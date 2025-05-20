@@ -48,7 +48,6 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
@@ -67,7 +66,6 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
@@ -129,7 +127,6 @@ class AuthenticationCallbackHandlerTest {
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -171,14 +168,6 @@ class AuthenticationCallbackHandlerTest {
     private static final Nonce RP_NONCE = new Nonce();
     private static final CredentialTrustLevel lowestCredentialTrustLevel =
             CredentialTrustLevel.LOW_LEVEL;
-    private static final ClientSession clientSession =
-            new ClientSession(
-                    generateRPAuthRequestForClientSession().toParameters(),
-                    null,
-                    List.of(
-                            VectorOfTrust.of(
-                                    lowestCredentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                    CLIENT_NAME);
     private static final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
                     CLIENT_SESSION_ID,
@@ -269,7 +258,6 @@ class AuthenticationCallbackHandlerTest {
                         tokenService,
                         sessionService,
                         orchSessionService,
-                        clientSessionService,
                         orchClientSessionService,
                         auditService,
                         userInfoStorageService,
@@ -606,17 +594,6 @@ class AuthenticationCallbackHandlerTest {
     void shouldAuditMediumCredentialTrustLevelOn2FARequest()
             throws UnsuccessfulCredentialResponseException {
         usingValidSession();
-        var mediumRequestSession =
-                new ClientSession(
-                        generateRPAuthRequestForClientSession().toParameters(),
-                        null,
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.LOW_LEVEL)),
-                        CLIENT_NAME);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(mediumRequestSession));
         var mediumRequestOrchSession =
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,
@@ -1399,8 +1376,6 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
         orchSession.addClientSession(CLIENT_SESSION_ID);
@@ -1517,10 +1492,6 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void assertClientSessionUpdated() {
-        var clientSessionCaptor = ArgumentCaptor.forClass(ClientSession.class);
-        verify(clientSessionService, times(1))
-                .updateStoredClientSession(any(), clientSessionCaptor.capture());
-        assertEquals(RP_PAIRWISE_ID.getValue(), clientSessionCaptor.getValue().getRpPairwiseId());
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService, times(1))
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
@@ -1537,23 +1508,10 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
-        ClientSession clientSessionWithCredentialTrustLevel =
-                createClientSession(credentialTrustLevel);
-
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSessionWithCredentialTrustLevel));
         var orchClientSessionWithCredentialTrustLevel =
                 createOrchClientSession(credentialTrustLevel);
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSessionWithCredentialTrustLevel));
-    }
-
-    private ClientSession createClientSession(CredentialTrustLevel credentialTrustLevel) {
-        return new ClientSession(
-                generateRPAuthRequestForClientSession().toParameters(),
-                null,
-                List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                CLIENT_NAME);
     }
 
     private OrchClientSessionItem createOrchClientSession(
