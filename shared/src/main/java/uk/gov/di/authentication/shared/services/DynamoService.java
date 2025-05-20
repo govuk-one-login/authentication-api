@@ -809,6 +809,21 @@ public class DynamoService implements AuthenticationService {
                                                 mfaMethodIdentifier)));
     }
 
+    public Result<String, List<MFAMethod>> updateMfaMethods(
+            List<MFAMethod> updatedMfaMethods, String email) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        var updatedUserCredentials =
+                dynamoUserCredentialsTable.updateItem(
+                        userCredentials
+                                .withUpdated(NowHelper.toTimestampString(NowHelper.now()))
+                                .withMfaMethods(updatedMfaMethods));
+
+        return Result.success(updatedUserCredentials.getMfaMethods());
+    }
+
     public Result<String, List<MFAMethod>> updateMigratedDefaultMfaMethod(
             String email, MFAMethodType type, String target, String mfaMethodIdentifier) {
         var userCredentials =
