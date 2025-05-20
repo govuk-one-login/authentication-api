@@ -74,6 +74,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -728,6 +729,24 @@ public class AuthenticationCallbackHandler
             boolean docAppJourney,
             ClientSession clientSession,
             String verifiedMfaMethodType) {
+        return buildDimensions(
+                accountState,
+                clientId,
+                clientSession.getClientName(),
+                clientSession.getVtrList(),
+                isTestJourney,
+                docAppJourney,
+                verifiedMfaMethodType);
+    }
+
+    private Map<String, String> buildDimensions(
+            AccountState accountState,
+            String clientId,
+            String clientName,
+            List<VectorOfTrust> vtrList,
+            boolean isTestJourney,
+            boolean docAppJourney,
+            String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
                         Map.of(
@@ -742,7 +761,7 @@ public class AuthenticationCallbackHandler
                                 "IsDocApp",
                                 Boolean.toString(docAppJourney),
                                 "ClientName",
-                                clientSession.getClientName()));
+                                clientName));
 
         if (Objects.nonNull(verifiedMfaMethodType)) {
             dimensions.put("MfaMethod", verifiedMfaMethodType);
@@ -750,7 +769,7 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
+        var orderedVtrList = VectorOfTrust.orderVtrList(vtrList);
         var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
 
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
