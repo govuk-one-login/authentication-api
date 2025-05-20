@@ -45,7 +45,6 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -67,7 +66,6 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -128,7 +126,6 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
@@ -146,7 +143,6 @@ public class AuthorisationHandler
             ConfigurationService configurationService,
             SessionService sessionService,
             OrchSessionService orchSessionService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
@@ -162,7 +158,6 @@ public class AuthorisationHandler
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
@@ -181,7 +176,6 @@ public class AuthorisationHandler
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -212,7 +206,6 @@ public class AuthorisationHandler
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService, redis);
@@ -255,7 +248,7 @@ public class AuthorisationHandler
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
         var ipAddress = IpAddressHelper.extractIpAddress(input);
-        var clientSessionId = clientSessionService.generateClientSessionId();
+        var clientSessionId = IdGenerator.generate();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
@@ -432,9 +425,6 @@ public class AuthorisationHandler
                 sessionId.flatMap(orchSessionService::getSession);
 
         var creationDate = LocalDateTime.now();
-        ClientSession clientSession =
-                clientSessionService.generateClientSession(
-                        authRequest.toParameters(), creationDate, vtrList, client.getClientName());
         OrchClientSessionItem orchClientSession =
                 orchClientSessionService.generateClientSession(
                         clientSessionId,
@@ -449,7 +439,6 @@ public class AuthorisationHandler
             return handleDocAppJourney(
                     sessionId,
                     orchSessionOptional,
-                    clientSession,
                     orchClientSession,
                     authRequest,
                     client,
@@ -465,7 +454,6 @@ public class AuthorisationHandler
                 sessionId,
                 browserSessionIdFromCookie,
                 orchSessionOptional,
-                clientSession,
                 orchClientSession,
                 authRequest,
                 persistentSessionId,
@@ -521,7 +509,6 @@ public class AuthorisationHandler
     private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
-            ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
@@ -566,8 +553,6 @@ public class AuthorisationHandler
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
 
-        clientSessionService.storeClientSession(
-                clientSessionId, clientSession.setDocAppSubjectId(subjectId));
         orchClientSessionService.storeClientSession(
                 orchClientSession.withDocAppSubjectId(subjectId.getValue()));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
@@ -630,7 +615,6 @@ public class AuthorisationHandler
             Optional<String> previousSessionIdFromCookie,
             Optional<String> browserSessionIdFromCookie,
             Optional<OrchSessionItem> existingOrchSessionOptional,
-            ClientSession clientSession,
             OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -736,7 +720,6 @@ public class AuthorisationHandler
                 pair("client-name", client.getClientName()),
                 pair("new_authentication_required", doesBrowserSessionIdFromSessionNotMatchCookie));
 
-        clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchClientSessionService.storeClientSession(orchClientSession);
 
         orchSession.addClientSession(clientSessionId);
