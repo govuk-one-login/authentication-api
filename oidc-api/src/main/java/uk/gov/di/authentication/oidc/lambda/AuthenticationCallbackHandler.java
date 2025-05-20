@@ -569,21 +569,8 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 sessionService.storeOrUpdateSession(session, sessionId);
-                var currentCredentialStrength =
-                        userInfo.getStringClaim(
-                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
-                if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
-                                > 0) {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    lowestRequestedCredentialTrustLevel));
-                } else {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    CredentialTrustLevel.valueOf(currentCredentialStrength)));
-                }
+                orchSessionService.updateSession(orchSession);
+
                 // ATO-975 logging to make sure there are no differences in production
                 LOG.info(
                         "Shared session current credential strength: {}",

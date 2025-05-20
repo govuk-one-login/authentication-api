@@ -81,7 +81,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -693,27 +692,6 @@ class AuthenticationCallbackHandlerTest {
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         CredentialTrustLevel.LOW_LEVEL,
                         CredentialTrustLevel.MEDIUM_LEVEL));
-    }
-
-    @ParameterizedTest
-    @MethodSource("currentCredentialStrengthParams")
-    void shouldSetTheCurrentCredentialStrengthToTheLowestCredentialTrustLevel(
-            CredentialTrustLevel userInfoCurrentCredentialStrengthResponse,
-            CredentialTrustLevel credentialTrustLevel,
-            CredentialTrustLevel correctCurrentCredentialStrengthSet)
-            throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
-        returnCurrentCredentialStrengthValue(userInfoCurrentCredentialStrengthResponse);
-        clientSessionWithCredentialTrustValue(credentialTrustLevel);
-        usingValidClient();
-        var event = new APIGatewayProxyRequestEvent();
-        setValidHeadersAndQueryParameters(event);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
-
-        handler.handleRequest(event, CONTEXT);
-
-        assertCurrentCredentialSetCorrectly(correctCurrentCredentialStrengthSet);
     }
 
     // TODO: ATO-1218: Following the handler changes, update this method to test
@@ -1484,9 +1462,6 @@ class AuthenticationCallbackHandlerTest {
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertTrue(orchSessionCaptor.getAllValues().get(0).getAuthenticated());
         assertThat(
-                orchSessionCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
-        assertThat(
                 orchSessionCaptor.getAllValues().get(0).getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.NEW));
     }
@@ -1522,20 +1497,5 @@ class AuthenticationCallbackHandlerTest {
                 null,
                 List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
                 CLIENT_NAME);
-    }
-
-    private void returnCurrentCredentialStrengthValue(CredentialTrustLevel credentialTrustLevel) {
-        when(USER_INFO.getStringClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue()))
-                .thenReturn(Objects.toString(credentialTrustLevel, null));
-    }
-
-    private void assertCurrentCredentialSetCorrectly(
-            CredentialTrustLevel currentCredentialStrength) {
-        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-
-        verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
-        assertThat(
-                orchSessionCaptor.getAllValues().get(1).getCurrentCredentialStrength(),
-                equalTo(currentCredentialStrength));
     }
 }
