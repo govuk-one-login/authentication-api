@@ -1073,7 +1073,6 @@ public class AuthorisationHandler
         claimsSet.add(AuthUserInfoClaims.EMAIL);
         claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
         claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
-        claimsSet.add(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH);
         claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
         claimsSet.add(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH);
         if (identityRequired) {
