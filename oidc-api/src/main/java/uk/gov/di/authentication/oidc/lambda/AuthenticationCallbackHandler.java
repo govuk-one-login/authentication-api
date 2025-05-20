@@ -381,10 +381,6 @@ public class AuthenticationCallbackHandler
                         userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
                                 != null);
                 LOG.info(
-                        "is current_credential_strength attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())
-                                != null);
-                LOG.info(
                         "is uplift_required attached to auth-external-api userinfo response: {}",
                         userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
                 LOG.info(
@@ -571,18 +567,6 @@ public class AuthenticationCallbackHandler
                 sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
 
-                // ATO-975 logging to make sure there are no differences in production
-                LOG.info(
-                        "Shared session current credential strength: {}",
-                        session.getCurrentCredentialStrength());
-                LOG.info(
-                        "Orch session current credential strength: {}",
-                        orchSession.getCurrentCredentialStrength());
-                LOG.info(
-                        "Is shared session CCS equal to Orch session CCS: {}",
-                        Objects.equals(
-                                session.getCurrentCredentialStrength(),
-                                orchSession.getCurrentCredentialStrength()));
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState,
