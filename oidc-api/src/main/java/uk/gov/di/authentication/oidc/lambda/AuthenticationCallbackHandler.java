@@ -442,7 +442,7 @@ public class AuthenticationCallbackHandler
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+                var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
                                 accountState,
