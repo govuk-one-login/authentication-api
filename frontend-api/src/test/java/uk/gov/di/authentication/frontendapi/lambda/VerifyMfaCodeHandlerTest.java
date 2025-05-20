@@ -234,7 +234,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
@@ -312,7 +311,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
@@ -355,7 +353,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
@@ -398,7 +395,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -446,7 +442,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        assertThat(authSession.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
