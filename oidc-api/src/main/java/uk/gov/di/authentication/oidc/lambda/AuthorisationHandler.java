@@ -782,7 +782,6 @@ public class AuthorisationHandler
                         .withSessionId(newSessionId)
                         .withBrowserSessionId(newBrowserSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry())
-                        .withCurrentCredentialStrength(null)
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
