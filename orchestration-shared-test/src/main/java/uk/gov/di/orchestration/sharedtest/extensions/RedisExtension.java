@@ -92,12 +92,6 @@ public class RedisExtension
     }
 
     public void createClientSession(
-            String clientSessionId, String clientName, Map<String, List<String>> authRequest)
-            throws Json.JsonException {
-        createClientSession(clientSessionId, clientName, authRequest, LocalDateTime.now());
-    }
-
-    public void createClientSession(
             String clientSessionId,
             String clientName,
             Map<String, List<String>> authRequest,

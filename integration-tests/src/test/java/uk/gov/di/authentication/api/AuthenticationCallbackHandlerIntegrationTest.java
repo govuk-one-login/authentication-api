@@ -278,16 +278,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void
-            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
-                    throws Json.JsonException {
-        var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity() {
         redis.addClientSessionAndStateToRedis(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
 
         var response =
