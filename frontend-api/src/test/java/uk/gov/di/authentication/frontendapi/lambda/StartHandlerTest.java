@@ -607,7 +607,6 @@ class StartHandlerTest {
                         rpPairwiseIdForReauth,
                         previousGovUkSignInJourneyId,
                         authenticated,
-                        null,
                         COOKIE_CONSENT,
                         null,
                         CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
