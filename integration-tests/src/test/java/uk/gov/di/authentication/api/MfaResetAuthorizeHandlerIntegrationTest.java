@@ -8,14 +8,8 @@ import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
@@ -29,9 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -46,13 +38,11 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.time.LocalDateTime;
 import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Base64;
@@ -203,7 +193,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
         setUpSession();
         addSessionToSessionStore(internalCommonSubjectId);
-        createClientSession();
         registerClient();
         addUserToUserStore();
     }
@@ -217,26 +206,6 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
-    }
-
-    private static void createClientSession() throws Json.JsonException {
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce());
-
-        var clientSession =
-                new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
-                        CLIENT_NAME);
-
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
     }
 
     private static void registerClient() {

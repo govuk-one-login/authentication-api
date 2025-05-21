@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -74,7 +73,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
@@ -84,7 +82,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 MfaRequest.class,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 authSessionService);

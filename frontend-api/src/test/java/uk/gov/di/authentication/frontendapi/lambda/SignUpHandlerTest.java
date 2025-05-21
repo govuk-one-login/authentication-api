@@ -2,14 +2,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,27 +13,23 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -78,7 +68,6 @@ class SignUpHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final User user = mock(User.class);
     private final UserProfile userProfile = mock(UserProfile.class);
@@ -88,12 +77,10 @@ class SignUpHandlerTest {
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final String CLIENT_NAME = "client-name";
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
-    private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -107,9 +94,6 @@ class SignUpHandlerTest {
     private SignUpHandler handler;
 
     private final Session session = new Session();
-    private final ClientSession clientSession =
-            new ClientSession(
-                    generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -139,15 +123,12 @@ class SignUpHandlerTest {
         when(user.getUserProfile()).thenReturn(userProfile);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
                 new SignUpHandler(
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         auditService,
@@ -164,7 +145,6 @@ class SignUpHandlerTest {
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
-        usingValidClientSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -208,7 +188,6 @@ class SignUpHandlerTest {
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
-        usingValidClientSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -231,7 +210,6 @@ class SignUpHandlerTest {
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
-        usingValidClientSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
@@ -302,7 +280,6 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
 
         usingValidSession();
-        usingValidClientSession();
         withValidAuthSession();
 
         var body =
@@ -344,7 +321,6 @@ class SignUpHandlerTest {
     void shouldReturn400IfNoAuthSessionPresent() {
         withNoAuthSession();
         usingValidSession();
-        usingValidClientSession();
 
         var body =
                 format(
@@ -362,25 +338,6 @@ class SignUpHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-    }
-
-    public static AuthenticationRequest generateAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
-        Scope scope = new Scope();
-        Nonce nonce = new Nonce();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add("phone");
-        scope.add("email");
-        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                .state(state)
-                .nonce(nonce)
-                .build();
-    }
-
-    private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
     }
 
     private ClientRegistry generateClientRegistry() {

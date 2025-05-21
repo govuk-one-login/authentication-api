@@ -3,14 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -41,7 +33,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -50,7 +41,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
-import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -92,8 +82,6 @@ class ResetPasswordHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
@@ -167,7 +155,6 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         usingValidSession();
-        usingValidClientSession();
         handler =
                 new ResetPasswordHandler(
                         authenticationService,
@@ -175,7 +162,6 @@ class ResetPasswordHandlerTest {
                         codeStorageService,
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         auditService,
                         commonPasswordsService,
@@ -483,21 +469,6 @@ class ResetPasswordHandlerTest {
             String password, Map<String, String> headers) {
         var body = format("{ \"password\": \"%s\"}", password);
         return apiRequestEventWithHeadersAndBody(headers, body);
-    }
-
-    private void usingValidClientSession() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(TEST_CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
     private UserCredentials generateUserCredentials() {

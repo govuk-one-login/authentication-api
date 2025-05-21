@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
@@ -99,7 +98,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     protected AccountInterventionsHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AccountInterventionsService accountInterventionsService,
@@ -112,7 +110,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 AccountInterventionsRequest.class,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 authSessionService);

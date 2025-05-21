@@ -1,10 +1,6 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +14,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 
-import java.net.URI;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +37,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String CLIENT_NAME = "test-client-name";
     private static final Scope OIDC_SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
@@ -117,7 +111,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn400WhenNoAuthSessionPresent() throws Json.JsonException {
+    void shouldReturn400WhenNoAuthSessionPresent() {
         setUpTest();
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -138,7 +132,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
-    private void setUpTest() throws Json.JsonException {
+    private void setUpTest() {
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -152,16 +146,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                OIDC_SCOPE,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .build();
-
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
     }
 
     private void withAuthSession() {

@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -95,7 +94,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             ConfigurationService configurationService,
             SessionService sessionService,
             AuthenticationService authenticationService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             CodeStorageService codeStorageService,
             UserMigrationService userMigrationService,
@@ -109,7 +107,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 LoginRequest.class,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 true,

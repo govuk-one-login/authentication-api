@@ -4,12 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -24,7 +19,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -33,7 +27,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -43,14 +36,12 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
@@ -98,7 +89,6 @@ class CheckUserExistsHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
@@ -110,7 +100,6 @@ class CheckUserExistsHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
                     .withClientId(CLIENT_ID);
-    private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -150,7 +139,6 @@ class CheckUserExistsHandlerTest {
                         configurationService,
                         sessionService,
                         authSessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         auditService,
@@ -465,22 +453,6 @@ class CheckUserExistsHandlerTest {
                 .withSubjectType("pairwise");
     }
 
-    private ClientSession getClientSession() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .build();
-
-        return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
-    }
-
     private static String getExpectedRpPairwiseId() {
         return ClientSubjectHelper.calculatePairwiseIdentifier(
                 SUBJECT.getValue(), "sector-identifier", SALT.array());
@@ -503,8 +475,6 @@ class CheckUserExistsHandlerTest {
 
     private void setupClient() {
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
     }
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {

@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -19,7 +18,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -37,6 +35,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -52,7 +52,6 @@ public abstract class BaseFrontendHandler<T>
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
-    protected final ClientSessionService clientSessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final AuthSessionService authSessionService;
@@ -63,14 +62,12 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = sessionService;
-        this.clientSessionService = clientSessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.authSessionService = authSessionService;
@@ -80,7 +77,6 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             SessionService sessionService,
-            ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             boolean loadUserCredentials,
@@ -89,7 +85,6 @@ public abstract class BaseFrontendHandler<T>
                 clazz,
                 configurationService,
                 sessionService,
-                clientSessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -100,7 +95,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
@@ -113,7 +107,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
@@ -163,6 +156,11 @@ public abstract class BaseFrontendHandler<T>
                         input.getHeaders(),
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
+        if (clientSessionId != null) {
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        }
+
         String txmaAuditEncoded = getTxmaAuditEncodedHeader(input).orElse(null);
 
         var sessionId =
@@ -192,9 +190,6 @@ public abstract class BaseFrontendHandler<T>
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
-        Optional<ClientSession> clientSession =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -217,8 +212,6 @@ public abstract class BaseFrontendHandler<T>
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
         clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
-
-        clientSession.ifPresent(userContextBuilder::withClientSession);
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)

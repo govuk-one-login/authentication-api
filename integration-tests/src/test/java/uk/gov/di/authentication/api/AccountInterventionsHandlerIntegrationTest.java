@@ -13,9 +13,6 @@ import software.amazon.awssdk.services.lambda.LambdaClient;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -26,7 +23,6 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,16 +135,6 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         Map<String, String> headers = new HashMap<>();
         var sessionId = redis.createSession();
         authSessionServiceExtension.addSession(sessionId);
-
-        var clientSession =
-                new ClientSession(
-                        null,
-                        LocalDateTime.now(),
-                        new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                        "clientName");
-
-        redis.createClientSession("client-session-id", clientSession);
-
         headers.put("Session-Id", sessionId);
         headers.put(CLIENT_SESSION_ID_HEADER, "client-session-id");
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);

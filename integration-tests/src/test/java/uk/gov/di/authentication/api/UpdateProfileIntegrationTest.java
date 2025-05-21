@@ -1,11 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
@@ -15,7 +9,6 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,7 +25,6 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-id";
-    private static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -47,7 +39,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
             throws Json.JsonException {
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
-        setUpTest(sessionId, clientSessionId);
+        setUpTest(sessionId);
 
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
@@ -66,22 +58,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE));
     }
 
-    private AuthenticationRequest setUpTest(String sessionId, String clientSessionId)
-            throws Json.JsonException {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add(OIDCScopeValue.EMAIL);
+    private void setUpTest(String sessionId) {
         authSessionStore.addSession(sessionId);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .nonce(new Nonce())
-                        .build();
-        redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -95,6 +74,5 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 "https://test.com",
                 "public");
         userStore.signUp(EMAIL_ADDRESS, "password");
-        return authRequest;
     }
 }

@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -51,7 +50,6 @@ class AccountRecoveryHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoAccountModifiersService dynamoAccountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -88,7 +86,6 @@ class AccountRecoveryHandlerTest {
                 new AccountRecoveryHandler(
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         dynamoAccountModifiersService,

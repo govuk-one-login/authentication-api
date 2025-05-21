@@ -3,12 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.Gson;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -28,14 +23,12 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.AccountState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetMfaState;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Intervention;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -45,7 +38,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
@@ -82,7 +74,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.LoginHandler.INTERNAL_SUBJECT_ID;
@@ -90,7 +81,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountInterventionsHandlerTest {
-    private static final String TEST_CLIENT_ID = "test_client_id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = "a-test-salt".getBytes(StandardCharsets.UTF_8);
@@ -110,7 +100,6 @@ class AccountInterventionsHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class, Mockito.RETURNS_DEEP_STUBS);
@@ -122,7 +111,6 @@ class AccountInterventionsHandlerTest {
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
-    private static final ClientSession clientSession = getClientSession();
     private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
@@ -167,7 +155,6 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded())
@@ -180,7 +167,6 @@ class AccountInterventionsHandlerTest {
                 new AccountInterventionsHandler(
                         configurationService,
                         sessionService,
-                        clientSessionService,
                         clientService,
                         authenticationService,
                         accountInterventionsService,
@@ -463,7 +449,6 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
 
         when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
-        when(userContext.getClientSession()).thenReturn(null);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -655,21 +640,6 @@ class AccountInterventionsHandlerTest {
         headers.put("di-persistent-session-id", CommonTestVariables.DI_PERSISTENT_SESSION_ID);
         headers.put("X-Forwarded-For", CommonTestVariables.IP_ADDRESS);
         return headers;
-    }
-
-    private static ClientSession getClientSession() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(TEST_CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .build();
-        return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {

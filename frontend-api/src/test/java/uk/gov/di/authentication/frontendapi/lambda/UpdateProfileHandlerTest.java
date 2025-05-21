@@ -3,14 +3,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,22 +13,17 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -71,19 +60,14 @@ class UpdateProfileHandlerTest {
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
-    private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
-    private static final Scope SCOPES =
-            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String COOKIE = "Cookie";
-    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
 
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -148,7 +132,6 @@ class UpdateProfileHandlerTest {
                 new UpdateProfileHandler(
                         authenticationService,
                         sessionService,
-                        clientSessionService,
                         configurationService,
                         auditService,
                         clientService,
@@ -158,7 +141,6 @@ class UpdateProfileHandlerTest {
     @Test
     void shouldReturn204WhenUpdatingTermsAndConditions() {
         usingValidSession();
-        usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
@@ -186,7 +168,6 @@ class UpdateProfileHandlerTest {
     @Test
     void checkUpdateProfileTermsCondsAcceptanceAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
-        usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
@@ -263,26 +244,6 @@ class UpdateProfileHandlerTest {
 
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-    }
-
-    private void usingValidClientSession() {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .build();
-        var clientSession =
-                new ClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        mock(VectorOfTrust.class),
-                        CLIENT_NAME);
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

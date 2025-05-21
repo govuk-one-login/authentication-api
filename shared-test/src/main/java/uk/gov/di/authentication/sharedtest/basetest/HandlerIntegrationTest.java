@@ -6,11 +6,8 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -248,23 +245,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
         return headers;
     }
 
-    public static void setUpClientSession(
-            String emailAddress,
-            String clientSessionId,
-            ClientID clientId,
-            String clientName,
-            URI redirectUri)
-            throws Json.JsonException {
-
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(clientId),
-                                URI.create("http://localhost/redirect"))
-                        .nonce(new Nonce())
-                        .build();
-        redis.createClientSession(clientSessionId, clientName, authRequest.toParameters());
+    public static void registerClient(
+            String emailAddress, ClientID clientId, String clientName, URI redirectUri) {
         clientStore.registerClient(
                 clientId.getValue(),
                 clientName,
