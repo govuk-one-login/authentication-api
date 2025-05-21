@@ -82,7 +82,6 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
@@ -160,7 +159,6 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DocAppAuthorisationService docAppAuthorisationService =
             mock(DocAppAuthorisationService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -233,7 +231,7 @@ class AuthorisationHandlerTest {
     private Session session;
     private Session newSession;
     private OrchSessionItem orchSession;
-    private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final Subject SUBJECT = new Subject();
@@ -242,14 +240,14 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(),
                             SUBJECT,
                             "http://localhost-rp",
-                            CLIENT_SESSION_ID,
+                            NEW_CLIENT_SESSION_ID,
                             EC_SIGNING_KEY)
                     .serialize();
     private static final String ID_TOKEN_AUDIENCE = getIdTokenAudience();
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
     private static final TxmaAuditUser BASE_AUDIT_USER =
             TxmaAuditUser.user()
-                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withGovukSigninJourneyId(NEW_CLIENT_SESSION_ID)
                     .withIpAddress("123.123.123.123")
                     .withPersistentSessionId(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
     private static final String SESSION_COOKIE =
@@ -295,7 +293,6 @@ class AuthorisationHandlerTest {
                         configService,
                         sessionService,
                         orchSessionService,
-                        clientSessionService,
                         orchClientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
@@ -312,9 +309,6 @@ class AuthorisationHandlerTest {
         newSession = new Session();
         orchSession = new OrchSessionItem(SESSION_ID);
         when(sessionService.generateSession()).thenReturn(newSession);
-        when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.generateClientSession(any(), any(), any(), any()))
-                .thenReturn(clientSession);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
@@ -350,7 +344,6 @@ class AuthorisationHandlerTest {
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -382,7 +375,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
@@ -423,7 +416,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
@@ -460,7 +453,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
             verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(CLIENT_SESSION_ID), any(State.class));
+                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
@@ -637,7 +630,6 @@ class AuthorisationHandlerTest {
             }
 
             verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -682,7 +674,6 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWithPromptParamWhenSetToLoginAndExistingSessionIsPresent() {
             withExistingSession(session);
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
@@ -708,7 +699,6 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -784,7 +774,6 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -832,7 +821,6 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verifyAuthorisationRequestParsedAuditEvent(
@@ -883,7 +871,6 @@ class AuthorisationHandlerTest {
             verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
-            verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -1522,7 +1509,7 @@ class AuthorisationHandlerTest {
                     equalTo(SUBJECT.getValue()));
             assertThat(
                     argument.getValue().getStringClaim("previous_govuk_signin_journey_id"),
-                    equalTo(CLIENT_SESSION_ID));
+                    equalTo(NEW_CLIENT_SESSION_ID));
         }
 
         @Test
@@ -1799,7 +1786,7 @@ class AuthorisationHandlerTest {
                                 os ->
                                         os.getClientSessions().size() == 1
                                                 && os.getClientSessions()
-                                                        .contains(CLIENT_SESSION_ID)));
+                                                        .contains(NEW_CLIENT_SESSION_ID)));
     }
 
     @Test
@@ -1819,7 +1806,7 @@ class AuthorisationHandlerTest {
                                 os ->
                                         os.getClientSessions().size() == 2
                                                 && os.getClientSessions()
-                                                        .contains(CLIENT_SESSION_ID)
+                                                        .contains(NEW_CLIENT_SESSION_ID)
                                                 && os.getClientSessions()
                                                         .contains("previous-client-session")));
     }
@@ -2082,7 +2069,7 @@ class AuthorisationHandlerTest {
                                                     && os.getClientSessions()
                                                             .contains("previous-client-session")
                                                     && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)));
+                                                            .contains(NEW_CLIENT_SESSION_ID)));
         }
 
         @Test
@@ -2094,7 +2081,7 @@ class AuthorisationHandlerTest {
                                     os ->
                                             os.getClientSessions().size() == 1
                                                     && os.getClientSessions()
-                                                            .contains(CLIENT_SESSION_ID)));
+                                                            .contains(NEW_CLIENT_SESSION_ID)));
         }
 
         @Test
@@ -2102,7 +2089,7 @@ class AuthorisationHandlerTest {
             makeDocAppHandlerRequest();
             verify(docAppAuthorisationService).storeState(eq(NEW_SESSION_ID), any());
             verify(noSessionOrchestrationService)
-                    .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any());
+                    .storeClientSessionIdAgainstState(eq(NEW_CLIENT_SESSION_ID), any());
         }
 
         @Test
@@ -2138,8 +2125,8 @@ class AuthorisationHandlerTest {
                 throws JOSEException {
             var response = makeDocAppHandlerRequest();
 
-            verify(clientSessionService).storeClientSession(anyString(), any());
             verify(orchSessionService).addSession(any());
+            verify(orchClientSessionService).storeClientSession(any());
 
             assertThat(response, hasStatus(302));
             assertThat(
@@ -2943,6 +2930,7 @@ class AuthorisationHandlerTest {
                 runWithIds(
                         () -> handler.handleRequest(event, context),
                         List.of(
+                                NEW_CLIENT_SESSION_ID,
                                 NEW_SESSION_ID,
                                 NEW_BROWSER_SESSION_ID,
                                 NEW_SESSION_ID_FOR_PREV_SESSION));
