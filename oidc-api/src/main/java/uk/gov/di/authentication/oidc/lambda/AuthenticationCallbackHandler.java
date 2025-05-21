@@ -857,7 +857,8 @@ public class AuthenticationCallbackHandler
 
     private void logComparisonRequestCredentialTrustAndAchieved(
             UserInfo authUserInfo, CredentialTrustLevel requestedCredentialStrength) {
-
+        // TODO: This logging currently looks fine but in future we should validate that
+        // this value is non-null and >= the requested credential strength
         try {
             var userInfoAchievedCredentialStrength =
                     authUserInfo.getStringClaim(
