@@ -182,7 +182,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
-            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client);
+            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client, authSession);
 
             String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
@@ -281,7 +281,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     subjectId,
                     journeyType,
                     auditContext,
-                    client,
                     maybeRpPairwiseId,
                     maybeRequestedSmsMfaMethod);
 
@@ -437,14 +436,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             JourneyType journeyType,
             AuditContext auditContext,
-            ClientRegistry client,
             Optional<String> maybeRpPairwiseId,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
-        var clientId = client.getClientID();
+        var clientId = authSession.getClientId();
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
@@ -631,12 +629,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return journeyType;
     }
 
-    private Optional<String> getRpPairwiseId(UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getRpPairwiseId(
+            UserProfile userProfile, ClientRegistry client, AuthSessionItem authSession) {
         try {
             var rpPairwiseId =
                     ClientSubjectHelper.getSubject(
                             userProfile,
                             client,
+                            authSession,
                             authenticationService,
                             configurationService.getInternalSectorUri());
             return Optional.of(rpPairwiseId.getValue());
