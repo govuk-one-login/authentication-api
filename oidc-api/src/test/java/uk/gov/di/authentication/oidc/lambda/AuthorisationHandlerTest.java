@@ -534,46 +534,6 @@ class AuthorisationHandlerTest {
             assertEquals(false, actualAuthenticatedClaim);
         }
 
-        @Test
-        void shouldPassCurrentCredentialStrengthClaimToAuthFromSession() {
-            withExistingSession(session);
-            var currentCredentialStrength = CredentialTrustLevel.MEDIUM_LEVEL;
-            withExistingOrchSession(
-                    new OrchSessionItem(NEW_SESSION_ID)
-                            .withCurrentCredentialStrength(currentCredentialStrength));
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim =
-                    captor.getValue().getClaim("current_credential_strength");
-            assertEquals(currentCredentialStrength, actualCurrentCredentialStrengthClaim);
-        }
-
-        @Test
-        void shouldPassNullCurrentCredentialStrengthClaimIfNewSession() {
-            withNoSession();
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim =
-                    captor.getValue().getClaim("current_credential_strength");
-            assertEquals(null, actualCurrentCredentialStrengthClaim);
-        }
-
         @ParameterizedTest
         @ValueSource(
                 strings = {

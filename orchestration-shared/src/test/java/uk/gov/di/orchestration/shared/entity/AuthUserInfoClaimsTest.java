@@ -18,7 +18,6 @@ class AuthUserInfoClaimsTest {
                 "email_verified",
                 "salt",
                 "local_account_id",
-                "current_credential_strength",
                 "uplift_required",
                 "rp_pairwise_id",
                 "phone_number_verified",
@@ -37,7 +36,7 @@ class AuthUserInfoClaimsTest {
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(AuthUserInfoClaims.getAllValidClaims().size(), equalTo(14));
+        assertThat(AuthUserInfoClaims.getAllValidClaims().size(), equalTo(13));
     }
 
     @ParameterizedTest
