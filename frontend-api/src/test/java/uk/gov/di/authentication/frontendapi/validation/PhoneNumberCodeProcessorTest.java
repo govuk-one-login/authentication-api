@@ -125,7 +125,10 @@ class PhoneNumberCodeProcessorTest {
                 codeRequestType);
 
         phoneNumberCodeProcessor.validateCode();
-        verify(codeStorageService).deleteOtpCode(CommonTestVariables.EMAIL, notificationType);
+        verify(codeStorageService)
+                .deleteOtpCode(
+                        CommonTestVariables.EMAIL.concat(CommonTestVariables.UK_MOBILE_NUMBER),
+                        notificationType);
     }
 
     @Test
@@ -174,7 +177,9 @@ class PhoneNumberCodeProcessorTest {
 
         phoneNumberCodeProcessor.validateCode();
         verify(codeStorageService, never())
-                .deleteOtpCode(CommonTestVariables.EMAIL, notificationType);
+                .deleteOtpCode(
+                        CommonTestVariables.EMAIL.concat(CommonTestVariables.UK_MOBILE_NUMBER),
+                        notificationType);
     }
 
     @Test
