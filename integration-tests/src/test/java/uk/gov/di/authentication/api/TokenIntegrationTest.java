@@ -47,7 +47,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
@@ -55,7 +54,6 @@ import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
@@ -188,8 +186,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
 
-        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
-        assertEquals(idToken.serialize(), clientSession.getIdTokenHint());
         var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
         assertTrue(orchClientSession.isPresent());
         assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
@@ -539,8 +535,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void
-            shouldCallTokenResourceUsingClientSecretPostAndWarnWhenClientIdInAuthCodeDoesNotMatchRequest()
-                    throws Exception {
+            shouldCallTokenResourceUsingClientSecretPostAndWarnWhenClientIdInAuthCodeDoesNotMatchRequest() {
         var clientSecret = new Secret();
         Scope scope =
                 new Scope(
@@ -766,8 +761,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Scope scope,
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
-            Optional<String> clientId)
-            throws Json.JsonException {
+            Optional<String> clientId) {
         return constructBaseTokenRequest(
                 scope, vtr, oidcClaimsRequest, clientId, CODE_VERIFIER.getValue());
     }
@@ -777,8 +771,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId,
-            String codeVerifier)
-            throws Json.JsonException {
+            String codeVerifier) {
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
         if (vtr.isPresent()) {
             vtrList =
@@ -787,9 +780,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         var creationDate = LocalDateTime.now();
         var authRequestParams = generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters();
-        var clientSession =
-                new ClientSession(authRequestParams, creationDate, vtrList, "client-name");
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                         CLIENT_SESSION_ID,

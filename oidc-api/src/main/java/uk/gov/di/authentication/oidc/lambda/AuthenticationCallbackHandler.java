@@ -54,7 +54,6 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -98,7 +97,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -109,7 +107,6 @@ public class AuthenticationCallbackHandler
     private final AuthenticationTokenService tokenService;
     private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
@@ -136,7 +133,6 @@ public class AuthenticationCallbackHandler
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
@@ -178,8 +174,6 @@ public class AuthenticationCallbackHandler
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redisConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
@@ -216,7 +210,6 @@ public class AuthenticationCallbackHandler
             AuthenticationTokenService tokenService,
             SessionService sessionService,
             OrchSessionService orchSessionService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
@@ -233,7 +226,6 @@ public class AuthenticationCallbackHandler
         this.tokenService = tokenService;
         this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
@@ -283,13 +275,6 @@ public class AuthenticationCallbackHandler
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
-            var clientSession =
-                    clientSessionService
-                            .getClientSession(clientSessionId)
-                            .orElseThrow(
-                                    () ->
-                                            new AuthenticationCallbackException(
-                                                    "ClientSession not found"));
             var orchClientSession =
                     orchClientSessionService
                             .getClientSession(clientSessionId)
@@ -297,7 +282,6 @@ public class AuthenticationCallbackHandler
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "OrchClientSession not found"));
-            logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
@@ -430,8 +414,6 @@ public class AuthenticationCallbackHandler
                 }
 
                 orchSession.setAuthenticated(true);
-                clientSession.setRpPairwiseId(
-                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
                 orchClientSession.setRpPairwiseId(
                         userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue()));
                 orchClientSession.setPublicSubjectId(
@@ -439,7 +421,6 @@ public class AuthenticationCallbackHandler
 
                 sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
-                clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);

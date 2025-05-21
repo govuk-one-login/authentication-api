@@ -48,7 +48,6 @@ import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
@@ -68,7 +67,6 @@ import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
@@ -128,7 +126,6 @@ class IPVCallbackHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -213,14 +210,6 @@ class IPVCallbackHandlerTest {
                     .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
     private final Map<String, List<String>> authRequestParams =
             generateAuthRequest(new OIDCClaimsRequest()).toParameters();
-    private final ClientSession clientSession =
-            new ClientSession(
-                    authRequestParams,
-                    null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
-                    CLIENT_NAME);
     private final OrchClientSessionItem orchClientSession =
             new OrchClientSessionItem(
                             CLIENT_SESSION_ID,
@@ -423,17 +412,6 @@ class IPVCallbackHandlerTest {
                         new AuthenticationSuccessResponse(
                                 REDIRECT_URI, null, null, null, null, null, null));
         var testAuthRequestParams = generateAuthRequest(claimsRequest).toParameters();
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new ClientSession(
-                                        testAuthRequestParams,
-                                        null,
-                                        List.of(
-                                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                                new VectorOfTrust(
-                                                        CredentialTrustLevel.MEDIUM_LEVEL)),
-                                        CLIENT_NAME)));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
                         Optional.of(
@@ -519,18 +497,6 @@ class IPVCallbackHandlerTest {
                                     REDIRECT_URI, null, null, null, null, null, null));
             var testAuthRequestParams =
                     generateAuthRequest(oidcValidClaimsRequestWithoutReturnCode).toParameters();
-            when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new ClientSession(
-                                            testAuthRequestParams,
-                                            null,
-                                            List.of(
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.LOW_LEVEL),
-                                                    new VectorOfTrust(
-                                                            CredentialTrustLevel.MEDIUM_LEVEL)),
-                                            CLIENT_NAME)));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(
                             Optional.of(
@@ -596,12 +562,6 @@ class IPVCallbackHandlerTest {
         var testAuthRequestParams = generateAuthRequest(claimsRequest).toParameters();
 
         List<VectorOfTrust> vtrList = List.of();
-
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new ClientSession(
-                                        testAuthRequestParams, null, vtrList, CLIENT_NAME)));
 
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(
@@ -1207,8 +1167,6 @@ class IPVCallbackHandlerTest {
     }
 
     private void usingValidClientSession() {
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(orchClientSession));
     }

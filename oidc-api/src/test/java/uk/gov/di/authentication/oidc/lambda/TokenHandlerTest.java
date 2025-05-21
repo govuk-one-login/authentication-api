@@ -51,7 +51,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -60,7 +59,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -166,7 +164,6 @@ public class TokenHandlerTest {
     private final TokenClientAuthValidator tokenClientAuthValidator =
             mock(TokenClientAuthValidator.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final RedisConnectionService redisConnectionService =
@@ -190,7 +187,6 @@ public class TokenHandlerTest {
                         dynamoService,
                         configurationService,
                         orchAuthCodeService,
-                        clientSessionService,
                         orchClientSessionService,
                         tokenValidationService,
                         redisConnectionService,
@@ -268,10 +264,6 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
-        var clientSessionCaptor = ArgumentCaptor.forClass(ClientSession.class);
-        verify(clientSessionService)
-                .updateStoredClientSession(eq(CLIENT_SESSION_ID), clientSessionCaptor.capture());
-        assertEquals(signedJWT.serialize(), clientSessionCaptor.getValue().getIdTokenHint());
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService)
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
@@ -1525,12 +1517,6 @@ public class TokenHandlerTest {
             List<VectorOfTrust> vtr,
             String clientId,
             Subject docAppSubjectId) {
-        var clientSession =
-                new ClientSession(authRequestParams, clientSessionCreationTime, vtr, CLIENT_NAME)
-                        .setDocAppSubjectId(docAppSubjectId);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(clientSession));
-
         AuthCodeExchangeData authCodeExchangeData =
                 new AuthCodeExchangeData()
                         .setEmail(TEST_EMAIL)
@@ -1561,8 +1547,6 @@ public class TokenHandlerTest {
                         .setClientId(CLIENT_ID);
         when(orchAuthCodeService.getExchangeDataForCode(anyString()))
                 .thenReturn(Optional.of(authCodeExchangeData));
-
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID)).thenReturn(Optional.empty());
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
     }

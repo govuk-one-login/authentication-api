@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodExcep
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -73,7 +72,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.orchestration.shared.utils.ClientSessionMigrationUtils.logIfClientSessionsAreNotEqual;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -84,7 +82,6 @@ public class TokenHandler
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
-    private final ClientSessionService clientSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
@@ -99,7 +96,6 @@ public class TokenHandler
             DynamoService dynamoService,
             ConfigurationService configurationService,
             OrchAuthCodeService orchAuthCodeService,
-            ClientSessionService clientSessionService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
@@ -109,7 +105,6 @@ public class TokenHandler
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
-        this.clientSessionService = clientSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
@@ -127,8 +122,6 @@ public class TokenHandler
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -150,8 +143,6 @@ public class TokenHandler
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientSessionService =
-                new ClientSessionService(configurationService, redisConnectionService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -247,13 +238,6 @@ public class TokenHandler
                 GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
 
         var clientSessionId = authCodeExchangeData.getClientSessionId();
-        var clientSessionOpt = clientSessionService.getClientSession(clientSessionId);
-        if (clientSessionOpt.isEmpty()) {
-            LOG.warn("No client session found for auth code client session id");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-        }
-        var clientSession = clientSessionOpt.get();
         var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
         if (orchClientSessionOpt.isEmpty()) {
             LOG.warn("No orch client session found for auth code client session id");
@@ -261,7 +245,6 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         var orchClientSession = orchClientSessionOpt.get();
-        logIfClientSessionsAreNotEqual(clientSession, orchClientSession);
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
@@ -295,8 +278,6 @@ public class TokenHandler
                         authCodeExchangeData);
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
-        clientSessionService.updateStoredClientSession(
-                clientSessionId, clientSession.setIdTokenHint(idTokenHint));
         orchClientSessionService.updateStoredClientSession(
                 orchClientSession.withIdTokenHint(idTokenHint));
 

@@ -35,7 +35,6 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubEx
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -278,16 +277,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void
-            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
-                    throws Json.JsonException {
-        var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        redis.createClientSession(
-                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity() {
         redis.addClientSessionAndStateToRedis(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -988,7 +978,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             orchSessionExtension.addSession(orchSession);
         }
 
-        private void setupPreviousClientsAndPreviousClientSessions() throws Json.JsonException {
+        private void setupPreviousClientsAndPreviousClientSessions() {
             PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.forEach(
                     AuthenticationCallbackHandlerIntegrationTest.this::setupClientRegWithClientId);
             for (String clientSessionId : PREVIOUS_CLIENT_SESSIONS) {
@@ -1369,8 +1359,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     public void setupClientSessionWithId(
-            String clientSessionId, String clientId, String rpPairwiseId)
-            throws Json.JsonException {
+            String clientSessionId, String clientId, String rpPairwiseId) {
         String vtrStr1 =
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
                         + "."
@@ -1390,15 +1379,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf(vtrStr1, vtrStr2));
         var creationDate = LocalDateTime.now();
-        var clientSession =
-                new ClientSession(
-                                authRequestBuilder.build().toParameters(),
-                                creationDate,
-                                vtrList,
-                                CLIENT_NAME)
-                        .setRpPairwiseId(rpPairwiseId);
-
-        redis.createClientSession(clientSessionId, clientSession);
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
                                 clientSessionId,
@@ -1409,7 +1389,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         .withRpPairwiseId(rpPairwiseId));
     }
 
-    private void setUpClientSession() throws Json.JsonException {
+    private void setUpClientSession() {
         setupClientSessionWithId(CLIENT_SESSION_ID, CLIENT_ID, null);
     }
 
