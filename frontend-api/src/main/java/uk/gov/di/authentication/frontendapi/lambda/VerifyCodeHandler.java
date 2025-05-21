@@ -318,14 +318,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     PhoneNumberHelper.formatPhoneNumber(requestedMfaMethod.getDestination());
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
-        return codeStorageService
-                .getOtpCode(identifier, notificationType)
-                .or( // Temporary fallback for old phone number key with just email
-                        () ->
-                                notificationType.isForPhoneNumber()
-                                        ? codeStorageService.getOtpCode(
-                                                emailAddress, notificationType)
-                                        : Optional.empty());
+        return codeStorageService.getOtpCode(identifier, notificationType);
     }
 
     private void handleInvalidVerificationCode(
@@ -485,10 +478,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
         codeStorageService.deleteOtpCode(identifier, notificationType);
-        if (notificationType.isForPhoneNumber()) {
-            // Temporary fallback for old phone number key with just email
-            codeStorageService.deleteOtpCode(emailAddress, notificationType);
-        }
 
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);

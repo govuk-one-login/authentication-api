@@ -122,12 +122,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         var storedCode =
                 isTestClient
                         ? configurationService.getTestClientVerifyPhoneNumberOTP()
-                        : codeStorageService
-                                .getOtpCode(codeIdentifier, notificationType)
-                                .or( // Temporary fallback for old phone number key with just email
-                                        () ->
-                                                codeStorageService.getOtpCode(
-                                                        emailAddress, notificationType));
+                        : codeStorageService.getOtpCode(codeIdentifier, notificationType);
 
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
@@ -141,8 +136,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (errorResponse.isEmpty()) {
             codeStorageService.deleteOtpCode(codeIdentifier, notificationType);
-            // Temporary fallback for old phone number key with just email
-            codeStorageService.deleteOtpCode(emailAddress, notificationType);
         }
 
         return errorResponse;
