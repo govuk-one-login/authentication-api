@@ -5,7 +5,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -41,14 +40,6 @@ public class DocAppUserHelper {
                     .filter(client -> client.getClientType().equals(ClientType.APP.getValue()))
                     .isPresent();
         }
-    }
-
-    public static boolean isDocCheckingAppUserWithSubjectId(ClientSession clientSession) {
-        boolean isDocCheckingUser =
-                clientSession.getDocAppSubjectId() != null
-                        && hasDocCheckingScope(clientSession.getAuthRequestParams());
-        LOG.info("User is Doc Checking App user: {}", isDocCheckingUser);
-        return isDocCheckingUser;
     }
 
     public static boolean isDocCheckingAppUserWithSubjectId(

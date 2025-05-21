@@ -36,7 +36,6 @@ import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -74,6 +73,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -378,7 +378,7 @@ public class AuthenticationCallbackHandler
 
                 boolean identityRequired =
                         identityRequired(
-                                clientSession.getAuthRequestParams(),
+                                orchClientSession.getAuthRequestParams(),
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
 
@@ -442,14 +442,15 @@ public class AuthenticationCallbackHandler
                 clientSessionService.updateStoredClientSession(clientSessionId, clientSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+                var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
                                 accountState,
                                 clientId,
+                                orchClientSession.getClientName(),
+                                orchClientSession.getVtrList(),
                                 isTestJourney,
                                 docAppJourney,
-                                clientSession,
                                 userInfo.getClaim(
                                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                                         String.class));
@@ -467,7 +468,7 @@ public class AuthenticationCallbackHandler
                                 .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
                 CredentialTrustLevel requestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
                         Optional.ofNullable(session.getCurrentCredentialStrength())
                                 .map(
@@ -553,7 +554,7 @@ public class AuthenticationCallbackHandler
                             persistentSessionId,
                             reproveIdentity,
                             VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    clientSession.getVtrList()));
+                                    orchClientSession.getVtrList()));
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
@@ -567,7 +568,7 @@ public class AuthenticationCallbackHandler
                         stateHash);
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 if (isNull(session.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         session.getCurrentCredentialStrength())
@@ -616,7 +617,10 @@ public class AuthenticationCallbackHandler
                                 orchSession.getCurrentCredentialStrength()));
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
-                        orchAccountState, clientId, clientSession.getClientName(), isTestJourney);
+                        orchAccountState,
+                        clientId,
+                        orchClientSession.getClientName(),
+                        isTestJourney);
 
                 LOG.info("Successfully processed request");
 
@@ -724,9 +728,10 @@ public class AuthenticationCallbackHandler
     private Map<String, String> buildDimensions(
             AccountState accountState,
             String clientId,
+            String clientName,
+            List<VectorOfTrust> vtrList,
             boolean isTestJourney,
             boolean docAppJourney,
-            ClientSession clientSession,
             String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -742,7 +747,7 @@ public class AuthenticationCallbackHandler
                                 "IsDocApp",
                                 Boolean.toString(docAppJourney),
                                 "ClientName",
-                                clientSession.getClientName()));
+                                clientName));
 
         if (Objects.nonNull(verifiedMfaMethodType)) {
             dimensions.put("MfaMethod", verifiedMfaMethodType);
@@ -750,7 +755,7 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
+        var orderedVtrList = VectorOfTrust.orderVtrList(vtrList);
         var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
 
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
