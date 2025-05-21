@@ -102,6 +102,14 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .withInternalCommonSubjectId(internalCommonSubjectIdl));
     }
 
+    public void addAchievedCredentialTrustToSession(
+            String sessionId, CredentialTrustLevel credentialStrength) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withAchievedCredentialStrength(credentialStrength));
+    }
+
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId,
             String sessionId,
