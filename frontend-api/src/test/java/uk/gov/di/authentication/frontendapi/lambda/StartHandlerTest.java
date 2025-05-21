@@ -66,6 +66,7 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CO
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -123,7 +124,6 @@ class StartHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
         handler =
                 new StartHandler(
@@ -472,7 +472,8 @@ class StartHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
-                .thenReturn(new AuthSessionItem().withSessionId(SESSION_ID));
+                .thenReturn(
+                        new AuthSessionItem().withSessionId(SESSION_ID).withClientId(CLIENT_ID));
     }
 
     private void usingInvalidSession() {

@@ -16,7 +16,6 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
@@ -56,7 +55,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
@@ -204,9 +202,7 @@ public class StartHandler
             var scopes = List.of(startRequest.scope().split(" "));
             var redirectURI = new URI(startRequest.redirectUri());
             var state = new State(startRequest.state());
-            attachLogFieldToLogs(
-                    CLIENT_ID,
-                    userContext.getClient().map(ClientRegistry::getClientID).orElse(UNKNOWN));
+            attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
             var clientStartInfo =
                     startService.buildClientStartInfo(
                             userContext.getClient().orElseThrow(), scopes, redirectURI, state);
@@ -243,7 +239,7 @@ public class StartHandler
 
             var auditContext =
                     new AuditContext(
-                            userContext.getClient().get().getClientID(),
+                            authSession.getClientId(),
                             clientSessionId,
                             sessionId,
                             internalCommonSubjectIdentifierForAuditEvent,
