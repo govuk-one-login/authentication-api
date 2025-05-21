@@ -127,8 +127,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(state);
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
-
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         var requestedVtr = VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrStringList));
         var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
@@ -209,8 +207,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
-
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
         var headers = standardHeadersWithSessionId(sessionId);
@@ -278,8 +274,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("vtr", jsonArrayOf("Cl.Cm"));
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
-
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
         var response =
@@ -329,8 +323,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
-
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
         var headers = standardHeadersWithSessionId(sessionId);
@@ -364,7 +356,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("redirect_uri", REDIRECT_URI.toString())
                         .customParameter("vtr", jsonArrayOf("Cl.Cm"))
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
@@ -403,14 +394,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             state = new State();
             scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);
-            var builder =
-                    new AuthenticationRequest.Builder(
-                                    ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                            .nonce(new Nonce())
-                            .state(state);
-            var authRequest = builder.build();
-            redis.createClientSession(
-                    CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
             registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
         }
 
@@ -516,17 +499,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.signUp(EMAIL, "password");
             registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
             scope.add(OIDCScopeValue.OPENID);
-            var builder =
-                    new AuthenticationRequest.Builder(
-                                    ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                            .nonce(new Nonce())
-                            .state(state)
-                            .customParameter("client_id", CLIENT_ID)
-                            .customParameter("redirect_uri", REDIRECT_URI.toString())
-                            .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"));
-            var authRequest = builder.build();
-            redis.createClientSession(
-                    CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         }
 
         @Test

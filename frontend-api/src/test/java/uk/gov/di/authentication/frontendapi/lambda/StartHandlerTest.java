@@ -2,11 +2,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +21,6 @@ import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -32,12 +28,10 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -56,7 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -80,7 +73,6 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -100,7 +92,6 @@ class StartHandlerTest {
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final StartService startService = mock(StartService.class);
@@ -114,7 +105,6 @@ class StartHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final Session session = new Session();
-    private final ClientSession clientSession = getClientSession();
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -133,12 +123,10 @@ class StartHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(userContext.getClientSession()).thenReturn(clientSession);
         when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
         handler =
                 new StartHandler(
-                        clientSessionService,
                         sessionService,
                         auditService,
                         startService,
@@ -166,7 +154,6 @@ class StartHandlerTest {
             throws Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidClientSession();
         usingValidSession();
 
         var event =
@@ -195,7 +182,6 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
 
         var body =
                 makeRequestBody(
@@ -244,7 +230,6 @@ class StartHandlerTest {
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
@@ -262,7 +247,6 @@ class StartHandlerTest {
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
@@ -277,7 +261,6 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
 
         var headers = headersWithReauthenticate("true");
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
@@ -309,7 +292,6 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -336,7 +318,6 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
-        usingValidClientSession();
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -363,7 +344,6 @@ class StartHandlerTest {
         withUserProfilePresent();
         var isAuthenticated = true;
         usingValidSession();
-        usingValidClientSession();
         var userStartInfo =
                 new UserStartInfo(false, false, isAuthenticated, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -438,7 +418,6 @@ class StartHandlerTest {
 
         var isAuthenticated = true;
         usingValidSession();
-        usingValidClientSession();
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
 
@@ -470,25 +449,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
-        usingValidSession();
-        usingInvalidClientSession();
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1018);
-        assertThat(result, hasBody(expectedResponse));
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
     void shouldReturn400WhenSessionIsNotFound() throws Json.JsonException {
-        usingValidClientSession();
         usingInvalidSession();
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -508,16 +469,6 @@ class StartHandlerTest {
         return makeRequestBody(null, null, null, authenticated);
     }
 
-    private void usingValidClientSession() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-    }
-
-    private void usingInvalidClientSession() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.empty());
-    }
-
     private void usingValidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any(), any()))
@@ -526,23 +477,6 @@ class StartHandlerTest {
 
     private void usingInvalidSession() {
         when(sessionService.getSession(anyString())).thenReturn(Optional.empty());
-    }
-
-    private ClientSession getClientSession() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(TEST_CLIENT_ID), REDIRECT_URL)
-                        .customParameter("cookie_consent", COOKIE_CONSENT)
-                        .customParameter("state", STATE.toString())
-                        .customParameter("vtr", jsonArrayOf("P1.Cl.Cm"))
-                        .build();
-        VectorOfTrust vtr = mock(VectorOfTrust.class);
-        when(vtr.getLevelOfConfidence()).thenReturn(LevelOfConfidence.LOW_LEVEL);
-        when(vtr.getCredentialTrustLevel()).thenReturn(CredentialTrustLevel.MEDIUM_LEVEL);
-        return new ClientSession(authRequest.toParameters(), null, vtr, TEST_CLIENT_NAME);
     }
 
     private ClientStartInfo getClientStartInfo() {
@@ -563,7 +497,7 @@ class StartHandlerTest {
 
     private void usingStartServiceThatReturns(
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
-        when(startService.buildUserContext(eq(session), any(), any(AuthSessionItem.class)))
+        when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any()))
                 .thenReturn(clientStartInfo);

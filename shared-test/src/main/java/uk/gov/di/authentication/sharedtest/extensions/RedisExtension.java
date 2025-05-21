@@ -9,11 +9,9 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -22,15 +20,11 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
@@ -65,10 +59,6 @@ public class RedisExtension
     public void addStateToRedis(String prefix, State state, String sessionId)
             throws Json.JsonException {
         redis.saveWithExpiry(prefix + sessionId, objectMapper.writeValueAsString(state), 3600);
-    }
-
-    public void addClientSessionAndStateToRedis(State state, String clientSessionId) {
-        redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
     }
 
     public void incrementPasswordCount(String email) {
@@ -164,37 +154,6 @@ public class RedisExtension
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();
         }
-    }
-
-    public void createClientSession(
-            String clientSessionId, String clientName, Map<String, List<String>> authRequest)
-            throws Json.JsonException {
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(
-                        new ClientSession(
-                                authRequest,
-                                LocalDateTime.now(),
-                                VectorOfTrust.getDefaults(),
-                                clientName)),
-                300);
-    }
-
-    public ClientSession getClientSession(String clientSessionId) {
-        try {
-            var result = redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));
-            return objectMapper.readValue(result, ClientSession.class);
-        } catch (Json.JsonException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void createClientSession(String clientSessionId, ClientSession clientSession)
-            throws Json.JsonException {
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(clientSession),
-                300);
     }
 
     @Override

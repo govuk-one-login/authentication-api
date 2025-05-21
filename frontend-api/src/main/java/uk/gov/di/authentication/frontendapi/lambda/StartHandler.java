@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -54,6 +53,8 @@ import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveL
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -70,7 +71,6 @@ public class StartHandler
     private static final Logger LOG = LogManager.getLogger(StartHandler.class);
 
     protected static final String REAUTHENTICATE_HEADER = "Reauthenticate";
-    private final ClientSessionService clientSessionService;
     private final SessionService sessionService;
     private final AuditService auditService;
     private final StartService startService;
@@ -81,7 +81,6 @@ public class StartHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
-            ClientSessionService clientSessionService,
             SessionService sessionService,
             AuditService auditService,
             StartService startService,
@@ -89,7 +88,6 @@ public class StartHandler
             ConfigurationService configurationService,
             AuthenticationAttemptsService authenticationAttemptsService,
             CloudwatchMetricsService cloudwatchMetricsService) {
-        this.clientSessionService = clientSessionService;
         this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
@@ -100,7 +98,6 @@ public class StartHandler
     }
 
     public StartHandler(ConfigurationService configurationService) {
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
@@ -116,7 +113,6 @@ public class StartHandler
     }
 
     public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
@@ -157,13 +153,16 @@ public class StartHandler
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var clientSessionOpt =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-
-        if (clientSessionOpt.isEmpty()) {
+        var clientSessionIdOpt =
+                getOptionalHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        if (clientSessionIdOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
-        var clientSession = clientSessionOpt.get();
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdOpt.get());
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdOpt.get());
 
         StartRequest startRequest;
         try {
@@ -202,7 +201,7 @@ public class StartHandler
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-            var userContext = startService.buildUserContext(session, clientSession, authSession);
+            var userContext = startService.buildUserContext(session, authSession);
 
             var scopes = List.of(startRequest.scope().split(" "));
             var redirectURI = new URI(startRequest.redirectUri());

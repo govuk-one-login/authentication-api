@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -51,12 +50,8 @@ public class StartService {
         this.sessionService = sessionService;
     }
 
-    public UserContext buildUserContext(
-            Session session, ClientSession clientSession, AuthSessionItem authSession) {
-        var builder =
-                UserContext.builder(session)
-                        .withClientSession(clientSession)
-                        .withAuthSession(authSession);
+    public UserContext buildUserContext(Session session, AuthSessionItem authSession) {
+        var builder = UserContext.builder(session).withAuthSession(authSession);
         UserContext userContext;
         try {
             var clientRegistry = getClient(authSession.getClientId());
