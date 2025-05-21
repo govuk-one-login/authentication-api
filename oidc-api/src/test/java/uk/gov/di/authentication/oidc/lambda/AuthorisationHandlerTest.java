@@ -65,7 +65,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -159,7 +158,6 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DocAppAuthorisationService docAppAuthorisationService =
             mock(DocAppAuthorisationService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
