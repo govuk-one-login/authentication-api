@@ -311,7 +311,6 @@ class AuthorisationHandlerTest {
         when(sessionService.generateSession()).thenReturn(newSession);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
-        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
