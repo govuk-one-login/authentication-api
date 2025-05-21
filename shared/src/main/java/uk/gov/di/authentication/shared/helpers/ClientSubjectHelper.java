@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jose4j.base64url.Base64Url;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -37,6 +38,23 @@ public class ClientSubjectHelper {
         }
     }
 
+    public static Subject getSubject(
+            UserProfile userProfile,
+            ClientRegistry client,
+            AuthSessionItem authSession,
+            AuthenticationService authenticationService,
+            String internalSectorURI) {
+        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
+            return new Subject(userProfile.getPublicSubjectID());
+        } else {
+            return new Subject(
+                    calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(),
+                            getSectorIdentifierForClient(client, authSession, internalSectorURI),
+                            authenticationService.getOrGenerateSalt(userProfile)));
+        }
+    }
+
     public static Subject getSubjectWithSectorIdentifier(
             UserProfile userProfile,
             String sectorIdentifierURI,
@@ -50,14 +68,22 @@ public class ClientSubjectHelper {
 
     public static String getSectorIdentifierForClient(
             ClientRegistry client, String internalSectorUri) {
+        return getSectorIdentifierForClient(client, client.getClientID(), internalSectorUri);
+    }
+
+    public static String getSectorIdentifierForClient(
+            ClientRegistry client, AuthSessionItem authSession, String internalSectorUri) {
+        return getSectorIdentifierForClient(client, authSession.getClientId(), internalSectorUri);
+    }
+
+    public static String getSectorIdentifierForClient(
+            ClientRegistry client, String clientId, String internalSectorUri) {
         if (client.isOneLoginService()) {
             return returnHost(internalSectorUri);
         }
         if (!hasValidClientConfig(client)) {
             String message =
-                    String.format(
-                            "ClientConfig for client %s has invalid sector id.",
-                            client.getClientID());
+                    String.format("ClientConfig for client %s has invalid sector id.", clientId);
             LOG.error(message);
             throw new RuntimeException(message);
         }
