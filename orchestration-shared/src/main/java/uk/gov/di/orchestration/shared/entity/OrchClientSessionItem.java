@@ -128,12 +128,6 @@ public class OrchClientSessionItem {
         return this;
     }
 
-    // TODO: I've added this method in case we still need it during the migration.
-    // We should probably remove it if we're not using it after the migration though.
-    public VectorOfTrust getEffectiveVectorOfTrust() {
-        return VectorOfTrust.orderVtrList(vtrList).stream().findFirst().orElse(null);
-    }
-
     @DynamoDbAttribute(ATTRIBUTE_RP_PAIRWISE_ID)
     public String getRpPairwiseId() {
         // This is public because the DynamoDbMapper requires it to be for serialisation.
