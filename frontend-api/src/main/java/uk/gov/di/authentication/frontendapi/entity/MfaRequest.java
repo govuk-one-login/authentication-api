@@ -14,6 +14,10 @@ public class MfaRequest extends BaseFrontendRequest {
     @SerializedName("journeyType")
     private JourneyType journeyType;
 
+    @Expose
+    @SerializedName("mfaMethodId")
+    private String mfaMethodId;
+
     public MfaRequest() {}
 
     public MfaRequest(String email, boolean isResendCodeRequest) {
@@ -23,9 +27,17 @@ public class MfaRequest extends BaseFrontendRequest {
     }
 
     public MfaRequest(String email, boolean isResendCodeRequest, JourneyType journeyType) {
-        this.email = email;
-        this.isResendCodeRequest = isResendCodeRequest;
+        this(email, isResendCodeRequest);
         this.journeyType = journeyType;
+    }
+
+    public MfaRequest(
+            String email,
+            boolean isResendCodeRequest,
+            JourneyType journeyType,
+            String mfaMethodId) {
+        this(email, isResendCodeRequest, journeyType);
+        this.mfaMethodId = mfaMethodId;
     }
 
     public boolean isResendCodeRequest() {
@@ -34,5 +46,9 @@ public class MfaRequest extends BaseFrontendRequest {
 
     public JourneyType getJourneyType() {
         return journeyType;
+    }
+
+    public String getMfaMethodId() {
+        return mfaMethodId;
     }
 }

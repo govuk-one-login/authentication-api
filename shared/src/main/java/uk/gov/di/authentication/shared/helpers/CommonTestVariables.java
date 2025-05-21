@@ -1,8 +1,7 @@
-package uk.gov.di.authentication.frontendapi.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 
 import java.util.Map;
 

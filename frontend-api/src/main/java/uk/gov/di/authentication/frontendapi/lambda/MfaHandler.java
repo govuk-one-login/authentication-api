@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
-import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -16,7 +15,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -35,8 +34,10 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -57,6 +58,9 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessio
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -67,6 +71,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
+    private final MFAMethodsService mfaMethodsService;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -77,7 +82,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AuthenticationService authenticationService,
             AuditService auditService,
             AwsSqsClient sqsClient,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 MfaRequest.class,
                 configurationService,
@@ -89,6 +95,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.sqsClient = sqsClient;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public MfaHandler(
@@ -104,6 +111,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public MfaHandler() {
@@ -116,6 +124,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -186,22 +195,41 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
 
-            var userProfileMaybe = userContext.getUserProfile();
-            if (userProfileMaybe.isEmpty()) {
-                LOG.error(
-                        "Error message: Email from session does not have a user profile required, cannot determine if mfa methods are migrated");
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1049);
+            var retrieveMfaMethods = mfaMethodsService.getMfaMethods(email);
+            List<MFAMethod> retrievedMfaMethods;
+            if (retrieveMfaMethods.isFailure()) {
+                var failure = retrieveMfaMethods.getFailure();
+                if (failure == USER_DOES_NOT_HAVE_ACCOUNT) {
+                    LOG.error(
+                            "Error message: Email from session does not have a user profile required, cannot determine if mfa methods are migrated");
+                    return generateApiGatewayProxyErrorResponse(400, ERROR_1049);
+                } else if (failure
+                        == UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP) {
+                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1078);
+                } else {
+                    String message =
+                            String.format(
+                                    "Unexpected error occurred while retrieving mfa methods: %s",
+                                    failure);
+                    LOG.error(message);
+                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+                }
+            } else {
+                retrievedMfaMethods = retrieveMfaMethods.getSuccess();
             }
-            var userProfile = userProfileMaybe.get();
-            Optional<String> maybePhoneNumber = getPhoneNumber(email, userProfile);
 
-            if (maybePhoneNumber.isEmpty()) {
+            var maybeRequestedSmsMfaMethod =
+                    getMfaMethodOrDefaultMfaMethod(
+                            retrievedMfaMethods, request.getMfaMethodId(), MFAMethodType.SMS);
+
+            if (maybeRequestedSmsMfaMethod.isEmpty()) {
                 auditService.submitAuditEvent(
                         AUTH_MFA_MISSING_PHONE_NUMBER, auditContext, metadataPairs);
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
 
-            var phoneNumber = maybePhoneNumber.get();
+            var requestSmsMfaMethod = maybeRequestedSmsMfaMethod.get();
+            var phoneNumber = requestSmsMfaMethod.getDestination();
             auditContext = auditContext.withPhoneNumber(phoneNumber);
 
             LOG.info("Incrementing code request count for {}", journeyType);
@@ -345,27 +373,5 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         LOG.info("Resetting code request count");
         authSessionService.updateSession(
                 authSessionItem.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
-    }
-
-    private Optional<String> getPhoneNumber(String email, UserProfile userProfile) {
-        if (userProfile.getMfaMethodsMigrated()) {
-            var userCredentials = authenticationService.getUserCredentialsFromEmail(email);
-            var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
-            if (maybeDefaultMethod.isEmpty()) {
-                LOG.error("Attempted to send SMS otp for user without a default mfa method");
-                return Optional.empty();
-            }
-            var defaultMethod = maybeDefaultMethod.get();
-            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
-                return Optional.ofNullable(defaultMethod.getDestination());
-            } else {
-                LOG.error(
-                        "Attempted to send SMS otp for user with default mfa method of type {}",
-                        defaultMethod.getMfaMethodType());
-                return Optional.empty();
-            }
-        } else {
-            return authenticationService.getPhoneNumber(email);
-        }
     }
 }

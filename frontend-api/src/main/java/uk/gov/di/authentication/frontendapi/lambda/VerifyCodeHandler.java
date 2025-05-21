@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -52,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
@@ -61,6 +59,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -72,6 +71,7 @@ import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extract
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
@@ -221,19 +221,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             } else {
                 retrievedMfaMethods = retrieveMfaMethods.getSuccess();
             }
-            var maybeDefaultSmsMfaMethod =
-                    retrievedMfaMethods.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            Objects.equals(
-                                                            mfaMethod.getPriority(),
-                                                            PriorityIdentifier.DEFAULT.toString())
-                                                    && Objects.equals(
-                                                            mfaMethod.getMfaMethodType(),
-                                                            MFAMethodType.SMS.toString()))
-                            .findFirst();
+
+            var maybeRequestedSmsMfaMethod =
+                    getMfaMethodOrDefaultMfaMethod(
+                            retrievedMfaMethods, codeRequest.mfaMethodId(), MFAMethodType.SMS);
+
+            if (notificationType.isForPhoneNumber() && maybeRequestedSmsMfaMethod.isEmpty()) {
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
+            }
+
             var code =
-                    getCode(notificationType, authSession, userContext, maybeDefaultSmsMfaMethod);
+                    getCode(notificationType, authSession, userContext, maybeRequestedSmsMfaMethod);
 
             var errorResponse =
                     ValidationHelper.validateVerificationCode(
@@ -285,7 +283,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     auditContext,
                     client,
                     maybeRpPairwiseId,
-                    maybeDefaultSmsMfaMethod);
+                    maybeRequestedSmsMfaMethod);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -307,7 +305,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             NotificationType notificationType,
             AuthSessionItem authSession,
             UserContext userContext,
-            Optional<MFAMethod> maybeDefaultSmsMfaMethod)
+            Optional<MFAMethod> shouldBeRequestedSmsMfaMethod)
             throws ClientNotFoundException {
         if (isTestClientWithAllowedEmail(userContext, configurationService))
             return getOtpCodeForTestClient(notificationType);
@@ -315,9 +313,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         String emailAddress = authSession.getEmailAddress();
         String identifier = emailAddress;
         if (notificationType.isForPhoneNumber()) {
-            var defaultSmsMfaMethod = maybeDefaultSmsMfaMethod.orElseThrow();
+            var requestedMfaMethod = shouldBeRequestedSmsMfaMethod.orElseThrow();
             String formattedPhoneNumber =
-                    PhoneNumberHelper.formatPhoneNumber(defaultSmsMfaMethod.getDestination());
+                    PhoneNumberHelper.formatPhoneNumber(requestedMfaMethod.getDestination());
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
         return codeStorageService
@@ -441,7 +439,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditContext auditContext,
             ClientRegistry client,
             Optional<String> maybeRpPairwiseId,
-            Optional<MFAMethod> maybeDefaultSmsMfaMethod) {
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -481,9 +479,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         String emailAddress = authSession.getEmailAddress();
         String identifier = emailAddress;
         if (notificationType.isForPhoneNumber()) {
-            var defaultSmsMfaMethod = maybeDefaultSmsMfaMethod.orElseThrow();
+            var requestedSmsMfaMethod = maybeRequestedSmsMfaMethod.orElseThrow();
             String formattedPhoneNumber =
-                    PhoneNumberHelper.formatPhoneNumber(defaultSmsMfaMethod.getDestination());
+                    PhoneNumberHelper.formatPhoneNumber(requestedSmsMfaMethod.getDestination());
             identifier = emailAddress.concat(formattedPhoneNumber);
         }
         codeStorageService.deleteOtpCode(identifier, notificationType);

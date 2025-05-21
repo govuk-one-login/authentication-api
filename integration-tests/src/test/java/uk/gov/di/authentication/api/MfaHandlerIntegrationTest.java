@@ -187,7 +187,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "mfa-id-1");
         private static final MFAMethod BACKUP_SMS_METHOD =
                 MFAMethod.smsMfaMethod(
-                        true, true, MIGRATED_PHONE_NUMBER_2, PriorityIdentifier.BACKUP, "mfa-id-1");
+                        true, true, MIGRATED_PHONE_NUMBER_2, PriorityIdentifier.BACKUP, "mfa-id-2");
 
         @BeforeEach
         void setup() throws Json.JsonException {
@@ -213,6 +213,25 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
             assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
                     notificationsQueue, MIGRATED_PHONE_NUMBER_1, MFA_SMS);
+        }
+
+        @Test
+        void shouldReturn204AndSendCodeToCorrectNumberWhenIdentifiedMfaMethodIsChosen() {
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    new MfaRequest(
+                                            USER_EMAIL,
+                                            false,
+                                            null,
+                                            BACKUP_SMS_METHOD.getMfaIdentifier())),
+                            constructFrontendHeaders(SESSION_ID),
+                            Map.of());
+
+            assertThat(response, hasStatus(204));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
+            assertNotificationsQueueHasMessageWithDestinationAndNotificationType(
+                    notificationsQueue, MIGRATED_PHONE_NUMBER_2, MFA_SMS);
         }
 
         @Test

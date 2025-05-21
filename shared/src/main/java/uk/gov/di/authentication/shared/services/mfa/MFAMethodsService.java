@@ -228,6 +228,26 @@ public class MFAMethodsService {
                 .orElse(Result.failure(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
     }
 
+    public static Optional<MFAMethod> getMfaMethodOrDefaultMfaMethod(
+            List<MFAMethod> mfaMethods, String mfaMethodId, MFAMethodType methodType) {
+        return mfaMethods.stream()
+                .filter(
+                        methodType == null
+                                ? mfaMethod -> true
+                                : mfaMethod ->
+                                        Objects.equals(
+                                                MFAMethodType.valueOf(mfaMethod.getMfaMethodType()),
+                                                methodType))
+                .filter(
+                        mfaMethodId == null
+                                ? mfaMethod ->
+                                        Objects.equals(
+                                                mfaMethod.getPriority(),
+                                                PriorityIdentifier.DEFAULT.toString())
+                                : mfaMethod -> mfaMethod.getMfaIdentifier().equals(mfaMethodId))
+                .findFirst();
+    }
+
     private Result<MfaUpdateFailureReason, List<MFAMethod>> handleBackupMethodUpdate(
             MFAMethod backupMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,

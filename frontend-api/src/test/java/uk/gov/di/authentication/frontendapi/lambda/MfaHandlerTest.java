@@ -20,9 +20,8 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -37,6 +36,8 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -60,17 +61,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -98,6 +99,7 @@ class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final MFAMethod backupAuthAppMethod =
@@ -168,7 +170,6 @@ class MfaHandlerTest {
                     SupportedLanguage.EN,
                     SESSION_ID,
                     CLIENT_SESSION_ID);
-    private static final UserProfile userProfile = mock(UserProfile.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
@@ -186,9 +187,17 @@ class MfaHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
-        when(userProfile.getMfaMethodsMigrated()).thenReturn(false);
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.success(
+                                List.of(
+                                        MFAMethod.smsMfaMethod(
+                                                true,
+                                                true,
+                                                UK_MOBILE_NUMBER,
+                                                PriorityIdentifier.DEFAULT,
+                                                "set-up-sms-mfa-identifier"))));
 
         handler =
                 new MfaHandler(
@@ -200,7 +209,8 @@ class MfaHandlerTest {
                         authenticationService,
                         auditService,
                         sqsClient,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
     }
 
@@ -234,15 +244,9 @@ class MfaHandlerTest {
     @Test
     void shouldReturn204ForSuccessfulMfaRequestForMigratedUser() throws Json.JsonException {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(
-                        new UserCredentials()
-                                .withMfaMethods(List.of(backupAuthAppMethod, defaultSmsMethod)));
-        var migratedUserProfile = mock(UserProfile.class);
-        when(migratedUserProfile.getMfaMethodsMigrated()).thenReturn(true);
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
-                .thenReturn(Optional.of(migratedUserProfile));
+
+        List<MFAMethod> mfaMethods = List.of(backupAuthAppMethod, defaultSmsMethod);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -282,6 +286,47 @@ class MfaHandlerTest {
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
+    @Test
+    void shouldSendMessageAndStoreCodeForRequestWithIdentifiedMfaMethod()
+            throws Json.JsonException {
+        usingValidSession();
+
+        List<MFAMethod> mfaMethods = List.of(backupSmsMethod, defaultSmsMethod);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
+
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"mfaMethodId\": \"%s\"}",
+                        EMAIL, backupSmsMethod.getMfaIdentifier());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        var notifyRequestWithNumberFromMigratedMethod =
+                new NotifyRequest(
+                        backupSmsMethod.getDestination(),
+                        MFA_SMS,
+                        CODE,
+                        SupportedLanguage.EN,
+                        SESSION_ID,
+                        CLIENT_SESSION_ID);
+        verify(sqsClient)
+                .send(
+                        argThat(
+                                partiallyContainsJsonString(
+                                        objectMapper.writeValueAsString(
+                                                notifyRequestWithNumberFromMigratedMethod),
+                                        "unique_notification_reference")));
+        verify(codeStorageService)
+                .saveOtpCode(
+                        EMAIL.concat(backupSmsMethod.getDestination()),
+                        CODE,
+                        CODE_EXPIRY_TIME,
+                        MFA_SMS);
+    }
+
     private static Stream<List<MFAMethod>> mfaMethodsWithoutSmsDefault() {
         return Stream.of(List.of(defaultAuthAppMethod, backupSmsMethod), List.of(backupSmsMethod));
     }
@@ -291,13 +336,7 @@ class MfaHandlerTest {
     void shouldReturn400IfMigratedUserDoesNotHaveSmsDefault(
             List<MFAMethod> mfaMethodsWithoutSmsDefault) {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(new UserCredentials().withMfaMethods(mfaMethodsWithoutSmsDefault));
-        var migratedUserProfile = mock(UserProfile.class);
-        when(migratedUserProfile.getMfaMethodsMigrated()).thenReturn(true);
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
-                .thenReturn(Optional.of(migratedUserProfile));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -446,7 +485,8 @@ class MfaHandlerTest {
     @Test
     void shouldReturn400IfEmailDoesNotHaveUserProfile() {
         usingValidSession();
-        when(authenticationService.getUserProfileFromEmail(EMAIL)).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -461,7 +501,8 @@ class MfaHandlerTest {
     @Test
     void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
