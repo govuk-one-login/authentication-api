@@ -65,7 +65,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -159,7 +158,6 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DocAppAuthorisationService docAppAuthorisationService =
             mock(DocAppAuthorisationService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final OrchClientSessionItem orchClientSession = mock(OrchClientSessionItem.class);
@@ -311,7 +309,6 @@ class AuthorisationHandlerTest {
         when(sessionService.generateSession()).thenReturn(newSession);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
-        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
@@ -721,7 +718,6 @@ class AuthorisationHandlerTest {
                 boolean isAuthOrchSplitEnabled) {
             withExistingSession(session);
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             Map<String, String> requestParams =
@@ -748,7 +744,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
@@ -795,7 +790,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
@@ -845,7 +839,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =

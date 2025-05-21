@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -144,9 +143,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var authRequestParams = generateDocAppAuthRequest().toParameters();
         var docAppSubjectId = new Subject();
         var vtrList = List.of(VectorOfTrust.getDefaults());
-        var clientSession =
-                new ClientSession(authRequestParams, creationDate, vtrList, CLIENT_NAME);
-        clientSession.setDocAppSubjectId(docAppSubjectId);
         var orchClientSession =
                 new OrchClientSessionItem(
                         clientSessionId, authRequestParams, creationDate, vtrList, CLIENT_NAME);
