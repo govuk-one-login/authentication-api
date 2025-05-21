@@ -73,7 +73,6 @@ public class UserInfoServiceTest {
     private static final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
-                    .withCurrentCredentialStrength(TEST_CURRENT_CREDENTIAL_STRENGTH)
                     .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
                     .withUpliftRequired(TEST_UPLIFT_REQUIRED);
 
@@ -102,7 +101,6 @@ public class UserInfoServiceTest {
             Boolean expectedPhoneNumberVerified,
             String expectedSalt,
             MFAMethodType expectedVerifiedMfaMethod,
-            CredentialTrustLevel expectedCurrentCredentialStrength,
             Boolean expectedUpliftRequired,
             CredentialTrustLevel expectedAchievedCredentialStrength) {
         UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
@@ -120,8 +118,6 @@ public class UserInfoServiceTest {
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
         assertEquals(expectedVerifiedMfaMethod, actual.getClaim("verified_mfa_method_type"));
-        assertEquals(
-                expectedCurrentCredentialStrength, actual.getClaim("current_credential_strength"));
         assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
         assertEquals(expectedUpliftRequired, actual.getClaim("uplift_required"));
         assertEquals(
@@ -143,7 +139,6 @@ public class UserInfoServiceTest {
                         null,
                         null,
                         null,
-                        null,
                         null),
                 Arguments.of(
                         getMockAccessTokenStore(
@@ -153,7 +148,6 @@ public class UserInfoServiceTest {
                         null,
                         TEST_EMAIL,
                         TEST_EMAIL_VERIFIED,
-                        null,
                         null,
                         null,
                         null,
@@ -172,7 +166,6 @@ public class UserInfoServiceTest {
                                         "phone_number_verified",
                                         "salt",
                                         "verified_mfa_method_type",
-                                        "current_credential_strength",
                                         "uplift_required",
                                         "achieved_credential_strength")),
                         TEST_LEGACY_SUBJECT_ID,
@@ -184,7 +177,6 @@ public class UserInfoServiceTest {
                         TEST_PHONE_VERIFIED,
                         bytesToBase64(TEST_SALT),
                         TEST_VERIFIED_MFA_METHOD_TYPE,
-                        TEST_CURRENT_CREDENTIAL_STRENGTH,
                         TEST_UPLIFT_REQUIRED,
                         TEST_ACHIEVED_CREDENTIAL_STRENGTH));
     }

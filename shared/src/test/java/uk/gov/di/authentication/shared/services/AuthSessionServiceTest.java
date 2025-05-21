@@ -9,7 +9,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 
 import java.time.Instant;
@@ -97,7 +96,7 @@ class AuthSessionServiceTest {
 
         var newSession =
                 authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.empty(), NEW_SESSION_ID, null);
+                        Optional.empty(), NEW_SESSION_ID);
 
         verifyNoInteractions(dynamoDbClient);
         assertEquals(NEW_SESSION_ID, newSession.getSessionId());
@@ -110,7 +109,7 @@ class AuthSessionServiceTest {
 
         var newSession =
                 authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(SESSION_ID), NEW_SESSION_ID, null);
+                        Optional.of(SESSION_ID), NEW_SESSION_ID);
 
         verifyNoInteractions(dynamoDbClient);
         assertEquals(NEW_SESSION_ID, newSession.getSessionId());
@@ -123,7 +122,7 @@ class AuthSessionServiceTest {
 
         var updatedSession =
                 authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(SESSION_ID), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.of(SESSION_ID), NEW_SESSION_ID);
 
         assertThat(updatedSession.getSessionId(), is(NEW_SESSION_ID));
         assertTrue(updatedSession.getTimeToLive() > Instant.now().getEpochSecond());
@@ -139,11 +138,9 @@ class AuthSessionServiceTest {
 
         var authSession =
                 authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.of(SESSION_ID), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.of(SESSION_ID), NEW_SESSION_ID);
 
         assertThat(authSession.getSessionId(), is(NEW_SESSION_ID));
-        assertThat(
-                authSession.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(
                 authSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
         assertThat(authSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
@@ -155,11 +152,9 @@ class AuthSessionServiceTest {
 
         var authSession =
                 authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                        Optional.empty(), NEW_SESSION_ID, CredentialTrustLevel.MEDIUM_LEVEL);
+                        Optional.empty(), NEW_SESSION_ID);
 
         assertThat(authSession.getSessionId(), is(NEW_SESSION_ID));
-        assertThat(
-                authSession.getCurrentCredentialStrength(), is(CredentialTrustLevel.MEDIUM_LEVEL));
     }
 
     @Test

@@ -22,7 +22,6 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
     public static final String ATTRIBUTE_RESET_PASSWORD_STATE = "resetPasswordState";
     public static final String ATTRIBUTE_RESET_MFA_STATE = "resetMfaState";
-    public static final String ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH = "currentCredentialStrength";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
@@ -178,21 +177,6 @@ public class AuthSessionItem {
 
     public AuthSessionItem withResetMfaState(ResetMfaState resetMfaState) {
         this.resetMfaState = resetMfaState;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_CURRENT_CREDENTIAL_STRENGTH)
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return this.currentCredentialStrength;
-    }
-
-    public void setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-    }
-
-    public AuthSessionItem withCurrentCredentialStrength(
-            CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
         return this;
     }
 

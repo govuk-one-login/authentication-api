@@ -101,16 +101,7 @@ public class UserInfoService {
                     authSession.getVerifiedMfaMethodType());
             LOG.info("verified_mfa value: {}", authSession.getVerifiedMfaMethodType());
         }
-        if (accessTokenInfo
-                .getClaims()
-                .contains(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())) {
-            userInfo.setClaim(
-                    AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue(),
-                    authSession.getCurrentCredentialStrength());
-            LOG.info(
-                    "current_credential_strength value: {}",
-                    authSession.getCurrentCredentialStrength());
-        }
+
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue())) {
             userInfo.setClaim(
                     AuthUserInfoClaims.UPLIFT_REQUIRED.getValue(), authSession.getUpliftRequired());
