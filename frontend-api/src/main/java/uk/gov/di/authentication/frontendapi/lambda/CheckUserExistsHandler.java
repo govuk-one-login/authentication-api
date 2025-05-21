@@ -161,6 +161,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
                                         userContext.getClient().get(),
+                                        userContext.getAuthSession(),
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();
