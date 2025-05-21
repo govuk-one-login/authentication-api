@@ -721,7 +721,6 @@ class AuthorisationHandlerTest {
                 boolean isAuthOrchSplitEnabled) {
             withExistingSession(session);
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             Map<String, String> requestParams =
@@ -748,7 +747,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
@@ -795,7 +793,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
@@ -845,7 +842,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
-            when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
             APIGatewayProxyResponseEvent response =
