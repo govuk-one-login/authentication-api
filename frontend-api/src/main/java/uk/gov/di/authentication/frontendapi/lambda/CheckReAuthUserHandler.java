@@ -175,6 +175,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 ClientSubjectHelper.getSubject(
                                 userProfile,
                                 client,
+                                userContext.getAuthSession(),
                                 authenticationService,
                                 configurationService.getInternalSectorUri())
                         .getValue();
