@@ -6,7 +6,6 @@ import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
@@ -35,9 +34,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldCallUpdateProfileToApproveTermsAndConditionsAndReturn204()
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
+    void shouldCallUpdateProfileToApproveTermsAndConditionsAndReturn204() {
+        String sessionId = IdGenerator.generate();
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId);
 
