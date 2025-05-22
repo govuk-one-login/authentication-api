@@ -523,6 +523,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
+            orchSessionExtension.updateSession(
+                    orchSessionExtension
+                            .getSession(previousSessionId)
+                            .orElseThrow()
+                            .withBrowserSessionId(BROWSER_SESSION_ID));
             registerUser();
 
             var response =
@@ -532,7 +537,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     new HttpCookie[] {
                                         buildSessionCookie(
                                                 previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", "some-other-browser-session-id")
+                                        // No BSID cookie
                                     }),
                             constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
                             Optional.of("GET"));
@@ -554,7 +559,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var sessionCookie =
                     getHttpCookieFromMultiValueResponseHeaders(
                             response.getMultiValueHeaders(), "gs");
-            assertOnSessionCookie(sessionCookie, previousSessionId);
+            assertOnSessionCookie(sessionCookie);
 
             Optional<HttpCookie> browserSessionIdCookie =
                     getHttpCookieFromMultiValueResponseHeaders(
@@ -2150,7 +2155,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String givenAnExistingSession() throws Json.JsonException {
-        return redis.createSession();
+        var sessionId = IdGenerator.generate();
+        orchSessionExtension.addSession(new OrchSessionItem(sessionId));
+        redis.createSession(sessionId);
+        return sessionId;
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
@@ -2362,7 +2370,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void assertOnSessionCookie(
             Optional<HttpCookie> sessionCookie, String previousSessionId) {
         assertOnSessionCookie(sessionCookie);
-        assertThat(sessionCookie.get().getValue(), not(startsWith(previousSessionId)));
+        assertThat(sessionCookie.get().getValue(), not(containsString(previousSessionId)));
         assertTrue(orchSessionExtension.getSession(previousSessionId).isEmpty());
     }
 
