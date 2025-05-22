@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -51,7 +50,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
@@ -60,7 +58,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         super(
                 AuthCodeRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
