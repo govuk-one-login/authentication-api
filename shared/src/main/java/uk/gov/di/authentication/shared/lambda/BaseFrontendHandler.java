@@ -61,21 +61,6 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientService clientService,
-            AuthenticationService authenticationService,
-            AuthSessionService authSessionService) {
-        this.clazz = clazz;
-        this.configurationService = configurationService;
-        this.sessionService = sessionService;
-        this.clientService = clientService;
-        this.authenticationService = authenticationService;
-        this.authSessionService = authSessionService;
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService) {
