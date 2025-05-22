@@ -50,9 +50,8 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn200WhenValidSignUpRequest() throws Json.JsonException {
+    void shouldReturn200WhenValidSignUpRequest() {
         setUpTest();
-        redis.createSession(SESSION_ID);
         withAuthSession();
 
         Map<String, String> headers = new HashMap<>();
