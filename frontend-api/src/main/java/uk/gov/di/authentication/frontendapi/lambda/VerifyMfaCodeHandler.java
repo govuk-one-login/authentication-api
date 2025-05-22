@@ -165,7 +165,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
         ClientRegistry client = clientMaybe.get();
 
-        Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client);
+        Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client, authSession);
 
         var auditContext =
                 auditContextFromUserContext(
@@ -413,7 +413,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .withVerifiedMfaMethodType(codeRequest.getMfaMethodType())
                         .withAchievedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
-        var clientId = userContext.getClientId();
+        var clientId = authSession.getClientId();
 
         cloudwatchMetricsService.incrementAuthenticationSuccess(
                 authSession.getIsNewAccount(),
@@ -566,12 +566,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .toArray(AuditService.MetadataPair[]::new);
     }
 
-    private Optional<String> getRpPairwiseId(UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getRpPairwiseId(
+            UserProfile userProfile, ClientRegistry client, AuthSessionItem authSession) {
         try {
             return Optional.of(
                     ClientSubjectHelper.getSubject(
                                     userProfile,
                                     client,
+                                    authSession,
                                     authenticationService,
                                     configurationService.getInternalSectorUri())
                             .getValue());
