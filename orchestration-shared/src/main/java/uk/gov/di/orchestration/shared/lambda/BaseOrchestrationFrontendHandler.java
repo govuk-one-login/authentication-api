@@ -106,7 +106,7 @@ public abstract class BaseOrchestrationFrontendHandler
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         OrchestrationUserSession.Builder userSessionBuilder =
-                OrchestrationUserSession.builder(sessionOpt.get())
+                OrchestrationUserSession.builder()
                         .withSessionId(sessionId)
                         .withClientSessionId(clientSessionIdOpt.orElse(null))
                         .withOrchClientSession(orchClientSessionOpt.orElse(null))
