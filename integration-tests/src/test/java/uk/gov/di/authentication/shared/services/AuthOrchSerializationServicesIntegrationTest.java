@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class AuthOrchSerializationServicesIntegrationTest {
@@ -48,15 +49,14 @@ class AuthOrchSerializationServicesIntegrationTest {
     }
 
     @Test
-    void orchCanReadFromSessionCreatedByAuth() {
+    void orchCanReadSessionCreatedByAuth() {
         var sessionId = "some-existing-session-id";
         var authSession = new Session();
-        authSession.setCurrentCredentialStrength(authMediumCredentialTrustLevel);
         authSessionService.storeOrUpdateSession(authSession, sessionId);
-        var orchSession = orchSessionService.getSession(sessionId).get();
-        assertThat(
-                orchSession.getCurrentCredentialStrength().getValue(),
-                equalTo(orchMediumCredentialTrustLevel.getValue()));
+        assertDoesNotThrow(
+                () -> {
+                    orchSessionService.getSession(sessionId).get();
+                });
     }
 
     @Test
@@ -65,7 +65,6 @@ class AuthOrchSerializationServicesIntegrationTest {
         orchSession.setCurrentCredentialStrength(orchMediumCredentialTrustLevel);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
-        authSession.setCurrentCredentialStrength(authMediumCredentialTrustLevel);
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertThat(
@@ -80,7 +79,6 @@ class AuthOrchSerializationServicesIntegrationTest {
         var orchSession = orchSessionService.generateSession();
         orchSessionService.storeOrUpdateSession(orchSession, oldSessionId);
         var authSession = authSessionService.getSession(oldSessionId).get();
-        authSession.setCurrentCredentialStrength(authMediumCredentialTrustLevel);
         authSessionService.storeOrUpdateSession(authSession, oldSessionId);
         orchSession = orchSessionService.getSession(oldSessionId).get();
         orchSessionService.updateWithNewSessionId(orchSession, oldSessionId, newSessionId);

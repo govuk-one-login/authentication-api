@@ -404,9 +404,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 codeRequest.getMfaMethodType().getValue(),
                 journeyType);
 
-        sessionService.storeOrUpdateSession(
-                session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL),
-                userContext.getAuthSession().getSessionId());
+        sessionService.storeOrUpdateSession(session, userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSession
