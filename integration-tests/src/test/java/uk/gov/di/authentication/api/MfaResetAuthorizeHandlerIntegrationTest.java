@@ -25,6 +25,7 @@ import uk.gov.di.authentication.frontendapi.entity.MfaResetRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -168,6 +169,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
 
     @BeforeEach
     void setup() throws Json.JsonException, MalformedURLException, NoSuchAlgorithmException {
+        sessionId = IdGenerator.generate();
         rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .privateKey(
@@ -191,14 +193,9 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                         "test.account.gov.uk",
                         SaltHelper.generateNewSalt());
 
-        setUpSession();
         addSessionToSessionStore(internalCommonSubjectId);
         registerClient();
         addUserToUserStore();
-    }
-
-    private void setUpSession() throws Json.JsonException {
-        sessionId = redis.createSession();
     }
 
     private void addSessionToSessionStore(String internalCommonSubjectId) {
