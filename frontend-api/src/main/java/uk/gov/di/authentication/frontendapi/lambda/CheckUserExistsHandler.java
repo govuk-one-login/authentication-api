@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -52,7 +51,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             AuthSessionService authSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
@@ -61,7 +59,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
