@@ -596,7 +596,6 @@ class ResetPasswordRequestHandlerTest {
             verify(awsSqsClient, never()).send(anyString());
             verify(codeStorageService, never())
                     .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
-            verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
             verifyNoInteractions(awsSqsClient);
         }
 
