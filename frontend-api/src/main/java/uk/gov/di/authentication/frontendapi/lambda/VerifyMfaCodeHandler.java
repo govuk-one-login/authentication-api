@@ -122,7 +122,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(VerifyMfaCodeRequest.class, configurationService, redis);
+        super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaCodeProcessorFactory =

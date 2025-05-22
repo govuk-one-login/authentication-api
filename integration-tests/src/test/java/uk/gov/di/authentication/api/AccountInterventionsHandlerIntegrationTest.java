@@ -74,7 +74,6 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         handler =
                 new AccountInterventionsHandler(
                         ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE,
-                        redisConnectionService,
                         new LambdaInvokerService(mockLambdaClient));
         accountInterventionsStubExtension.initWithBlockedUserId(
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),

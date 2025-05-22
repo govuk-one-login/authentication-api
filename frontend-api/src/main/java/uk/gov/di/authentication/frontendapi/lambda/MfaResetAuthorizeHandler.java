@@ -80,7 +80,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
     public MfaResetAuthorizeHandler(RedisConnectionService redisConnectionService)
             throws MalformedURLException {
-        super(MfaResetRequest.class, ConfigurationService.getInstance(), redisConnectionService);
+        super(MfaResetRequest.class, ConfigurationService.getInstance());
         KmsConnectionService kmsConnectionService = new KmsConnectionService(configurationService);
         JwtService jwtService = new JwtService(kmsConnectionService);
         TokenService tokenService =

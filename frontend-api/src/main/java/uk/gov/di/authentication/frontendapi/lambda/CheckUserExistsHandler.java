@@ -78,7 +78,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckUserExistsRequest.class, configurationService, redis);
+        super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
     }

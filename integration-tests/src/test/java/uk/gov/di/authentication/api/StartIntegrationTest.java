@@ -77,7 +77,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+        handler = new StartHandler(new TestConfigurationService());
         txmaAuditQueue.clear();
     }
 
@@ -353,7 +353,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = redis.createSession();
             userStore.signUp(EMAIL, "password");
@@ -438,7 +438,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
             redis.createSession(sessionId);

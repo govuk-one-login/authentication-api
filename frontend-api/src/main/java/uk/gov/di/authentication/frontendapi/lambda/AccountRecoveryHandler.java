@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -52,14 +51,6 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
 
     public AccountRecoveryHandler(ConfigurationService configurationService) {
         super(AccountRecoveryRequest.class, configurationService);
-        this.dynamoAccountModifiersService =
-                new DynamoAccountModifiersService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public AccountRecoveryHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(AccountRecoveryRequest.class, configurationService, redis);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
         this.auditService = new AuditService(configurationService);

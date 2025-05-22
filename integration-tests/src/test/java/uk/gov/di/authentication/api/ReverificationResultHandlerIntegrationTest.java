@@ -114,7 +114,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new ReverificationResultHandler(redisConnectionService);
+        handler = new ReverificationResultHandler();
 
         sessionId = IdGenerator.generate();
         internalCommonSubjectId =

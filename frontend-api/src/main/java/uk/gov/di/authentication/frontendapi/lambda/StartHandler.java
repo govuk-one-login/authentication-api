@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -97,21 +96,6 @@ public class StartHandler
 
     public StartHandler(ConfigurationService configurationService) {
         this.sessionService = new SessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
-        this.startService =
-                new StartService(
-                        new DynamoClientService(configurationService),
-                        new DynamoService(configurationService),
-                        sessionService);
-        this.authSessionService = new AuthSessionService(configurationService);
-        this.configurationService = configurationService;
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-    }
-
-    public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);

@@ -112,7 +112,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
     public ResetPasswordHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(ResetPasswordCompletionRequest.class, configurationService, redis);
+        super(ResetPasswordCompletionRequest.class, configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(

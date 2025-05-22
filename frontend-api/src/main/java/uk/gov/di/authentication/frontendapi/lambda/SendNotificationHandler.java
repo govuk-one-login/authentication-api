@@ -136,7 +136,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(SendNotificationRequest.class, configurationService, redis);
+        super(SendNotificationRequest.class, configurationService);
         this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

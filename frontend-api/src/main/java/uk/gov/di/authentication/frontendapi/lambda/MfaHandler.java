@@ -98,7 +98,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     public MfaHandler(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService) {
-        super(MfaRequest.class, configurationService, redisConnectionService);
+        super(MfaRequest.class, configurationService);
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(configurationService, redisConnectionService);

@@ -97,7 +97,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         requestHeaders = createHeaders(sessionId);
-        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 

@@ -95,18 +95,6 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            RedisConnectionService redis) {
-        this.clazz = clazz;
-        this.configurationService = configurationService;
-        this.sessionService = null;
-        this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
             boolean loadUserCredentials) {
         this(clazz, configurationService);
         this.loadUserCredentials = loadUserCredentials;
@@ -117,7 +105,7 @@ public abstract class BaseFrontendHandler<T>
             ConfigurationService configurationService,
             boolean loadUserCredentials,
             RedisConnectionService redis) {
-        this(clazz, configurationService, redis);
+        this(clazz, configurationService);
         this.loadUserCredentials = loadUserCredentials;
     }
 

@@ -41,9 +41,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
     @BeforeEach
     void setup() {
-        handler =
-                new AccountRecoveryHandler(
-                        new AccountRecoveryTestConfigurationService(), redisConnectionService);
+        handler = new AccountRecoveryHandler(new AccountRecoveryTestConfigurationService());
         txmaAuditQueue.clear();
     }
 

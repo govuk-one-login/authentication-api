@@ -128,7 +128,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     public VerifyCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(VerifyCodeRequest.class, configurationService, redis);
+        super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
