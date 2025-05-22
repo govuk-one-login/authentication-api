@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
@@ -89,7 +88,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient emailSqsClient,
@@ -102,7 +100,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         super(
                 SendNotificationRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);

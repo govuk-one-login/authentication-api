@@ -8,6 +8,7 @@ import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -38,14 +39,13 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler =
                 new SendNotificationHandler(
                         TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
-        SESSION_ID = redis.createSession();
+        SESSION_ID = IdGenerator.generate();
         authSessionExtension.addSession(SESSION_ID);
         authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
     }
 
     @Test
-    void shouldCallSendNotificationEndpointAndPlaceSuccessMessageOnAuditQueueWhenSuccessful()
-            throws Json.JsonException {
+    void shouldCallSendNotificationEndpointAndPlaceSuccessMessageOnAuditQueueWhenSuccessful() {
         var response =
                 makeRequest(
                         Optional.of(
