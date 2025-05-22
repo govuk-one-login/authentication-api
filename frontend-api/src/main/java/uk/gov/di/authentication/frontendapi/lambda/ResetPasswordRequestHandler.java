@@ -13,10 +13,11 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerRe
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -33,6 +34,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Objects;
@@ -42,7 +44,7 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
-import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
+import static uk.gov.di.authentication.frontendapi.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -60,6 +62,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final MFAMethodsService mfaMethodsService;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -70,7 +73,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -82,6 +86,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public ResetPasswordRequestHandler() {
@@ -98,6 +103,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public ResetPasswordRequestHandler(
@@ -111,6 +117,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -259,38 +266,50 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         }
 
         LOG.info("Successfully processed request");
-        var credentialTrustLevel = userContext.getAuthSession().getRequestedCredentialStrength();
-        var maybeResponse =
-                generateResponseWithMfaDetail(resetPasswordRequest, credentialTrustLevel);
-        if (maybeResponse.isPresent()) {
-            try {
-                return generateApiGatewayProxyResponse(200, maybeResponse.get());
-            } catch (JsonException e) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-            }
-        } else {
-            LOG.error("Could not find user profile for reset password request");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(resetPasswordRequest.getEmail());
+        if (retrieveMfaMethods.isFailure()) {
+            return switch (retrieveMfaMethods.getFailure()) {
+                case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.ERROR_1078);
+                case USER_DOES_NOT_HAVE_ACCOUNT -> {
+                    LOG.error("Could not find user profile for reset password request");
+                    yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+                }
+            };
         }
-    }
 
-    Optional<ResetPasswordRequestHandlerResponse> generateResponseWithMfaDetail(
-            ResetPasswordRequest resetPasswordRequest, CredentialTrustLevel credentialTrustLevel) {
-        return authenticationService
-                .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
-                .map(
-                        userProfile -> {
-                            var userMfaDetail =
-                                    getUserMFADetail(
-                                            credentialTrustLevel,
-                                            authenticationService.getUserCredentialsFromEmail(
-                                                    resetPasswordRequest.getEmail()),
-                                            userProfile);
+        var retrievedMfaMethods = retrieveMfaMethods.getSuccess();
 
-                            return new ResetPasswordRequestHandlerResponse(
-                                    userMfaDetail.mfaMethodType(),
-                                    getLastDigitsOfPhoneNumber(userMfaDetail));
-                        });
+        var defaultMfaMethod =
+                MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
+        String defaultMfaType = defaultMfaMethod.map(MFAMethod::getMfaMethodType).orElse(null);
+        String defaultMfaPhoneNumber =
+                defaultMfaType != null
+                                && MFAMethodType.valueOf(defaultMfaType).equals(MFAMethodType.SMS)
+                        ? defaultMfaMethod.map(MFAMethod::getDestination).orElse(null)
+                        : null;
+
+        var maybeMfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrievedMfaMethods);
+        if (maybeMfaMethodResponses.isFailure()) {
+            LOG.error(maybeMfaMethodResponses.getFailure());
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+        }
+
+        var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
+
+        try {
+            return generateApiGatewayProxyResponse(
+                    200,
+                    new ResetPasswordRequestHandlerResponse(
+                            defaultMfaType != null ? MFAMethodType.valueOf(defaultMfaType) : null,
+                            mfaMethodResponses,
+                            defaultMfaPhoneNumber != null
+                                    ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
+                                    : null));
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 
     private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
