@@ -259,7 +259,6 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(any(OrchClientSessionItem.class), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel);
         orchSession.setIsNewAccount(OrchSessionItem.AccountState.NEW);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(

@@ -150,7 +150,7 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
 
-    private static final Session session = new Session().setCurrentCredentialStrength(null);
+    private static final Session session = new Session();
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withAuthenticated(false);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -228,7 +228,6 @@ class AuthenticationCallbackHandlerTest {
 
         clearInvocations(orchAuthCodeService);
 
-        session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
