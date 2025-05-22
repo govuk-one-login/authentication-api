@@ -62,6 +62,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String RP_SECTOR_URI = "https://rp-sector-uri.com";
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
+    private static final String LOGIN_HINT = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
@@ -95,7 +96,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), "P2.Cl.Cm"),
+                        constructQueryStringParameters(
+                                rpRequestedScopes.toString(), "P2.Cl.Cm", null),
                         Optional.of("GET"));
 
         var claimsRequest =
@@ -126,7 +128,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null, null),
                         Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
@@ -152,7 +154,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null, null),
                         Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
@@ -180,7 +182,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null, null),
                         Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
@@ -206,7 +208,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null, null),
                         Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
@@ -222,7 +224,32 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                         AUTHORISATION_INITIATED));
     }
 
-    private Map<String, String> constructQueryStringParameters(String scopes, String vtr) {
+    @Test
+    void shouldSendSecureJarToAuthenticationWithRelevantScopesWithoutLoginHintIfLoginHintIsPresent()
+            throws ParseException, JOSEException, java.text.ParseException {
+        var rpRequestedScopes = new Scope(OPENID, PHONE, EMAIL, GOVUK_ACCOUNT);
+        registerClient(rpRequestedScopes.toStringList(), false);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                rpRequestedScopes.toString(), null, LOGIN_HINT),
+                        Optional.of("GET"));
+
+        getValidatedClaimsRequest(response);
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String scopes, String vtr, String loginHint) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -240,6 +267,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                                 scopes));
 
         Optional.ofNullable(vtr).ifPresent(s -> queryStringParameters.put("vtr", jsonArrayOf(vtr)));
+        Optional.ofNullable(loginHint)
+                .ifPresent(s -> queryStringParameters.put("login_hint", loginHint));
 
         return queryStringParameters;
     }
@@ -337,6 +366,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 signedJWT.getJWTClaimsSet().getClaim("requested_credential_strength"),
                 equalTo(credentialTrustLevel.getValue()));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
+        assertTrue(Objects.isNull(signedJWT.getJWTClaimsSet().getClaim("login_hint")));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {

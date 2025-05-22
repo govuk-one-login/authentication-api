@@ -239,6 +239,15 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                     "login_hint present in request object, length: {}",
                                     hint.length()));
 
+            if (loginHint.isPresent() && loginHint.get().length() > 256) {
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "login_hint parameter is invalid"),
+                        state);
+            }
+
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
         } catch (ParseException e) {

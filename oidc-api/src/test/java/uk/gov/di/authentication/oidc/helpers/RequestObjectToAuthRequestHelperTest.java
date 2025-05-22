@@ -286,6 +286,33 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
+    void shouldConvertRequestObjectToAuthRequestWhenLoginHintClaimPresent() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet = getClaimsSetBuilder(scope).claim("login_hint", "test@email.com").build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+        assertThat(transformedAuthRequest.getLoginHint(), equalTo("test@email.com"));
+    }
+
+    @Test
     void shouldConvertRequestObjectToAuthRequestWhenCodeChallengePresent() throws JOSEException {
         var codeChallenge = "aCodeChallenge";
         var codeChallengeMethod = CodeChallengeMethod.S256.getValue();

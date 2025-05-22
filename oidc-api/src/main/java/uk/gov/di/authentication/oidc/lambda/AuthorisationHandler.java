@@ -288,6 +288,7 @@ public class AuthorisationHandler
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
+            authRequest = stripOutLoginHintQueryParams(authRequest);
         } catch (ParseException e) {
             LOG.warn("Authentication request could not be parsed", e);
             return generateParseExceptionResponse(e, user);
@@ -937,7 +938,8 @@ public class AuthorisationHandler
                         .claim(
                                 "current_credential_strength",
                                 orchSession.getCurrentCredentialStrength())
-                        .claim("scope", authenticationRequest.getScope().toString());
+                        .claim("scope", authenticationRequest.getScope().toString())
+                        .claim("login_hint", authenticationRequest.getLoginHint());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
         gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
@@ -1177,6 +1179,10 @@ public class AuthorisationHandler
         return new AuthenticationRequest.Builder(authRequest)
                 .customParameter("id_token_hint")
                 .build();
+    }
+
+    private AuthenticationRequest stripOutLoginHintQueryParams(AuthenticationRequest authRequest) {
+        return new AuthenticationRequest.Builder(authRequest).loginHint(null).build();
     }
 
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
