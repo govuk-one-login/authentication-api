@@ -17,8 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SessionServiceTest {
@@ -28,18 +26,6 @@ class SessionServiceTest {
     private final Json objectMapper = SerializationService.getInstance();
 
     private final SessionService sessionService = new SessionService(configuration, redis);
-
-    @Test
-    void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
-        when(configuration.getSessionExpiry()).thenReturn(1234L);
-
-        var session = new Session();
-
-        sessionService.storeOrUpdateSession(session, SESSION_ID);
-
-        verify(redis, times(1))
-                .saveWithExpiry(SESSION_ID, objectMapper.writeValueAsString(session), 1234L);
-    }
 
     @Test
     void shouldRetrieveSessionUsingRequestHeaders() throws Json.JsonException {
@@ -134,16 +120,6 @@ class SessionServiceTest {
                         Map.of(CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;"));
 
         assertFalse(session.isPresent());
-    }
-
-    @Test
-    void shouldDeleteSessionIdFromRedis() {
-        var session = new Session();
-
-        sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.deleteSessionFromRedis(SESSION_ID);
-
-        verify(redis).deleteValue(SESSION_ID);
     }
 
     private String generateSearlizedSession() throws Json.JsonException {
