@@ -196,13 +196,7 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(
-                        false,
-                        sessionService,
-                        session,
-                        SESSION_ID,
-                        orchSessionService,
-                        orchSession);
+                .saveSession(false, orchSessionService, orchSession);
         when(dynamoClientService.getClient(anyString()))
                 .thenReturn(
                         Optional.of(
@@ -299,13 +293,7 @@ class AuthCodeHandlerTest {
         assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
-                .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        eq(orchSessionService),
-                        eq(orchSession));
+                .saveSession(anyBoolean(), eq(orchSessionService), eq(orchSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -419,12 +407,7 @@ class AuthCodeHandlerTest {
         assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -774,12 +757,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(

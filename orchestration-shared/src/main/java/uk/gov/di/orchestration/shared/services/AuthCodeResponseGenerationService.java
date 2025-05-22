@@ -5,7 +5,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 
 import java.util.HashMap;
@@ -69,19 +68,14 @@ public class AuthCodeResponseGenerationService {
 
     public void saveSession(
             boolean docAppJourney,
-            SessionService sessionService,
-            Session session,
-            String sessionId,
             OrchSessionService orchSessionService,
             OrchSessionItem orchSession) {
 
         if (docAppJourney) {
-            sessionService.storeOrUpdateSession(session, sessionId);
             orchSessionService.updateSession(
                     orchSession.withAccountState(
                             OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
         } else {
-            sessionService.storeOrUpdateSession(session, sessionId);
             orchSessionService.updateSession(
                     orchSession
                             .withAuthenticated(true)
