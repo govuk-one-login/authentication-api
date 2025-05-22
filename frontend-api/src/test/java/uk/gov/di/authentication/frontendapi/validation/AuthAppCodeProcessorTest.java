@@ -91,7 +91,8 @@ class AuthAppCodeProcessorTest {
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
                         .withEmailAddress(EMAIL)
-                        .withInternalCommonSubjectId(INTERNAL_SUB_ID);
+                        .withInternalCommonSubjectId(INTERNAL_SUB_ID)
+                        .withClientId(CLIENT_ID);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
         this.mockDynamoService = mock(DynamoService.class);

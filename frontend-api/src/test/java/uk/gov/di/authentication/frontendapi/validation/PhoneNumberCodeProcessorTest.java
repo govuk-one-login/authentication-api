@@ -58,7 +58,8 @@ class PhoneNumberCodeProcessorTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_SUB_ID);
+                    .withInternalCommonSubjectId(INTERNAL_SUB_ID)
+                    .withClientId(CLIENT_ID);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final UserProfile userProfile = mock(UserProfile.class);

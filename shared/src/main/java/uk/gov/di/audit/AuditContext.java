@@ -24,7 +24,7 @@ public record AuditContext(
             String phoneNumber,
             String persistentSessionId) {
         return new AuditContext(
-                userContext.getClientId(),
+                userContext.getAuthSession().getClientId(),
                 userContext.getClientSessionId(),
                 userContext.getAuthSession().getSessionId(),
                 subjectId,
