@@ -385,7 +385,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"email_verified\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"email_verified\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -426,7 +426,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -463,7 +463,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var expectedClaimSetRequest =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null,\"current_credential_strength\":null, \"uplift_required\":null , \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null, \"uplift_required\":null , \"achieved_credential_strength\":null}}");
             var actualClaimSetRequest =
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
@@ -532,46 +532,6 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
             var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
             assertEquals(false, actualAuthenticatedClaim);
-        }
-
-        @Test
-        void shouldPassCurrentCredentialStrengthClaimToAuthFromSession() {
-            withExistingSession(session);
-            var currentCredentialStrength = CredentialTrustLevel.MEDIUM_LEVEL;
-            withExistingOrchSession(
-                    new OrchSessionItem(NEW_SESSION_ID)
-                            .withCurrentCredentialStrength(currentCredentialStrength));
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim =
-                    captor.getValue().getClaim("current_credential_strength");
-            assertEquals(currentCredentialStrength, actualCurrentCredentialStrengthClaim);
-        }
-
-        @Test
-        void shouldPassNullCurrentCredentialStrengthClaimIfNewSession() {
-            withNoSession();
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim =
-                    captor.getValue().getClaim("current_credential_strength");
-            assertEquals(null, actualCurrentCredentialStrengthClaim);
         }
 
         @ParameterizedTest
@@ -1385,7 +1345,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
@@ -1408,7 +1368,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"current_credential_strength\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }
@@ -1429,7 +1389,7 @@ class AuthorisationHandlerTest {
 
             var expectedClaim =
                     ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"current_credential_strength\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
+                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
             var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
             assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
         }

@@ -782,7 +782,6 @@ public class AuthorisationHandler
                         .withSessionId(newSessionId)
                         .withBrowserSessionId(newBrowserSessionId)
                         .withTimeToLive(timeNow + configurationService.getSessionExpiry())
-                        .withCurrentCredentialStrength(null)
                         .withAuthenticated(false)
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
@@ -935,9 +934,6 @@ public class AuthorisationHandler
                         .claim("previous_govuk_signin_journey_id", reauthSid)
                         .claim("channel", client.getChannel().toLowerCase())
                         .claim("authenticated", orchSession.getAuthenticated())
-                        .claim(
-                                "current_credential_strength",
-                                orchSession.getCurrentCredentialStrength())
                         .claim("scope", authenticationRequest.getScope().toString())
                         .claim("login_hint", authenticationRequest.getLoginHint());
 
@@ -1073,7 +1069,6 @@ public class AuthorisationHandler
         claimsSet.add(AuthUserInfoClaims.EMAIL);
         claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
         claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
-        claimsSet.add(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH);
         claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
         claimsSet.add(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH);
         if (identityRequired) {

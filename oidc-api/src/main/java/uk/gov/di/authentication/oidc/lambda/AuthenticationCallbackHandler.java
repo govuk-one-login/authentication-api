@@ -381,10 +381,6 @@ public class AuthenticationCallbackHandler
                         userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
                                 != null);
                 LOG.info(
-                        "is current_credential_strength attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue())
-                                != null);
-                LOG.info(
                         "is uplift_required attached to auth-external-api userinfo response: {}",
                         userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
                 LOG.info(
@@ -569,33 +565,8 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 sessionService.storeOrUpdateSession(session, sessionId);
-                var currentCredentialStrength =
-                        userInfo.getStringClaim(
-                                AuthUserInfoClaims.CURRENT_CREDENTIAL_STRENGTH.getValue());
-                if (isNull(currentCredentialStrength)
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        CredentialTrustLevel.valueOf(currentCredentialStrength))
-                                > 0) {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    lowestRequestedCredentialTrustLevel));
-                } else {
-                    orchSessionService.updateSession(
-                            orchSession.withCurrentCredentialStrength(
-                                    CredentialTrustLevel.valueOf(currentCredentialStrength)));
-                }
-                // ATO-975 logging to make sure there are no differences in production
-                LOG.info(
-                        "Shared session current credential strength: {}",
-                        session.getCurrentCredentialStrength());
-                LOG.info(
-                        "Orch session current credential strength: {}",
-                        orchSession.getCurrentCredentialStrength());
-                LOG.info(
-                        "Is shared session CCS equal to Orch session CCS: {}",
-                        Objects.equals(
-                                session.getCurrentCredentialStrength(),
-                                orchSession.getCurrentCredentialStrength()));
+                orchSessionService.updateSession(orchSession);
+
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
                         orchAccountState,
@@ -886,7 +857,8 @@ public class AuthenticationCallbackHandler
 
     private void logComparisonRequestCredentialTrustAndAchieved(
             UserInfo authUserInfo, CredentialTrustLevel requestedCredentialStrength) {
-
+        // TODO: This logging currently looks fine but in future we should validate that
+        // this value is non-null and >= the requested credential strength
         try {
             var userInfoAchievedCredentialStrength =
                     authUserInfo.getStringClaim(
