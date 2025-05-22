@@ -131,7 +131,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
         var auditContext =
                 new AuditContext(
-                        userContext.getClientId(),
+                        userContext.getAuthSession().getClientId(),
                         ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                         sessionId,
                         AuditService.UNKNOWN,
