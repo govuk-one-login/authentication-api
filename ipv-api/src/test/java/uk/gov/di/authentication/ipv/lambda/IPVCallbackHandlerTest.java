@@ -398,7 +398,6 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
                         any(),
                         any(),
@@ -478,7 +477,6 @@ class IPVCallbackHandlerTest {
             when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                            any(),
                             any(),
                             any(),
                             any(),
@@ -582,7 +580,6 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
                         any(),
                         any(),
@@ -605,7 +602,6 @@ class IPVCallbackHandlerTest {
                 .generateReturnCodeAuthenticationResponse(
                         any(),
                         eq(CLIENT_SESSION_ID),
-                        eq(session),
                         eq(SESSION_ID),
                         any(OrchSessionItem.class),
                         eq(CLIENT_NAME),

@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +23,7 @@ class AuthCodeResponseGenerationServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private OrchSessionItem orchSession;
-    private Session session;
 
     private AuthCodeResponseGenerationService authCodeResponseGenerationService;
 
@@ -37,7 +34,6 @@ class AuthCodeResponseGenerationServiceTest {
                 new OrchSessionItem(SESSION_ID)
                         .withAccountState(NEW)
                         .withVerifiedMfaMethodType(AUTH_APP.toString());
-        session = new Session();
         authCodeResponseGenerationService =
                 new AuthCodeResponseGenerationService(configurationService);
     }
@@ -70,8 +66,7 @@ class AuthCodeResponseGenerationServiceTest {
 
     @Test
     void saveSessionUpdatesNonDocAppSessionWithAuthenticatedAndAccountState() {
-        authCodeResponseGenerationService.saveSession(
-                false, sessionService, session, SESSION_ID, orchSessionService, orchSession);
+        authCodeResponseGenerationService.saveSession(false, orchSessionService, orchSession);
 
         verify(orchSessionService)
                 .updateSession(
@@ -84,8 +79,7 @@ class AuthCodeResponseGenerationServiceTest {
 
     @Test
     void saveSessionUpdatesDocAppSessionWithDocAppState() {
-        authCodeResponseGenerationService.saveSession(
-                true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
+        authCodeResponseGenerationService.saveSession(true, orchSessionService, orchSession);
         verify(orchSessionService)
                 .updateSession(
                         argThat(
