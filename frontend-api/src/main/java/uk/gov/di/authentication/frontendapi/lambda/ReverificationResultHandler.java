@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
@@ -55,7 +54,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
     public ReverificationResultHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             ReverificationResultService reverificationResultService,
@@ -66,7 +64,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         super(
                 ReverificationResultRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
