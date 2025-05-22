@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -75,7 +74,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
     public MfaHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             ClientService clientService,
@@ -87,7 +85,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         super(
                 MfaRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
