@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
@@ -80,7 +79,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
@@ -92,7 +90,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
