@@ -85,11 +85,6 @@ public abstract class BaseOrchestrationFrontendHandler
                         input.getHeaders(),
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        var sessionOpt = sessionService.getSession(sessionId);
-        if (sessionOpt.isEmpty()) {
-            LOG.warn("Session cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
 
         var orchSessionOpt = orchSessionService.getSession(sessionId);
 
