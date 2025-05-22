@@ -181,6 +181,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -237,6 +238,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(expectedResponse),
                     JsonParser.parseString(result.getBody()));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -292,6 +294,7 @@ class CheckUserExistsHandlerTest {
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertThat(result, hasStatus(200));
             assertTrue(
                     result.getBody()
@@ -357,6 +360,7 @@ class CheckUserExistsHandlerTest {
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
         assertNull(authSession.getInternalCommonSubjectId());
+        verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
