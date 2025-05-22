@@ -92,7 +92,6 @@ class CheckEmailFraudBlockHandlerTest {
     @BeforeEach
     void setup() {
         var userProfile = generateUserProfile();
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
