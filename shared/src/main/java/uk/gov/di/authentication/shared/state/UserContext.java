@@ -85,6 +85,10 @@ public class UserContext {
         return new Builder(session);
     }
 
+    public static Builder builder(AuthSessionItem session) {
+        return new Builder(session);
+    }
+
     public static class Builder {
         private Session session;
         private AuthSessionItem authSession;
@@ -100,8 +104,7 @@ public class UserContext {
             this.session = session;
         }
 
-        protected Builder(Session session, AuthSessionItem authSession) {
-            this.session = session;
+        protected Builder(AuthSessionItem authSession) {
             this.authSession = authSession;
         }
 
