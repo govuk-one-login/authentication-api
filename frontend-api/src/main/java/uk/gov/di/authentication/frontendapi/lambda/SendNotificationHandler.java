@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -203,7 +202,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
-                            userContext.getSession(),
                             userContext.getAuthSession(),
                             request.getNotificationType(),
                             request.getJourneyType());
@@ -221,7 +219,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
-                            userContext.getSession(),
                             userContext.getAuthSession(),
                             request.getNotificationType(),
                             request.getJourneyType());
@@ -408,7 +405,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
             String email,
-            Session session,
             AuthSessionItem authSession,
             NotificationType notificationType,
             JourneyType journeyType) {

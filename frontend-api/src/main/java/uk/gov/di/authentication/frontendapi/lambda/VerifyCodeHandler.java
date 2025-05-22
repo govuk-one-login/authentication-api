@@ -153,8 +153,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         try {
             LOG.info("Processing request");
 
-            var session = userContext.getSession();
-            var sessionId = userContext.getAuthSession().getSessionId();
             AuthSessionItem authSession = userContext.getAuthSession();
 
             var notificationType = codeRequest.notificationType();

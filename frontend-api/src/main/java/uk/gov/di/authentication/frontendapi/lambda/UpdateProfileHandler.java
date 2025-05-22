@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -93,7 +92,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UpdateProfileRequest request,
             UserContext userContext) {
 
-        Session session = userContext.getSession();
         AuthSessionItem authSession = userContext.getAuthSession();
 
         String persistentSessionId =
