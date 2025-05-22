@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -394,9 +393,7 @@ public class AuthenticationCallbackHandler
 
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
-                AccountState accountState = deduceAccountState(newAccount);
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
-                session.setNewAccount(accountState);
                 orchSession.withAccountState(orchAccountState);
 
                 if (!orchSession.getAuthenticated() || deduceUpliftRequired(userInfo)) {
@@ -422,7 +419,7 @@ public class AuthenticationCallbackHandler
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
-                                accountState,
+                                orchAccountState,
                                 clientId,
                                 orchClientSession.getClientName(),
                                 orchClientSession.getVtrList(),
@@ -654,16 +651,6 @@ public class AuthenticationCallbackHandler
         }
     }
 
-    private AccountState deduceAccountState(Boolean newAccount) {
-        AccountState accountState;
-        if (newAccount == null) {
-            accountState = AccountState.UNKNOWN;
-        } else {
-            accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
-        }
-        return accountState;
-    }
-
     private OrchSessionItem.AccountState deduceOrchAccountState(Boolean newAccount) {
         OrchSessionItem.AccountState accountState;
         if (newAccount == null) {
@@ -678,7 +665,7 @@ public class AuthenticationCallbackHandler
     }
 
     private Map<String, String> buildDimensions(
-            AccountState accountState,
+            OrchSessionItem.AccountState accountState,
             String clientId,
             String clientName,
             List<VectorOfTrust> vtrList,

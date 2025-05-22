@@ -95,9 +95,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -193,15 +190,6 @@ class AuthCodeHandlerTest {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         doAnswer(
                         (i) -> {
-                            session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
-                            return null;
-                        })
-                .when(authCodeResponseService)
-                .saveSession(
-                        true, sessionService, session, SESSION_ID, orchSessionService, orchSession);
-        doAnswer(
-                        (i) -> {
-                            session.setNewAccount(EXISTING);
                             orchSession
                                     .withAuthenticated(true)
                                     .setIsNewAccount(OrchSessionItem.AccountState.EXISTING);
@@ -271,7 +259,8 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(any(OrchClientSessionItem.class), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel).setNewAccount(AccountState.NEW);
+        session.setCurrentCredentialStrength(initialLevel);
+        orchSession.setIsNewAccount(OrchSessionItem.AccountState.NEW);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -380,7 +369,6 @@ class AuthCodeHandlerTest {
             throws Json.JsonException, JOSEException {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, true);
-        session.setNewAccount(AccountState.UNKNOWN);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -708,7 +696,6 @@ class AuthCodeHandlerTest {
             throws ParseException, JOSEException {
         generateAuthUserInfo();
 
-        session.setNewAccount(AccountState.UNKNOWN);
         orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
 
         when(orchestrationAuthorizationService.isClientRedirectUriValid(
@@ -737,7 +724,6 @@ class AuthCodeHandlerTest {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
 
-        session.setNewAccount(AccountState.UNKNOWN);
         orchSession.withAccountState(OrchSessionItem.AccountState.UNKNOWN);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(

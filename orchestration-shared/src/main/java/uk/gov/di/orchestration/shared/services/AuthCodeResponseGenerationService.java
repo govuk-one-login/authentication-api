@@ -12,9 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
-
 public class AuthCodeResponseGenerationService {
     private static final Logger LOG = LogManager.getLogger(AuthCodeResponseGenerationService.class);
 
@@ -79,13 +76,12 @@ public class AuthCodeResponseGenerationService {
             OrchSessionItem orchSession) {
 
         if (docAppJourney) {
-            sessionService.storeOrUpdateSession(
-                    session.setNewAccount(EXISTING_DOC_APP_JOURNEY), sessionId);
+            sessionService.storeOrUpdateSession(session, sessionId);
             orchSessionService.updateSession(
                     orchSession.withAccountState(
                             OrchSessionItem.AccountState.EXISTING_DOC_APP_JOURNEY));
         } else {
-            sessionService.storeOrUpdateSession(session.setNewAccount(EXISTING), sessionId);
+            sessionService.storeOrUpdateSession(session, sessionId);
             orchSessionService.updateSession(
                     orchSession
                             .withAuthenticated(true)
