@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -89,7 +88,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
@@ -102,7 +100,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         super(
                 VerifyCodeRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
