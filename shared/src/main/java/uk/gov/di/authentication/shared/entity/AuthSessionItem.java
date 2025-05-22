@@ -302,15 +302,43 @@ public class AuthSessionItem {
         return this;
     }
 
+    /**
+     * Returns the {@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel} the user has
+     * achieved in this session. This will be null initially and is set at the end of a user's
+     * journey. This value is reported back to Orchestration in the /userinfo response.
+     *
+     * @return {{@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel}: the level of
+     *     credential trust a user has achieved.
+     */
     @DynamoDbAttribute(ATTRIBUTE_ACHIEVED_CREDENTIAL_STRENGTH)
     public CredentialTrustLevel getAchievedCredentialStrength() {
         return this.achievedCredentialStrength;
     }
 
+    /**
+     * Sets the {@link uk.gov.di.authentication.shared.entity.CredentialTrustLevel} the user has
+     * achieved in this session. Modifies the session object in place. This should only be called
+     * towards the end of a user's journey once we're sure they've presented valid credentials to
+     * achieve the level we're about to set. Usages of this should be careful not to downshift a
+     * user's Credential Trust level.
+     *
+     * @param credentialStrength - the level of Credential Trust a user has achieved
+     */
     public void setAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
         this.achievedCredentialStrength = credentialStrength;
     }
 
+    /**
+     * Builder like method which both sets the level of Credential Trust the user has achieved in
+     * this session and returns the modified session object, enabling method chaining. This should
+     * only be called towards the end of a user's journey once we're sure they've presented valid
+     * credentials to achieve the level we're about to set. Usages of this should be careful not to
+     * downshift a user's Credential Trust level.
+     *
+     * @param credentialStrength - the level of Credential Trust a user has achieved
+     * @return {@link uk.gov.di.authentication.shared.entity.AuthSessionItem} - the now modified
+     *     session object.
+     */
     public AuthSessionItem withAchievedCredentialStrength(CredentialTrustLevel credentialStrength) {
         this.achievedCredentialStrength = credentialStrength;
         return this;
