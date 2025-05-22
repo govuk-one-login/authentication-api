@@ -68,7 +68,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -280,6 +279,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         return ClientSubjectHelper.getSubject(
                         userProfile,
                         client,
+                        userContext.getAuthSession(),
                         authenticationService,
                         configurationService.getInternalSectorUri())
                 .getValue();
@@ -323,14 +323,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         auditService.submitAuditEvent(
                 AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
-
+        var clientId = userContext.getAuthSession().getClientId();
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     AuthSessionItem.AccountState.EXISTING,
-                    userContext.getClientId(),
+                    clientId,
                     userContext.getClientName(),
                     "P0",
-                    clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
+                    clientService.isTestJourney(clientId, userProfile.getEmail()),
                     false);
 
             if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
