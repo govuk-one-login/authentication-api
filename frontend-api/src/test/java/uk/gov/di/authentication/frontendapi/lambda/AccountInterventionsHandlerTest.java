@@ -157,7 +157,6 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded())
                 .thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);

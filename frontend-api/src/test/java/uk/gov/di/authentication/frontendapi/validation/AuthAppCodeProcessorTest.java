@@ -406,7 +406,6 @@ class AuthAppCodeProcessorTest {
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(mockUserContext.getSession()).thenReturn(session);
         when(mockUserContext.getAuthSession()).thenReturn(authSession);
-        when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
         when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 
         this.authAppCodeProcessor =
