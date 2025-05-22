@@ -631,11 +631,9 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
+    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenAuthReportPreviouslyMediumLevel()
             throws UnsuccessfulCredentialResponseException {
-        Session mediumLevelSession =
-                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(new Session()));
         when(orchSessionService.getSession(SESSION_ID))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
         usingValidClientSession();
@@ -647,6 +645,8 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH.getValue()))
+                .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL.name());
 
         handler.handleRequest(event, CONTEXT);
 
