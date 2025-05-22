@@ -35,9 +35,7 @@ public class SessionService {
     }
 
     public Session copySessionForMaxAge(Session previousSession) {
-        var copiedSession = new Session(previousSession);
-        copiedSession.setCurrentCredentialStrength(null);
-        return copiedSession;
+        return new Session(previousSession);
     }
 
     public void storeOrUpdateSession(Session session, String sessionId) {
