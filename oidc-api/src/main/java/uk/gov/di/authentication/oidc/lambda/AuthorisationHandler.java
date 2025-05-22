@@ -438,7 +438,6 @@ public class AuthorisationHandler
                 authRequest.toParameters(), Optional.of(client))) {
 
             return handleDocAppJourney(
-                    sessionId,
                     orchSessionOptional,
                     orchClientSession,
                     authRequest,
@@ -508,7 +507,6 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
-            Optional<String> existingSessionId,
             Optional<OrchSessionItem> orchSessionOptional,
             OrchClientSessionItem orchClientSession,
             AuthenticationRequest authenticationRequest,
@@ -516,33 +514,21 @@ public class AuthorisationHandler
             String clientSessionId,
             String persistentSessionId,
             TxmaAuditUser user) {
-        Session session;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = existingSessionId.flatMap(sessionService::getSession);
-        if (existingSessionId.isEmpty() || existingSession.isEmpty()) {
-            session = sessionService.generateSession();
-            updateAttachedSessionIdToLogs(newSessionId);
-            LOG.info("Created new session with ID {}", newSessionId);
-        } else {
-            var previousSessionId = existingSessionId.get();
-            session =
-                    sessionService.updateWithNewSessionId(
-                            existingSession.get(), previousSessionId, newSessionId);
-            updateAttachedSessionIdToLogs(newSessionId);
-            LOG.info("Updated session ID from {} to {}", previousSessionId, newSessionId);
-        }
 
         OrchSessionItem orchSession;
         if (orchSessionOptional.isEmpty()) {
             orchSession =
                     new OrchSessionItem(newSessionId).withBrowserSessionId(newBrowserSessionId);
+            updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Created new Orch session with ID {}", newSessionId);
         } else {
             String previousOrchSessionId = orchSessionOptional.get().getSessionId();
             orchSession =
                     orchSessionService.addOrUpdateSessionId(
                             Optional.of(previousOrchSessionId), newSessionId);
+            updateAttachedSessionIdToLogs(newSessionId);
             LOG.info("Updated Orch session ID from {} to {}", previousOrchSessionId, newSessionId);
         }
         attachOrchSessionIdToLogs(orchSession.getSessionId());
@@ -561,7 +547,6 @@ public class AuthorisationHandler
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionOptional.ifPresentOrElse(
                 s -> orchSessionService.updateSession(orchSession),
                 () -> orchSessionService.addSession(orchSession));
@@ -641,16 +626,12 @@ public class AuthorisationHandler
                 browserSessionIdFromSession.isPresent()
                         && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
 
-        Session session;
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
         if (previousSessionIdFromCookie.isEmpty()
-                || existingSession.isEmpty()
                 || existingOrchSessionOptional.isEmpty()
                 || doesBrowserSessionIdFromSessionNotMatchCookie) {
-            session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
             // We re-assign here to ensure that we only pass auth previous session id
@@ -669,12 +650,6 @@ public class AuthorisationHandler
                             maxAgeParam,
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
-                session =
-                        updateSharedSessionDueToMaxAgeExpiry(
-                                existingSession.get(),
-                                previousSessionIdFromCookie.get(),
-                                newSessionIdForPreviousSession,
-                                newSessionId);
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -694,11 +669,7 @@ public class AuthorisationHandler
                         newSessionId);
 
             } else {
-                var previousSession = existingSession.get();
                 var previousSessionId = previousSessionIdFromCookie.get();
-                session =
-                        sessionService.updateWithNewSessionId(
-                                previousSession, previousSessionId, newSessionId);
 
                 orchSession =
                         updateOrchSession(newSessionId, existingOrchSessionOptional.get(), timeNow);
@@ -726,7 +697,6 @@ public class AuthorisationHandler
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
