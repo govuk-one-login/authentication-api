@@ -37,7 +37,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -211,7 +210,6 @@ class UserInfoHandlerTest {
         assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
         verify(sessionService).getSessionFromRequestHeaders(request.getHeaders());
         verifyNoInteractions(accessTokenService, userInfoService, auditService);
-        verify(sessionService, never()).storeOrUpdateSession(any(), anyString());
     }
 
     @Test
@@ -232,7 +230,6 @@ class UserInfoHandlerTest {
         assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
         verify(sessionService).getSessionFromRequestHeaders(request.getHeaders());
         verifyNoInteractions(accessTokenService, userInfoService, auditService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -257,7 +254,6 @@ class UserInfoHandlerTest {
         assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
         verify(sessionService).getSessionFromRequestHeaders(request.getHeaders());
         verifyNoInteractions(accessTokenService, userInfoService, auditService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -282,7 +278,6 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
         verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -308,7 +303,6 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
         verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -338,7 +332,6 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
         verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -365,7 +358,6 @@ class UserInfoHandlerTest {
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
 
         verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     private void withAuthSession() {
