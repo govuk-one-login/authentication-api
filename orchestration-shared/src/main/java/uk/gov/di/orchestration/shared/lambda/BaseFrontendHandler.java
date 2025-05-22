@@ -171,7 +171,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+        UserContext.Builder userContextBuilder = UserContext.builder();
 
         userContextBuilder.withSessionId(sessionId).withClientSessionId(clientSessionId);
         userContextBuilder.withOrchSession(orchSession.get());
