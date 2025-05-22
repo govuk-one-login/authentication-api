@@ -90,18 +90,11 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             boolean loadUserCredentials,
             AuthSessionService authSessionService) {
-        this(
-                clazz,
-                configurationService,
-                sessionService,
-                clientService,
-                authenticationService,
-                authSessionService);
+        this(clazz, configurationService, clientService, authenticationService, authSessionService);
         this.loadUserCredentials = loadUserCredentials;
     }
 
