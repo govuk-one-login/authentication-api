@@ -23,14 +23,12 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -42,9 +40,9 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -73,6 +71,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyReques
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNAL_COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
@@ -82,6 +81,7 @@ import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -108,6 +108,7 @@ class ResetPasswordRequestHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final Context context = mock(Context.class);
     private static final String CLIENT_ID = "test-client-id";
 
@@ -139,7 +140,8 @@ class ResetPasswordRequestHandlerTest {
                     codeGeneratorService,
                     codeStorageService,
                     auditService,
-                    authSessionService);
+                    authSessionService,
+                    mfaMethodsService);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -203,28 +205,22 @@ class ResetPasswordRequestHandlerTest {
                     .thenReturn(subject);
             when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.of(userProfileWithPhoneNumber()));
             var disabledMfaMethod =
-                    new MFAMethod(
-                            MFAMethodType.AUTH_APP.getValue(),
+                    MFAMethod.authAppMfaMethod(
                             "first-value",
                             true,
                             false,
-                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+                            PriorityIdentifier.BACKUP,
+                            "auth-app-mfa-id");
             var enabledMfaMethod =
-                    new MFAMethod(
-                            MFAMethodType.SMS.getValue(),
-                            "second-value",
+                    MFAMethod.smsMfaMethod(
                             true,
                             true,
-                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
-                    .thenReturn(
-                            new UserCredentials()
-                                    .withMfaMethods(List.of(disabledMfaMethod, enabledMfaMethod)));
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            "sms-mfa-id");
+            when(mfaMethodsService.getMfaMethods(CommonTestVariables.EMAIL))
+                    .thenReturn(Result.success(List.of(disabledMfaMethod, enabledMfaMethod)));
         }
 
         @Test
@@ -233,7 +229,8 @@ class ResetPasswordRequestHandlerTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(200, result.getStatusCode());
-            var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            var expectedBody =
+                    "{\"mfaMethodType\":\"SMS\",\"mfaMethods\":[{\"id\":\"auth-app-mfa-id\",\"type\":\"AUTH_APP\",\"priority\":\"BACKUP\"},{\"id\":\"sms-mfa-id\",\"type\":\"SMS\",\"priority\":\"DEFAULT\",\"redactedPhoneNumber\":\"*********7890\"}],\"phoneNumberLastThree\":\"890\"}";
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
@@ -254,24 +251,22 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn200WithTheMigratedUsersMfaMethodAndSaveOtpCodeForAValidRequest() {
             usingValidSession();
-            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.of(migratedUserProfileWithoutPhoneNumber()));
-            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
+            when(mfaMethodsService.getMfaMethods(CommonTestVariables.EMAIL))
                     .thenReturn(
-                            new UserCredentials()
-                                    .withMfaMethods(
-                                            List.of(
-                                                    MFAMethod.smsMfaMethod(
-                                                            true,
-                                                            true,
-                                                            CommonTestVariables.UK_MOBILE_NUMBER,
-                                                            PriorityIdentifier.DEFAULT,
-                                                            "1"))));
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.smsMfaMethod(
+                                                    true,
+                                                    true,
+                                                    CommonTestVariables.UK_MOBILE_NUMBER,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "1"))));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(200, result.getStatusCode());
-            var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            var expectedBody =
+                    "{\"mfaMethodType\":\"SMS\",\"mfaMethods\":[{\"id\":\"1\",\"type\":\"SMS\",\"priority\":\"DEFAULT\",\"redactedPhoneNumber\":\"*********7890\"}],\"phoneNumberLastThree\":\"890\"}";
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
@@ -292,24 +287,22 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn200WithTheMigratedUsersMfaMethodAndSaveEmailOtpCodeForAValidRequest() {
             usingValidSession();
-            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.of(migratedUserProfileWithoutPhoneNumber()));
-            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
+            when(mfaMethodsService.getMfaMethods(CommonTestVariables.EMAIL))
                     .thenReturn(
-                            new UserCredentials()
-                                    .withMfaMethods(
-                                            List.of(
-                                                    MFAMethod.authAppMfaMethod(
-                                                            "cred",
-                                                            true,
-                                                            true,
-                                                            PriorityIdentifier.DEFAULT,
-                                                            "auth-app-id"))));
+                            Result.success(
+                                    List.of(
+                                            MFAMethod.authAppMfaMethod(
+                                                    "cred",
+                                                    true,
+                                                    true,
+                                                    PriorityIdentifier.DEFAULT,
+                                                    "auth-app-id"))));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(200, result.getStatusCode());
-            var expectedBody = "{\"mfaMethodType\":\"AUTH_APP\",\"phoneNumberLastThree\":null}";
+            var expectedBody =
+                    "{\"mfaMethodType\":\"AUTH_APP\",\"mfaMethods\":[{\"id\":\"auth-app-id\",\"type\":\"AUTH_APP\",\"priority\":\"DEFAULT\"}],\"phoneNumberLastThree\":null}";
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
@@ -463,6 +456,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldRecordPasswordResetAttemptInSession() {
             usingValidSession();
+            when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
 
             handler.handleRequest(validEvent, context);
 
@@ -478,10 +472,9 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         void shouldReturn404IfUserProfileIsNotFound() {
-            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.empty());
-
             usingValidSession();
+            when(mfaMethodsService.getMfaMethods(CommonTestVariables.EMAIL))
+                    .thenReturn(Result.failure(USER_DOES_NOT_HAVE_ACCOUNT));
             var result = handler.handleRequest(validEvent, context);
 
             assertEquals(404, result.getStatusCode());

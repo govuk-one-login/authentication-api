@@ -16,11 +16,16 @@ public class FrontendApiPhoneNumberHelper {
     public static String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
         if (userMfaDetail.phoneNumber() != null
                 && !userMfaDetail.phoneNumber().isEmpty()
-                && userMfaDetail.phoneNumber().length() >= NUMBER_OF_LAST_DIGITS
                 && MFAMethodType.SMS.equals(userMfaDetail.mfaMethodType())) {
-            return userMfaDetail
-                    .phoneNumber()
-                    .substring(userMfaDetail.phoneNumber().length() - NUMBER_OF_LAST_DIGITS);
+            return getLastDigitsOfPhoneNumber(userMfaDetail.phoneNumber());
+        } else {
+            return null;
+        }
+    }
+
+    public static String getLastDigitsOfPhoneNumber(String phoneNumber) {
+        if (phoneNumber != null && phoneNumber.length() >= NUMBER_OF_LAST_DIGITS) {
+            return phoneNumber.substring(phoneNumber.length() - NUMBER_OF_LAST_DIGITS);
         } else {
             return null;
         }
