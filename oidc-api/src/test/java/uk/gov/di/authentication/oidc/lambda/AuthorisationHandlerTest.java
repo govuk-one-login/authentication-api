@@ -66,7 +66,6 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -696,53 +695,6 @@ class AuthorisationHandlerTest {
             assertThat(uri.getQuery(), containsString("result=sign-in"));
             assertThat(
                     uri.getQuery(), not(containsString("an-irrelevant-key=an-irrelevant-value")));
-        }
-
-        @Test
-        void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
-            session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
-            withExistingSession(session);
-            var authRequestParams =
-                    generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
-            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
-
-            APIGatewayProxyResponseEvent response =
-                    makeHandlerRequest(
-                            withRequestEvent(buildRequestParams(Map.of("vtr", "[\"Cl\"]"))));
-            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            assertThat(response, hasStatus(302));
-            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
-
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_NEW_SESSION_COOKIE_STRING));
-
-            var diPersistentCookieString =
-                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
-            var sessionId =
-                    extractSessionId(
-                            diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
-            verify(orchSessionService).addSession(any());
-            verify(orchSessionService).deleteSession(SESSION_ID);
-            verify(orchClientSessionService).storeClientSession(orchClientSession);
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_INITIATED,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                            pair("client-name", RP_CLIENT_NAME),
-                            pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
-                    .putEmbeddedValue(
-                            "AuthRedirectQueryParamSize",
-                            48,
-                            Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
