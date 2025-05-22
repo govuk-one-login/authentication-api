@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -56,13 +55,6 @@ public class RedisExtension
 
     public void addClientSessionAndStateToRedis(State state, String clientSessionId) {
         redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
-    }
-
-    public void setSessionCredentialTrustLevel(
-            String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setCurrentCredentialStrength(credentialTrustLevel);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public Session getSession(String sessionId) throws Json.JsonException {

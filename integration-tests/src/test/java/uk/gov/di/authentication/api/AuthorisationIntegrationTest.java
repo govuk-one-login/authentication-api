@@ -522,7 +522,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
 
             var response =
@@ -573,7 +573,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -620,7 +620,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity()
                 throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -666,7 +666,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
                         throws Exception {
             setupForAuthJourney();
-            String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            String sessionId = givenAnExistingSession();
             registerUser();
 
             var response =
@@ -718,7 +718,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -766,7 +766,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -816,7 +816,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
             setupForAuthJourney();
-            String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+            String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
@@ -1297,7 +1297,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
             registerClient(
                     CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
+            var previousSessionId = givenAnExistingSession();
             orchSessionExtension.addSession(
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
@@ -2149,11 +2149,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return sessionId;
     }
 
-    private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
-        redis.setSessionCredentialTrustLevel(sessionId, credentialTrustLevel);
-        return sessionId;
+    private String givenAnExistingSession() throws Json.JsonException {
+        return redis.createSession();
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
