@@ -104,7 +104,6 @@ class StartServiceTest {
                 .thenReturn((mock(UserCredentials.class)));
         var userContext = startService.buildUserContext(AUTH_SESSION);
 
-        assertThat(userContext.getSession(), equalTo(SESSION));
         assertThat(userContext.getAuthSession(), equalTo(AUTH_SESSION));
     }
 
@@ -602,7 +601,7 @@ class StartServiceTest {
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)
                         .withOneLoginService(oneLoginService);
-        return UserContext.builder(SESSION)
+        return UserContext.builder(AUTH_SESSION)
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)

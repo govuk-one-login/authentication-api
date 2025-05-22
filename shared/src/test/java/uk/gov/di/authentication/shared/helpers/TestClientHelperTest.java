@@ -138,9 +138,6 @@ class TestClientHelperTest {
                         .withTestClientEmailAllowlist(allowedEmails);
         var session = new Session();
         var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
-        return UserContext.builder(session)
-                .withClient(clientRegistry)
-                .withAuthSession(authSession)
-                .build();
+        return UserContext.builder(authSession).withClient(clientRegistry).build();
     }
 }
