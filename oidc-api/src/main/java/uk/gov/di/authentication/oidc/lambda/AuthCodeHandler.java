@@ -23,7 +23,6 @@ import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -51,7 +50,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -455,14 +453,6 @@ public class AuthCodeHandler
             String clientSessionId,
             Session session,
             OrchSessionItem orchSession) {
-        CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
-        if (isNull(session.getCurrentCredentialStrength())
-                || lowestRequestedCredentialTrustLevel.compareTo(
-                                session.getCurrentCredentialStrength())
-                        > 0) {
-            session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-        }
 
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
                 clientID.getValue(),

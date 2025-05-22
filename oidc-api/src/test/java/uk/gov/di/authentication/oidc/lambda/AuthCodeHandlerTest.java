@@ -297,8 +297,6 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
@@ -419,7 +417,6 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
