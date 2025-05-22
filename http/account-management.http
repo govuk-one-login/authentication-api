@@ -77,14 +77,14 @@ Authorization:Bearer {{authToken}}
 # Gets a user's MFA methods
 # Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
 # Must also run ./scripts/api-proxy.sh account-management [environment]
-GET http://localhost:8123/v1/mfa-methods/{{publicSubjectId}}
+GET {{baseUrl}}/v1/mfa-methods/{{publicSubjectId}}
 Authorization:Bearer {{authToken}}
 
 ### Post to /v1/mfa-methods/{publicSubjectId}
 # Creates a new MFA method (must be back up to be successful)
 # Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
 # Must also run ./scripts/api-proxy.sh account-management [environment]
-POST http://localhost:8123/v1/mfa-methods/{{publicSubjectId}}
+POST {{baseUrl}}/v1/mfa-methods/{{publicSubjectId}}
 Authorization:Bearer {{authToken}}
 
 {
@@ -102,7 +102,7 @@ Authorization:Bearer {{authToken}}
 # Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
 # Must first get mfaIdentifier of the mfa method you want to change by using get to /v1/mfa-methods/{publicSubjectId} populating mfaIdentifier field
 # Must also run ./scripts/api-proxy.sh account-management [environment]
-DELETE http://localhost:8123/v1/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
+DELETE {{baseUrl}}/v1/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
 Authorization:Bearer {{authToken}}
 
 ### Put to /v1/mfa-methods/{publicSubjectId}/{mfaIdentifier}
@@ -110,7 +110,7 @@ Authorization:Bearer {{authToken}}
 # Must populate publicSubjectId for a specified environment, getting the value from User Profile table for your email
 # Must first get mfaIdentifier of the mfa method you want to change by using get to /v1/mfa-methods/{publicSubjectId} populating mfaIdentifier field
 # Must also run ./scripts/api-proxy.sh account-management [environment]
-PUT http://localhost:8123/v1/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
+PUT {{baseUrl}}/v1/mfa-methods/{{publicSubjectId}}/{{mfaIdentifier}}
 Authorization:Bearer {{authToken}}
 
 {
