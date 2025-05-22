@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -37,9 +38,15 @@ class ClientSubjectHelperTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject PUBLIC_SUBJECT = new Subject();
-    private static final String CLIENT_ID = "test-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+    private static final String CLIENT_ID_1 = "test-client-id-1";
+    private static final AuthSessionItem AUTH_SESSION_FOR_CLIENT_1 =
+            new AuthSessionItem().withSessionId("test-auth-session-1").withClientId(CLIENT_ID_1);
+    private static final String CLIENT_ID_2 = "test-client-id-2";
+    private static final AuthSessionItem AUTH_SESSION_FOR_CLIENT_2 =
+            new AuthSessionItem().withSessionId("test-auth-session-2").withClientId(CLIENT_ID_2);
+
     private KeyPair keyPair;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final UserProfile userProfile = generateUserProfile();
@@ -55,25 +62,25 @@ class ClientSubjectHelperTest {
     void shouldReturnDifferentSubjectIDForMultipleClientsWithDifferentSectors() {
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-1",
-                        PAIRWISE.toString(),
-                        "https://test.com",
-                        false);
+                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
         ClientRegistry clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-2",
-                        PAIRWISE.toString(),
-                        "https://not-test.com",
-                        false);
+                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://not-test.com", false);
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry2,
+                        AUTH_SESSION_FOR_CLIENT_2,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
         assertNotEquals(subject1, subject2);
     }
@@ -82,25 +89,25 @@ class ClientSubjectHelperTest {
     void shouldReturnSameSubjectIDForMultipleClientsWithSameSector() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-1",
-                        PAIRWISE.toString(),
-                        "https://test.com",
-                        false);
+                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
         var clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-2",
-                        PAIRWISE.toString(),
-                        "https://test.com",
-                        false);
+                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://test.com", false);
 
-        var subject1 =
+        Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
-        var subject2 =
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
+        Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry2,
+                        AUTH_SESSION_FOR_CLIENT_2,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
         assertEquals(subject1, subject2);
     }
@@ -109,17 +116,25 @@ class ClientSubjectHelperTest {
     void shouldReturnSameSubjectIDForMultipleClientsWithPublicSubjectType() {
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), "https://test.com", false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
         ClientRegistry clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-2", PUBLIC.toString(), "https://test.com", false);
+                        keyPair, CLIENT_ID_2, PUBLIC.toString(), "https://test.com", false);
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry2,
+                        AUTH_SESSION_FOR_CLIENT_2,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
         assertThat(subject1, equalTo(PUBLIC_SUBJECT));
         assertThat(subject2, equalTo(PUBLIC_SUBJECT));
@@ -129,15 +144,15 @@ class ClientSubjectHelperTest {
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwise() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-1",
-                        PAIRWISE.toString(),
-                        "https://test.com",
-                        false);
+                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
 
         var subject =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
         assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
@@ -146,35 +161,43 @@ class ClientSubjectHelperTest {
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwiseAndIsAOneLoginService() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PAIRWISE.toString(), "https://test.com", true);
+                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", true);
         var clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair,
-                        "test-client-id-1",
-                        PAIRWISE.toString(),
-                        "https://test.com",
-                        false);
+                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://test.com", false);
 
-        var subject =
+        var subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
         var subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry2,
+                        AUTH_SESSION_FOR_CLIENT_2,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
-        assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-        assertThat(subject, not(subject2));
+        assertTrue(subject1.getValue().startsWith("urn:fdc:gov.uk:2022:"));
+        assertThat(subject1, not(subject2));
     }
 
     @Test
     void shouldNotReturnPairwiseSubjectIdWhenClientTypeIsPublic() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), "https://test.com", false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
 
         var subject =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        userProfile,
+                        clientRegistry1,
+                        AUTH_SESSION_FOR_CLIENT_1,
+                        authenticationService,
+                        INTERNAL_SECTOR_URI);
 
         assertFalse(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
         assertThat(subject.getValue(), equalTo(PUBLIC_SUBJECT.getValue()));
@@ -184,11 +207,11 @@ class ClientSubjectHelperTest {
     void shouldGetHostAsSectorIdentifierWhenDefinedByClient() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), "https://test.com", false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, INTERNAL_SECTOR_URI);
+                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.com"));
     }
@@ -196,12 +219,11 @@ class ClientSubjectHelperTest {
     @Test
     void shouldGetHostOfInternalSectorUriWhenClientIsOneLoginService() {
         var clientRegistry =
-                generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), null, true);
+                generateClientRegistryPairwise(keyPair, CLIENT_ID_1, PUBLIC.toString(), null, true);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, INTERNAL_SECTOR_URI);
+                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
@@ -210,11 +232,11 @@ class ClientSubjectHelperTest {
     void shouldUseHostOfInternalSectorUriWhenOneLoginServiceAndClientHasRegisteredSector() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), "https://test.com", true);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", true);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, INTERNAL_SECTOR_URI);
+                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
@@ -223,11 +245,11 @@ class ClientSubjectHelperTest {
     void shouldCalculateHostFromRedirectUriWhenSectorUriIsNotDefinedByClient() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), null, false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), null, false);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, INTERNAL_SECTOR_URI);
+                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("localhost"));
     }
@@ -237,7 +259,7 @@ class ClientSubjectHelperTest {
         var clientRegistry =
                 generateClientRegistryPairwise(
                         keyPair,
-                        "test-client-id-1",
+                        CLIENT_ID_1,
                         PUBLIC.toString(),
                         null,
                         List.of("https://www.test.com", "https://www.test2.com"),
@@ -247,7 +269,7 @@ class ClientSubjectHelperTest {
                 RuntimeException.class,
                 () ->
                         ClientSubjectHelper.getSectorIdentifierForClient(
-                                clientRegistry, INTERNAL_SECTOR_URI),
+                                clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI),
                 "Expected to throw exception");
     }
 
@@ -303,7 +325,7 @@ class ClientSubjectHelperTest {
     void shouldBeValidClientWithoutSectorId() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), null, false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), null, false);
 
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
@@ -312,7 +334,7 @@ class ClientSubjectHelperTest {
     void shouldBeValidClientWithSectorId() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, "test-client-id-1", PUBLIC.toString(), "https://test.com", false);
+                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
 
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
@@ -322,7 +344,7 @@ class ClientSubjectHelperTest {
         var clientRegistry =
                 generateClientRegistryPairwise(
                         keyPair,
-                        "test-client-id-1",
+                        CLIENT_ID_1,
                         PUBLIC.toString(),
                         "https://test.com",
                         List.of("https://www.test.com", "https://www.test2.com"),
@@ -336,7 +358,7 @@ class ClientSubjectHelperTest {
         var clientRegistry =
                 generateClientRegistryPairwise(
                         keyPair,
-                        "test-client-id-1",
+                        CLIENT_ID_1,
                         PUBLIC.toString(),
                         null,
                         List.of("https://www.test.com", "https://www.test2.com"),
@@ -350,7 +372,7 @@ class ClientSubjectHelperTest {
         var clientRegistry =
                 generateClientRegistryPairwise(
                         keyPair,
-                        "test-client-id-1",
+                        CLIENT_ID_1,
                         PUBLIC.toString(),
                         null,
                         List.of("https://www.test.com/1", "https://www.test.com/2"),
