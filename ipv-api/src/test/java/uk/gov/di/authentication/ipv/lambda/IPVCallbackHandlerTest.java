@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -202,8 +201,6 @@ class IPVCallbackHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension redirectLogging =
             new CaptureLoggingExtension(RedirectService.class);
-
-    private final Session session = new Session();
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
@@ -742,19 +739,6 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() {
-        var request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(Collections.emptyMap());
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
     void shouldRedirectToFrontendErrorPageWhenOrchSessionIsNotFound() {
         var request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(Collections.emptyMap());
@@ -1158,7 +1142,6 @@ class IPVCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
