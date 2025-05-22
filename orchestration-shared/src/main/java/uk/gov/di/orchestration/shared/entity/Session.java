@@ -76,11 +76,6 @@ public class Session {
         return this;
     }
 
-    public Session setNewAccount(AccountState isNewAccount) {
-        this.isNewAccount = isNewAccount;
-        return this;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);
