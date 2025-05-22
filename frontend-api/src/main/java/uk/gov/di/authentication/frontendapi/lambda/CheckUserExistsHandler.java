@@ -137,6 +137,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     emailAddress,
                     CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
+                authSessionService.updateSession(userContext.getAuthSession());
                 sessionService.storeOrUpdateSession(session, sessionId);
 
                 auditService.submitAuditEvent(
