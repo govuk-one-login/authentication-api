@@ -132,7 +132,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -162,7 +161,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -200,7 +198,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.empty(), logoutRequest.session());
         assertEquals(Optional.empty(), logoutRequest.orchSession());
         assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.empty(), logoutRequest.sessionId());
@@ -238,7 +235,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -282,7 +278,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -335,7 +330,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -376,7 +370,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -419,7 +412,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
