@@ -256,8 +256,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String code =
                     codeStorageService
                             .getOtpCode(codeIdentifier, notificationType)
-                            .or( // Temporary fallback for old phone number key with just email
-                                    () -> codeStorageService.getOtpCode(email, notificationType))
                             .orElseGet(
                                     () -> generateAndSaveNewCode(codeIdentifier, notificationType));
 
