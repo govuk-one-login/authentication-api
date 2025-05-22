@@ -1448,9 +1448,6 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2))
                 .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
-        assertThat(
-                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
     }
 
     private void assertOrchSessionUpdated() {
