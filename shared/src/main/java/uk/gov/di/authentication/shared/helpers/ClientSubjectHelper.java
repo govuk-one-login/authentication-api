@@ -25,22 +25,6 @@ public class ClientSubjectHelper {
     public static Subject getSubject(
             UserProfile userProfile,
             ClientRegistry client,
-            AuthenticationService authenticationService,
-            String internalSectorURI) {
-        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
-            return new Subject(userProfile.getPublicSubjectID());
-        } else {
-            return new Subject(
-                    calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            getSectorIdentifierForClient(client, internalSectorURI),
-                            authenticationService.getOrGenerateSalt(userProfile)));
-        }
-    }
-
-    public static Subject getSubject(
-            UserProfile userProfile,
-            ClientRegistry client,
             AuthSessionItem authSession,
             AuthenticationService authenticationService,
             String internalSectorURI) {
@@ -67,23 +51,15 @@ public class ClientSubjectHelper {
     }
 
     public static String getSectorIdentifierForClient(
-            ClientRegistry client, String internalSectorUri) {
-        return getSectorIdentifierForClient(client, client.getClientID(), internalSectorUri);
-    }
-
-    public static String getSectorIdentifierForClient(
             ClientRegistry client, AuthSessionItem authSession, String internalSectorUri) {
-        return getSectorIdentifierForClient(client, authSession.getClientId(), internalSectorUri);
-    }
-
-    public static String getSectorIdentifierForClient(
-            ClientRegistry client, String clientId, String internalSectorUri) {
         if (client.isOneLoginService()) {
             return returnHost(internalSectorUri);
         }
         if (!hasValidClientConfig(client)) {
             String message =
-                    String.format("ClientConfig for client %s has invalid sector id.", clientId);
+                    String.format(
+                            "ClientConfig for client %s has invalid sector id.",
+                            authSession.getClientId());
             LOG.error(message);
             throw new RuntimeException(message);
         }
