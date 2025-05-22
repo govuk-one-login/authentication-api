@@ -165,8 +165,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     pair("rpPairwiseId", rpPairwiseId));
 
             LOG.info("Setting internal common subject identifier in user session");
-            sessionService.storeOrUpdateSession(
-                    userContext.getSession(), userContext.getAuthSession().getSessionId());
 
             authSessionService.updateSession(
                     authSessionItem
