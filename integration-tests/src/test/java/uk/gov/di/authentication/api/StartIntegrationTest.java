@@ -270,7 +270,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
+                        Optional.of(
+                                makeRequestBody(
+                                        isAuthenticated, authRequest, Optional.empty(), "Cl.Cm")),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -355,7 +357,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(makeRequestBody(isAuthenticated, authRequest)),
+                        Optional.of(
+                                makeRequestBody(
+                                        isAuthenticated, authRequest, Optional.empty(), "Cl.Cm")),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
@@ -535,10 +539,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Arguments.of(LOW_LEVEL, LOW_LEVEL, false),
                     Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, true));
         }
-    }
-
-    private String makeRequestBody(boolean isAuthenticated, AuthenticationRequest authRequest) {
-        return makeRequestBody(isAuthenticated, authRequest, Optional.empty(), "Cl.Cm");
     }
 
     private String makeRequestBody(
