@@ -993,9 +993,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
         assertThat(response, hasStatus(302));
-        assertThrows(
-                uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                () -> redis.getSession(SESSION_ID));
+        assertTrue(orchSessionExtension.getSession(SESSION_ID).isEmpty());
 
         URI redirectLocationHeader =
                 URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -1019,9 +1017,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     private void assertRedirectToBlockedPage(APIGatewayProxyResponseEvent response) {
         assertThat(response, hasStatus(302));
-        assertThrows(
-                uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                () -> redis.getSession(SESSION_ID));
+        assertTrue(orchSessionExtension.getSession(SESSION_ID).isEmpty());
 
         URI redirectLocationHeader =
                 URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -1129,9 +1125,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void assertSessionIsDeleted() {
-        var session = redis.getFromRedis(SESSION_ID);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
-        assertNull(session);
         assertTrue(orchSession.isEmpty());
     }
 

@@ -65,8 +65,4 @@ public class SessionService {
             throw new RuntimeException(e);
         }
     }
-
-    public void deleteStoredSession(String sessionId) {
-        redisConnectionService.deleteValue(sessionId);
-    }
 }
