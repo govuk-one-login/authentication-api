@@ -50,15 +50,4 @@ public class SessionService {
             throw new RuntimeException(e);
         }
     }
-
-    public Session updateWithNewSessionId(
-            Session session, String oldSessionId, String newSessionId) {
-        try {
-            storeOrUpdateSession(session, oldSessionId, newSessionId);
-            redisConnectionService.deleteValue(oldSessionId);
-            return session;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
