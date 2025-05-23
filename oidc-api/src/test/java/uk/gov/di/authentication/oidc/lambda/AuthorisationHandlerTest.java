@@ -306,8 +306,6 @@ class AuthorisationHandlerTest {
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
-        when(sessionService.updateWithNewSessionId(any(Session.class), anyString(), anyString()))
-                .then(invocation -> invocation.<Session>getArgument(0));
     }
 
     @Nested
