@@ -70,7 +70,6 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -2532,7 +2531,6 @@ class AuthorisationHandlerTest {
             when(configService.getSessionExpiry()).thenReturn(3600L);
             orchSession.incrementProcessingIdentityAttempts();
             withExistingSession();
-            when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
         }
 
         @Test
