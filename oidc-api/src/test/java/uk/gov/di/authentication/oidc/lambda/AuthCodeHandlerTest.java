@@ -259,7 +259,6 @@ class AuthCodeHandlerTest {
                 .processVectorOfTrust(any(OrchClientSessionItem.class), any());
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
-        session.setCurrentCredentialStrength(initialLevel);
         orchSession.setIsNewAccount(OrchSessionItem.AccountState.NEW);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
@@ -297,8 +296,6 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
@@ -419,7 +416,6 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(

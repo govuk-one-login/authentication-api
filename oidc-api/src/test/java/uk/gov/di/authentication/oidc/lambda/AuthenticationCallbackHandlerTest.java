@@ -150,7 +150,7 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
 
-    private static final Session session = new Session().setCurrentCredentialStrength(null);
+    private static final Session session = new Session();
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withAuthenticated(false);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -228,7 +228,6 @@ class AuthenticationCallbackHandlerTest {
 
         clearInvocations(orchAuthCodeService);
 
-        session.setCurrentCredentialStrength(null);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any(), any()))
                 .thenAnswer(
@@ -631,11 +630,9 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenPreviously2FA()
+    void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenAuthReportPreviouslyMediumLevel()
             throws UnsuccessfulCredentialResponseException {
-        Session mediumLevelSession =
-                new Session().setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(mediumLevelSession));
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(new Session()));
         when(orchSessionService.getSession(SESSION_ID))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
         usingValidClientSession();
@@ -647,6 +644,8 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        when(USER_INFO.getStringClaim(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH.getValue()))
+                .thenReturn(CredentialTrustLevel.MEDIUM_LEVEL.name());
 
         handler.handleRequest(event, CONTEXT);
 
@@ -1448,9 +1447,6 @@ class AuthenticationCallbackHandlerTest {
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionService, times(2))
                 .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
-        assertThat(
-                sessionSaveCaptor.getAllValues().get(0).getCurrentCredentialStrength(),
-                equalTo(lowestCredentialTrustLevel));
     }
 
     private void assertOrchSessionUpdated() {

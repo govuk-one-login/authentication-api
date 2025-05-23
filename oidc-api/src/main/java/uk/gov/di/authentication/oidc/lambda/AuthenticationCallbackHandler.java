@@ -78,7 +78,6 @@ import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
@@ -441,19 +440,23 @@ public class AuthenticationCallbackHandler
                                                 .orElse(UNKNOWN))
                                 .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
-                CredentialTrustLevel requestedCredentialTrustLevel =
+                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
                 CredentialTrustLevel credentialTrustLevel =
-                        Optional.ofNullable(session.getCurrentCredentialStrength())
+                        Optional.ofNullable(
+                                        userInfo.getStringClaim(
+                                                AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH
+                                                        .getValue()))
+                                .map(CredentialTrustLevel::valueOf)
                                 .map(
-                                        sessionValue ->
+                                        achievedCredentialTrust ->
                                                 CredentialTrustLevel.max(
-                                                        sessionValue,
-                                                        requestedCredentialTrustLevel))
-                                .orElse(requestedCredentialTrustLevel);
+                                                        achievedCredentialTrust,
+                                                        lowestRequestedCredentialTrustLevel))
+                                .orElse(lowestRequestedCredentialTrustLevel);
 
                 logComparisonRequestCredentialTrustAndAchieved(
-                        userInfo, requestedCredentialTrustLevel);
+                        userInfo, lowestRequestedCredentialTrustLevel);
 
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
@@ -540,15 +543,6 @@ public class AuthenticationCallbackHandler
                         "Redirecting to: {} with SHA-256 of state: {}",
                         clientRedirectURI,
                         stateHash);
-
-                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(orchClientSession.getVtrList());
-                if (isNull(session.getCurrentCredentialStrength())
-                        || lowestRequestedCredentialTrustLevel.compareTo(
-                                        session.getCurrentCredentialStrength())
-                                > 0) {
-                    session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
-                }
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(

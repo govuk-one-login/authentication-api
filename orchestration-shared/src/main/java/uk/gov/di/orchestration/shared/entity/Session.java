@@ -67,15 +67,6 @@ public class Session {
         return this.emailAddress.equals(emailAddress);
     }
 
-    public CredentialTrustLevel getCurrentCredentialStrength() {
-        return currentCredentialStrength;
-    }
-
-    public Session setCurrentCredentialStrength(CredentialTrustLevel currentCredentialStrength) {
-        this.currentCredentialStrength = currentCredentialStrength;
-        return this;
-    }
-
     private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
             codeRequestCountMap.put(requestType, 0);

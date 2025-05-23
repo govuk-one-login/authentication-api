@@ -6,8 +6,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 
 import java.util.Optional;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -21,11 +19,6 @@ class AuthOrchSerializationServicesIntegrationTest {
 
     private uk.gov.di.orchestration.shared.services.SessionService orchSessionService;
     private uk.gov.di.authentication.shared.services.SessionService authSessionService;
-
-    uk.gov.di.orchestration.shared.entity.CredentialTrustLevel orchMediumCredentialTrustLevel =
-            CredentialTrustLevelFactory.getOrchMediumCredentialTrustLevel();
-    uk.gov.di.authentication.shared.entity.CredentialTrustLevel authMediumCredentialTrustLevel =
-            CredentialTrustLevelFactory.getAuthMediumCredentialTrustLevel();
 
     @BeforeEach
     void setup() {
@@ -62,14 +55,13 @@ class AuthOrchSerializationServicesIntegrationTest {
     @Test
     void authCanUpdateSharedFieldInSessionCreatedByOrch() {
         var orchSession = orchSessionService.generateSession();
-        orchSession.setCurrentCredentialStrength(orchMediumCredentialTrustLevel);
         orchSessionService.storeOrUpdateSession(orchSession, SESSION_ID);
         var authSession = authSessionService.getSession(SESSION_ID).get();
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
-        orchSession = orchSessionService.getSession(SESSION_ID).get();
-        assertThat(
-                orchSession.getCurrentCredentialStrength().getValue(),
-                equalTo(orchMediumCredentialTrustLevel.getValue()));
+        assertDoesNotThrow(
+                () -> {
+                    orchSessionService.getSession(SESSION_ID).get();
+                });
     }
 
     @Test
@@ -94,17 +86,5 @@ class AuthOrchSerializationServicesIntegrationTest {
         authSessionService.storeOrUpdateSession(authSession, SESSION_ID);
         orchSession = orchSessionService.getSession(SESSION_ID).get();
         assertNotNull(orchSession);
-    }
-}
-
-class CredentialTrustLevelFactory {
-    public static uk.gov.di.authentication.shared.entity.CredentialTrustLevel
-            getAuthMediumCredentialTrustLevel() {
-        return uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-    }
-
-    public static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel
-            getOrchMediumCredentialTrustLevel() {
-        return uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
     }
 }
