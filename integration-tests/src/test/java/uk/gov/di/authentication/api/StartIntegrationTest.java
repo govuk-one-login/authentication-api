@@ -622,6 +622,39 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 customAuthParams.get("scope"));
     }
 
+    private String makeRequestBody(
+            boolean isAuthenticated,
+            Optional<String> previousSessionIdOpt,
+            String state,
+            String scope,
+            String clientId,
+            String redirectUri,
+            Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
+            CredentialTrustLevel requestedCredentialStrength) {
+        Map<String, Object> requestBodyMap =
+                new HashMap<>(
+                        Map.of(
+                                "authenticated",
+                                isAuthenticated,
+                                "state",
+                                state,
+                                "requested_credential_strength",
+                                requestedCredentialStrength.getValue(),
+                                "scope",
+                                scope,
+                                "client_id",
+                                clientId,
+                                "redirect_uri",
+                                redirectUri));
+        previousSessionIdOpt.ifPresent(
+                previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
+        requestedLevelOfConfidenceOpt.ifPresent(
+                levelOfConfidence ->
+                        requestBodyMap.put(
+                                "requested_level_of_confidence", levelOfConfidence.getValue()));
+        return SerializationService.getInstance().writeValueAsString(requestBodyMap);
+    }
+
     private void registerWebClient(KeyPair keyPair) {
         clientStore.registerClient(
                 CLIENT_ID,
