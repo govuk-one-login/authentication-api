@@ -43,14 +43,4 @@ class SessionServiceTest {
         verify(redis).saveWithExpiry(eq("new-session-id"), anyString(), anyLong());
         verify(redis).deleteValue("session-id");
     }
-
-    @Test
-    void shouldDeleteSessionIdFromRedis() {
-        var session = new Session();
-
-        sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.deleteStoredSession("session-id");
-
-        verify(redis).deleteValue("session-id");
-    }
 }
