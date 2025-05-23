@@ -36,7 +36,6 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +59,6 @@ public class IPVCallbackHelper {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
-    private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
     private final OrchSessionService orchSessionService;
@@ -72,7 +70,6 @@ public class IPVCallbackHelper {
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.objectMapper = SerializationService.getInstance();
-        this.sessionService = new SessionService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -91,7 +88,6 @@ public class IPVCallbackHelper {
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.objectMapper = SerializationService.getInstance();
-        this.sessionService = new SessionService(configurationService, redis);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -110,7 +106,6 @@ public class IPVCallbackHelper {
             DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
             SerializationService objectMapper,
-            SessionService sessionService,
             AwsSqsClient sqsClient,
             OidcAPI oidcApi,
             OrchSessionService orchSessionService) {
@@ -121,7 +116,6 @@ public class IPVCallbackHelper {
         this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.objectMapper = objectMapper;
-        this.sessionService = sessionService;
         this.sqsClient = sqsClient;
         this.oidcAPI = oidcApi;
         this.orchSessionService = orchSessionService;

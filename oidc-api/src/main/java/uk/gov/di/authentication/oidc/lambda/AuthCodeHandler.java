@@ -40,8 +40,6 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -70,7 +68,6 @@ public class AuthCodeHandler
 
     private static final Logger LOG = LogManager.getLogger(AuthCodeHandler.class);
 
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
@@ -83,7 +80,6 @@ public class AuthCodeHandler
     private final DynamoClientService dynamoClientService;
 
     public AuthCodeHandler(
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             AuthCodeResponseGenerationService authCodeResponseService,
@@ -94,7 +90,6 @@ public class AuthCodeHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService) {
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.authCodeResponseService = authCodeResponseService;
@@ -108,23 +103,6 @@ public class AuthCodeHandler
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
-        sessionService = new SessionService(configurationService);
-        orchSessionService = new OrchSessionService(configurationService);
-        authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
-        orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        auditService = new AuditService(configurationService);
-        cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.configurationService = configurationService;
-        authCodeResponseService = new AuthCodeResponseGenerationService(configurationService);
-        dynamoClientService = new DynamoClientService(configurationService);
-    }
-
-    public AuthCodeHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        sessionService = new SessionService(configurationService, redis);
         orchSessionService = new OrchSessionService(configurationService);
         authUserInfoStorageService = new AuthenticationUserInfoStorageService(configurationService);
         orchAuthCodeService = new OrchAuthCodeService(configurationService);

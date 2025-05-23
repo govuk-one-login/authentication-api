@@ -56,7 +56,6 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.List;
 import java.util.Map;
@@ -83,7 +82,6 @@ public class IPVCallbackHandler
     private final ConfigurationService configurationService;
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final OrchClientSessionService orchClientSessionService;
@@ -104,7 +102,6 @@ public class IPVCallbackHandler
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
             IPVTokenService ipvTokenService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
             OrchClientSessionService orchClientSessionService,
@@ -118,7 +115,6 @@ public class IPVCallbackHandler
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.orchClientSessionService = orchClientSessionService;
@@ -140,7 +136,6 @@ public class IPVCallbackHandler
                         new RedisConnectionService(configurationService),
                         kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);
@@ -166,7 +161,6 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
                 new AuthenticationUserInfoStorageService(configurationService);

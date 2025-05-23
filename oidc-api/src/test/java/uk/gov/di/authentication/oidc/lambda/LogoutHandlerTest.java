@@ -24,7 +24,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -51,7 +50,6 @@ class LogoutHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
@@ -96,7 +94,6 @@ class LogoutHandlerTest {
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService,
                         dynamoClientService,
                         tokenValidationService,
                         logoutService,

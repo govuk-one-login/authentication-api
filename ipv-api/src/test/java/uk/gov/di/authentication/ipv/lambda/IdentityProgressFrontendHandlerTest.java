@@ -32,7 +32,6 @@ import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.Collections;
@@ -80,7 +79,6 @@ public class IdentityProgressFrontendHandlerTest {
                             .build());
 
     private final Context context = mock(Context.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -114,7 +112,6 @@ public class IdentityProgressFrontendHandlerTest {
                         dynamoIdentityService,
                         auditService,
                         cloudwatchMetricsService,
-                        sessionService,
                         userInfoStorageService,
                         orchSessionService,
                         orchClientSessionService);

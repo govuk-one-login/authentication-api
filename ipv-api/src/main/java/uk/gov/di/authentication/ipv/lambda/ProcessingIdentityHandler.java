@@ -30,7 +30,6 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.util.Map;
@@ -82,7 +81,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     public ProcessingIdentityHandler(
             DynamoIdentityService dynamoIdentityService,
             AccountInterventionService accountInterventionService,
-            SessionService sessionService,
             DynamoClientService dynamoClientService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
@@ -94,7 +92,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
-                sessionService,
                 dynamoClientService,
                 dynamoService,
                 orchSessionService,
