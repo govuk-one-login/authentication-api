@@ -204,7 +204,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -237,7 +236,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -270,7 +268,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -304,7 +301,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -352,7 +348,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -386,7 +381,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -427,7 +421,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
@@ -503,7 +496,6 @@ class LogoutServiceTest {
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(orchClientSessionService).deleteStoredClientSession("client-session-id-3");
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
@@ -556,7 +548,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService)
                 .deleteStoredClientSession(orchSession.getClientSessions().get(0));
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
@@ -595,7 +586,6 @@ class LogoutServiceTest {
 
         verify(orchClientSessionService, times(1)).deleteStoredClientSession(clientSessionId1);
         verify(orchClientSessionService, times(1)).deleteStoredClientSession(clientSessionId2);
-        verify(sessionService).deleteStoredSession(SESSION_ID);
         verify(orchSessionService).deleteSession(SESSION_ID);
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId(clientId1)), eq("rp-pairwise-id-client-1"));
