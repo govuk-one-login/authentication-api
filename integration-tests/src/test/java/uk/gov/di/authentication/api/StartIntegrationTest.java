@@ -1,12 +1,9 @@
 package uk.gov.di.authentication.api;
 
 import com.google.gson.JsonParser;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -56,7 +53,6 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -324,15 +320,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var isAuthenticated = true;
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(STATE)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", jsonArrayOf("Cl.Cm"))
-                        .build();
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
@@ -342,7 +329,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.of(
                                 makeRequestBody(
-                                        isAuthenticated, authRequest, Optional.empty(), "Cl.Cm")),
+                                        isAuthenticated,
+                                        NO_PREVIOUS_SESSION,
+                                        STATE.getValue(),
+                                        scope.toString(),
+                                        CLIENT_ID,
+                                        REDIRECT_URI.toString(),
+                                        Optional.empty(),
+                                        MEDIUM_LEVEL)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
