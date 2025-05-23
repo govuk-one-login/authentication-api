@@ -225,7 +225,6 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private Session newSession;
     private OrchSessionItem orchSession;
     private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
@@ -301,9 +300,7 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService);
-        newSession = new Session();
         orchSession = new OrchSessionItem(SESSION_ID);
-        when(sessionService.generateSession()).thenReturn(newSession);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
         when(clientService.getClient(anyString()))
@@ -1706,15 +1703,8 @@ class AuthorisationHandlerTest {
 
     @Nested
     class BrowserSessionId {
-        private final ArgumentCaptor<Session> sessionCaptor =
-                ArgumentCaptor.forClass(Session.class);
         private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
                 ArgumentCaptor.forClass(OrchSessionItem.class);
-
-        @BeforeEach
-        void setup() {
-            when(sessionService.generateSession()).thenReturn(new Session());
-        }
 
         @Test
         void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {

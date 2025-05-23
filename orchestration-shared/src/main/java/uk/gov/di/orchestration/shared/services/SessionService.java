@@ -28,10 +28,6 @@ public class SessionService {
                         configurationService.getRedisPassword()));
     }
 
-    public Session generateSession() {
-        return new Session();
-    }
-
     public Session copySessionForMaxAge(Session previousSession) {
         return new Session(previousSession);
     }
