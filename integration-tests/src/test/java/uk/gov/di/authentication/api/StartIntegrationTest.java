@@ -3,7 +3,6 @@ package uk.gov.di.authentication.api;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -516,37 +515,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Arguments.of(LOW_LEVEL, LOW_LEVEL, false),
                     Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, true));
         }
-    }
-
-    private String makeRequestBody(
-            boolean isAuthenticated,
-            AuthenticationRequest authRequest,
-            Optional<LevelOfConfidence> levelOfConfidenceOpt,
-            String credentialStrength) {
-        Map<String, Object> requestBodyMap =
-                new HashMap<>(
-                        Map.of(
-                                "previous-session-id",
-                                "4waJ14KA9IyxKzY7bIGIA3hUDos",
-                                "authenticated",
-                                isAuthenticated,
-                                "state",
-                                authRequest.getState().getValue(),
-                                "requested_credential_strength",
-                                credentialStrength,
-                                "scope",
-                                authRequest.getScope().toString()));
-        Optional.ofNullable(authRequest.getCustomParameter("client_id"))
-                .map(l -> l.get(0))
-                .ifPresent(clientId -> requestBodyMap.put("client_id", clientId));
-        Optional.ofNullable(authRequest.getCustomParameter("redirect_uri"))
-                .map(l -> l.get(0))
-                .ifPresent(redirectUri -> requestBodyMap.put("redirect_uri", redirectUri));
-        levelOfConfidenceOpt.ifPresent(
-                levelOfConfidence ->
-                        requestBodyMap.put(
-                                "requested_level_of_confidence", levelOfConfidence.getValue()));
-        return SerializationService.getInstance().writeValueAsString(requestBodyMap);
     }
 
     private String makeRequestBody(
