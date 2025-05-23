@@ -1,7 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
 public class SessionService {
@@ -26,24 +24,5 @@ public class SessionService {
                         configurationService.getRedisPort(),
                         configurationService.getUseRedisTLS(),
                         configurationService.getRedisPassword()));
-    }
-
-    public void storeOrUpdateSession(Session session, String sessionId) {
-        storeOrUpdateSession(session, sessionId, sessionId);
-    }
-
-    private void storeOrUpdateSession(Session session, String oldSessionId, String newSessionId) {
-        try {
-            var newSession = OBJECT_MAPPER.writeValueAsString(session);
-            if (redisConnectionService.keyExists(oldSessionId)) {
-                var oldSession = redisConnectionService.getValue(oldSessionId);
-                newSession = JsonUpdateHelper.updateJson(oldSession, newSession);
-            }
-
-            redisConnectionService.saveWithExpiry(
-                    newSessionId, newSession, configurationService.getSessionExpiry());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }
