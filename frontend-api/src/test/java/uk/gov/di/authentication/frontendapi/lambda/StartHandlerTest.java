@@ -67,6 +67,7 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -549,6 +550,7 @@ class StartHandlerTest {
                         STATE.toString(),
                         TEST_CLIENT_ID,
                         REDIRECT_URL.toString(),
-                        SCOPE.toString()));
+                        SCOPE.toString(),
+                        CLIENT_NAME));
     }
 }

@@ -16,4 +16,5 @@ public record StartRequest(
         @Expose @SerializedName("state") String state,
         @Expose @SerializedName("client_id") String clientId,
         @Expose @SerializedName("redirect_uri") String redirectUri,
-        @Expose @SerializedName("scope") String scope) {}
+        @Expose @SerializedName("scope") String scope,
+        @Expose @SerializedName("client_name") String clientName) {}

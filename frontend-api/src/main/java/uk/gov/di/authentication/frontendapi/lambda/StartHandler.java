@@ -186,6 +186,7 @@ public class StartHandler
                         retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
             }
             authSession.setClientId(startRequest.clientId());
+            authSession.setClientName(startRequest.clientName());
 
             isUserAuthenticatedWithValidProfile =
                     startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);
