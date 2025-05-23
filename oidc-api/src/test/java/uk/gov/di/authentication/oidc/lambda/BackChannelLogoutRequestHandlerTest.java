@@ -10,6 +10,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.exceptions.HttpRequestTimeoutException;
 import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -95,7 +96,7 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
-    void shouldReturnBatchItemFailuresWhenSendRequestFails() {
+    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithPostRequestFailureException() {
         var firstInput =
                 new BackChannelLogoutMessage(
                         "client-id", "https://test-1.account.gov.uk", "some-subject-id");
@@ -112,6 +113,46 @@ class BackChannelLogoutRequestHandlerTest {
                 .thenReturn(jwt);
 
         doThrow(new PostRequestFailureException("Post request failed"))
+                .when(request)
+                .post(
+                        URI.create("https://test-2.account.gov.uk"),
+                        "logout_token=serialized-payload");
+
+        var firstMessage = getMessages(firstInput, "firstMessageId");
+        var secondMessage = getMessages(secondInput, "secondMessageId");
+        List<SQSEvent.SQSMessage> messageList = new ArrayList<>();
+        firstMessage.ifPresent(messageList::add);
+        secondMessage.ifPresent(messageList::add);
+
+        var event = new SQSEvent();
+        event.setRecords(messageList);
+
+        var result = handler.handleRequest(event, context);
+
+        List<SQSBatchResponse.BatchItemFailure> batchItemFailures =
+                List.of(new SQSBatchResponse.BatchItemFailure("secondMessageId"));
+
+        assertThat(result, is(new SQSBatchResponse(batchItemFailures)));
+    }
+
+    @Test
+    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithHttpRequestTimeoutException() {
+        var firstInput =
+                new BackChannelLogoutMessage(
+                        "client-id", "https://test-1.account.gov.uk", "some-subject-id");
+        var secondInput =
+                new BackChannelLogoutMessage(
+                        "client-id", "https://test-2.account.gov.uk", "some-subject-id");
+
+        var jwt = mock(SignedJWT.class);
+
+        when(jwt.serialize()).thenReturn("serialized-payload");
+
+        when(tokenService.generateSignedJwtUsingExternalKey(
+                        any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
+                .thenReturn(jwt);
+
+        doThrow(new HttpRequestTimeoutException("Request timed out", new Exception()))
                 .when(request)
                 .post(
                         URI.create("https://test-2.account.gov.uk"),
