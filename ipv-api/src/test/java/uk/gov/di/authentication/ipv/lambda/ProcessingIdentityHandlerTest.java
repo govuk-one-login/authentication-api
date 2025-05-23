@@ -38,7 +38,6 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -91,7 +90,6 @@ class ProcessingIdentityHandlerTest {
     private static final String ENVIRONMENT = "test-environment";
 
     private final Context context = mock(Context.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
@@ -131,7 +129,6 @@ class ProcessingIdentityHandlerTest {
                 new ProcessingIdentityHandler(
                         dynamoIdentityService,
                         accountInterventionService,
-                        sessionService,
                         dynamoClientService,
                         dynamoService,
                         configurationService,

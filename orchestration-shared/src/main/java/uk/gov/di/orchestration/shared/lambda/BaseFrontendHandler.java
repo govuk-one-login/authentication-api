@@ -21,9 +21,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.util.Optional;
@@ -48,7 +46,6 @@ public abstract class BaseFrontendHandler<T>
     private static final String CLIENT_ID = "client_id";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
-    protected final SessionService sessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -58,14 +55,12 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.sessionService = sessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.orchSessionService = orchSessionService;
@@ -75,20 +70,6 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            RedisConnectionService redis) {
-        this.clazz = clazz;
-        this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
