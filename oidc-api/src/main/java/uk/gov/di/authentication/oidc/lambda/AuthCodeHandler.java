@@ -26,8 +26,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -46,7 +44,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -158,7 +155,6 @@ public class AuthCodeHandler
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId;
-        Session session;
         OrchSessionItem orchSession;
         String clientSessionId;
         try {
@@ -170,14 +166,13 @@ public class AuthCodeHandler
             if (sessionId == null) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
-            session = sessionService.getSession(sessionId).orElse(null);
             orchSession = orchSessionService.getSession(sessionId).orElse(null);
             clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
-            validateSessions(session, orchSession, clientSessionId);
+            validateSessions(orchSession, clientSessionId);
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         }
@@ -243,14 +238,7 @@ public class AuthCodeHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
 
-            authCode =
-                    generateAuthCode(
-                            clientID,
-                            emailOptional,
-                            orchClientSession.getVtrList(),
-                            clientSessionId,
-                            session,
-                            orchSession);
+            authCode = generateAuthCode(clientID, emailOptional, clientSessionId, orchSession);
 
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -364,12 +352,8 @@ public class AuthCodeHandler
         }
     }
 
-    private void validateSessions(
-            Session session, OrchSessionItem orchSession, String clientSessionId)
+    private void validateSessions(OrchSessionItem orchSession, String clientSessionId)
             throws ProcessAuthRequestException {
-        if (Objects.isNull(session)) {
-            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1000);
-        }
         if (Objects.isNull(orchSession)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1000);
         }
@@ -443,9 +427,7 @@ public class AuthCodeHandler
     private AuthorizationCode generateAuthCode(
             ClientID clientID,
             Optional<String> emailOptional,
-            List<VectorOfTrust> vtrList,
             String clientSessionId,
-            Session session,
             OrchSessionItem orchSession) {
 
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
