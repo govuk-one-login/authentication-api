@@ -15,8 +15,6 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.Map;
@@ -34,7 +32,6 @@ public class LogoutHandler
 
     private static final Logger LOG = LogManager.getLogger(LogoutHandler.class);
 
-    private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
     private final OrchSessionService orchSessionService;
@@ -46,20 +43,6 @@ public class LogoutHandler
     }
 
     public LogoutHandler(ConfigurationService configurationService) {
-        this.sessionService = new SessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        new JwksService(
-                                configurationService,
-                                new KmsConnectionService(configurationService)),
-                        configurationService);
-        this.logoutService = new LogoutService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-    }
-
-    public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.sessionService = new SessionService(configurationService, redis);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -72,12 +55,10 @@ public class LogoutHandler
     }
 
     public LogoutHandler(
-            SessionService sessionService,
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
             LogoutService logoutService,
             OrchSessionService orchSessionService) {
-        this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
         this.logoutService = logoutService;
@@ -99,11 +80,7 @@ public class LogoutHandler
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        input,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, input, orchSessionService);
 
         logoutRequest
                 .sessionId()
