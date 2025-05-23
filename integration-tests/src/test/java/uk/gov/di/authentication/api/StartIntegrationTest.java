@@ -246,15 +246,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var state = new State();
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .state(state)
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("vtr", jsonArrayOf("Cl.Cm"));
-        var authRequest = builder.build();
 
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
@@ -262,7 +253,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.of(
                                 makeRequestBody(
-                                        isAuthenticated, authRequest, Optional.empty(), "Cl.Cm")),
+                                        isAuthenticated,
+                                        WITH_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        CLIENT_ID,
+                                        REDIRECT_URI.toString(),
+                                        Optional.empty(),
+                                        MEDIUM_LEVEL)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
