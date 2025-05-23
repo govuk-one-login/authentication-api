@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -89,16 +88,20 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static Stream<Arguments> successfulRequests() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true),
-                Arguments.of(jsonArrayOf("Cl.Cm", "P0.Cl.Cm"), false, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, false));
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, false),
+                Arguments.of(Optional.empty(), MEDIUM_LEVEL, false, true),
+                Arguments.of(Optional.of(LevelOfConfidence.NONE), MEDIUM_LEVEL, false, false),
+                Arguments.of(
+                        Optional.of(LevelOfConfidence.MEDIUM_LEVEL), MEDIUM_LEVEL, true, false));
     }
 
     @ParameterizedTest
     @MethodSource("successfulRequests")
     void shouldReturn200AndStartResponse(
-            String vtrStringList, boolean identityRequired, boolean isAuthenticated)
+            Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
+            CredentialTrustLevel requestedCredentialTrustLevel,
+            boolean identityRequired,
+            boolean isAuthenticated)
             throws Json.JsonException {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
@@ -108,29 +111,20 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        var builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .nonce(new Nonce())
-                        .customParameter("client_id", CLIENT_ID)
-                        .customParameter("redirect_uri", REDIRECT_URI.toString())
-                        .customParameter("state", state.getValue())
-                        .customParameter("vtr", vtrStringList)
-                        .state(state);
-        var authRequest = builder.build();
 
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
-        var requestedVtr = VectorOfTrust.parseFromAuthRequestAttribute(List.of(vtrStringList));
-        var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
-        var credentialTrustLevel = requestedVtr.getCredentialTrustLevel();
         var response =
                 makeRequest(
                         Optional.of(
                                 makeRequestBody(
                                         isAuthenticated,
-                                        authRequest,
-                                        levelOfConfidenceOpt,
-                                        credentialTrustLevel.getValue())),
+                                        WITH_PREVIOUS_SESSION,
+                                        state.getValue(),
+                                        scope.toString(),
+                                        CLIENT_ID,
+                                        REDIRECT_URI.toString(),
+                                        requestedLevelOfConfidenceOpt,
+                                        requestedCredentialTrustLevel)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -173,10 +167,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
         var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
         assertThat(
-                actualAuthSession.getRequestedCredentialStrength(), equalTo(credentialTrustLevel));
+                actualAuthSession.getRequestedCredentialStrength(),
+                equalTo(requestedCredentialTrustLevel));
         assertThat(
                 actualAuthSession.getRequestedLevelOfConfidence(),
-                equalTo(levelOfConfidenceOpt.orElse(null)));
+                equalTo(requestedLevelOfConfidenceOpt.orElse(null)));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
     }
 
