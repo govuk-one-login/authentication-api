@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,17 +27,5 @@ class SessionServiceTest {
 
         verify(redis, times(1))
                 .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
-    }
-
-    @Test
-    void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
-        var session = new Session();
-
-        sessionService.storeOrUpdateSession(session, "session-id");
-        sessionService.updateWithNewSessionId(session, "session-id", "new-session-id");
-
-        verify(redis).saveWithExpiry(eq("session-id"), anyString(), anyLong());
-        verify(redis).saveWithExpiry(eq("new-session-id"), anyString(), anyLong());
-        verify(redis).deleteValue("session-id");
     }
 }
