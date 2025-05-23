@@ -71,16 +71,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
-    public static final String REQUEST_BODY =
-            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", "
-                    + "\"authenticated\": %s, "
-                    + "\"state\": \"%s\","
-                    + "\"client_id\": \"%s\","
-                    + "\"redirect_uri\": \"%s\","
-                    + "\"requested_level_of_confidence\": \"%s\", "
-                    + "\"requested_credential_strength\": \"%s\", "
-                    + "\"scope\": \"%s\""
-                    + "}";
+    private static final Optional<String> WITH_PREVIOUS_SESSION = Optional.of(PREVIOUS_SESSION_ID);
+    private static final Optional<String> NO_PREVIOUS_SESSION = Optional.empty();
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -403,19 +395,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    NO_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    CLIENT_ID,
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -433,19 +419,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    WITH_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    CLIENT_ID,
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -461,19 +441,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Optional.of(
                             makeRequestBody(
                                     false,
-                                    Map.of(
-                                            "state",
-                                            state.getValue(),
-                                            "redirect_uri",
-                                            REDIRECT_URI.toString(),
-                                            "scope",
-                                            scope.toString(),
-                                            "client_id",
-                                            CLIENT_ID,
-                                            "requested_level_of_confidence",
-                                            "P1",
-                                            "requested_credential_strength",
-                                            "Cl.Cm"))),
+                                    WITH_PREVIOUS_SESSION,
+                                    state.getValue(),
+                                    scope.toString(),
+                                    CLIENT_ID,
+                                    REDIRECT_URI.toString(),
+                                    Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                    MEDIUM_LEVEL)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -509,19 +483,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Optional.of(
                                     makeRequestBody(
                                             false,
-                                            Map.of(
-                                                    "state",
-                                                    state.getValue(),
-                                                    "redirect_uri",
-                                                    REDIRECT_URI.toString(),
-                                                    "scope",
-                                                    scope.toString(),
-                                                    "client_id",
-                                                    CLIENT_ID,
-                                                    "requested_level_of_confidence",
-                                                    "P1",
-                                                    "requested_credential_strength",
-                                                    MEDIUM_LEVEL.getValue()))),
+                                            NO_PREVIOUS_SESSION,
+                                            state.getValue(),
+                                            scope.toString(),
+                                            CLIENT_ID,
+                                            REDIRECT_URI.toString(),
+                                            Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                            MEDIUM_LEVEL)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -545,19 +513,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Optional.of(
                                     makeRequestBody(
                                             false,
-                                            Map.of(
-                                                    "state",
-                                                    state.getValue(),
-                                                    "redirect_uri",
-                                                    REDIRECT_URI.toString(),
-                                                    "scope",
-                                                    scope.toString(),
-                                                    "client_id",
-                                                    CLIENT_ID,
-                                                    "requested_level_of_confidence",
-                                                    "P1",
-                                                    "requested_credential_strength",
-                                                    requestedCredentialStrength.getValue()))),
+                                            WITH_PREVIOUS_SESSION,
+                                            state.getValue(),
+                                            scope.toString(),
+                                            CLIENT_ID,
+                                            REDIRECT_URI.toString(),
+                                            Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                            requestedCredentialStrength)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -608,18 +570,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         requestBodyMap.put(
                                 "requested_level_of_confidence", levelOfConfidence.getValue()));
         return SerializationService.getInstance().writeValueAsString(requestBodyMap);
-    }
-
-    private String makeRequestBody(boolean isAuthenticated, Map<String, Object> customAuthParams) {
-        return String.format(
-                REQUEST_BODY,
-                isAuthenticated,
-                customAuthParams.get("state"),
-                customAuthParams.get("client_id"),
-                customAuthParams.get("redirect_uri"),
-                customAuthParams.get("requested_level_of_confidence"),
-                customAuthParams.get("requested_credential_strength"),
-                customAuthParams.get("scope"));
     }
 
     private String makeRequestBody(
