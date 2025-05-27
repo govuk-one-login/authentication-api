@@ -485,7 +485,7 @@ class AuthorisationHandlerTest {
                     arguments(null, Channel.WEB.getValue()),
                     arguments(Channel.WEB.getValue(), Channel.WEB.getValue()),
                     arguments(Channel.STRATEGIC_APP.getValue(), Channel.STRATEGIC_APP.getValue()),
-                    arguments(Channel.MOBILE.getValue(), Channel.MOBILE.getValue()));
+                    arguments(Channel.GENERIC_APP.getValue(), Channel.GENERIC_APP.getValue()));
         }
 
         @ParameterizedTest
