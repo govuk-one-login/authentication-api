@@ -240,6 +240,81 @@ class AuthenticateHandlerTest {
     }
 
     @Test
+    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithPasswordReset()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(false, true, false, true)));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
+    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithReproveIdentity()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(false, true, true, false)));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
+    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
+                .thenReturn(
+                        new AccountInterventionsInboundResponse(
+                                new Intervention(1L), new State(false, true, true, true)));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
     public void shouldReturn500IfIfAisCallEnabledTheCallFails()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
