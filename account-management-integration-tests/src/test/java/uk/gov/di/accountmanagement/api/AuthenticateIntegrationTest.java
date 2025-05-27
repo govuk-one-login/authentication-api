@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.lambda.AuthenticateHandler;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -41,7 +43,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() throws Exception {
+    public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String publicSubjectId = setupUserAndRetrieveUserId(email, password);
@@ -59,7 +61,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
+    public void shouldCallLoginEndpointAndReturn401WhenUserHasInvalidCredentials() {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
@@ -75,7 +77,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
     }
 
     @Test
-    public void shouldCallLoginEndpointAndReturn403henUserIsBlockedInAis() {
+    public void shouldCallLoginEndpointAndReturn403WhenUserIsBlockedInAis() throws Exception {
         String email = "joe.bloggs+5@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String publicSubjectId = setupUserAndRetrieveUserId(email, password);
@@ -87,9 +89,84 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(403));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1084)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE));
+    }
+
+    @Test
+    public void shouldCallLoginEndpointAndReturn403WhenUserIsSuspendedInAis() throws Exception {
+        String email = "joe.bloggs+5@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, false, true, false, false);
+
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(403));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1083)));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE));
+    }
+
+    @Test
+    public void shouldCallLoginEndpointAndReturn204WhenUserIsSuspendedInAisButHasPasswordReset() {
+        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, false, true, false, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE));
+    }
+
+    @Test
+    public void shouldCallLoginEndpointAndReturn204WhenUserIsSuspendedInAisButHasReproveIdentity() {
+        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, false, true, true, false);
+
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE));
+    }
+
+    @Test
+    public void
+            shouldCallLoginEndpointAndReturn204WhenUserIsSuspendedInAisButHasPasswordResetAndReproveIdentity() {
+        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String publicSubjectId = setupUserAndRetrieveUserId(email, password);
+        accountInterventionsStubExtension.initWithAccountStatus(
+                publicSubjectId, false, true, true, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE));
     }
 
     private static class AccountInterventionsTestConfigurationService
