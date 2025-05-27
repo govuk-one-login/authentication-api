@@ -83,7 +83,7 @@ class ClientConfigValidationServiceTest {
                         null,
                         null,
                         null,
-                        Channel.MOBILE.getValue()),
+                        Channel.GENERIC_APP.getValue()),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
