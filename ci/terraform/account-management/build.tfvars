@@ -15,3 +15,4 @@ lambda_min_concurrency = 1
 
 # Feature flags
 mfa_method_management_api_enabled = true
+ais_call_in_authenticate_enabled  = true
