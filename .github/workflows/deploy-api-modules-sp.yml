@@ -47,7 +47,7 @@ jobs:
 
       - name: SAM build
         run: |
-          ./gradlew --no-daemon --parallel :auth-external-api:buildZip
+          ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip
           sam validate -t backend-template.yaml
           sam build --parallel -t backend-template.yaml
 

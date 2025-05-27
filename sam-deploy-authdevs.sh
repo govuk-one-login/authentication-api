@@ -18,6 +18,7 @@ Options:
     -c, --clean                 run gradle clean before build
     -h, --help                  display this help message
 
+    -o, --oidc                  deploy the OIDC API
     -x, --auth-external         deploy the auth-external API
 
 Arguments:
@@ -50,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --no-build) O_BUILD=0 ;;
     -p | --prompt) CONFIRM_CHANGESET_OPTION="--confirm-changeset" ;;
     -c | --clean) O_CLEAN="clean" ;;
+    -o | --oidc) O_DEPLOY=1 ;;
     -x | --auth-external) O_DEPLOY=1 ;;
     -h | --help)
       usage
@@ -81,7 +83,7 @@ echo "Environment: ${ENVIRONMENT}"
 
 if [[ ${O_BUILD} -eq 1 ]]; then
   echo "Building deployment artefacts ... "
-  ./gradlew --no-daemon --parallel ${O_CLEAN} :auth-external-api:buildZip
+  ./gradlew --no-daemon --parallel ${O_CLEAN} :auth-external-api:buildZip :frontend-api:buildZip
   echo "done!"
 fi
 
