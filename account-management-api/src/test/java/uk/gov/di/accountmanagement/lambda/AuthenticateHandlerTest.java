@@ -290,8 +290,9 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
-            throws UnsuccessfulAccountInterventionsResponseException {
+    public void
+            shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
+                    throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))

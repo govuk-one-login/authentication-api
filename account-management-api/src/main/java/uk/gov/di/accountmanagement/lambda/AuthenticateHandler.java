@@ -121,7 +121,9 @@ public class AuthenticateHandler
                             accountInterventionsService.sendAccountInterventionsOutboundRequest(
                                     internalCommonSubjectIdentifier.getValue());
 
-                    if (interventions.state().suspended() && !interventions.state().resetPassword() && !interventions.state().reproveIdentity()) {
+                    if (interventions.state().suspended()
+                            && !interventions.state().resetPassword()
+                            && !interventions.state().reproveIdentity()) {
                         auditService.submitAuditEvent(
                                 AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
                                 auditContext);
