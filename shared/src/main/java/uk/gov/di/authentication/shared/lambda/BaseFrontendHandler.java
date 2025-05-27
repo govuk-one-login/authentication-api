@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -96,15 +95,6 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials,
-            RedisConnectionService redis) {
         this(clazz, configurationService);
         this.loadUserCredentials = loadUserCredentials;
     }

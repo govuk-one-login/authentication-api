@@ -131,7 +131,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        super(LoginRequest.class, configurationService, true, redis);
+        super(LoginRequest.class, configurationService, true);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
