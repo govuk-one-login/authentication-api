@@ -3012,6 +3012,7 @@ Resources:
         - !Ref OrchSessionTableReadAndWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
+        - !Ref StateStorageTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5329,6 +5330,55 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
+
+  #region State Storage policies #
+
+  StateStorageTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
+  StateStorageTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem #We won't be updating items, only getting and putting
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
+  #endregion
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
