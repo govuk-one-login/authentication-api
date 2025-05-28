@@ -1198,7 +1198,8 @@ class LoginHandlerTest {
                                         .withClientId(CLIENT_ID.getValue())
                                         .withAchievedCredentialStrength(achievedCredentialStrength)
                                         .withRequestedCredentialStrength(
-                                                requestedCredentialStrength)));
+                                                requestedCredentialStrength)
+                                        .withClientName(CLIENT_NAME)));
     }
 
     private void usingValidAuthSession() {

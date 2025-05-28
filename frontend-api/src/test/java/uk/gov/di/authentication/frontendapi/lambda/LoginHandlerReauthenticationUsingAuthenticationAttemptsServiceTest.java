@@ -552,7 +552,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                         .withSessionId(SESSION_ID)
                                         .withEmailAddress(EMAIL)
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withClientId(CLIENT_ID.getValue())));
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withClientName(CLIENT_NAME)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
