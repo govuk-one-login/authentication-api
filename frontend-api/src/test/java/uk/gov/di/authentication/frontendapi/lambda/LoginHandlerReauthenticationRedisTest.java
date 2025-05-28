@@ -50,7 +50,6 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -211,7 +210,7 @@ class LoginHandlerReauthenticationRedisTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @ParameterizedTest

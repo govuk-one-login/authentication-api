@@ -789,8 +789,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
-
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
         verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).saveBlockedForEmail(any(), any(), anyLong());
@@ -845,7 +844,7 @@ class LoginHandlerTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @ParameterizedTest
@@ -881,7 +880,7 @@ class LoginHandlerTest {
                                 configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @ParameterizedTest
@@ -941,7 +940,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @ParameterizedTest
@@ -992,7 +991,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @Test
@@ -1007,7 +1006,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @Test
@@ -1022,7 +1021,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @Test
@@ -1055,7 +1054,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
     @Test
@@ -1077,7 +1076,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1078));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
@@ -1106,7 +1104,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1064));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
     }
 
     @Test
