@@ -87,7 +87,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
         setUpTest();
-        redis.createSession(SESSION_ID);
         withAuthSession();
 
         Map<String, String> headers = new HashMap<>();
