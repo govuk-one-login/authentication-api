@@ -98,7 +98,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean identityRequired,
             boolean isAuthenticated)
             throws Json.JsonException {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
@@ -172,7 +172,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
             throws Json.JsonException {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
         var state = new State();
@@ -223,7 +223,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType) throws Json.JsonException {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var isAuthenticated = true;
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
         authSessionExtension.addSession(sessionId);
@@ -281,7 +281,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenRedirectURIIsInvalid() throws Exception {
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
         var state = new State();
@@ -316,7 +316,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var isAuthenticated = true;
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(sessionId);
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
 
@@ -355,7 +355,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void setup() throws Json.JsonException {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
-            sessionId = redis.createSession();
+            sessionId = IdGenerator.generate();
             userStore.signUp(EMAIL, "password");
             authSessionExtension.addSession(sessionId);
             state = new State();
@@ -441,7 +441,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
-            redis.createSession(sessionId);
             userStore.signUp(EMAIL, "password");
             registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
             scope.add(OIDCScopeValue.OPENID);
