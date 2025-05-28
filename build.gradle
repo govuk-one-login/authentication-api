@@ -112,7 +112,6 @@ subprojects {
         xray
         pact_consumer
         pact_provider
-        open_telemetry
     }
 
     // Check dependencies using:
@@ -227,10 +226,6 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
-
-        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.15.0-alpha"),
-                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure",
-                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
 

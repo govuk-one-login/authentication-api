@@ -27,8 +27,6 @@ dependencies {
             project(":client-registry-api"),
             project(":doc-checking-app-api")
 
-    runtimeOnly configurations.open_telemetry
-
     implementation project(path: ':ipv-api')
 
     testImplementation configurations.tests,
