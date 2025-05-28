@@ -8,7 +8,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 public class SessionHelper {
@@ -16,7 +15,6 @@ public class SessionHelper {
 
     public static void updateSessionWithSubject(
             UserContext userContext,
-            SessionService sessionService,
             AuthSessionService authSessionService,
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {

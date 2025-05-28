@@ -298,11 +298,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
             SessionHelper.updateSessionWithSubject(
-                    userContext,
-                    sessionService,
-                    authSessionService,
-                    authenticationService,
-                    configurationService);
+                    userContext, authSessionService, authenticationService, configurationService);
         }
 
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
