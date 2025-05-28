@@ -342,7 +342,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     maybeRpPairwiseId);
         }
 
-        sessionService.storeOrUpdateSession(session, sessionId);
+        authSessionService.updateSession(authSession);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
                 codeRequest.getJourneyType(),
@@ -399,8 +399,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
                 codeRequest.getMfaMethodType().getValue(),
                 journeyType);
-
-        sessionService.storeOrUpdateSession(session, userContext.getAuthSession().getSessionId());
 
         authSessionService.updateSession(
                 authSession
