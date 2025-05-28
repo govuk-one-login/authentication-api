@@ -506,6 +506,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
 
+    public long getBackChannelLogoutCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("BACK_CHANNEL_LOGOUT_CALL_TIMEOUT", "15000"));
+    }
+
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }

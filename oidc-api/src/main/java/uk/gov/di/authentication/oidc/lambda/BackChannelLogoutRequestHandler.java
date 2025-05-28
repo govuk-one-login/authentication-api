@@ -10,6 +10,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.oidc.exceptions.HttpRequestTimeoutException;
 import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -47,7 +48,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     public BackChannelLogoutRequestHandler() {
         var configurationService = ConfigurationService.getInstance();
         this.oidcApi = new OidcAPI(configurationService);
-        this.httpRequestService = new HttpRequestService();
+        this.httpRequestService = new HttpRequestService(configurationService);
         this.tokenService =
                 new TokenService(
                         configurationService,
@@ -86,7 +87,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         for (SQSEvent.SQSMessage message : event.getRecords()) {
             try {
                 sendLogoutMessage(message);
-            } catch (PostRequestFailureException e) {
+            } catch (PostRequestFailureException | HttpRequestTimeoutException e) {
                 LOG.warn(e.getMessage());
                 batchItemFailures.add(
                         new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
