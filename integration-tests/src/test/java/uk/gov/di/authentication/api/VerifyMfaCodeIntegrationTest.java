@@ -171,7 +171,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("existingUserAuthAppJourneyTypes")
-    void whenAuthAppMethodIsBackupReturnsErrorForMigratedUser(JourneyType journeyType) {
+    void whenAuthAppMethodIsBackupReturns204ForMigratedUser(JourneyType journeyType) {
         var emailAddressOfMigratedUser = "migrated.user@example.com";
         setupUser(sessionId, emailAddressOfMigratedUser, true);
 
@@ -200,11 +200,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(codeRequest),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
-        assertThat(response, hasStatus(400));
-        assertTrue(
-                response.getBody()
-                        .contains(
-                                "Attempting to validate auth app code for user without auth app method"));
+        assertThat(response, hasStatus(204));
     }
 
     @Test

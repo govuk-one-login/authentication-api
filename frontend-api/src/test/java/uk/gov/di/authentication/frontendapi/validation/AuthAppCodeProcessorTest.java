@@ -187,7 +187,7 @@ class AuthAppCodeProcessorTest {
 
     @ParameterizedTest
     @MethodSource("validatorParamsWithoutRegistrationJourney")
-    void returnsAnErrorIfDefaultMethodIsNotAuthAppForMigratedUser(JourneyType journeyType) {
+    void returnsNoErrorOnValidAuthCodeToBackupMethodForMigratedUser(JourneyType journeyType) {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
 
@@ -218,34 +218,7 @@ class AuthAppCodeProcessorTest {
                         mockAuditService,
                         mockAccountModifiersService);
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
-    }
-
-    @ParameterizedTest
-    @MethodSource("validatorParamsWithoutRegistrationJourney")
-    void returnsAnErrorIfThereIsNoDefaultMethodForMigratedUser(JourneyType journeyType) {
-        when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
-                .thenReturn(false);
-
-        var userCredentials = new UserCredentials().withMfaMethods(List.of(BACKUP_AUTH_APP_METHOD));
-        when(mockDynamoService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-        when(mockDynamoService.getUserProfileByEmail(EMAIL))
-                .thenReturn(new UserProfile().withMfaMethodsMigrated(true));
-
-        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType);
-
-        this.authAppCodeProcessor =
-                new AuthAppCodeProcessor(
-                        mockUserContext,
-                        mockCodeStorageService,
-                        mockConfigurationService,
-                        mockDynamoService,
-                        MAX_RETRIES,
-                        codeRequest,
-                        mockAuditService,
-                        mockAccountModifiersService);
-
-        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
+        assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
