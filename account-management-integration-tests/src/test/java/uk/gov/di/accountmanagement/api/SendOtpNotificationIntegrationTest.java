@@ -34,6 +34,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+    private static final String TEST_NEW_EMAIL = "new.joe@digital.cabinet-office.gov.uk";
     private static final String TEST_TESTER_CLIENT_ID = "tester-client-id";
     private static final String TEST_PHONE_NUMBER =
             Long.toString(
@@ -53,11 +54,12 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
+        userStore.signUp(TEST_EMAIL, "password");
         var response =
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                        TEST_NEW_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -67,7 +69,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(TEST_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
+                List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_SEND_OTP));
     }

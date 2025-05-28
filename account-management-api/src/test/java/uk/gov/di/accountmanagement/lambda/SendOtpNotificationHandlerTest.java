@@ -26,10 +26,8 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -45,7 +43,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -69,6 +70,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1004;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -91,6 +93,7 @@ class SendOtpNotificationHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
     private final Json objectMapper = SerializationService.getInstance();
+
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
     private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
@@ -101,9 +104,11 @@ class SendOtpNotificationHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
-    private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+
+    private final Context context = mock(Context.class);
     private static final String PERSISTENT_ID = "some-persistent-session-id";
 
     private final AuditContext auditContext =
@@ -130,7 +135,8 @@ class SendOtpNotificationHandlerTest {
                     dynamoEmailCheckResultService,
                     auditService,
                     clientService,
-                    cloudwatchMetricsService);
+                    cloudwatchMetricsService,
+                    mfaMethodsService);
 
     @BeforeEach
     void setup() {
@@ -142,6 +148,8 @@ class SendOtpNotificationHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("test-env");
         when(configurationService.getTestClientVerifyPhoneNumberOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
+        when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+
         when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
                 .thenReturn(true);
 
@@ -153,6 +161,19 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws Json.JsonException {
+        var mfaMethods = new ArrayList<MFAMethod>();
+        var mfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString());
+        mfaMethods.add(mfaMethod);
+
+        when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                .thenReturn(new Result.Success<>(mfaMethods));
+
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         TEST_EMAIL_ADDRESS,
@@ -217,6 +238,19 @@ class SendOtpNotificationHandlerTest {
     @MethodSource("requestEmailCheckPermutations")
     void shouldCorrectlyRequestEmailCheck(
             boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
+        var mfaMethods = new ArrayList<MFAMethod>();
+        var mfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString());
+        mfaMethods.add(mfaMethod);
+
+        when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                .thenReturn(new Result.Success<>(mfaMethods));
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -274,6 +308,19 @@ class SendOtpNotificationHandlerTest {
     @Test
     void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled()
             throws Json.JsonException {
+        var mfaMethods = new ArrayList<MFAMethod>();
+        var mfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString());
+        mfaMethods.add(mfaMethod);
+
+        when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                .thenReturn(new Result.Success<>(mfaMethods));
+
         when(configurationService.isEmailCheckEnabled()).thenReturn(false);
 
         String persistentIdValue = "some-persistent-session-id";
@@ -312,13 +359,18 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
-        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(TEST_EMAIL_ADDRESS)
-                                        .withPhoneNumber("+447755551085")
-                                        .withPhoneNumberVerified(true)));
+        var mfaMethods = new ArrayList<MFAMethod>();
+        var mfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        TEST_PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        UUID.randomUUID().toString());
+        mfaMethods.add(mfaMethod);
+
+        when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                .thenReturn(new Result.Success<>(mfaMethods));
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
@@ -494,6 +546,20 @@ class SendOtpNotificationHandlerTest {
 
         @Test
         void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
+            var mfaMethods = new ArrayList<MFAMethod>();
+            var defaultMfaMethod =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            "+447755551084",
+                            PriorityIdentifier.DEFAULT,
+                            UUID.randomUUID().toString());
+
+            mfaMethods.add(defaultMfaMethod);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                    .thenReturn(new Result.Success<>(mfaMethods));
+
             NotifyRequest notifyRequest =
                     new NotifyRequest(
                             TEST_EMAIL_ADDRESS,
@@ -503,7 +569,7 @@ class SendOtpNotificationHandlerTest {
                             false,
                             TEST_EMAIL_ADDRESS);
             String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-            doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
+            doThrow(SdkClientException.class).when(emailSqsClient).send(serialisedRequest);
 
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHeaders(Map.of());
@@ -548,25 +614,31 @@ class SendOtpNotificationHandlerTest {
                 event.setBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                "joe.bloggs", VERIFY_EMAIL));
+                                "not.an.email", VERIFY_EMAIL));
 
                 APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+                assertThat(result, hasJsonBody(ERROR_1004));
 
                 verifyNoInteractions(auditService);
             }
 
             @Test
             void shouldReturn400IfPhoneNumberIsInvalid() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)));
+                var mfaMethods = new ArrayList<MFAMethod>();
+                var defaultMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "+447755551084",
+                                PriorityIdentifier.DEFAULT,
+                                UUID.randomUUID().toString());
+
+                mfaMethods.add(defaultMfaMethod);
+
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(new Result.Success<>(mfaMethods));
 
                 APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -586,13 +658,20 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)));
+                var mfaMethods = new ArrayList<MFAMethod>();
+                var defaultMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "+447755551084",
+                                PriorityIdentifier.DEFAULT,
+                                UUID.randomUUID().toString());
+
+                mfaMethods.add(defaultMfaMethod);
+
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(new Result.Success<>(mfaMethods));
+
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
                 event.setRequestContext(eventContext);
@@ -610,8 +689,10 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400WhenUserProfileMissing() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(Optional.empty());
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(
+                                new Result.Failure<>(
+                                        MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -624,19 +705,25 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.NO_USER_PROFILE_FOR_EMAIL));
+                assertThat(result, hasJsonBody(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT));
                 verifyNoInteractions(auditService);
             }
 
             @Test
             void shouldReturn400WhenPhoneNumberInvalid() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)));
+                var mfaMethods = new ArrayList<MFAMethod>();
+                var defaultMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "+447755551084",
+                                PriorityIdentifier.DEFAULT,
+                                UUID.randomUUID().toString());
+
+                mfaMethods.add(defaultMfaMethod);
+
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(new Result.Success<>(mfaMethods));
 
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -676,41 +763,33 @@ class SendOtpNotificationHandlerTest {
             }
 
             @Test
-            void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
+            void cannotChangeEmailToOneInUseByAnotherUser() {
                 when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
 
-                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
                 event.setRequestContext(eventContext);
                 event.setBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                                 TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+                var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
-
                 verifyNoInteractions(auditService);
             }
         }
 
         @Nested
         class UnMigratedUsers {
-
             @Test
             void shouldReturn400WhenNoUserCredentialsForEmail() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
                         .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)
-                                                .withMfaMethodsMigrated(true)));
-
-                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
-                        .thenReturn(null);
+                                new Result.Failure<>(
+                                        MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -723,31 +802,25 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.NO_USER_CREDENTIALS_FOR_EMAIL));
+                assertThat(result, hasJsonBody(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT));
                 verifyNoInteractions(auditService);
             }
 
             @Test
             void shouldReturn400WhenPhoneNumberAlreadyInUse() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)
-                                                .withMfaMethodsMigrated(true)));
+                var mfaMethods = new ArrayList<MFAMethod>();
+                var defaultMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "+447755551084",
+                                PriorityIdentifier.DEFAULT,
+                                UUID.randomUUID().toString());
 
-                var defaultMfaMethod = new MFAMethod();
-                defaultMfaMethod.setPriority(PriorityIdentifier.DEFAULT.name());
-                defaultMfaMethod.setMfaMethodType(MFAMethodType.SMS.name());
-                defaultMfaMethod.setDestination("+447755551084");
+                mfaMethods.add(defaultMfaMethod);
 
-                var userCredentials = new UserCredentials();
-                userCredentials.setMfaMethod(defaultMfaMethod);
-
-                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
-                        .thenReturn(userCredentials);
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(new Result.Success<>(mfaMethods));
 
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -766,25 +839,19 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400WhenPhoneNumberInvalid() {
-                when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                        .thenReturn(
-                                Optional.of(
-                                        new UserProfile()
-                                                .withEmail(TEST_EMAIL_ADDRESS)
-                                                .withPhoneNumber("+447755551084")
-                                                .withPhoneNumberVerified(true)
-                                                .withMfaMethodsMigrated(true)));
+                var mfaMethods = new ArrayList<MFAMethod>();
+                var defaultMfaMethod =
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "+447755551084",
+                                PriorityIdentifier.DEFAULT,
+                                UUID.randomUUID().toString());
 
-                var defaultMfaMethod = new MFAMethod();
-                defaultMfaMethod.setPriority(PriorityIdentifier.DEFAULT.name());
-                defaultMfaMethod.setMfaMethodType(MFAMethodType.SMS.name());
-                defaultMfaMethod.setDestination("+447755551084");
+                mfaMethods.add(defaultMfaMethod);
 
-                var userCredentials = new UserCredentials();
-                userCredentials.setMfaMethod(defaultMfaMethod);
-
-                when(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
-                        .thenReturn(userCredentials);
+                when(mfaMethodsService.getMfaMethods(TEST_EMAIL_ADDRESS))
+                        .thenReturn(new Result.Success<>(mfaMethods));
 
                 var event = new APIGatewayProxyRequestEvent();
                 event.setHeaders(Map.of());
@@ -798,6 +865,25 @@ class SendOtpNotificationHandlerTest {
 
                 assertEquals(400, result.getStatusCode());
                 assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+                verifyNoInteractions(auditService);
+            }
+
+            @Test
+            void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
+                when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+
+                APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+                event.setHeaders(Map.of());
+                event.setRequestContext(eventContext);
+                event.setBody(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+
                 verifyNoInteractions(auditService);
             }
         }

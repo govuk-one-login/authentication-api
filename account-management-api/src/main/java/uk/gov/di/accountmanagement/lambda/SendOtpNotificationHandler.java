@@ -20,14 +20,13 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -41,6 +40,7 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 import java.util.Objects;
@@ -53,8 +53,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.NO_USER_CREDENTIALS_FOR_EMAIL;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.NO_USER_PROFILE_FOR_EMAIL;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -63,6 +62,8 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.authentication.shared.helpers.ValidationHelper.validatePhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -83,6 +84,8 @@ public class SendOtpNotificationHandler
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final MFAMethodsService mfaMethodsService;
+
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
     public SendOtpNotificationHandler(
@@ -95,7 +98,8 @@ public class SendOtpNotificationHandler
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
             ClientService clientService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            MFAMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -106,6 +110,7 @@ public class SendOtpNotificationHandler
         this.auditService = auditService;
         this.clientService = clientService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -129,6 +134,7 @@ public class SendOtpNotificationHandler
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public SendOtpNotificationHandler() {
@@ -144,42 +150,75 @@ public class SendOtpNotificationHandler
                 () -> sendOtpRequestHandler(input, context));
     }
 
-    public APIGatewayProxyResponseEvent sendOtpRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
-        Map<String, String> headers = input.getHeaders();
-        String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
-        String clientSessionId =
-                RequestHeaderHelper.getHeaderValueOrElse(headers, CLIENT_SESSION_ID_HEADER, "");
-        String persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
-        attachSessionIdToLogs(sessionId);
-        LOG.info("Request received in SendOtp Lambda");
+    private Result<APIGatewayProxyResponseEvent, SendNotificationRequest> checkRequestFormat(
+            APIGatewayProxyRequestEvent input) {
+        try {
+            var sendNotificationRequest =
+                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            return Result.success(sendNotificationRequest);
+        } catch (JsonException e) {
+            LOG.error("Error parsing sendNotificationRequest", e);
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, ERROR_1001));
+        }
+    }
 
-        SendNotificationRequest sendNotificationRequest;
-        boolean isTestUserRequest;
-
+    private Result<APIGatewayProxyResponseEvent, Boolean> checkForTestUser(
+            APIGatewayProxyRequestEvent input, SendNotificationRequest sendNotificationRequest) {
         try {
             String clientIdFromApiGateway =
                     (String)
                             Objects.requireNonNull(
                                     input.getRequestContext().getAuthorizer().get("clientId"),
                                     "'clientId' key does not exist in map");
-            sendNotificationRequest =
-                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
-            isTestUserRequest =
+            boolean isTestUserRequest =
                     clientService.isTestJourney(
                             clientIdFromApiGateway, sendNotificationRequest.getEmail());
-        } catch (JsonException e) {
-            LOG.error("Error parsing sendNotificationRequest", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+
+            if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
+                LOG.warn(
+                        "Test user journey attempted, but test clients are not enabled in this environment");
+                return Result.failure(
+                        generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
+            }
+
+            return Result.success(isTestUserRequest);
         } catch (NullPointerException e) {
             LOG.error("Error reading Client ID from context (passed from API Gateway)", e);
-            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+            return Result.failure(generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
         } catch (Exception e) {
             LOG.error(
                     "Error initialising required variables for Account Management Send OTP Handler",
                     e);
-            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+            return Result.failure(generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
         }
+    }
+
+    public APIGatewayProxyResponseEvent sendOtpRequestHandler(
+            APIGatewayProxyRequestEvent input, Context context) throws JsonException {
+        LOG.info("Request received in SendOtp Lambda");
+
+        Map<String, String> headers = input.getHeaders();
+        String sessionId = getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
+        String clientSessionId = getHeaderValueOrElse(headers, CLIENT_SESSION_ID_HEADER, "");
+        String persistentSessionId = extractPersistentIdFromHeaders(headers);
+
+        attachSessionIdToLogs(sessionId);
+
+        var checkRequestFormat = checkRequestFormat(input);
+
+        if (checkRequestFormat.isFailure()) {
+            return checkRequestFormat.getFailure();
+        }
+
+        var sendNotificationRequest = checkRequestFormat.getSuccess();
+
+        var checkForTestUser = checkForTestUser(input, sendNotificationRequest);
+
+        if (checkForTestUser.isFailure()) {
+            return checkForTestUser.getFailure();
+        }
+
+        boolean isTestUserRequest = checkForTestUser.getSuccess();
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
@@ -187,149 +226,146 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getNotificationType().name(),
                 configurationService.getEnvironment());
 
-        if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
-            LOG.warn(
-                    "Test user journey attempted, but test clients are not enabled in this environment");
-            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+        if (sendNotificationRequest.getNotificationType() == null) {
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         }
 
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(headers, configurationService));
-        try {
-            String email = sendNotificationRequest.getEmail();
-            switch (sendNotificationRequest.getNotificationType()) {
-                case VERIFY_EMAIL:
-                    LOG.info("NotificationType is VERIFY_EMAIL");
-                    Optional<ErrorResponse> emailErrorResponse =
-                            ValidationHelper.validateEmailAddress(email);
-                    if (emailErrorResponse.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
-                    }
-                    if (dynamoService.userExists(email)) {
-                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
-                    }
-                    if (configurationService.isEmailCheckEnabled()) {
-                        var emailCheckResult =
-                                dynamoEmailCheckResultService.getEmailCheckStore(email);
-                        if (emailCheckResult.isEmpty()) {
-                            var userId =
-                                    input.getRequestContext()
-                                            .getAuthorizer()
-                                            .getOrDefault("principalId", AuditService.UNKNOWN)
-                                            .toString();
-                            UUID requestReference = UUID.randomUUID();
-                            long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
-                            pendingEmailCheckSqsClient.send(
-                                    objectMapper.writeValueAsString(
-                                            new PendingEmailCheckRequest(
-                                                    userId,
-                                                    requestReference,
-                                                    email,
-                                                    sessionId,
-                                                    clientSessionId,
-                                                    persistentSessionId,
-                                                    IpAddressHelper.extractIpAddress(input),
-                                                    JourneyType.ACCOUNT_MANAGEMENT,
-                                                    timeOfInitialRequest,
-                                                    isTestUserRequest)));
-                            LOG.info(
-                                    "Email address check requested for {} at {}",
-                                    requestReference,
-                                    timeOfInitialRequest);
-                        } else {
-                            LOG.info(
-                                    "Skipped request for new email address check. Result already cached");
-                        }
-                    }
 
-                    return handleNotificationRequest(
-                            isTestUserRequest,
-                            email,
-                            sendNotificationRequest,
-                            input,
-                            context,
-                            userLanguage);
-                case VERIFY_PHONE_NUMBER:
-                    LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
+        String email = sendNotificationRequest.getEmail();
 
-                    var userProfile = dynamoService.getUserProfileByEmailMaybe(email);
+        Optional<ErrorResponse> emailErrorResponse = ValidationHelper.validateEmailAddress(email);
 
-                    if (userProfile.isEmpty()) {
-                        LOG.error(NO_USER_PROFILE_FOR_EMAIL.getMessage());
-                        return generateApiGatewayProxyErrorResponse(400, NO_USER_PROFILE_FOR_EMAIL);
-                    }
+        if (emailErrorResponse.isPresent()) {
+            return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
+        }
 
-                    String newPhoneNumber;
-                    try {
-                        newPhoneNumber =
-                                PhoneNumberHelper.formatPhoneNumber(
-                                        sendNotificationRequest.getPhoneNumber());
-                    } catch (Exception e) {
-                        return generateApiGatewayProxyErrorResponse(400, INVALID_PHONE_NUMBER);
-                    }
+        switch (sendNotificationRequest.getNotificationType()) {
+            case VERIFY_EMAIL -> {
+                LOG.info("NotificationType is VERIFY_EMAIL");
 
-                    if (!userProfile.get().getMfaMethodsMigrated()) {
-                        if (newPhoneNumber.equalsIgnoreCase(userProfile.get().getPhoneNumber())) {
-                            LOG.error(NEW_PHONE_NUMBER_ALREADY_IN_USE.getMessage());
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
-                        }
-                    } else {
-                        var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
-                        if (userCredentials == null) {
-                            LOG.error("no user credentials");
-                            return generateApiGatewayProxyErrorResponse(
-                                    400, NO_USER_CREDENTIALS_FOR_EMAIL);
-                        } else {
-                            var numberOfTimesUsed =
-                                    userCredentials.getMfaMethods().stream()
-                                            .filter(
-                                                    mfaMethod ->
-                                                            mfaMethod
-                                                                    .getMfaMethodType()
-                                                                    .equalsIgnoreCase(
-                                                                            MFAMethodType.SMS
-                                                                                    .name()))
-                                            .filter(
-                                                    mfaMethod ->
-                                                            mfaMethod
-                                                                    .getDestination()
-                                                                    .equalsIgnoreCase(
-                                                                            newPhoneNumber))
-                                            .count();
-                            if (numberOfTimesUsed != 0) {
-                                LOG.error("number already in use");
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
-                            }
-                        }
-                    }
+                if (dynamoService.userExists(email)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+                }
 
-                    var response =
-                            validatePhoneNumber(
-                                    newPhoneNumber, configurationService.getEnvironment(), false);
+                checkEmail(
+                        input,
+                        email,
+                        sessionId,
+                        clientSessionId,
+                        persistentSessionId,
+                        isTestUserRequest);
 
-                    if (response.isPresent()) {
-                        return generateApiGatewayProxyErrorResponse(400, response.get());
-                    }
-
-                    return handleNotificationRequest(
-                            isTestUserRequest,
-                            sendNotificationRequest.getPhoneNumber(),
-                            sendNotificationRequest,
-                            input,
-                            context,
-                            userLanguage);
+                return handleNotificationRequest(
+                        isTestUserRequest,
+                        email,
+                        sendNotificationRequest,
+                        input,
+                        context,
+                        userLanguage);
             }
-            // Unreachable code.
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-        } catch (SdkClientException ex) {
-            LOG.error("Error sending message to queue", ex);
-            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonException e) {
-            // Unreachable code.
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+            case VERIFY_PHONE_NUMBER -> {
+                LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
+
+                var mfaMethodsRequest = mfaMethodsService.getMfaMethods(email);
+
+                if (mfaMethodsRequest.isFailure()) {
+                    return generateApiGatewayProxyErrorResponse(400, USER_DOES_NOT_HAVE_ACCOUNT);
+                }
+
+                var mfaMethods = mfaMethodsRequest.getSuccess();
+
+                String newPhoneNumber;
+
+                try {
+                    newPhoneNumber =
+                            PhoneNumberHelper.formatPhoneNumber(
+                                    sendNotificationRequest.getPhoneNumber());
+                } catch (Exception e) {
+                    return generateApiGatewayProxyErrorResponse(400, INVALID_PHONE_NUMBER);
+                }
+
+                var numberOfTimesUsed =
+                        mfaMethods.stream()
+                                .filter(
+                                        mfaMethod ->
+                                                mfaMethod
+                                                        .getMfaMethodType()
+                                                        .equalsIgnoreCase(MFAMethodType.SMS.name()))
+                                .filter(
+                                        mfaMethod ->
+                                                mfaMethod
+                                                        .getDestination()
+                                                        .equalsIgnoreCase(newPhoneNumber))
+                                .count();
+                if (numberOfTimesUsed != 0) {
+                    LOG.error("number already in use");
+                    return generateApiGatewayProxyErrorResponse(
+                            400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
+                }
+
+                var response =
+                        validatePhoneNumber(
+                                newPhoneNumber, configurationService.getEnvironment(), false);
+
+                if (response.isPresent()) {
+                    return generateApiGatewayProxyErrorResponse(400, response.get());
+                }
+
+                return handleNotificationRequest(
+                        isTestUserRequest,
+                        sendNotificationRequest.getPhoneNumber(),
+                        sendNotificationRequest,
+                        input,
+                        context,
+                        userLanguage);
+            }
+            default -> {
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+            }
+        }
+    }
+
+    private void checkEmail(
+            APIGatewayProxyRequestEvent input,
+            String email,
+            String sessionId,
+            String clientSessionId,
+            String persistentSessionId,
+            boolean isTestUserRequest)
+            throws JsonException {
+        if (configurationService.isEmailCheckEnabled()) {
+            var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(email);
+            if (emailCheckResult.isEmpty()) {
+                var userId =
+                        input.getRequestContext()
+                                .getAuthorizer()
+                                .getOrDefault("principalId", AuditService.UNKNOWN)
+                                .toString();
+                UUID requestReference = UUID.randomUUID();
+                long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
+                pendingEmailCheckSqsClient.send(
+                        objectMapper.writeValueAsString(
+                                new PendingEmailCheckRequest(
+                                        userId,
+                                        requestReference,
+                                        email,
+                                        sessionId,
+                                        clientSessionId,
+                                        persistentSessionId,
+                                        IpAddressHelper.extractIpAddress(input),
+                                        JourneyType.ACCOUNT_MANAGEMENT,
+                                        timeOfInitialRequest,
+                                        isTestUserRequest)));
+                LOG.info(
+                        "Email address check requested for {} at {}",
+                        requestReference,
+                        timeOfInitialRequest);
+            } else {
+                LOG.info("Skipped request for new email address check. Result already cached");
+            }
         }
     }
 
@@ -368,7 +404,12 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getNotificationType(),
                 isTestUserRequest);
 
-        emailSqsClient.send(serialiseRequest(notifyRequest));
+        try {
+            emailSqsClient.send(serialiseRequest(notifyRequest));
+        } catch (SdkClientException e) {
+            LOG.error("Error sending message to queue");
+            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
+        }
 
         var auditContext =
                 new AuditContext(
@@ -385,7 +426,7 @@ public class SendOtpNotificationHandler
                         sendNotificationRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         sendNotificationRequest.getPhoneNumber(),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        extractPersistentIdFromHeaders(input.getHeaders()),
                         AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
         auditService.submitAuditEvent(
