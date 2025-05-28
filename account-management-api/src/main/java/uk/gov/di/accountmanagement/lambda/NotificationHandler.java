@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,6 +114,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case DELETE_ACCOUNT -> sendDeleteAccountNotification(notifyRequest);
             case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
+            case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
         }
     }
 
@@ -167,6 +169,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 passwordUpdatedPersonalisation,
                 String.valueOf(NotificationType.PASSWORD_UPDATED));
+    }
+
+    private void sendBackupAddedNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.BACKUP_METHOD_ADDED));
     }
 
     private void sendEmailNotification(

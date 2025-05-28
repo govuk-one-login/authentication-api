@@ -184,6 +184,24 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         }
                     };
 
+    protected static final ConfigurationService
+            ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isMfaMethodManagementApiEnabled() {
+                            return true;
+                        }
+                    };
+
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);

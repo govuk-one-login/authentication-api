@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
@@ -16,7 +17,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
@@ -30,6 +31,8 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -67,15 +70,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        ConfigurationService mfaMethodEnabledConfigurationService =
-                new ConfigurationService() {
-                    @Override
-                    public boolean isMfaMethodManagementApiEnabled() {
-                        return true;
-                    }
-                };
-
-        handler = new MFAMethodsCreateHandler(mfaMethodEnabledConfigurationService);
+        handler = new MFAMethodsCreateHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
         userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
         TEST_PUBLIC_SUBJECT =
                 userStore.getUserProfileFromEmail(TEST_EMAIL).get().getPublicSubjectID();
@@ -85,6 +80,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         userStore.getUserProfileFromEmail(TEST_EMAIL).get().getSubjectID(),
                         INTERNAL_SECTOR_HOST,
                         salt);
+        notificationsQueue.clear();
     }
 
     @Test
@@ -122,6 +118,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertEquals(TEST_PHONE_NUMBER_WITH_COUNTRY_CODE, retrievedSmsMethod.getDestination());
         assertTrue(retrievedSmsMethod.isEnabled());
         assertTrue(retrievedSmsMethod.isMethodVerified());
+
+        assertNotificationsReceived(
+                notificationsQueue,
+                List.of(
+                        new NotifyRequest(
+                                TEST_EMAIL,
+                                BACKUP_METHOD_ADDED,
+                                LocaleHelper.SupportedLanguage.EN)));
 
         var extractedMfaIdentifier = retrievedSmsMethod.getMfaIdentifier();
         var expectedJson =

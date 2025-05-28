@@ -12,6 +12,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -23,9 +25,12 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
@@ -46,6 +51,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -73,12 +79,14 @@ class MFAMethodsCreateHandlerTest {
     private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(TEST_EMAIL);
     private static final String TEST_INTERNAL_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
+    private final Json objectMapper = SerializationService.getInstance();
 
     private MFAMethodsCreateHandler handler;
 
@@ -88,7 +96,11 @@ class MFAMethodsCreateHandlerTest {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsCreateHandler(
-                        configurationService, mfaMethodsService, dynamoService, codeStorageService);
+                        configurationService,
+                        mfaMethodsService,
+                        dynamoService,
+                        codeStorageService,
+                        sqsClient);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -129,10 +141,11 @@ class MFAMethodsCreateHandlerTest {
         assertThat(result, hasStatus(expectedStatusCode));
         assertTrue(result.getBody().contains(String.valueOf(expectedError.getCode())));
         assertTrue(result.getBody().contains(expectedError.getMessage()));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
-    void shouldReturn200AndCreateMfaSmsMfaMethod() {
+    void shouldReturn200AndCreateMfaSmsMfaMethod() throws Json.JsonException {
         var backupMfa =
                 MFAMethod.smsMfaMethod(
                         true, true, TEST_PHONE_NUMBER, PriorityIdentifier.BACKUP, TEST_SMS_MFA_ID);
@@ -156,6 +169,14 @@ class MFAMethodsCreateHandlerTest {
                 new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
 
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL,
+                                        NotificationType.BACKUP_METHOD_ADDED,
+                                        LocaleHelper.SupportedLanguage.EN)));
+
         assertThat(result, hasStatus(200));
         var expectedResponse =
                 format(
@@ -177,7 +198,7 @@ class MFAMethodsCreateHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndCreateAuthAppMfa() {
+    void shouldReturn200AndCreateAuthAppMfa() throws Json.JsonException {
         var authAppBackup =
                 MFAMethod.authAppMfaMethod(
                         TEST_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, TEST_AUTH_APP_ID);
@@ -219,6 +240,14 @@ class MFAMethodsCreateHandlerTest {
         var expectedResponseParsedToString =
                 JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
         assertEquals(expectedResponseParsedToString, result.getBody());
+
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL,
+                                        NotificationType.BACKUP_METHOD_ADDED,
+                                        LocaleHelper.SupportedLanguage.EN)));
     }
 
     @Test
@@ -234,6 +263,7 @@ class MFAMethodsCreateHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -250,6 +280,7 @@ class MFAMethodsCreateHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 "Subject missing from request prevents request being handled.")));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -267,6 +298,7 @@ class MFAMethodsCreateHandlerTest {
 
         assertThat(result, hasStatus(404));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -363,6 +395,7 @@ class MFAMethodsCreateHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -419,6 +452,7 @@ class MFAMethodsCreateHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
+        verifyNoInteractions(sqsClient);
     }
 
     @Test

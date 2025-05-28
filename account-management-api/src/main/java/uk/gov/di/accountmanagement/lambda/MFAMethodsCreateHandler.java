@@ -8,8 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -18,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -33,6 +36,8 @@ import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migr
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -43,6 +48,7 @@ public class MFAMethodsCreateHandler
     private final CodeStorageService codeStorageService;
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
+    private final AwsSqsClient sqsClient;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -55,17 +61,24 @@ public class MFAMethodsCreateHandler
         this.dynamoService = new DynamoService(configurationService);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     public MFAMethodsCreateHandler(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
             DynamoService dynamoService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
         this.codeStorageService = codeStorageService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -113,6 +126,11 @@ public class MFAMethodsCreateHandler
                 migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
 
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+
         try {
             MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
 
@@ -150,6 +168,15 @@ public class MFAMethodsCreateHandler
                 LOG.error(backupMfaMethodAsResponse.getFailure());
                 return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
             }
+
+            LOG.info("Backup method added successfully.  Adding confirmation message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            userProfile.getEmail(),
+                            NotificationType.BACKUP_METHOD_ADDED,
+                            userLanguage);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info("Message successfully added to queue. Generating successful response");
 
             return generateApiGatewayProxyResponse(
                     200, backupMfaMethodAsResponse.getSuccess(), true);
