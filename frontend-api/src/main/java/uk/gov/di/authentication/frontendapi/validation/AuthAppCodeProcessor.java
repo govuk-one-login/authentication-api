@@ -4,7 +4,6 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -169,20 +168,19 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         if (userProfile.getMfaMethodsMigrated()) {
-            var maybeDefaultMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
-            if (maybeDefaultMethod.isEmpty()) {
-                LOG.error("No default method found for migrated user");
+            var maybeAuthAppMfaMethod =
+                    userCredentials.getMfaMethods().stream()
+                            .filter(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getMfaMethodType()
+                                                    .equals(AUTH_APP.getValue()))
+                            .findFirst();
+            if (maybeAuthAppMfaMethod.isEmpty()) {
+                LOG.error("No auth app method found for migrated user");
                 return Optional.empty();
             }
-            var defaultMethod = maybeDefaultMethod.get();
-            if (defaultMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
-                return Optional.of(defaultMethod.getCredentialValue());
-            } else {
-                LOG.error(
-                        "Attempting to validate auth app code for user with a default mfa method of type {}",
-                        defaultMethod.getMfaMethodType());
-                return Optional.empty();
-            }
+            return Optional.of(maybeAuthAppMfaMethod.get().getCredentialValue());
         } else {
             var mfaMethod =
                     userCredentials.getMfaMethods().stream()
