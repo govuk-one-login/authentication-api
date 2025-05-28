@@ -143,6 +143,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
                                         client,
+                                        userContext.getAuthSession(),
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();

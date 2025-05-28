@@ -152,6 +152,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     ClientSubjectHelper.getSubject(
                                     userProfile,
                                     clientRegistry,
+                                    authSession,
                                     authenticationService,
                                     configurationService.getInternalSectorUri())
                             .toString();

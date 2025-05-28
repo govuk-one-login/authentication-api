@@ -58,7 +58,8 @@ class PhoneNumberCodeProcessorTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
-                    .withInternalCommonSubjectId(INTERNAL_SUB_ID);
+                    .withInternalCommonSubjectId(INTERNAL_SUB_ID)
+                    .withClientId(CLIENT_ID);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final UserProfile userProfile = mock(UserProfile.class);
@@ -412,7 +413,6 @@ class PhoneNumberCodeProcessorTest {
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));

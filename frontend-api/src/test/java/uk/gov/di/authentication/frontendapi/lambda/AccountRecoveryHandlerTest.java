@@ -61,7 +61,8 @@ class AccountRecoveryHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session();
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withClientId(AuditService.UNKNOWN);
 
     private final AuditContext auditContext =
             new AuditContext(

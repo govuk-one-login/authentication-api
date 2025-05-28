@@ -169,7 +169,6 @@ class VerifyMfaCodeHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
@@ -980,6 +979,7 @@ class VerifyMfaCodeHandlerTest {
                                     ClientSubjectHelper.getSubject(
                                             eq(userProfile),
                                             any(ClientRegistry.class),
+                                            any(AuthSessionItem.class),
                                             any(AuthenticationService.class),
                                             any(String.class)))
                     .thenReturn(subject);

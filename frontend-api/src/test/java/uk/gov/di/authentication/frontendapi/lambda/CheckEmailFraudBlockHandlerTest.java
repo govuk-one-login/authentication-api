@@ -71,7 +71,8 @@ class CheckEmailFraudBlockHandlerTest {
     private static AuthSessionService authSessionServiceMock;
 
     private final Session session = new Session();
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withClientId(CLIENT_ID);
     private CheckEmailFraudBlockHandler handler;
 
     @BeforeAll
@@ -91,10 +92,9 @@ class CheckEmailFraudBlockHandlerTest {
     @BeforeEach
     void setup() {
         var userProfile = generateUserProfile();
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
+        when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationServiceMock.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);

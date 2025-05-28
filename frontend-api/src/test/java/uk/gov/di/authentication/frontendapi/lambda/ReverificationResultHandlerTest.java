@@ -123,7 +123,10 @@ class ReverificationResultHandlerTest {
 
     private static final UserContext USER_CONTEXT = mock(UserContext.class);
     private final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID).withInternalCommonSubjectId(SUB);
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withInternalCommonSubjectId(SUB)
+                    .withClientId(CLIENT_ID);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -142,7 +145,6 @@ class ReverificationResultHandlerTest {
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
         when(USER_CONTEXT.getSession()).thenReturn(session);
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
-        when(USER_CONTEXT.getClientId()).thenReturn(CLIENT_ID);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         var userProfile = mock(UserProfile.class);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);

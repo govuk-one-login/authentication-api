@@ -148,10 +148,11 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     userContext
                             .getClient()
                             .map(
-                                    t ->
+                                    client ->
                                             ClientSubjectHelper.getSubject(
                                                             user.getUserProfile(),
-                                                            t,
+                                                            client,
+                                                            authSessionItem,
                                                             authenticationService,
                                                             configurationService
                                                                     .getInternalSectorUri())

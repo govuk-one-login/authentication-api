@@ -89,7 +89,10 @@ class CheckReAuthUserHandlerTest {
 
     private final Session session = new Session();
     private final AuthSessionItem authSession =
-            new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL_USED_TO_SIGN_IN);
+            new AuthSessionItem()
+                    .withSessionId(SESSION_ID)
+                    .withEmailAddress(EMAIL_USED_TO_SIGN_IN)
+                    .withClientId(CLIENT_ID);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
@@ -128,7 +131,6 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
 
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -146,6 +148,7 @@ class CheckReAuthUserHandlerTest {
                 ClientSubjectHelper.getSubject(
                                 USER_PROFILE,
                                 clientRegistry,
+                                authSession,
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
                         .getValue();

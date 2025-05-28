@@ -104,7 +104,8 @@ class MfaResetAuthorizeHandlerTest {
     private static final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
-                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
+                    .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
+                    .withClientId(CLIENT_ID);
     private static MfaResetAuthorizeHandler handler;
     private static UserProfile userProfile = new UserProfile();
 
@@ -114,7 +115,6 @@ class MfaResetAuthorizeHandlerTest {
 
         when(userContext.getSession()).thenReturn(new Session());
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userContext.getSession()).thenReturn(session);

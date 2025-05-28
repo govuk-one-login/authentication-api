@@ -255,7 +255,7 @@ class AuthenticationAuthCodeHandlerTest {
                     .when(
                             () ->
                                     ClientSubjectHelper.getSubject(
-                                            eq(userProfile), any(), any(), any()))
+                                            eq(userProfile), any(), any(), any(), any()))
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             var existingPasswordCount = 1;
             var existingEmailCount = 2;
@@ -314,7 +314,7 @@ class AuthenticationAuthCodeHandlerTest {
                     .when(
                             () ->
                                     ClientSubjectHelper.getSubject(
-                                            eq(userProfile), any(), any(), any()))
+                                            eq(userProfile), any(), any(), any(), any()))
                     .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
             // This is already the case but just to make it explicit here
             authSession.setPreservedReauthCountsForAuditMap(null);

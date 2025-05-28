@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jose4j.base64url.Base64Url;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -24,6 +25,7 @@ public class ClientSubjectHelper {
     public static Subject getSubject(
             UserProfile userProfile,
             ClientRegistry client,
+            AuthSessionItem authSession,
             AuthenticationService authenticationService,
             String internalSectorURI) {
         if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
@@ -32,7 +34,7 @@ public class ClientSubjectHelper {
             return new Subject(
                     calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            getSectorIdentifierForClient(client, internalSectorURI),
+                            getSectorIdentifierForClient(client, authSession, internalSectorURI),
                             authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
@@ -49,7 +51,7 @@ public class ClientSubjectHelper {
     }
 
     public static String getSectorIdentifierForClient(
-            ClientRegistry client, String internalSectorUri) {
+            ClientRegistry client, AuthSessionItem authSession, String internalSectorUri) {
         if (client.isOneLoginService()) {
             return returnHost(internalSectorUri);
         }
@@ -57,7 +59,7 @@ public class ClientSubjectHelper {
             String message =
                     String.format(
                             "ClientConfig for client %s has invalid sector id.",
-                            client.getClientID());
+                            authSession.getClientId());
             LOG.error(message);
             throw new RuntimeException(message);
         }

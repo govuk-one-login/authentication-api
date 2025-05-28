@@ -144,7 +144,6 @@ class UpdateProfileHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
         var body =
                 format(
@@ -171,7 +170,6 @@ class UpdateProfileHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
         var body =
                 format(
