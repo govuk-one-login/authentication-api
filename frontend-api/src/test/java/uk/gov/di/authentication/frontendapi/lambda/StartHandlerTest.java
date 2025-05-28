@@ -502,7 +502,8 @@ class StartHandlerTest {
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
         when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any(), any()))
+        when(startService.buildClientStartInfo(
+                        eq(clientRegistry), any(), any(), any(), any(), any()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
                         eq(userContext),

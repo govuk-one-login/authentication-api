@@ -208,6 +208,7 @@ public class StartHandler
                     startService.buildClientStartInfo(
                             userContext.getClient().orElseThrow(),
                             startRequest.serviceType(),
+                            authSession.getClientName(),
                             scopes,
                             redirectURI,
                             state);
