@@ -61,10 +61,6 @@ public class UserContext {
         return client;
     }
 
-    public String getClientName() {
-        return getClient().map(ClientRegistry::getClientName).orElse("");
-    }
-
     public SupportedLanguage getUserLanguage() {
         return userLanguage;
     }
