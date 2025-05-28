@@ -247,7 +247,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            sessionService.storeOrUpdateSession(session, sessionId);
+            authSessionService.updateSession(authSession);
 
             if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
