@@ -124,7 +124,8 @@ class VerifyMfaCodeHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withClientName(CLIENT_NAME);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
