@@ -247,7 +247,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            sessionService.storeOrUpdateSession(session, sessionId);
+            authSessionService.updateSession(authSession);
 
             if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
@@ -269,7 +269,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
-                        sessionService,
                         authSessionService,
                         authenticationService,
                         configurationService);

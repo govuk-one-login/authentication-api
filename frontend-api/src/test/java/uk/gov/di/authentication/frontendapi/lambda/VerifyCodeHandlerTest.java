@@ -272,8 +272,8 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(codeStorageService).deleteOtpCode(EMAIL, emailNotificationType);
-        verify(sessionService).storeOrUpdateSession(session, SESSION_ID);
         verifyNoInteractions(accountModifiersService);
+        verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -645,7 +645,6 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .deleteOtpCode(EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
-        verify(sessionService, times(1)).storeOrUpdateSession(session, SESSION_ID);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
@@ -683,7 +682,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(authSessionService)
+        verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(
                                 as ->

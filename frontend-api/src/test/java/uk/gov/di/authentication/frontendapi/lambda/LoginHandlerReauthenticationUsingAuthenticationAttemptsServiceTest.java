@@ -268,7 +268,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             verify(cloudwatchMetricsService, never())
                     .incrementAuthenticationSuccess(
                             any(), any(), any(), any(), anyBoolean(), anyBoolean());
-            verify(sessionService, never()).storeOrUpdateSession(any(Session.class), anyString());
+            verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
         }
     }
 

@@ -407,7 +407,7 @@ class VerifyMfaCodeHandlerTest {
                         "P0",
                         false,
                         true);
-        verify(authSessionService, times(2))
+        verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
                                 state ->
@@ -454,7 +454,7 @@ class VerifyMfaCodeHandlerTest {
                         "P0",
                         false,
                         true);
-        verify(authSessionService, times(2))
+        verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
                                 state ->

@@ -61,7 +61,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -182,6 +181,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -238,6 +238,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(expectedResponse),
                     JsonParser.parseString(result.getBody()));
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
         }
 
@@ -293,6 +294,7 @@ class CheckUserExistsHandlerTest {
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertThat(result, hasStatus(200));
             assertTrue(
                     result.getBody()
@@ -333,7 +335,7 @@ class CheckUserExistsHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
-            verify(sessionService, times(1)).storeOrUpdateSession(any(Session.class), anyString());
+            verify(authSessionService, times(1)).updateSession(any(AuthSessionItem.class));
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -358,6 +360,7 @@ class CheckUserExistsHandlerTest {
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
         assertNull(authSession.getInternalCommonSubjectId());
+        verify(authSessionService).updateSession(any(AuthSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
