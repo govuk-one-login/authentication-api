@@ -206,7 +206,11 @@ public class StartHandler
             attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
             var clientStartInfo =
                     startService.buildClientStartInfo(
-                            userContext.getClient().orElseThrow(), scopes, redirectURI, state);
+                            userContext.getClient().orElseThrow(),
+                            startRequest.serviceType(),
+                            scopes,
+                            redirectURI,
+                            state);
 
             var cookieConsent =
                     startService.getCookieConsentValue(

@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -514,12 +515,14 @@ class StartServiceTest {
                         false,
                         Optional.empty(),
                         Optional.empty(),
-                        oneLoginService);
+                        oneLoginService,
+                        Optional.of(ServiceType.MANDATORY.toString()));
         var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
         var clientStartInfo =
                 startService.buildClientStartInfo(
                         userContext.getClient().orElseThrow(),
+                        ServiceType.MANDATORY.toString(),
                         scopes.toStringList(),
                         REDIRECT_URI,
                         STATE);
@@ -529,6 +532,7 @@ class StartServiceTest {
         assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
         assertThat(clientStartInfo.state().getValue(), equalTo(STATE.getValue()));
         assertThat(clientStartInfo.isOneLoginService(), equalTo(oneLoginService));
+        assertThat(clientStartInfo.serviceType(), equalTo(ServiceType.MANDATORY.toString()));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
@@ -596,6 +600,24 @@ class StartServiceTest {
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean oneLoginService) {
+        return buildUserContext(
+                cookieConsentShared,
+                clientType,
+                identityVerificationSupport,
+                userProfile,
+                userCredentials,
+                oneLoginService,
+                Optional.empty());
+    }
+
+    private UserContext buildUserContext(
+            boolean cookieConsentShared,
+            ClientType clientType,
+            boolean identityVerificationSupport,
+            Optional<UserProfile> userProfile,
+            Optional<UserCredentials> userCredentials,
+            boolean oneLoginService,
+            Optional<String> serviceTypeOpt) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
@@ -604,6 +626,7 @@ class StartServiceTest {
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)
                         .withOneLoginService(oneLoginService);
+        serviceTypeOpt.ifPresent(clientRegistry::setServiceType);
         return UserContext.builder(SESSION)
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)

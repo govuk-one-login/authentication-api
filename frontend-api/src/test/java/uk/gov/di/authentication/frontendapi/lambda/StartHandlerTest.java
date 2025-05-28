@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -501,7 +502,7 @@ class StartHandlerTest {
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
         when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
-        when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any()))
+        when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any(), any()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
                         eq(userContext),
@@ -551,6 +552,7 @@ class StartHandlerTest {
                         TEST_CLIENT_ID,
                         REDIRECT_URL.toString(),
                         SCOPE.toString(),
-                        CLIENT_NAME));
+                        CLIENT_NAME,
+                        ServiceType.MANDATORY.toString()));
     }
 }
