@@ -1,22 +1,14 @@
 package uk.gov.di.authentication.shared.state;
 
 import org.jetbrains.annotations.Nullable;
-import uk.gov.di.authentication.shared.entity.Session;
 
 public class OrchestrationUserSession {
-    private final Session session;
     @Nullable private final String clientId;
     private final String clientSessionId;
 
-    protected OrchestrationUserSession(
-            Session session, @Nullable String clientId, String clientSessionId) {
-        this.session = session;
+    protected OrchestrationUserSession(@Nullable String clientId, String clientSessionId) {
         this.clientId = clientId;
         this.clientSessionId = clientSessionId;
-    }
-
-    public Session getSession() {
-        return session;
     }
 
     public @Nullable String getClientId() {
@@ -27,18 +19,15 @@ public class OrchestrationUserSession {
         return clientSessionId;
     }
 
-    public static Builder builder(Session session) {
-        return new Builder(session);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static class Builder {
-        private Session session;
         private String clientId;
         private String clientSessionId;
 
-        protected Builder(Session session) {
-            this.session = session;
-        }
+        protected Builder() {}
 
         public Builder withClientId(String clientId) {
             this.clientId = clientId;
@@ -51,7 +40,7 @@ public class OrchestrationUserSession {
         }
 
         public OrchestrationUserSession build() {
-            return new OrchestrationUserSession(session, clientId, clientSessionId);
+            return new OrchestrationUserSession(clientId, clientSessionId);
         }
     }
 }

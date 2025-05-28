@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -66,7 +65,6 @@ class StartServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session();
     private static final AuthSessionItem AUTH_SESSION =
             new AuthSessionItem()
                     .withEmailAddress(EMAIL)
