@@ -359,7 +359,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         () ->
                                 handleSuccess(
                                         codeRequest,
-                                        userContext,
                                         codeRequest.getJourneyType(),
                                         authSession,
                                         session));
@@ -388,7 +387,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private APIGatewayProxyResponseEvent handleSuccess(
             VerifyMfaCodeRequest codeRequest,
-            UserContext userContext,
             JourneyType journeyType,
             AuthSessionItem authSession,
             Session session) {
