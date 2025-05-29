@@ -13,6 +13,8 @@ env:
   AWS_REGION: eu-west-2
   JAVA_VERSION: 17
   JAVA_DISTRIBUTION: corretto
+  RAIN_VERSION: v1.23.0
+  RAIN_ARCH: linux-amd64
 
 jobs:
   deploy:
@@ -50,11 +52,30 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
-      - name: SAM build
+      - name: Gradle build
         run: |
           ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip
-          sam validate -t backend-template.yaml
-          sam build --parallel -t backend-template.yaml
+
+      - name: Install Rain
+        env:
+          VERSION: ${{ env.RAIN_VERSION }}
+          ARCH: ${{ env.RAIN_ARCH }}
+        run: |
+          wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
+          unzip "rain-${VERSION}_${ARCH}.zip"
+          chmod +x "rain-${VERSION}_${ARCH}/rain"
+          mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
+
+      - name: Generate auth template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/auth
+          TEMPLATE_FILE: auth-template.yaml
+
+      - name: SAM build
+        run: |
+          sam validate --lint -t auth-template.yaml
+          sam build --parallel -t auth-template.yaml
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@f6188fc96fe860179f87bfc5bdeebc17eb3e1e4f # v3.9.4

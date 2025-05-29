@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AuthExternalApiTxMAAuditQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-auth-external-api-txma-audit-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuthExternalApiTxMAAuditDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 70
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-external-api-txma-audit.yaml
+
+  AuthExternalApiTxMAAuditQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AuthExternalApiTxMAAuditQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ReceiveMessage
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueue.Arn
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  AuthExternalApiTxMAAuditDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-auth-external-api-txma-audit-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 604800
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-external-api-txma-audit.yaml
+
+  AuthExternalApiTxMAAuditQueueEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for encrypting auth-external-api TxMA audit queue at rest
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowTxmaAccessToKmsAuditEncryptionKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+      Tags:
+        - Key: Service
+          Value: auth-external-api
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-external-api-txma-audit.yaml
+
+  AuthExternalApiTxMAAuditQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-auth-external-api-audit-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref AuthExternalApiTxMAAuditQueueEncryptionKey
+
+  AuthExternalApiTxMAAuditQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for write access to the auth-external-api TxMA audit queue"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToTxmaAuditQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueue.Arn
+          - Sid: AllowAccessToKeyForEncryptingPayloads
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !GetAtt AuthExternalApiTxMAAuditQueueEncryptionKey.Arn
