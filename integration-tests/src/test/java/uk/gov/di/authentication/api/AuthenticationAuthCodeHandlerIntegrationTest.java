@@ -6,7 +6,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
@@ -44,7 +43,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new AuthenticationAuthCodeHandler(TEST_CONFIGURATION_SERVICE);
+        handler =
+                new AuthenticationAuthCodeHandler(
+                        TEST_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -139,8 +140,8 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         return headers;
     }
 
-    private String setupSession() {
-        var sessionId = IdGenerator.generate();
+    private String setupSession() throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         return sessionId;

@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -21,6 +22,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -43,6 +46,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     protected UpdateProfileHandler(
             AuthenticationService authenticationService,
+            SessionService sessionService,
             ConfigurationService configurationService,
             AuditService auditService,
             ClientService clientService,
@@ -50,6 +54,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         super(
                 UpdateProfileRequest.class,
                 configurationService,
+                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -62,6 +67,12 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
+        auditService = new AuditService(configurationService);
+    }
+
+    public UpdateProfileHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(UpdateProfileRequest.class, configurationService, redis);
         auditService = new AuditService(configurationService);
     }
 
@@ -92,6 +103,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UpdateProfileRequest request,
             UserContext userContext) {
 
+        Session session = userContext.getSession();
         AuthSessionItem authSession = userContext.getAuthSession();
 
         String persistentSessionId =

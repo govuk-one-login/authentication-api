@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -73,6 +75,7 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADD
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartHandlerTest {
@@ -91,6 +94,7 @@ class StartHandlerTest {
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final StartService startService = mock(StartService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
@@ -124,6 +128,7 @@ class StartHandlerTest {
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
         handler =
                 new StartHandler(
+                        sessionService,
                         auditService,
                         startService,
                         authSessionService,
@@ -444,15 +449,36 @@ class StartHandlerTest {
                                 expectedFailureReason));
     }
 
+    @Test
+    void shouldReturn400WhenSessionIsNotFound() throws Json.JsonException {
+        usingInvalidSession();
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(false));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1000);
+        assertThat(result, hasBody(expectedResponse));
+
+        verifyNoInteractions(auditService);
+    }
+
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
         return makeRequestBody(null, null, null, authenticated);
     }
 
     private void usingValidSession() {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(
                         new AuthSessionItem().withSessionId(SESSION_ID).withClientId(CLIENT_ID));
+    }
+
+    private void usingInvalidSession() {
+        when(sessionService.getSession(anyString())).thenReturn(Optional.empty());
     }
 
     private ClientStartInfo getClientStartInfo() {
@@ -473,7 +499,8 @@ class StartHandlerTest {
 
     private void usingStartServiceThatReturns(
             UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
-        when(startService.buildUserContext(any(AuthSessionItem.class))).thenReturn(userContext);
+        when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
+                .thenReturn(userContext);
         when(startService.buildClientStartInfo(eq(clientRegistry), any(), any(), any()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(

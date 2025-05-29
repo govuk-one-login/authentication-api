@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -91,6 +92,7 @@ class ReverificationResultHandlerTest {
     private ReverificationResultHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -135,10 +137,13 @@ class ReverificationResultHandlerTest {
     @BeforeEach
     void setUp() throws URISyntaxException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
+        when(USER_CONTEXT.getSession()).thenReturn(session);
         when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
         when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         var userProfile = mock(UserProfile.class);
@@ -148,6 +153,7 @@ class ReverificationResultHandlerTest {
         handler =
                 new ReverificationResultHandler(
                         configurationService,
+                        sessionService,
                         clientService,
                         authenticationService,
                         reverificationResultService,

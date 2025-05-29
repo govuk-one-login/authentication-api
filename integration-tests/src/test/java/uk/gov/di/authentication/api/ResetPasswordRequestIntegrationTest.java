@@ -7,6 +7,7 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
@@ -39,13 +40,14 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
     }
 
     @Test
-    public void shouldCallResetPasswordEndpointAndReturn200ForCodeFlowRequest() {
+    public void shouldCallResetPasswordEndpointAndReturn200ForCodeFlowRequest()
+            throws Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         String phoneNumber = "01234567890";
         userStore.signUp(email, password);
         userStore.addVerifiedPhoneNumber(email, phoneNumber);
-        String sessionId = IdGenerator.generate();
+        String sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";

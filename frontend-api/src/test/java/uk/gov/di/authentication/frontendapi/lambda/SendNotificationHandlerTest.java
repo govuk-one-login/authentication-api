@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Date;
@@ -103,6 +105,7 @@ class SendNotificationHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
     private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -122,6 +125,7 @@ class SendNotificationHandlerTest {
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
+    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -144,6 +148,7 @@ class SendNotificationHandlerTest {
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
                     configurationService,
+                    sessionService,
                     clientService,
                     authenticationService,
                     emailSqsClient,
@@ -1070,6 +1075,8 @@ class SendNotificationHandlerTest {
     }
 
     private void usingValidSession(String clientId) {
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession.withClientId(clientId)));
     }

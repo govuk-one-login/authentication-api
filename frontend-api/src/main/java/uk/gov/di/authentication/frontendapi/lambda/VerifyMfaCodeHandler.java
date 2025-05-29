@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -41,6 +42,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
@@ -78,6 +80,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
+            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
@@ -89,6 +92,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
+                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -121,7 +125,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(VerifyMfaCodeRequest.class, configurationService);
+        super(VerifyMfaCodeRequest.class, configurationService, redis);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaCodeProcessorFactory =
@@ -269,7 +273,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Optional<String> maybeRpPairwiseId,
             ClientRegistry client) {
 
+        var session = userContext.getSession();
         var authSession = userContext.getAuthSession();
+        var sessionId = authSession.getSessionId();
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -355,7 +361,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         codeRequest,
                                         userContext,
                                         codeRequest.getJourneyType(),
-                                        authSession));
+                                        authSession,
+                                        session));
     }
 
     private void auditSuccess(
@@ -383,7 +390,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             JourneyType journeyType,
-            AuthSessionItem authSession) {
+            AuthSessionItem authSession,
+            Session session) {
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 

@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -83,12 +84,13 @@ class StartServiceTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService);
+        startService = new StartService(dynamoClientService, dynamoService, sessionService);
     }
 
     @Test
@@ -102,8 +104,9 @@ class StartServiceTest {
                 .thenReturn(Optional.of(mock(UserProfile.class)));
         when(dynamoService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn((mock(UserCredentials.class)));
-        var userContext = startService.buildUserContext(AUTH_SESSION);
+        var userContext = startService.buildUserContext(SESSION, AUTH_SESSION);
 
+        assertThat(userContext.getSession(), equalTo(SESSION));
         assertThat(userContext.getAuthSession(), equalTo(AUTH_SESSION));
     }
 
@@ -601,7 +604,7 @@ class StartServiceTest {
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)
                         .withOneLoginService(oneLoginService);
-        return UserContext.builder(AUTH_SESSION)
+        return UserContext.builder(SESSION)
                 .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)

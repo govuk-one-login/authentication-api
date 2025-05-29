@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -65,6 +66,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
+            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
@@ -76,6 +78,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         super(
                 ResetPasswordRequest.class,
                 configurationService,
+                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -105,7 +108,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        super(ResetPasswordRequest.class, configurationService);
+        super(ResetPasswordRequest.class, configurationService, redis);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),

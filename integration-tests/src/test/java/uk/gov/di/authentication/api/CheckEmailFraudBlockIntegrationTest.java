@@ -7,8 +7,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandler;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -44,14 +44,16 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     void setup() {
-        handler = new CheckEmailFraudBlockHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new CheckEmailFraudBlockHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
     @Test
-    void shouldReturnCorrectStatusBasedOnDbResult() {
+    void shouldReturnCorrectStatusBasedOnDbResult() throws Json.JsonException {
         userStore.signUp(EMAIL, "password-1", SUBJECT);
-        var sessionId = IdGenerator.generate();
+        var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 EMAIL, EmailCheckResultStatus.ALLOW, unixTimePlusNDays(), "test-reference");

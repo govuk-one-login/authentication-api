@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -92,12 +91,12 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @BeforeEach
     void setup() throws Json.JsonException {
 
-        var sessionId = IdGenerator.generate();
+        var sessionId = redis.createSession();
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         requestHeaders = createHeaders(sessionId);
-        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE);
+        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
