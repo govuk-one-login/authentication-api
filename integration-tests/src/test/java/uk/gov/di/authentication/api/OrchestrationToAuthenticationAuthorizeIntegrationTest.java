@@ -43,6 +43,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED;
@@ -367,6 +368,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 equalTo(credentialTrustLevel.getValue()));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
         assertTrue(Objects.isNull(signedJWT.getJWTClaimsSet().getClaim("login_hint")));
+        assertFalse(signedJWT.getJWTClaimsSet().getBooleanClaim("is_smoke_test"));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
