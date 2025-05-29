@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -60,7 +59,6 @@ class AuthAppCodeProcessorTest {
     AuditService mockAuditService;
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
-    private Session session;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -86,7 +84,6 @@ class AuthAppCodeProcessorTest {
 
     @BeforeEach
     void setUp() {
-        this.session = new Session();
         this.authSession =
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
