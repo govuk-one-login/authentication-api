@@ -37,8 +37,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 
 public class ClientSignatureValidationService {
 
@@ -112,7 +112,9 @@ public class ClientSignatureValidationService {
             ClientAuthenticationVerifier<?> authenticationVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey),
-                            Collections.singleton(new Audience(oidcAPI.tokenURI().toString())));
+                            Set.of(
+                                    new Audience(oidcAPI.tokenURI().toString()),
+                                    new Audience(oidcAPI.getIssuerURI().toString())));
             authenticationVerifier.verify(privateKeyJWT, null, null);
         } catch (InvalidClientException
                 | NoSuchAlgorithmException

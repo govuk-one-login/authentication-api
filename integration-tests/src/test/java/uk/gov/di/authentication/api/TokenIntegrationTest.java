@@ -20,6 +20,7 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
@@ -183,6 +184,95 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
+    }
+
+    @Test
+    void shouldAllowIssuerUriAsPrivateKeyJwtAudience() throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response =
+                makeTokenRequestWithPrivateKeyJWT(
+                        CLIENT_ID,
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        new Audience(ROOT_RESOURCE_URL).toSingleAudienceList());
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+
+        var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
+        assertTrue(orchClientSession.isPresent());
+        assertEquals(idToken.serialize(), orchClientSession.get().getIdTokenHint());
+    }
+
+    @Test
+    void shouldReturn200WithTokensWhenPrivateKeyJwtContainsBothIssuerAndTokenURIAsAudienceList()
+            throws Exception {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response =
+                makeTokenRequestWithPrivateKeyJWT(
+                        CLIENT_ID,
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        List.of(
+                                new Audience(ROOT_RESOURCE_URL),
+                                new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT)));
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
+        assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
 
@@ -593,7 +683,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithPrivateKeyJWT(
-                        "test-client-1", baseTokenRequest, keyPair.getPrivate());
+                        "test-client-1",
+                        baseTokenRequest,
+                        keyPair.getPrivate(),
+                        new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT).toSingleAudienceList());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
@@ -724,16 +817,23 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
             Map<String, List<String>> requestParams, PrivateKey privateKey) throws JOSEException {
-        return makeTokenRequestWithPrivateKeyJWT(CLIENT_ID, requestParams, privateKey);
+        return makeTokenRequestWithPrivateKeyJWT(
+                CLIENT_ID,
+                requestParams,
+                privateKey,
+                Collections.singletonList(new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT)));
     }
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
-            String clientId, Map<String, List<String>> requestParams, PrivateKey privateKey)
+            String clientId,
+            Map<String, List<String>> requestParams,
+            PrivateKey privateKey,
+            List<Audience> audience)
             throws JOSEException {
         var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
-                        new ClientID(clientId), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+                        new ClientID(clientId), audience, expiryDate, null, null, new JWTID());
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
                 new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
