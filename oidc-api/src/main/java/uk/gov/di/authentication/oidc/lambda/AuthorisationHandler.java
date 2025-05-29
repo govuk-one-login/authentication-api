@@ -935,7 +935,8 @@ public class AuthorisationHandler
                         .claim("channel", client.getChannel().toLowerCase())
                         .claim("authenticated", orchSession.getAuthenticated())
                         .claim("scope", authenticationRequest.getScope().toString())
-                        .claim("login_hint", authenticationRequest.getLoginHint());
+                        .claim("login_hint", authenticationRequest.getLoginHint())
+                        .claim("is_smoke_test", client.isSmokeTest());
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
         gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
