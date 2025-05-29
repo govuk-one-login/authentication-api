@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services.mfa;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -41,13 +42,43 @@ public class MFAMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
+    public Result<ErrorResponse, Boolean> isPhoneAlreadyInUseAsAnMfa(
+            String email, String phoneNumber) {
+        var result = getMfaMethods(email);
+
+        if (result.isFailure()) {
+            return Result.failure(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT);
+        }
+
+        var mfaMethods = result.getSuccess();
+
+        var numberOfTimesUsed =
+                mfaMethods.stream()
+                        .filter(
+                                mfaMethod ->
+                                        mfaMethod
+                                                .getMfaMethodType()
+                                                .equalsIgnoreCase(MFAMethodType.SMS.name()))
+                        .filter(
+                                mfaMethod ->
+                                        mfaMethod.getDestination().equalsIgnoreCase(phoneNumber))
+                        .count();
+
+        if (numberOfTimesUsed != 0) {
+            LOG.error("number already in use");
+            return Result.success(true);
+        } else {
+            return Result.success(false);
+        }
+    }
+
     public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (userProfile == null || userCredentials == null) {
             return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
         }
-        if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
+        if (userProfile.getMfaMethodsMigrated()) {
             return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
