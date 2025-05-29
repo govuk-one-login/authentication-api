@@ -10,7 +10,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -21,9 +20,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Locale;
@@ -51,7 +48,6 @@ public abstract class BaseFrontendHandler<T>
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
-    protected final SessionService sessionService;
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final AuthSessionService authSessionService;
@@ -61,13 +57,11 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.sessionService = sessionService;
         this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.authSessionService = authSessionService;
@@ -76,37 +70,17 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             boolean loadUserCredentials,
             AuthSessionService authSessionService) {
-        this(
-                clazz,
-                configurationService,
-                sessionService,
-                clientService,
-                authenticationService,
-                authSessionService);
+        this(clazz, configurationService, clientService, authenticationService, authSessionService);
         this.loadUserCredentials = loadUserCredentials;
     }
 
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            RedisConnectionService redis) {
-        this.clazz = clazz;
-        this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
@@ -117,15 +91,6 @@ public abstract class BaseFrontendHandler<T>
             ConfigurationService configurationService,
             boolean loadUserCredentials) {
         this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials,
-            RedisConnectionService redis) {
-        this(clazz, configurationService, redis);
         this.loadUserCredentials = loadUserCredentials;
     }
 
@@ -168,25 +133,18 @@ public abstract class BaseFrontendHandler<T>
                         input.getHeaders(),
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
-        if (sessionId.isEmpty() || session.isEmpty()) {
-            LOG.warn("Session cannot be found");
+        if (sessionId.isEmpty() || authSession.isEmpty()) {
+            LOG.warn("Auth session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachSessionIdToLogs(sessionId.get());
         }
 
-        if (authSession.isEmpty()) {
-            LOG.warn("Auth session cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
-
-        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+        UserContext.Builder userContextBuilder = UserContext.builder(authSession.get());
         userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
-        userContextBuilder.withAuthSession(authSession.get());
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 

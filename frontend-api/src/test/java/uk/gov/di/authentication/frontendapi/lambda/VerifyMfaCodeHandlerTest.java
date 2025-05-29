@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -47,7 +46,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.Instant;
@@ -118,7 +116,6 @@ class VerifyMfaCodeHandlerTest {
     private final String expectedRpPairwiseSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT_ID, CLIENT_SECTOR_HOST, SALT);
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -130,7 +127,6 @@ class VerifyMfaCodeHandlerTest {
     public VerifyMfaCodeHandler handler;
 
     private final Context context = mock(Context.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
@@ -186,7 +182,6 @@ class VerifyMfaCodeHandlerTest {
         handler =
                 new VerifyMfaCodeHandler(
                         configurationService,
-                        sessionService,
                         clientService,
                         authenticationService,
                         codeStorageService,
@@ -268,8 +263,6 @@ class VerifyMfaCodeHandlerTest {
 
         var body = objectMapper.writeValueAsString(mfaCodeRequest);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(session));
 
         var result = handler.handleRequest(event, context);
 
@@ -1016,8 +1009,6 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         var body = objectMapper.writeValueAsString(mfaCodeRequest);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(session));
         return handler.handleRequest(event, context);
     }
 

@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -36,7 +35,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -91,13 +89,11 @@ class LoginHandlerReauthenticationRedisTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final Session session = new Session();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -155,7 +151,6 @@ class LoginHandlerReauthenticationRedisTest {
         handler =
                 new LoginHandler(
                         configurationService,
-                        sessionService,
                         authenticationService,
                         clientService,
                         codeStorageService,
@@ -183,7 +178,6 @@ class LoginHandlerReauthenticationRedisTest {
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -223,7 +217,6 @@ class LoginHandlerReauthenticationRedisTest {
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
@@ -237,11 +230,6 @@ class LoginHandlerReauthenticationRedisTest {
         } else {
             verify(codeStorageService, atLeastOnce()).increaseIncorrectPasswordCount(EMAIL);
         }
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
     }
 
     private void usingValidAuthSession() {

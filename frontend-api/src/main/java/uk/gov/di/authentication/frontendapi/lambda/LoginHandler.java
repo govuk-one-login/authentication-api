@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -91,7 +90,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     public LoginHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             AuthenticationService authenticationService,
             ClientService clientService,
             CodeStorageService codeStorageService,
@@ -105,7 +103,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         super(
                 LoginRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 true,
@@ -134,7 +131,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        super(LoginRequest.class, configurationService, true, redis);
+        super(LoginRequest.class, configurationService, true);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
