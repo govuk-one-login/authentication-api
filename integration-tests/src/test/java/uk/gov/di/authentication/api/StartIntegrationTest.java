@@ -533,7 +533,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "redirect_uri",
                                 redirectUri,
                                 "client_name",
-                                TEST_CLIENT_NAME));
+                                TEST_CLIENT_NAME,
+                                "service_type",
+                                ServiceType.MANDATORY.toString()));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(
