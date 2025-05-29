@@ -25,7 +25,8 @@ dependencies {
             configurations.lambda,
             configurations.dynamodb
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly configurations.test_runtime,
+            configurations.open_telemetry
 }
 
 test {

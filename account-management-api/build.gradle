@@ -24,7 +24,9 @@ dependencies {
 
     implementation project(":shared")
 
-    runtimeOnly configurations.logging_runtime
+    runtimeOnly configurations.logging_runtime,
+            configurations.open_telemetry
+
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
