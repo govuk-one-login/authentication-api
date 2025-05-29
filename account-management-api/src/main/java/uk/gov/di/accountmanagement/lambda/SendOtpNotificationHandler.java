@@ -21,7 +21,6 @@ import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -51,9 +50,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -204,21 +201,21 @@ public class SendOtpNotificationHandler
 
         attachSessionIdToLogs(sessionId);
 
-        var checkRequestFormat = checkRequestFormat(input);
+        var checkRequestFormatResult = checkRequestFormat(input);
 
-        if (checkRequestFormat.isFailure()) {
-            return checkRequestFormat.getFailure();
+        if (checkRequestFormatResult.isFailure()) {
+            return checkRequestFormatResult.getFailure();
         }
 
-        var sendNotificationRequest = checkRequestFormat.getSuccess();
+        var sendNotificationRequest = checkRequestFormatResult.getSuccess();
 
-        var checkForTestUser = checkForTestUser(input, sendNotificationRequest);
+        var checkForTestUserResult = checkForTestUser(input, sendNotificationRequest);
 
-        if (checkForTestUser.isFailure()) {
-            return checkForTestUser.getFailure();
+        if (checkForTestUserResult.isFailure()) {
+            return checkForTestUserResult.getFailure();
         }
 
-        boolean isTestUserRequest = checkForTestUser.getSuccess();
+        boolean isTestUserRequest = checkForTestUserResult.getSuccess();
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
@@ -269,49 +266,32 @@ public class SendOtpNotificationHandler
             case VERIFY_PHONE_NUMBER -> {
                 LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
 
-                var mfaMethodsRequest = mfaMethodsService.getMfaMethods(email);
-
-                if (mfaMethodsRequest.isFailure()) {
-                    return generateApiGatewayProxyErrorResponse(400, USER_DOES_NOT_HAVE_ACCOUNT);
-                }
-
-                var mfaMethods = mfaMethodsRequest.getSuccess();
-
-                String newPhoneNumber;
-
-                try {
-                    newPhoneNumber =
-                            PhoneNumberHelper.formatPhoneNumber(
-                                    sendNotificationRequest.getPhoneNumber());
-                } catch (Exception e) {
-                    return generateApiGatewayProxyErrorResponse(400, INVALID_PHONE_NUMBER);
-                }
-
-                var numberOfTimesUsed =
-                        mfaMethods.stream()
-                                .filter(
-                                        mfaMethod ->
-                                                mfaMethod
-                                                        .getMfaMethodType()
-                                                        .equalsIgnoreCase(MFAMethodType.SMS.name()))
-                                .filter(
-                                        mfaMethod ->
-                                                mfaMethod
-                                                        .getDestination()
-                                                        .equalsIgnoreCase(newPhoneNumber))
-                                .count();
-                if (numberOfTimesUsed != 0) {
-                    LOG.error("number already in use");
-                    return generateApiGatewayProxyErrorResponse(
-                            400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
-                }
-
                 var response =
                         validatePhoneNumber(
-                                newPhoneNumber, configurationService.getEnvironment(), false);
+                                sendNotificationRequest.getPhoneNumber(),
+                                configurationService.getEnvironment(),
+                                false);
 
                 if (response.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, response.get());
+                }
+
+                String newPhoneNumber;
+
+                newPhoneNumber =
+                        PhoneNumberHelper.formatPhoneNumber(
+                                sendNotificationRequest.getPhoneNumber());
+
+                var inUseResult =
+                        mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(email, newPhoneNumber);
+
+                if (inUseResult.isFailure()) {
+                    return generateApiGatewayProxyErrorResponse(400, inUseResult.getFailure());
+                }
+
+                if (Boolean.TRUE.equals(inUseResult.getSuccess())) {
+                    return generateApiGatewayProxyErrorResponse(
+                            400, NEW_PHONE_NUMBER_ALREADY_IN_USE);
                 }
 
                 return handleNotificationRequest(
