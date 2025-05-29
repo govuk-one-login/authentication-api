@@ -7,7 +7,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -136,11 +135,7 @@ class TestClientHelperTest {
                         .withClientName("some-client")
                         .withTestClient(isTestClient)
                         .withTestClientEmailAllowlist(allowedEmails);
-        var session = new Session();
         var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
-        return UserContext.builder(session)
-                .withClient(clientRegistry)
-                .withAuthSession(authSession)
-                .build();
+        return UserContext.builder(authSession).withClient(clientRegistry).build();
     }
 }

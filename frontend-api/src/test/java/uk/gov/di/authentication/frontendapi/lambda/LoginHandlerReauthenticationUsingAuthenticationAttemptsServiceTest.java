@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -44,7 +43,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -112,7 +110,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final Session session = new Session();
     private final Context context = mock(Context.class);
     private final Subject subject = mock(Subject.class);
     private final String expectedCommonSubject =
@@ -140,7 +137,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -182,7 +178,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         handler =
                 new LoginHandler(
                         configurationService,
-                        sessionService,
                         authenticationService,
                         clientService,
                         codeStorageService,
@@ -219,7 +214,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-            usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -325,7 +319,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-            usingValidSession();
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -379,7 +372,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -426,7 +418,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -470,7 +461,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
@@ -511,7 +501,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(authenticationAttemptsService.getCount(any(), any(), any()))
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
@@ -537,11 +526,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                 }),
                         eq(REAUTHENTICATION),
                         eq(ENTER_PASSWORD));
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
     }
 
     private void usingValidAuthSession() {

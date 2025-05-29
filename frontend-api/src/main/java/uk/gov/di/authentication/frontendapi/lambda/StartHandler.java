@@ -31,9 +31,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -69,7 +67,6 @@ public class StartHandler
     private static final Logger LOG = LogManager.getLogger(StartHandler.class);
 
     protected static final String REAUTHENTICATE_HEADER = "Reauthenticate";
-    private final SessionService sessionService;
     private final AuditService auditService;
     private final StartService startService;
     private final AuthSessionService authSessionService;
@@ -79,14 +76,12 @@ public class StartHandler
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
-            SessionService sessionService,
             AuditService auditService,
             StartService startService,
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
             AuthenticationAttemptsService authenticationAttemptsService,
             CloudwatchMetricsService cloudwatchMetricsService) {
-        this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
@@ -96,30 +91,13 @@ public class StartHandler
     }
 
     public StartHandler(ConfigurationService configurationService) {
-        this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
-                        new DynamoService(configurationService),
-                        sessionService);
-        this.authSessionService = new AuthSessionService(configurationService);
-        this.configurationService = configurationService;
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-    }
-
-    public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        this.sessionService = new SessionService(configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
-        this.startService =
-                new StartService(
-                        new DynamoClientService(configurationService),
-                        new DynamoService(configurationService),
-                        sessionService);
+                        new DynamoService(configurationService));
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
@@ -139,15 +117,13 @@ public class StartHandler
                         input.getHeaders(),
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        var sessionOpt = sessionIdOpt.flatMap(sessionService::getSession);
-        if (sessionIdOpt.isEmpty() || sessionOpt.isEmpty()) {
+        if (sessionIdOpt.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         }
+
         var sessionId = sessionIdOpt.get();
-        var session = sessionOpt.get();
 
         attachSessionIdToLogs(sessionId);
-        LOG.info("Start session retrieved");
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
@@ -178,6 +154,7 @@ public class StartHandler
             var authSession =
                     authSessionService.getUpdatedPreviousSessionOrCreateNew(
                             Optional.ofNullable(startRequest.previousSessionId()), sessionId);
+            LOG.info("Start session retrieved");
             var requestedCredentialTrustLevel =
                     retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
             authSession.setRequestedCredentialStrength(requestedCredentialTrustLevel);
@@ -197,7 +174,7 @@ public class StartHandler
 
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-            var userContext = startService.buildUserContext(session, authSession);
+            var userContext = startService.buildUserContext(authSession);
 
             var scopes = List.of(startRequest.scope().split(" "));
             var redirectURI = new URI(startRequest.redirectUri());

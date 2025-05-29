@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -16,7 +15,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
-import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Optional;
 
@@ -49,7 +47,6 @@ class AccountRecoveryHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoAccountModifiersService dynamoAccountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -60,7 +57,6 @@ class AccountRecoveryHandlerTest {
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withClientId(AuditService.UNKNOWN);
 
@@ -86,7 +82,6 @@ class AccountRecoveryHandlerTest {
         handler =
                 new AccountRecoveryHandler(
                         configurationService,
-                        sessionService,
                         clientService,
                         authenticationService,
                         dynamoAccountModifiersService,
@@ -145,8 +140,6 @@ class AccountRecoveryHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
