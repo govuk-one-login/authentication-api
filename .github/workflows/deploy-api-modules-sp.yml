@@ -52,7 +52,7 @@ jobs:
           sam build --parallel -t backend-template.yaml
 
       - name: Deploy SAM app
-        uses: govuk-one-login/devplatform-upload-action@f6188fc96fe860179f87bfc5bdeebc17eb3e1e4f # v3.9.4
+        uses: govuk-one-login/devplatform-upload-action@4aea54e8885223b8d92b23b3dbf3bf5ee7f44003 # v3.10.0
         with:
           artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
