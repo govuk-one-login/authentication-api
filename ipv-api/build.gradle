@@ -22,7 +22,8 @@ dependencies {
 
     implementation project(":orchestration-shared")
 
-    runtimeOnly configurations.logging_runtime
+    runtimeOnly configurations.logging_runtime,
+            configurations.open_telemetry
 
     testImplementation configurations.tests,
             configurations.apache,
