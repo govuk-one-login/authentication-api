@@ -74,6 +74,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 };
         txmaAuditQueue.clear();
         handler = new UserInfoHandler(configurationService);
+        withRedisSession();
     }
 
     @Test
@@ -314,6 +315,10 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         return userStore.getUserProfileFromEmail(TEST_EMAIL_ADDRESS).get();
+    }
+
+    private void withRedisSession() throws Json.JsonException {
+        redis.createSession(TEST_SESSION_ID);
     }
 
     private void withAuthSessionNewAccount() {

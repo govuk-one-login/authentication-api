@@ -15,7 +15,6 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -114,9 +113,9 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new ReverificationResultHandler();
+        handler = new ReverificationResultHandler(redisConnectionService);
 
-        sessionId = IdGenerator.generate();
+        sessionId = redis.createSession();
         internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         new Subject().getValue(),

@@ -11,7 +11,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 
@@ -75,8 +75,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldUpdatePasswordAndReturn204() {
-        var sessionId = IdGenerator.generate();
+    void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -99,9 +99,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void
-            shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber() {
-        var sessionId = IdGenerator.generate();
+    void shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -137,8 +137,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void
-            shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset() {
-        var sessionId = IdGenerator.generate();
+            shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset()
+                    throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -167,8 +168,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldReturn400ForRequestWithCommonPassword() {
-        var sessionId = IdGenerator.generate();
+    void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -191,8 +192,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue() {
-        var sessionId = IdGenerator.generate();
+    void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -223,8 +225,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @ParameterizedTest
     @MethodSource("phoneNumberVerified")
     void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
-            boolean phoneNumberVerified) {
-        var sessionId = IdGenerator.generate();
+            boolean phoneNumberVerified) throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
@@ -274,8 +276,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @ParameterizedTest
     @MethodSource("authAppVerified")
     void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
-            boolean authAppVerified) {
-        var sessionId = IdGenerator.generate();
+            boolean authAppVerified) throws Json.JsonException {
+        var sessionId = redis.createSession();
         authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);

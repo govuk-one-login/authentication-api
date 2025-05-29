@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -33,18 +35,23 @@ public class StartService {
 
     private final ClientService clientService;
     private final DynamoService dynamoService;
+    private final SessionService sessionService;
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
     private static final Logger LOG = LogManager.getLogger(StartService.class);
 
-    public StartService(ClientService clientService, DynamoService dynamoService) {
+    public StartService(
+            ClientService clientService,
+            DynamoService dynamoService,
+            SessionService sessionService) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
+        this.sessionService = sessionService;
     }
 
-    public UserContext buildUserContext(AuthSessionItem authSession) {
-        var builder = UserContext.builder(authSession);
+    public UserContext buildUserContext(Session session, AuthSessionItem authSession) {
+        var builder = UserContext.builder(session).withAuthSession(authSession);
         UserContext userContext;
         try {
             var clientRegistry = getClient(authSession.getClientId());

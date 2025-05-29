@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem.ResetPasswordState
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Intervention;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.State;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -41,6 +42,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -98,6 +100,7 @@ class AccountInterventionsHandlerTest {
     private final Context context = mock(Context.class);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class, Mockito.RETURNS_DEEP_STUBS);
@@ -109,6 +112,7 @@ class AccountInterventionsHandlerTest {
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
+    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -137,6 +141,8 @@ class AccountInterventionsHandlerTest {
     @BeforeEach
     void setUp() throws URISyntaxException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
@@ -149,6 +155,7 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
+        when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded())
@@ -160,6 +167,7 @@ class AccountInterventionsHandlerTest {
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
+                        sessionService,
                         clientService,
                         authenticationService,
                         accountInterventionsService,

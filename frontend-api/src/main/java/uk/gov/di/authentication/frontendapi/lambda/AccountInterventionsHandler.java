@@ -33,6 +33,8 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
@@ -95,6 +97,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     protected AccountInterventionsHandler(
             ConfigurationService configurationService,
+            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             AccountInterventionsService accountInterventionsService,
@@ -106,6 +109,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         super(
                 AccountInterventionsRequest.class,
                 configurationService,
+                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -119,8 +123,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     }
 
     public AccountInterventionsHandler(
-            ConfigurationService configurationService, LambdaInvokerService lambdaInvokerService) {
-        super(AccountInterventionsRequest.class, configurationService);
+            ConfigurationService configurationService,
+            RedisConnectionService redis,
+            LambdaInvokerService lambdaInvokerService) {
+        super(AccountInterventionsRequest.class, configurationService, redis);
 
         this.lambdaInvoker = lambdaInvokerService;
 
