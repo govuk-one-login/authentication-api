@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -35,7 +34,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -90,7 +88,6 @@ class MfaHandlerTest {
     private static final String TEST_CLIENT_ID = "test-client-id";
 
     private final Context context = mock(Context.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -145,7 +142,6 @@ class MfaHandlerTest {
                     DI_PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -202,7 +198,6 @@ class MfaHandlerTest {
         handler =
                 new MfaHandler(
                         configurationService,
-                        sessionService,
                         codeGeneratorService,
                         codeStorageService,
                         clientService,
@@ -439,10 +434,7 @@ class MfaHandlerTest {
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(
-                        event,
-                        context,
-                        test,
-                        UserContext.builder(session).withAuthSession(authSession).build());
+                        event, context, test, UserContext.builder(authSession).build());
 
         assertThat(result, hasStatus(400));
 
@@ -451,7 +443,8 @@ class MfaHandlerTest {
 
     @Test
     void shouldReturn400WhenSessionIdIsInvalid() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.empty());
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -772,8 +765,6 @@ class MfaHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }

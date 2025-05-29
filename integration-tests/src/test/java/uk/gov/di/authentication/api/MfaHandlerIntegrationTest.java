@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -191,7 +192,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @BeforeEach
         void setup() throws Json.JsonException {
-            SESSION_ID = redis.createSession();
+            SESSION_ID = IdGenerator.generate();
             authSessionStore.addSession(SESSION_ID);
             authSessionStore.addEmailToSession(SESSION_ID, USER_EMAIL);
             userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject("new-subject"));

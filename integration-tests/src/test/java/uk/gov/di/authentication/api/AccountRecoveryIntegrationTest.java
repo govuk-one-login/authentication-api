@@ -7,7 +7,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
@@ -41,20 +41,18 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
     @BeforeEach
     void setup() {
-        handler =
-                new AccountRecoveryHandler(
-                        new AccountRecoveryTestConfigurationService(), redisConnectionService);
+        handler = new AccountRecoveryHandler(new AccountRecoveryTestConfigurationService());
         txmaAuditQueue.clear();
     }
 
     @Test
-    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresent() throws Json.JsonException {
+    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresent() {
         userStore.signUp(EMAIL, "password-1", SUBJECT);
         var salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionServiceExtension.addSession(sessionId);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         Map<String, String> headers = new HashMap<>();
@@ -71,8 +69,8 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     }
 
     @Test
-    void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() throws Json.JsonException {
-        var sessionId = redis.createSession();
+    void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() {
+        var sessionId = IdGenerator.generate();
         authSessionServiceExtension.addSession(sessionId);
         userStore.signUp(EMAIL, "password-1", SUBJECT);
 

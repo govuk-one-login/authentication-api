@@ -63,7 +63,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists(
             MFAMethodType mfaMethodType) throws JsonException, URISyntaxException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession();
+        var sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         var clientSessionId = IdGenerator.generate();
@@ -116,7 +116,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws JsonException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
         var codeRequestType =
@@ -159,7 +159,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallUserExistsEndpointAndReturnUserNotFoundStateWhenUserDoesNotExist()
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         var clientSessionId = IdGenerator.generate();
         registerClient(emailAddress, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
@@ -187,7 +187,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallUserExistsEndpointAndReturnErrorResponse1045WhenUserAccountIsLocked()
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
-        String sessionId = redis.createSession();
+        String sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         redis.blockMfaCodesForEmail(
                 emailAddress,

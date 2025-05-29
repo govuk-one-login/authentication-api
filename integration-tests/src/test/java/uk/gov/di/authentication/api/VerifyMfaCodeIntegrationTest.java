@@ -20,9 +20,9 @@ import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -91,7 +91,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @BeforeEach
-    void beforeEachSetup() throws Json.JsonException {
+    void beforeEachSetup() {
         handler =
                 new VerifyMfaCodeHandler(
                         REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
@@ -99,7 +99,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         txmaAuditQueue.clear();
 
-        this.sessionId = redis.createSession();
+        this.sessionId = IdGenerator.generate();
         authSessionExtension.addSession(this.sessionId);
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
