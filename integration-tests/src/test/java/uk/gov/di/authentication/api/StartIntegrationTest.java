@@ -167,6 +167,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 actualAuthSession.getRequestedLevelOfConfidence(),
                 equalTo(requestedLevelOfConfidenceOpt.orElse(null)));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
+        assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
     }
 
     @Test
@@ -209,6 +210,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 actualAuthSession.getRequestedLevelOfConfidence(),
                 equalTo(LevelOfConfidence.LOW_LEVEL));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
+        assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
@@ -529,7 +531,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "client_id",
                                 CLIENT_ID,
                                 "redirect_uri",
-                                redirectUri));
+                                redirectUri,
+                                "client_name",
+                                TEST_CLIENT_NAME));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(

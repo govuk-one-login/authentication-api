@@ -38,6 +38,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_REQUESTED_LEVEL_OF_CONFIDENCE =
             "RequestedLevelOfConfidence";
     public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
+    public static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
 
     public enum AccountState {
         NEW,
@@ -75,6 +76,7 @@ public class AuthSessionItem {
     private CredentialTrustLevel requestedCredentialStrength;
     private LevelOfConfidence requestedLevelOfConfidence;
     private String clientId;
+    private String clientName;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -385,6 +387,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withClientId(String clientId) {
         this.clientId = clientId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CLIENT_NAME)
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+
+    public AuthSessionItem withClientName(String clientName) {
+        this.clientName = clientName;
         return this;
     }
 
