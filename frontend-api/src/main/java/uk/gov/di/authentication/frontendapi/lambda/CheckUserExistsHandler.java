@@ -128,12 +128,21 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
             var userExists = userProfile.isPresent();
+            var internalCommonSubjectId =
+                    userExists
+                            ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                            userProfile.get(),
+                                            configurationService.getInternalSectorUri(),
+                                            authenticationService)
+                                    .getValue()
+                            : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
             if (codeStorageService.isBlockedForEmail(
                     emailAddress,
                     CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
+                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 authSessionService.updateSession(userContext.getAuthSession());
 
                 auditService.submitAuditEvent(
@@ -161,12 +170,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         userContext.getAuthSession(),
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
-                                .getValue();
-                var internalCommonSubjectId =
-                        ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                        userProfile.get(),
-                                        configurationService.getInternalSectorUri(),
-                                        authenticationService)
                                 .getValue();
 
                 LOG.info("Setting internal common subject identifier in user session");

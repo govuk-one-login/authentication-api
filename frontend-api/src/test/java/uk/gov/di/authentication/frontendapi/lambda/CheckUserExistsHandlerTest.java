@@ -339,7 +339,7 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUDIT_CONTEXT,
+                            AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
         }
