@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -369,6 +370,9 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
         assertTrue(Objects.isNull(signedJWT.getJWTClaimsSet().getClaim("login_hint")));
         assertFalse(signedJWT.getJWTClaimsSet().getBooleanClaim("is_smoke_test"));
+        assertThat(
+                signedJWT.getJWTClaimsSet().getClaim("subject_type"),
+                equalTo(SubjectType.PUBLIC.toString()));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
@@ -387,7 +391,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 RP_SECTOR_URI,
-                "public",
+                SubjectType.PUBLIC.toString(),
                 ClientType.WEB,
                 ES256.getName(),
                 identitySupported);
