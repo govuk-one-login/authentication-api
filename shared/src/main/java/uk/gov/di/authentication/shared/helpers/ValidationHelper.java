@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
+import com.google.i18n.phonenumbers.Phonenumber;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -45,43 +46,34 @@ public class ValidationHelper {
     private ValidationHelper() {}
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String currentPhoneNumber, String newPhoneNumber, String environment) {
-        if (Objects.nonNull(currentPhoneNumber)
-                && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
-            return Optional.of(ErrorResponse.ERROR_1044);
-        }
-        return validatePhoneNumber(newPhoneNumber, environment, false);
-    }
-
-    public static Optional<ErrorResponse> validatePhoneNumber(
             String phoneNumberInput, String environment, boolean isSmokeTest) {
         if (isValidTestNumberForEnvironment(phoneNumberInput, environment, isSmokeTest)) {
             return Optional.empty();
         }
+
         if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
             LOG.warn("Invalid phone number: length check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
+
         var phoneUtil = PhoneNumberUtil.getInstance();
+
+        Phonenumber.PhoneNumber phoneNumber;
+
         try {
-            var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
-            var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
-            if (!isAcceptedPhoneNumberType(phoneNumberType)) {
-                LOG.warn(
-                        "Invalid phone number: not a mobile number.  NumberType {}",
-                        phoneNumberType);
-                return Optional.of(ErrorResponse.ERROR_1012);
-            }
-            LOG.info("Accepted phone NumberType {}", phoneNumberType);
-            if (phoneUtil.isValidNumber(phoneNumber)) {
-                return Optional.empty();
-            }
-            LOG.warn("Invalid phone number: failed isValidNumber check");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
         } catch (NumberParseException e) {
             LOG.warn("Invalid phone number: parsing failure");
-            return Optional.of(ErrorResponse.ERROR_1012);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
         }
+
+        var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
+        if (!isAcceptedPhoneNumberType(phoneNumberType)) {
+            LOG.warn("Invalid phone number: not a mobile number.  NumberType {}", phoneNumberType);
+            return Optional.of(ErrorResponse.INVALID_PHONE_NUMBER);
+        }
+        LOG.info("Accepted phone NumberType {}", phoneNumberType);
+        return Optional.empty();
     }
 
     static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {
