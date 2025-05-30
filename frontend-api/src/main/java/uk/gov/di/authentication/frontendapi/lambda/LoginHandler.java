@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -370,7 +369,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
 
-        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
+        boolean termsAndConditionsAccepted =
+                isTermsAndConditionsAccepted(authSessionItem, userProfile);
 
         try {
             return generateApiGatewayProxyResponse(
@@ -481,19 +481,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         return internalCommonSubjectId.getValue();
     }
 
-    private boolean isTermsAndConditionsAccepted(UserContext userContext, UserProfile userProfile) {
+    private boolean isTermsAndConditionsAccepted(
+            AuthSessionItem authSessionItem, UserProfile userProfile) {
         if (userProfile.getTermsAndConditions() == null) {
             return false;
         }
-        boolean isSmokeTestClient =
-                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-        LOG.info(
-                "isSmokeTest on auth session equal to client registry? {}",
-                userContext.getAuthSession().getIsSmokeTest() == isSmokeTestClient);
         return TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
                 userProfile.getTermsAndConditions(),
                 configurationService.getTermsAndConditionsVersion(),
-                isSmokeTestClient);
+                authSessionItem.getIsSmokeTest());
     }
 
     private void blockUser(

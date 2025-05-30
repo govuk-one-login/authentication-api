@@ -1115,7 +1115,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
+        usingValidAuthSessionInSmokeTest();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -1200,6 +1200,19 @@ class LoginHandlerTest {
                                         .withRequestedCredentialStrength(
                                                 requestedCredentialStrength)
                                         .withClientName(CLIENT_NAME)));
+    }
+
+    private void usingValidAuthSessionInSmokeTest() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withEmailAddress(EMAIL)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withRequestedCredentialStrength(MEDIUM_LEVEL)
+                                        .withIsSmokeTest(true)));
     }
 
     private void usingValidAuthSession() {
