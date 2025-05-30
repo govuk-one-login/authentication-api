@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-envvalue=("authdev1" "authdev2")
+envvalue=("authdev1" "authdev2" "authdev3")
 
 select word in "${envvalue[@]}"; do
   if [[ -z ${word} ]]; then
