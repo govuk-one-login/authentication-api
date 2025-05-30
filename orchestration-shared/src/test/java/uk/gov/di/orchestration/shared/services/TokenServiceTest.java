@@ -421,6 +421,26 @@ class TokenServiceTest {
     }
 
     @Test
+    void shouldReturnErrorIfCodeIEmptyStringWhenValidatingTokenRequest() {
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        customParams.put("code", Collections.singletonList(""));
+        Optional<ErrorObject> errorObject =
+                tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code parameter"))));
+    }
+
+    @Test
     void shouldReturnErrorIfGrantIsInvalidWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("client_credentials"));
