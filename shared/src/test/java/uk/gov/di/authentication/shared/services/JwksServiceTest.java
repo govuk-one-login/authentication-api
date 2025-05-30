@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
@@ -14,6 +15,7 @@ import java.util.Base64;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,10 +23,23 @@ import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256Strin
 
 class JwksServiceTest {
 
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final JwksService jwksService =
-            new JwksService(configurationService, kmsConnectionService);
+    private static final ConfigurationService configurationService =
+            mock(ConfigurationService.class);
+    private static final KmsConnectionService kmsConnectionService =
+            mock(KmsConnectionService.class);
+    private static JwksService jwksService;
+
+    @BeforeAll
+    static void beforeAll() {
+        jwksService = JwksService.getInstance(configurationService, kmsConnectionService);
+    }
+
+    @Test
+    void checkIsSingleton() {
+        var jwksServiceInstance =
+                JwksService.getInstance(configurationService, kmsConnectionService);
+        assertEquals(jwksService, jwksServiceInstance);
+    }
 
     @Test
     void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() {
