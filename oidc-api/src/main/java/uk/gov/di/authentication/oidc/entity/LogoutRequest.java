@@ -10,7 +10,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -32,7 +31,6 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractP
 
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
-    private final Optional<Session> session;
     private final Optional<String> internalCommonSubjectId;
     private final Optional<String> sessionId;
     private final Optional<Map<String, String>> queryStringParameters;
@@ -58,9 +56,6 @@ public class LogoutRequest {
         var sessionCookieIds = CookieHelper.parseSessionCookie(input.getHeaders());
         sessionId = sessionCookieIds.map(SessionCookieIds::getSessionId);
         var clientSessionIdFromCookie = sessionCookieIds.map(SessionCookieIds::getClientSessionId);
-        session =
-                segmentedFunctionCall(
-                        "getSession", () -> sessionId.flatMap(sessionService::getSession));
         orchSession = sessionId.flatMap(orchSessionService::getSession);
 
         internalCommonSubjectId = orchSession.map(OrchSessionItem::getInternalCommonSubjectId);
@@ -182,10 +177,6 @@ public class LogoutRequest {
                     uri);
             return true;
         }
-    }
-
-    public Optional<Session> session() {
-        return session;
     }
 
     public Optional<String> internalCommonSubjectId() {

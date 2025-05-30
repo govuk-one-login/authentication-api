@@ -4,8 +4,6 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
-import java.util.Optional;
-
 public class SessionService {
 
     private static final Json OBJECT_MAPPER = SerializationService.getInstance();
@@ -70,11 +68,5 @@ public class SessionService {
 
     public void deleteStoredSession(String sessionId) {
         redisConnectionService.deleteValue(sessionId);
-    }
-
-    public Optional<Session> getSession(String sessionId) {
-        String serializedSession = redisConnectionService.getValue(sessionId);
-        return Optional.ofNullable(serializedSession)
-                .map(s -> OBJECT_MAPPER.readValueUnchecked(s, Session.class));
     }
 }

@@ -21,7 +21,6 @@ import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -179,7 +178,6 @@ public class IPVCallbackHelper {
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
             String clientSessionId,
-            Session session,
             String sessionId,
             OrchSessionItem orchSession,
             String clientName,
@@ -245,8 +243,7 @@ public class IPVCallbackHelper {
         cloudwatchMetricsService.incrementSignInByClient(
                 orchSession.getIsNewAccount(), clientId, clientName, isTestJourney);
 
-        authCodeResponseService.saveSession(
-                false, sessionService, session, sessionId, orchSessionService, orchSession);
+        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
     }
 

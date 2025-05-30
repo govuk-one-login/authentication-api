@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -75,7 +74,6 @@ class LogoutHandlerTest {
     private SignedJWT signedIDToken;
     private String idTokenHint;
     private static final Subject SUBJECT = new Subject();
-    private Session session;
     private OrchSessionItem orchSession;
 
     @RegisterExtension
@@ -125,7 +123,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldDestroySessionAndLogoutWhenSessionIsAvailable() {
-        session = generateSession();
+        generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -135,7 +133,7 @@ class LogoutHandlerTest {
 
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        saveSession(session);
+        saveSession();
         handler.handleRequest(event, context);
 
         var expectedDestroySessionsRequest =
@@ -191,7 +189,7 @@ class LogoutHandlerTest {
 
     @Test
     void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
-        session = generateSession();
+        generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -205,7 +203,7 @@ class LogoutHandlerTest {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
         orchSession.getClientSessions().add("expired-client-session-id");
-        saveSession(session);
+        saveSession();
         handler.handleRequest(event, context);
 
         var expectedDestroySessionsRequest =
@@ -234,13 +232,11 @@ class LogoutHandlerTest {
                         Optional.of(SUBJECT.getValue()));
     }
 
-    private Session generateSession() {
+    private void generateSession() {
         orchSession.addClientSession(CLIENT_SESSION_ID);
-        return new Session();
     }
 
-    private void saveSession(Session session) {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+    private void saveSession() {
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 

@@ -219,11 +219,6 @@ public class IPVCallbackHandler
                         AuditService.UNKNOWN);
             }
             var sessionId = sessionCookiesIds.getSessionId();
-            var session =
-                    sessionService
-                            .getSession(sessionId)
-                            .orElseThrow(
-                                    () -> new IPVCallbackNoSessionException("Session not found"));
             OrchSessionItem orchSession =
                     orchSessionService
                             .getSession(sessionId)
@@ -394,7 +389,6 @@ public class IPVCallbackHandler
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
                                         clientSessionId,
-                                        session,
                                         sessionId,
                                         orchSession,
                                         orchClientSession.getClientName(),

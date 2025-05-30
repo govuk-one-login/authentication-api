@@ -3,10 +3,8 @@ package uk.gov.di.orchestration.shared.state;
 import org.jetbrains.annotations.Nullable;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 
 public class OrchestrationUserSession {
-    private final Session session;
     private final String sessionId;
     @Nullable private final String clientId;
     @Nullable private final OrchClientSessionItem orchClientSession;
@@ -14,22 +12,16 @@ public class OrchestrationUserSession {
     private final OrchSessionItem orchSessionItem;
 
     protected OrchestrationUserSession(
-            Session session,
             String sessionId,
             @Nullable String clientId,
             @Nullable OrchClientSessionItem orchClientSession,
             String clientSessionId,
             OrchSessionItem orchSession) {
-        this.session = session;
         this.sessionId = sessionId;
         this.clientId = clientId;
         this.orchClientSession = orchClientSession;
         this.clientSessionId = clientSessionId;
         this.orchSessionItem = orchSession;
-    }
-
-    public Session getSession() {
-        return session;
     }
 
     public String getSessionId() {
@@ -52,21 +44,18 @@ public class OrchestrationUserSession {
         return orchSessionItem;
     }
 
-    public static Builder builder(Session session) {
-        return new Builder(session);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static class Builder {
-        private final Session session;
         private String sessionId;
         private String clientId;
         private OrchClientSessionItem orchClientSession;
         private String clientSessionId;
         private OrchSessionItem orchSession;
 
-        protected Builder(Session session) {
-            this.session = session;
-        }
+        protected Builder() {}
 
         public Builder withSessionId(String sessionId) {
             this.sessionId = sessionId;
@@ -95,7 +84,7 @@ public class OrchestrationUserSession {
 
         public OrchestrationUserSession build() {
             return new OrchestrationUserSession(
-                    session, sessionId, clientId, orchClientSession, clientSessionId, orchSession);
+                    sessionId, clientId, orchClientSession, clientSessionId, orchSession);
         }
     }
 }
