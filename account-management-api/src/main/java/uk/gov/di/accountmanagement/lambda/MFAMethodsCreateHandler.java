@@ -169,7 +169,7 @@ public class MFAMethodsCreateHandler
             case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.ERROR_1070);
             case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.INVALID_PHONE_NUMBER);
+                    400, ErrorResponse.ERROR_1012);
         };
     }
 
