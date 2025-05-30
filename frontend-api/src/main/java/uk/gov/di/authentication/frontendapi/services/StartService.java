@@ -78,12 +78,13 @@ public class StartService {
     public ClientStartInfo buildClientStartInfo(
             ClientRegistry clientRegistry,
             String serviceType,
+            String clientName,
             List<String> scopes,
             URI redirectURI,
             State state) {
         var clientInfo =
                 new ClientStartInfo(
-                        clientRegistry.getClientName(),
+                        clientName,
                         scopes,
                         serviceType,
                         clientRegistry.isCookieConsentShared(),
@@ -92,7 +93,7 @@ public class StartService {
                         clientRegistry.isOneLoginService());
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
-                clientRegistry.getClientName(),
+                clientName,
                 scopes,
                 serviceType);
 

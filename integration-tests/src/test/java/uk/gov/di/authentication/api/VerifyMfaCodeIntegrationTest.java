@@ -60,6 +60,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String USER_PASSWORD = "TestPassword123!";
     private static final String CLIENT_ID = "test-client-id";
+    private static final String CLIENT_NAME = "test-client-name";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String AUTH_APP_SECRET_BASE_32 = "ORSXG5BNORSXQ5A=";
     private static final String ALTERNATIVE_AUTH_APP_SECRET_BASE_32 =
@@ -103,6 +104,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addInternalCommonSubjectIdToSession(
                 this.sessionId, internalCommonSubjectId);
         authSessionExtension.addClientIdToSession(this.sessionId, CLIENT_ID);
+        authSessionExtension.addClientNameToSession(this.sessionId, CLIENT_NAME);
         setupUser(sessionId, EMAIL_ADDRESS, false);
     }
 

@@ -359,7 +359,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         () ->
                                 handleSuccess(
                                         codeRequest,
-                                        userContext,
                                         codeRequest.getJourneyType(),
                                         authSession,
                                         session));
@@ -388,7 +387,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private APIGatewayProxyResponseEvent handleSuccess(
             VerifyMfaCodeRequest codeRequest,
-            UserContext userContext,
             JourneyType journeyType,
             AuthSessionItem authSession,
             Session session) {
@@ -410,7 +408,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         cloudwatchMetricsService.incrementAuthenticationSuccess(
                 authSession.getIsNewAccount(),
                 clientId,
-                userContext.getClientName(),
+                authSession.getClientName(),
                 levelOfConfidence.getValue(),
                 clientService.isTestJourney(clientId, authSession.getEmailAddress()),
                 true);

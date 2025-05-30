@@ -74,7 +74,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         clientStore.registerClient(
                 CLIENT_ID,
-                "The test client",
+                CLIENT_NAME,
                 singletonList(REDIRECT_URI),
                 singletonList("test-client@test.com"),
                 singletonList(SCOPE.toString()),
@@ -107,6 +107,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
+        authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -163,6 +164,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
+        authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);

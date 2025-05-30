@@ -131,7 +131,8 @@ class VerifyCodeHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withClientName(CLIENT_NAME);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);

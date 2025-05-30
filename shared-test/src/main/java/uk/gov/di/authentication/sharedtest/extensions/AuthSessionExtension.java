@@ -110,6 +110,10 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .withAchievedCredentialStrength(credentialStrength));
     }
 
+    public void addClientNameToSession(String sessionId, String clientName) {
+        updateSession(getSession(sessionId).orElseThrow().withClientName(clientName));
+    }
+
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId, String sessionId) {
         return authSessionService.getUpdatedPreviousSessionOrCreateNew(

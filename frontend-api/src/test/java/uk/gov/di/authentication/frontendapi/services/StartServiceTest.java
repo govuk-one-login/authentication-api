@@ -523,6 +523,7 @@ class StartServiceTest {
                 startService.buildClientStartInfo(
                         userContext.getClient().orElseThrow(),
                         ServiceType.MANDATORY.toString(),
+                        CLIENT_NAME,
                         scopes.toStringList(),
                         REDIRECT_URI,
                         STATE);

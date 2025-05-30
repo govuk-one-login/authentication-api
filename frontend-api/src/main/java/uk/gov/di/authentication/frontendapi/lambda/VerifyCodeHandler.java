@@ -451,7 +451,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     authSession.getIsNewAccount(),
                     clientId,
-                    userContext.getClientName(),
+                    authSession.getClientName(),
                     levelOfConfidence.getValue(),
                     clientService.isTestJourney(clientId, authSession.getEmailAddress()),
                     true);

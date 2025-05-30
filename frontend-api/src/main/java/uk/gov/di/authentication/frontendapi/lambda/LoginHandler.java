@@ -328,7 +328,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     AuthSessionItem.AccountState.EXISTING,
                     clientId,
-                    userContext.getClientName(),
+                    authSessionItem.getClientName(),
                     "P0",
                     clientService.isTestJourney(clientId, userProfile.getEmail()),
                     false);
