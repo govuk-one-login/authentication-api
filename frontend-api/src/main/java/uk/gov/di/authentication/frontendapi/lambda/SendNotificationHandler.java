@@ -12,7 +12,6 @@ import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -251,11 +250,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
-                    boolean isSmokeTest =
-                            userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-                    LOG.info(
-                            "isSmokeTest on auth session equal to client registry? {}",
-                            userContext.getAuthSession().getIsSmokeTest() == isSmokeTest);
+                    boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
                     var errorResponse =
                             ValidationHelper.validatePhoneNumber(
                                     request.getPhoneNumber(),

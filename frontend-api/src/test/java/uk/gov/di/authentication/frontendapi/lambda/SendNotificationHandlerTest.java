@@ -516,8 +516,8 @@ class SendNotificationHandlerTest {
     @MethodSource("sendNotificationPhoneNumberFails")
     void shouldReturn400WhenPhoneNumberFailsValidation(
             String phoneNumber, String environment, boolean isSmokeTest) {
+        authSession.setIsSmokeTest(isSmokeTest);
         usingValidSession();
-        clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
         var body =
