@@ -402,7 +402,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
-        when(clientRegistry.isSmokeTest()).thenReturn(true);
+        authSession.setIsSmokeTest(true);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
