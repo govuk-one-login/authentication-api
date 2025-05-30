@@ -17,7 +17,7 @@ public enum ErrorResponse {
     ERROR_1009(1009, "An account with this email address already exists"),
     ERROR_1010(1010, "An account with this email address does not exist"),
     ERROR_1011(1011, "Phone number is missing"),
-    INVALID_PHONE_NUMBER(1012, "Phone number is invalid"),
+    ERROR_1012(1012, "Phone number is invalid"),
     ERROR_1013(1013, "Update profile type is invalid"),
     ERROR_1014(1014, "Phone number is not registered"),
     ERROR_1015(1015, "Client not found"),
@@ -49,7 +49,7 @@ public enum ErrorResponse {
     ERROR_1041(1041, "Auth app secret is invalid"),
     ERROR_1042(1042, "User entered invalid authenticator app verification code too many times"),
     ERROR_1043(1043, "User entered invalid authenticator app code"),
-    NEW_PHONE_NUMBER_ALREADY_IN_USE(1044, "New phone number is the same as current phone number"),
+    ERROR_1044(1044, "New phone number is the same as current phone number"),
     ERROR_1045(1045, "User account is temporarily locked from sign in"),
     ERROR_1046(
             1046,
@@ -95,9 +95,7 @@ public enum ErrorResponse {
     ERROR_1081(1081, "Attempting to validate auth app code for user without auth app method"),
     ERROR_1082(1082, "Cannot add a second auth app."),
     ERROR_1083(1083, "User's account is suspended"),
-    ERROR_1084(1084, "User's account is blocked"),
-    NO_USER_PROFILE_FOR_EMAIL(1085, "Email from request does not have a user profile"),
-    USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials");
+    ERROR_1084(1084, "User's account is blocked");
 
     private int code;
 
