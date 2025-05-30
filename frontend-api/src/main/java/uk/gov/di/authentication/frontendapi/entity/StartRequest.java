@@ -18,4 +18,5 @@ public record StartRequest(
         @Expose @SerializedName("redirect_uri") String redirectUri,
         @Expose @SerializedName("scope") String scope,
         @Expose @SerializedName("client_name") String clientName,
-        @Expose @SerializedName("service_type") String serviceType) {}
+        @Expose @SerializedName("service_type") String serviceType,
+        @Expose @SerializedName("cookie_consent_shared") boolean isCookieConsentShared) {}

@@ -535,7 +535,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "client_name",
                                 TEST_CLIENT_NAME,
                                 "service_type",
-                                ServiceType.MANDATORY.toString()));
+                                ServiceType.MANDATORY.toString(),
+                                "cookie_consent_shared",
+                                false));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(

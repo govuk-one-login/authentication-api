@@ -526,7 +526,8 @@ class StartServiceTest {
                         CLIENT_NAME,
                         scopes.toStringList(),
                         REDIRECT_URI,
-                        STATE);
+                        STATE,
+                        cookieConsentShared);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
@@ -555,7 +556,7 @@ class StartServiceTest {
                                         cookieConsentShared)));
 
         assertThat(
-                startService.getCookieConsentValue(cookieConsentValue, CLIENT_ID.getValue()),
+                startService.getCookieConsentValue(cookieConsentValue, cookieConsentShared),
                 equalTo(expectedValue));
     }
 

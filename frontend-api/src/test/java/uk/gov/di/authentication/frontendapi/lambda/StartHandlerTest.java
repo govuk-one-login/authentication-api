@@ -503,7 +503,7 @@ class StartHandlerTest {
         when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(
-                        eq(clientRegistry), any(), any(), any(), any(), any()))
+                        eq(clientRegistry), any(), any(), any(), any(), any(), anyBoolean()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
                         eq(userContext),
@@ -554,6 +554,7 @@ class StartHandlerTest {
                         REDIRECT_URL.toString(),
                         SCOPE.toString(),
                         CLIENT_NAME,
-                        ServiceType.MANDATORY.toString()));
+                        ServiceType.MANDATORY.toString(),
+                        false));
     }
 }
