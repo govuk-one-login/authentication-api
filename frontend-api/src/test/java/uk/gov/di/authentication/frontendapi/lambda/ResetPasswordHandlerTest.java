@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -38,7 +37,6 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.time.temporal.ChronoUnit;
@@ -79,7 +77,6 @@ class ResetPasswordHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
@@ -129,7 +126,6 @@ class ResetPasswordHandlerTest {
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     private ResetPasswordHandler handler;
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -161,7 +157,6 @@ class ResetPasswordHandlerTest {
                         sqsClient,
                         codeStorageService,
                         configurationService,
-                        sessionService,
                         clientService,
                         auditService,
                         commonPasswordsService,
@@ -404,7 +399,8 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasInvalidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
@@ -507,8 +503,6 @@ class ResetPasswordHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }

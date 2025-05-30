@@ -24,8 +24,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -42,7 +40,6 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
     protected CheckEmailFraudBlockHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
@@ -51,7 +48,6 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         super(
                 CheckEmailFraudBlockRequest.class,
                 configurationService,
-                sessionService,
                 clientService,
                 authenticationService,
                 authSessionService);
@@ -61,14 +57,6 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
     public CheckEmailFraudBlockHandler(ConfigurationService configurationService) {
         super(CheckEmailFraudBlockRequest.class, configurationService);
-        this.dynamoEmailCheckResultService =
-                new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public CheckEmailFraudBlockHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckEmailFraudBlockRequest.class, configurationService, redis);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
