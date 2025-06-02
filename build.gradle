@@ -146,6 +146,10 @@ subprojects {
                 add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
                     because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
                 }
+
+                add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
+                    because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
+                }
             }
         }
 
