@@ -19,4 +19,5 @@ public record StartRequest(
         @Expose @SerializedName("scope") String scope,
         @Expose @SerializedName("client_name") String clientName,
         @Expose @SerializedName("service_type") String serviceType,
-        @Expose @SerializedName("cookie_consent_shared") boolean isCookieConsentShared) {}
+        @Expose @SerializedName("cookie_consent_shared") boolean isCookieConsentShared,
+        @Expose @SerializedName("is_smoke_test") boolean isSmokeTest) {}

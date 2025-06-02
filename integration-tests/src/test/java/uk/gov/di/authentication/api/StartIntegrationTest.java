@@ -168,6 +168,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(requestedLevelOfConfidenceOpt.orElse(null)));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
         assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertFalse(actualAuthSession.getIsSmokeTest());
     }
 
     @Test
@@ -211,6 +212,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(LevelOfConfidence.LOW_LEVEL));
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
         assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertFalse(actualAuthSession.getIsSmokeTest());
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
@@ -537,6 +539,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "service_type",
                                 ServiceType.MANDATORY.toString(),
                                 "cookie_consent_shared",
+                                false,
+                                "is_smoke_test",
                                 false));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));

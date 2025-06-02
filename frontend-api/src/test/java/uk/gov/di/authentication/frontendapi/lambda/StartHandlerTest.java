@@ -555,6 +555,7 @@ class StartHandlerTest {
                         SCOPE.toString(),
                         CLIENT_NAME,
                         ServiceType.MANDATORY.toString(),
+                        false,
                         false));
     }
 }

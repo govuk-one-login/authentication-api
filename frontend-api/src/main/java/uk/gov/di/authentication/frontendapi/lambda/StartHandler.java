@@ -187,6 +187,7 @@ public class StartHandler
             }
             authSession.setClientId(startRequest.clientId());
             authSession.setClientName(startRequest.clientName());
+            authSession.setIsSmokeTest(startRequest.isSmokeTest());
 
             isUserAuthenticatedWithValidProfile =
                     startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);

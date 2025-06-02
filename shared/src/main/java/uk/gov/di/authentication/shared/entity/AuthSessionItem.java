@@ -39,6 +39,7 @@ public class AuthSessionItem {
             "RequestedLevelOfConfidence";
     public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
     public static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
+    public static final String ATTRIBUTE_IS_SMOKE_TEST = "IsSmokeTest";
 
     public enum AccountState {
         NEW,
@@ -77,6 +78,7 @@ public class AuthSessionItem {
     private LevelOfConfidence requestedLevelOfConfidence;
     private String clientId;
     private String clientName;
+    private boolean isSmokeTest;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -401,6 +403,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withClientName(String clientName) {
         this.clientName = clientName;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_SMOKE_TEST)
+    public boolean getIsSmokeTest() {
+        return isSmokeTest;
+    }
+
+    public void setIsSmokeTest(boolean isSmokeTest) {
+        this.isSmokeTest = isSmokeTest;
+    }
+
+    public AuthSessionItem withIsSmokeTest(boolean isSmokeTest) {
+        this.isSmokeTest = isSmokeTest;
         return this;
     }
 
