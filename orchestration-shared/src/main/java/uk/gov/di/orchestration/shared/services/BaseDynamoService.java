@@ -7,6 +7,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
@@ -14,6 +16,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import uk.gov.di.orchestration.shared.helpers.TableNameHelper;
 
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
@@ -92,6 +95,17 @@ public class BaseDynamoService<T> {
                                 .consistentRead(true)
                                 .key(Key.builder().partitionValue(partition).build())
                                 .build()));
+    }
+
+    public List<T> queryIndex(String indexName, String partition) {
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(partition).build());
+        return dynamoTable
+                .index(indexName)
+                .query(QueryEnhancedRequest.builder().queryConditional(q).build())
+                .stream()
+                .flatMap(page -> page.items().stream())
+                .toList();
     }
 
     public void delete(String partition) {
