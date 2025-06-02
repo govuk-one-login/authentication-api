@@ -211,11 +211,12 @@ public class StartHandler
                             authSession.getClientName(),
                             scopes,
                             redirectURI,
-                            state);
+                            state,
+                            startRequest.isCookieConsentShared());
 
             var cookieConsent =
                     startService.getCookieConsentValue(
-                            startRequest.cookieConsent(), startRequest.clientId());
+                            startRequest.cookieConsent(), startRequest.isCookieConsentShared());
             var gaTrackingId = startRequest.ga();
             var reauthenticateHeader =
                     getHeaderValueFromHeaders(

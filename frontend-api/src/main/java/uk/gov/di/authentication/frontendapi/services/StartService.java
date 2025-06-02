@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.function.Predicate.not;
 
 public class StartService {
@@ -81,13 +80,14 @@ public class StartService {
             String clientName,
             List<String> scopes,
             URI redirectURI,
-            State state) {
+            State state,
+            boolean isCookieConsentShared) {
         var clientInfo =
                 new ClientStartInfo(
                         clientName,
                         scopes,
                         serviceType,
-                        clientRegistry.isCookieConsentShared(),
+                        isCookieConsentShared,
                         redirectURI,
                         state,
                         clientRegistry.isOneLoginService());
@@ -150,17 +150,12 @@ public class StartService {
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
     }
 
-    public String getCookieConsentValue(String cookieConsentValue, String clientID) {
-        try {
-            if (validCookieConsentValueIsPresent(cookieConsentValue)
-                    && isClientCookieConsentShared(clientID)) {
-                LOG.info("Sharing cookie_consent");
-                return cookieConsentValue;
-            }
-            return null;
-        } catch (ClientNotFoundException e) {
-            throw new RuntimeException("Client not found", e);
+    public String getCookieConsentValue(String cookieConsentValue, boolean isCookieConsentShared) {
+        if (validCookieConsentValueIsPresent(cookieConsentValue) && isCookieConsentShared) {
+            LOG.info("Sharing cookie_consent");
+            return cookieConsentValue;
         }
+        return null;
     }
 
     public boolean isUserProfileEmpty(AuthSessionItem authSession) {
@@ -218,18 +213,6 @@ public class StartService {
         } else if (authApp(userContext)) {
             return MFAMethodType.AUTH_APP;
         } else return null;
-    }
-
-    private boolean isClientCookieConsentShared(String clientID) throws ClientNotFoundException {
-        return clientService
-                .getClient(clientID)
-                .map(ClientRegistry::isCookieConsentShared)
-                .orElseThrow(
-                        () ->
-                                new ClientNotFoundException(
-                                        format(
-                                                "Could not find client for clientID: %s",
-                                                clientID)));
     }
 
     private boolean validCookieConsentValueIsPresent(String cookieConsent) {
