@@ -99,6 +99,19 @@ class MFAMethodsServiceIntegrationTest {
         }
 
         @Test
+        void guardsAgainstInvalidPhoneNumbers() {
+            userStoreExtension.addVerifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, "not a phone number");
+
+            assertTrue(result.isFailure());
+            assertEquals(ErrorResponse.INVALID_PHONE_NUMBER, result.getFailure());
+        }
+
+        @Test
         void confirmsVerifiedPhoneNumberIsInUse() {
             userStoreExtension.addVerifiedPhoneNumber(
                     NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
@@ -149,19 +162,6 @@ class MFAMethodsServiceIntegrationTest {
 
             assertTrue(result.isFailure());
             assertEquals(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT, result.getFailure());
-        }
-
-        @Test
-        void doesNotValidatePhoneNumbers() {
-            userStoreExtension.addVerifiedPhoneNumber(
-                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
-
-            var result =
-                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
-                            NON_MIGRATED_USER_EMAIL, "not a phone number");
-
-            assertTrue(result.isSuccess());
-            assertFalse(result.getSuccess());
         }
     }
 

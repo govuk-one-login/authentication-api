@@ -44,6 +44,13 @@ public class MFAMethodsService {
 
     public Result<ErrorResponse, Boolean> isPhoneAlreadyInUseAsAVerifiedMfa(
             String email, String phoneNumber) {
+
+        try {
+            PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        } catch (Exception e) {
+            return Result.failure(ErrorResponse.INVALID_PHONE_NUMBER);
+        }
+
         var result = getMfaMethods(email, true);
 
         if (result.isFailure()) {
