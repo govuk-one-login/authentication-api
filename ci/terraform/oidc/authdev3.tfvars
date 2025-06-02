@@ -1,6 +1,9 @@
 shared_state_bucket = "di-auth-development-tfstate"
 
 
+# disaling OIDC temporarly
+oidc_cloudfront_enabled = false
+
 # FMS
 frontend_api_fms_tag_value = "authfrontendsp"
 
@@ -49,7 +52,7 @@ otp_code_ttl_duration                     = 60
 email_acct_creation_otp_code_ttl_duration = 60
 
 
-orch_frontend_api_gateway_integration_enabled = true
+orch_frontend_api_gateway_integration_enabled = false
 
 orch_redirect_uri                  = "https://oidc.authdev3.dev.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
