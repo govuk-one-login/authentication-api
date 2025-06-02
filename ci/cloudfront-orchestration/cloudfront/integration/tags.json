@@ -25,6 +25,6 @@
   },
   {
     "Key": "FMSGlobalCustomPolicyName",
-    "Value": "cloudfrontoidc"
+    "Value": "cloudfrontoidcint"
   }
 ]

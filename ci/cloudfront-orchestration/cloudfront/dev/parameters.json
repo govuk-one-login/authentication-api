@@ -12,15 +12,11 @@
     "ParameterValue": "false"
   },
   {
-    "ParameterKey": "CloudFrontWafACL",
-    "ParameterValue": "arn:aws:wafv2:us-east-1:761723964695:global/webacl/dev-oidc-cloudfront-waf/87540c97-bbad-49f5-b11b-53a4d30e76ab"
-  },
-  {
     "ParameterKey": "StandardLoggingEnabled",
     "ParameterValue": "true"
   },
   {
     "ParameterKey": "LogDestination",
-    "ParameterValue":  "csls_cw_logs_destination_prodpython"
+    "ParameterValue": "csls_cw_logs_destination_prodpython"
   }
 ]
