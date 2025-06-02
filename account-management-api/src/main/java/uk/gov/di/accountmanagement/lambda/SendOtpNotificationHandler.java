@@ -283,7 +283,7 @@ public class SendOtpNotificationHandler
                                 sendNotificationRequest.getPhoneNumber());
 
                 var inUseResult =
-                        mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(email, newPhoneNumber);
+                        mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(email, newPhoneNumber);
 
                 if (inUseResult.isFailure()) {
                     return generateApiGatewayProxyErrorResponse(400, inUseResult.getFailure());

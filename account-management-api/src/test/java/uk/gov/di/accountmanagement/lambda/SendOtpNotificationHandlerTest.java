@@ -328,7 +328,7 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
-        when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+        when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                         TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                 .thenReturn(Result.success(false));
 
@@ -363,7 +363,8 @@ class SendOtpNotificationHandlerTest {
                         VERIFY_PHONE_NUMBER);
 
         verify(mfaMethodsService, only())
-                .isPhoneAlreadyInUseAsAnMfa(TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER);
+                .isPhoneAlreadyInUseAsAVerifiedMfa(
+                        TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER);
 
         verify(auditService, only())
                 .submitAuditEvent(
@@ -379,7 +380,7 @@ class SendOtpNotificationHandlerTest {
     @Disabled("Test user feature not implemented yet")
     @Test
     void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
-        when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+        when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                         TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                 .thenReturn(Result.success(false));
 
@@ -558,7 +559,7 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
-                when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                                 TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                         .thenReturn(Result.success(true));
 
@@ -577,7 +578,7 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400WhenUserProfileMissing() {
-                when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                                 TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                         .thenReturn(Result.failure(USER_DOES_NOT_HAVE_ACCOUNT));
 
@@ -655,7 +656,7 @@ class SendOtpNotificationHandlerTest {
         class UnMigratedUsers {
             @Test
             void shouldReturn400WhenNoUserCredentialsForEmail() {
-                when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                                 TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                         .thenReturn(Result.failure(USER_DOES_NOT_HAVE_ACCOUNT));
 
@@ -674,7 +675,7 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void shouldReturn400WhenPhoneNumberAlreadyInUse() {
-                when(mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                                 TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                         .thenReturn(Result.success(true));
 

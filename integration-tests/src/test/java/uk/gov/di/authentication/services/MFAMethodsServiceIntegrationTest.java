@@ -99,12 +99,12 @@ class MFAMethodsServiceIntegrationTest {
         }
 
         @Test
-        void findsPhoneNumberIsInUse() {
+        void confirmsVerifiedPhoneNumberIsInUse() {
             userStoreExtension.addVerifiedPhoneNumber(
                     NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             var result =
-                    mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                             NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             assertTrue(result.isSuccess());
@@ -112,13 +112,26 @@ class MFAMethodsServiceIntegrationTest {
         }
 
         @Test
-        void findsPhoneNumberIsNotInUse() {
+        void confirmsNewPhoneNumberIsNotInUse() {
             userStoreExtension.addVerifiedPhoneNumber(
                     NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             var result =
-                    mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                             NON_MIGRATED_USER_EMAIL, "07900000001");
+
+            assertTrue(result.isSuccess());
+            assertEquals(false, result.getSuccess());
+        }
+
+        @Test
+        void ignoresUnverifiedPhoneNumber() {
+            userStoreExtension.addUnverifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             assertTrue(result.isSuccess());
             assertEquals(false, result.getSuccess());
@@ -131,7 +144,7 @@ class MFAMethodsServiceIntegrationTest {
             userStoreExtension.deleteUserCredentials(NON_MIGRATED_USER_EMAIL);
 
             Result<ErrorResponse, Boolean> result =
-                    mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                             NON_MIGRATED_USER_EMAIL, "07900000001");
 
             assertTrue(result.isFailure());
@@ -144,7 +157,7 @@ class MFAMethodsServiceIntegrationTest {
                     NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
 
             var result =
-                    mfaMethodsService.isPhoneAlreadyInUseAsAnMfa(
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
                             NON_MIGRATED_USER_EMAIL, "not a phone number");
 
             assertTrue(result.isSuccess());
