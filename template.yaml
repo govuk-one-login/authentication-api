@@ -463,6 +463,15 @@ Resources:
       AttributeDefinitions:
         - AttributeName: SessionId
           AttributeType: S
+        - AttributeName: InternalCommonSubjectId
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: InternalCommonSubjectIdIndex
+          KeySchema:
+            - AttributeName: InternalCommonSubjectId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       KeySchema:
         - AttributeName: SessionId
           KeyType: HASH

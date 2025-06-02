@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -151,6 +152,7 @@ public class OrchSessionItem {
         return this;
     }
 
+    @DynamoDbSecondaryPartitionKey(indexNames = {"InternalCommonSubjectIdIndex"})
     @DynamoDbAttribute(ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID)
     public String getInternalCommonSubjectId() {
         return internalCommonSubjectId;
