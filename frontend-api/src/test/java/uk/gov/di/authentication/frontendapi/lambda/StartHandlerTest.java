@@ -92,6 +92,7 @@ class StartHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String COOKIE_CONSENT = "accept";
     private static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID.getValue());
+    private static final String TEST_SUBJECT_TYPE = "pairwise";
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -557,6 +558,7 @@ class StartHandlerTest {
                         ServiceType.MANDATORY.toString(),
                         false,
                         false,
-                        false));
+                        false,
+                        TEST_SUBJECT_TYPE));
     }
 }

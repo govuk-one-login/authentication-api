@@ -188,6 +188,8 @@ public class StartHandler
             authSession.setClientId(startRequest.clientId());
             authSession.setClientName(startRequest.clientName());
             authSession.setIsSmokeTest(startRequest.isSmokeTest());
+            authSession.setIsOneLoginService(startRequest.isOneLoginService());
+            authSession.setSubjectType(startRequest.subjectType());
 
             isUserAuthenticatedWithValidProfile =
                     startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);
@@ -197,10 +199,9 @@ public class StartHandler
                             requestedCredentialTrustLevel,
                             authSession.getAchievedCredentialStrength());
 
-            authSessionService.addSession(
-                    authSession
-                            .withUpliftRequired(upliftRequired)
-                            .withIsOneLoginService(startRequest.isOneLoginService()));
+            LOG.info("subject type is: {}", startRequest.subjectType());
+
+            authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
             var userContext = startService.buildUserContext(session, authSession);
 
