@@ -6,6 +6,19 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
 environments=("authdev1" "authdev2" "dev")
 
+# -------------
+# Prerequisites
+# -------------
+if ! command -v rain &> /dev/null; then
+  echo "Merging templates requires rain to be installed. See https://github.com/aws-cloudformation/rain for installation instructions."
+  exit 1
+fi
+
+if ! command -v sam &> /dev/null; then
+  echo "Deploying template requires AWS sam cli to be installed. See https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html for installation instructions."
+  exit 1
+fi
+
 function usage() {
   cat <<- USAGE
 Usage:
@@ -23,8 +36,16 @@ Options:
 
 Arguments:
     environment                 the environment to deploy to. Valid environments are: ${environments[*]}
+
+Dependencies:
+    AWS CLI, AWS SAM, rain
 USAGE
 }
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
 
 function sso_login() {
   export AWS_ACCOUNT=di-authentication-development
@@ -41,7 +62,7 @@ O_CLEAN="" # -c, --clean
 O_DEPLOY=0 # -x, --auth-external
 
 POSITIONAL=()
-TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/backend-template.yaml}"
+TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
 SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
 CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
@@ -89,6 +110,10 @@ fi
 
 if [[ ${O_DEPLOY} -eq 1 ]]; then
   sso_login
+
+  echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f -name "*.yaml" -print) -o "${TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${TEMPLATE_FILE}"

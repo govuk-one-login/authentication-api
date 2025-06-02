@@ -1,0 +1,285 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  FrontendApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub
+        - ${Env}-di-authentication-frontend-api
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      Policy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+          - Effect: Deny
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce:
+                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+
+  FrontendApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - AccountInterventionsEndpointMethod
+    Properties:
+      RestApiId: !Ref FrontendApi
+
+  FrontendApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt FrontendApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      CacheClusterEnabled: false
+      DeploymentId: !Ref FrontendApiDeployment
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      RestApiId: !Ref FrontendApi
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TracingEnabled: true
+
+  FrontendApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-frontend-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-FrontendApiAccessLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/frontend-api.yaml
+
+  FrontendApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref FrontendApiAccessLogGroup
+
+  FrontendApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    DependsOn:
+      - FrontendApiStage
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${FrontendApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  FrontendApiDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub
+        - "${Env}-di-authentication-frontend-api-dashboard"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      DashboardBody:
+        Fn::Sub:
+          - |
+            {
+              "start": "-PT336H",
+              "widgets": [
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 6,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Latency",
+                        "ApiName",
+                        "${Env}-di-authentication-frontend-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Average",
+                    "title": "Latency",
+                    "yAxis": {
+                      "left": {
+                        "label": "Millis",
+                        "showUnits": false,
+                        "min": 0
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    },
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Count",
+                        "ApiName",
+                        "${Env}-di-authentication-frontend-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Requests (sum/hr)",
+                    "yAxis": {
+                      "left": {
+                        "label": "Requests",
+                        "showUnits": false
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 12,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                          "label": "",
+                          "id": "e2",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "5XXError",
+                        "ApiName",
+                        "${Env}-di-authentication-frontend-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ],
+                      [
+                        ".",
+                        "Count",
+                        ".",
+                        ".",
+                        {
+                          "id": "m2",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Successful requests",
+                    "yAxis": {
+                      "left": {
+                        "label": "",
+                        "showUnits": false,
+                        "min": 0,
+                        "max": 100
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    },
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
+                }
+              ]
+            }
+          - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
