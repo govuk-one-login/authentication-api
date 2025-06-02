@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
@@ -299,6 +301,28 @@ class NotificationHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 formatMessage(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, DELETE_ACCOUNT))));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessBackupAddedMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_ADDED, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), BACKUP_METHOD_ADDED);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_ADDED))));
     }
 
     @Test

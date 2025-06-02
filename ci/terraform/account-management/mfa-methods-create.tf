@@ -21,6 +21,7 @@ module "mfa-methods-create" {
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
     REDIS_KEY                         = local.redis_key
+    EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
     MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
