@@ -65,6 +65,7 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
@@ -124,9 +125,11 @@ public class AuthenticationCallbackHandler
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var redisConnectionService = new RedisConnectionService(configurationService);
+        var stateStorageService = new StateStorageService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
@@ -166,8 +169,10 @@ public class AuthenticationCallbackHandler
             RedisConnectionService redisConnectionService) {
 
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redisConnectionService);

@@ -11,6 +11,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.List;
 import java.util.Map;
@@ -20,13 +21,17 @@ public class AuthenticationAuthorizationService {
     private static final Logger LOG =
             LogManager.getLogger(AuthenticationAuthorizationService.class);
     private final RedisConnectionService redisConnectionService;
+    private final StateStorageService stateStorageService;
     public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
     private final Json objectMapper = SerializationService.getInstance();
     public static final List<ErrorObject> reauthErrors =
             List.of(OIDCError.LOGIN_REQUIRED, OAuth2Error.ACCESS_DENIED);
 
-    public AuthenticationAuthorizationService(RedisConnectionService redisConnectionService) {
+    public AuthenticationAuthorizationService(
+            RedisConnectionService redisConnectionService,
+            StateStorageService stateStorageService) {
         this.redisConnectionService = redisConnectionService;
+        this.stateStorageService = stateStorageService;
     }
 
     public void validateRequest(Map<String, String> queryParams, String sessionId)
@@ -68,13 +73,18 @@ public class AuthenticationAuthorizationService {
                 Optional.ofNullable(
                         redisConnectionService.getValue(
                                 AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId));
+
+        var dynamoState =
+                stateStorageService.getState(AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId);
+
+        logComparisonBetweenStateValues(value, dynamoState);
         if (value.isEmpty()) {
             LOG.info("No Authentication state found in Redis");
             return false;
         }
-        State storedState;
+        State redisState;
         try {
-            storedState = objectMapper.readValue(value.get(), State.class);
+            redisState = objectMapper.readValue(value.get(), State.class);
         } catch (JsonException e) {
             LOG.info("Error when deserializing state from redis");
             return false;
@@ -82,8 +92,40 @@ public class AuthenticationAuthorizationService {
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,
-                storedState.getValue(),
-                responseState.equals(storedState.getValue()));
-        return responseState.equals(storedState.getValue());
+                redisState.getValue(),
+                responseState.equals(redisState.getValue()));
+        return responseState.equals(redisState.getValue());
+    }
+
+    private void logComparisonBetweenStateValues(
+            Optional<String> redisStateOpt, Optional<State> dynamoStateOpt) {
+        try {
+            if (redisStateOpt.isEmpty() && dynamoStateOpt.isEmpty()) {
+                LOG.info("Both redis and dynamo state are empty");
+                return;
+            }
+            if (redisStateOpt.isPresent() && dynamoStateOpt.isEmpty()
+                    || redisStateOpt.isEmpty() && dynamoStateOpt.isPresent()) {
+                LOG.info(
+                        "Either one of redis or Dynamo state is not present. Redis present: {}, Dynamo present: {}",
+                        redisStateOpt.isPresent(),
+                        dynamoStateOpt.isPresent());
+                return;
+            }
+
+            var redisState = objectMapper.readValue(redisStateOpt.get(), State.class);
+            var dyanmoState = dynamoStateOpt.get();
+
+            LOG.info(
+                    "Dynamo state: {} and redis state: {}. Are equal: {}",
+                    dyanmoState.getValue(),
+                    redisState.getValue(),
+                    dyanmoState.getValue().equals(redisState.getValue()));
+
+        } catch (Exception e) {
+            LOG.warn(
+                    "Exception when comparing redis and dynamo state: {}. Continuing as normal",
+                    e.getMessage());
+        }
     }
 }
