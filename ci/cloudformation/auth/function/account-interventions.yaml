@@ -52,7 +52,7 @@ Resources:
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
           TICF_CRI_LAMBDA_IDENTIFIER: !GetAtt TicfCriFunctionAliasactive.AliasArn
-          TXMA_AUDIT_QUEUE_URL: !GetAtt FrontendApiTxMAAuditQueue.QueueUrl
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AccountInterventionsFunctionLogGroup
       Policies:
@@ -61,7 +61,7 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
-        - !Ref FrontendApiTxMAAuditQueueAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref TicfCriFunctionInvocationPolicy
       VpcConfig:
@@ -89,15 +89,15 @@ Resources:
   AccountInterventionsEndpointResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: !Ref FrontendApi
-      ParentId: !GetAtt FrontendApi.RootResourceId
+      RestApiId: !Ref AuthInternalApi
+      ParentId: !GetAtt AuthInternalApi.RootResourceId
       PathPart: "account-interventions"
 
   AccountInterventionsEndpointMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       ResourceId: !Ref AccountInterventionsEndpointResource
-      RestApiId: !Ref FrontendApi
+      RestApiId: !Ref AuthInternalApi
       HttpMethod: POST
       AuthorizationType: NONE
       Integration:
