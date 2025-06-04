@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  UserExistsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-user-exists-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler::handleRequest
+      Environment:
+        Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          HEADERS_CASE_INSENSITIVE: "false"
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          REDIS_KEY: "session"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref UserExistsFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref RedisParametersAccessPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  UserExistsFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt UserExistsFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  UserExistsFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref UserExistsFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  UserExistsEndpointResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AuthInternalApi
+      ParentId: !GetAtt AuthInternalApi.RootResourceId
+      PathPart: "user-exists"
+
+  UserExistsEndpointMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ResourceId: !Ref UserExistsEndpointResource
+      RestApiId: !Ref AuthInternalApi
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserExistsFunction.Arn}:active/invocations
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+
+  UserExistsFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-user-exists-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-UserExistsFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/user-exists.yaml
+
+  UserExistsFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-user-exists-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref UserExistsFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-user-exists-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UserExistsFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-user-exists-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "user-exists",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-user-exists-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-user-exists-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  UserExistsFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-user-exists-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "user-exists",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-user-exists-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-user-exists-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-user-exists-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  UserExistsFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UserExistsFunctionLogGroup
+
+  UserExistsFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
+    DependsOn: UserExistsFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt UserExistsFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  UserExistsFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: UserExistsFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-user-exists-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt UserExistsFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.6",
+          ]
