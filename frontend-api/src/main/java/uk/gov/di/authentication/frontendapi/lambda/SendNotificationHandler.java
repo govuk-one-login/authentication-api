@@ -251,8 +251,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
-                    var isSmokeTest =
+                    boolean isSmokeTest =
                             userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+                    LOG.info(
+                            "isSmokeTest on auth session equal to client registry? {}",
+                            userContext.getAuthSession().getIsSmokeTest() == isSmokeTest);
                     var errorResponse =
                             ValidationHelper.validatePhoneNumber(
                                     request.getPhoneNumber(),
