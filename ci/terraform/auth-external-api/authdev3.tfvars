@@ -5,7 +5,7 @@ vpc_environment     = "dev"
 internal_sector_uri = "https://identity.sandpit.account.gov.uk"
 
 # Signing Keys
-orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESyWJU5s5F4jSovHsh9y133/Ogf5Px78OrfDJqiMMI2p8Warbq0ppcbWvbihK6rAXTH7bPIeOHOeU9cKAEl5NdQ=="
+orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyu7XCXkDyxhHrmoOfLrl6tcd9e9VL1pzzWqVo1P546NLL2c1H2Qd7UNaa7oQX1/eNFDKaAZuJY3YUAPwNN4Ypg=="
 
 # VPC
 orch_api_vpc_endpoint_id = "vpce-0028f62dad635589a"
