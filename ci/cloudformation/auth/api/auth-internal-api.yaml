@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  FrontendApi:
+  AuthInternalApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub
-        - ${Env}-di-authentication-frontend-api
+        - ${Env}-di-auth-internal-api
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EndpointConfiguration:
         Types:
@@ -29,18 +29,18 @@ Resources:
                 aws:SourceVpce:
                   - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
 
-  FrontendApiDeployment:
+  AuthInternalApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - AccountInterventionsEndpointMethod
     Properties:
-      RestApiId: !Ref FrontendApi
+      RestApiId: !Ref AuthInternalApi
 
-  FrontendApiStage:
+  AuthInternalApiStage:
     Type: AWS::ApiGateway::Stage
     Properties:
       AccessLogSetting:
-        DestinationArn: !GetAtt FrontendApiAccessLogGroup.Arn
+        DestinationArn: !GetAtt AuthInternalApiAccessLogGroup.Arn
         Format:
           Fn::ToJsonString:
             requestId: $context.requestId
@@ -56,7 +56,7 @@ Resources:
             integrationLatency: $context.integration.latency
             integrationRequestId: $context.integration.requestId
       CacheClusterEnabled: false
-      DeploymentId: !Ref FrontendApiDeployment
+      DeploymentId: !Ref AuthInternalApiDeployment
       MethodSettings:
         - CachingEnabled: false
           DataTraceEnabled: false
@@ -64,16 +64,44 @@ Resources:
           ResourcePath: "/*"
           LoggingLevel: INFO
           MetricsEnabled: true
-      RestApiId: !Ref FrontendApi
+      RestApiId: !Ref AuthInternalApi
       StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
 
-  FrontendApiAccessLogGroup:
+  AuthInternalApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: !Sub
+        - ${Env}-di-auth-internal-api-key
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Value: !Sub
+        - "{{resolve:secretsmanager:/${Env}/frontend-api-key}}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  AuthInternalApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: !Sub
+        - ${Env}-di-auth-internal-api-usage-plan
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ApiStages:
+        - ApiId: !Ref AuthInternalApi
+          Stage: !Ref AuthInternalApiStage
+
+  AuthInternalApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref AuthInternalApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref AuthInternalApiUsagePlan
+
+  AuthInternalApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       LogGroupName: !Sub
-        - "${Env}-frontend-api-access-logs"
+        - "${Env}-auth-internal-api-access-logs"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       RetentionInDays:
         !FindInMap [
@@ -83,38 +111,38 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-FrontendApiAccessLogGroup"
+          Value: !Sub "${AWS::StackName}-AuthInternalApiAccessLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/frontend-api.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/auth-internal-api.yaml
 
-  FrontendApiAccessLogSubscriptionFilter:
+  AuthInternalApiAccessLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref FrontendApiAccessLogGroup
+      LogGroupName: !Ref AuthInternalApiAccessLogGroup
 
-  FrontendApiExecutionLogSubscriptionFilter:
+  AuthInternalApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     DependsOn:
-      - FrontendApiStage
+      - AuthInternalApiStage
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Sub
-        - API-Gateway-Execution-Logs_${FrontendApi}/${StageName}
+        - API-Gateway-Execution-Logs_${AuthInternalApi}/${StageName}
         - StageName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
-  FrontendApiDashboard:
+  AuthInternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
       DashboardName: !Sub
-        - "${Env}-di-authentication-frontend-api-dashboard"
+        - "${Env}-di-auth-internal-api-dashboard"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       DashboardBody:
         Fn::Sub:
@@ -143,7 +171,7 @@ Resources:
                         "AWS/ApiGateway",
                         "Latency",
                         "ApiName",
-                        "${Env}-di-authentication-frontend-api",
+                        "${Env}-di-auth-internal-api",
                         {
                           "id": "m1",
                           "visible": false
@@ -194,7 +222,7 @@ Resources:
                         "AWS/ApiGateway",
                         "Count",
                         "ApiName",
-                        "${Env}-di-authentication-frontend-api",
+                        "${Env}-di-auth-internal-api",
                         {
                           "id": "m1",
                           "visible": false
@@ -239,7 +267,7 @@ Resources:
                         "AWS/ApiGateway",
                         "5XXError",
                         "ApiName",
-                        "${Env}-di-authentication-frontend-api",
+                        "${Env}-di-auth-internal-api",
                         {
                           "id": "m1",
                           "visible": false

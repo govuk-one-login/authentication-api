@@ -1,31 +1,31 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  FrontendApiTxMAAuditQueue:
+  AuthInternalApiTxMAAuditQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub
-        - ${Env}-oidc-txma-audit-queue
+        - ${Env}-auth-internal-api-txma-audit-queue
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: !GetAtt FrontendApiTxMAAuditQueueEncryptionKey.Arn
+      KmsMasterKeyId: !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
       MessageRetentionPeriod: 1209600
       RedrivePolicy:
-        deadLetterTargetArn: !GetAtt FrontendApiTxMAAuditDeadLetterQueue.Arn
+        deadLetterTargetArn: !GetAtt AuthInternalApiTxMAAuditDeadLetterQueue.Arn
         maxReceiveCount: 3
       VisibilityTimeout: 70
       Tags:
         - Key: Service
-          Value: oidc
+          Value: auth-internal-api
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/frontend-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-internal-api-txma-audit.yaml
 
-  FrontendApiTxMAAuditQueuePolicy:
+  AuthInternalApiTxMAAuditQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref FrontendApiTxMAAuditQueue
+        - !Ref AuthInternalApiTxMAAuditQueue
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -36,7 +36,7 @@ Resources:
               - sqs:GetQueueAttributes
               - sqs:ReceiveMessage
             Resource:
-              - !GetAtt FrontendApiTxMAAuditQueue.Arn
+              - !GetAtt AuthInternalApiTxMAAuditQueue.Arn
             Principal:
               AWS: !Sub
                 - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
@@ -47,27 +47,27 @@ Resources:
                       !Ref Environment,
                     ]
 
-  FrontendApiTxMAAuditDeadLetterQueue:
+  AuthInternalApiTxMAAuditDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub
-        - ${Env}-oidc-txma-audit-dlq
+        - ${Env}-auth-internal-api-txma-audit-dlq
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsDataKeyReusePeriodSeconds: 300
-      KmsMasterKeyId: !GetAtt FrontendApiTxMAAuditQueueEncryptionKey.Arn
+      KmsMasterKeyId: !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
       MessageRetentionPeriod: 604800
       Tags:
         - Key: Service
-          Value: oidc
+          Value: auth-internal-api
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/frontend-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-internal-api-txma-audit.yaml
 
-  FrontendApiTxMAAuditQueueEncryptionKey:
+  AuthInternalApiTxMAAuditQueueEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
-      Description: KMS signing key for encrypting oidc TxMA audit queue at rest
+      Description: KMS signing key for encrypting auth-internal-api TxMA audit queue at rest
       PendingWindowInDays: 30
       KeySpec: SYMMETRIC_DEFAULT
       KeyUsage: ENCRYPT_DECRYPT
@@ -97,24 +97,24 @@ Resources:
             Resource: "*"
       Tags:
         - Key: Service
-          Value: oidc
+          Value: auth-internal-api
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/frontend-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/queue/auth-internal-api-txma-audit.yaml
 
-  FrontendApiTxMAAuditQueueEncryptionKeyAlias:
+  AuthInternalApiTxMAAuditQueueEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
       AliasName: !Sub
-        - alias/${Env}-oidc-audit-kms-alias
+        - alias/${Env}-auth-internal-api-audit-kms-alias
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      TargetKeyId: !Ref FrontendApiTxMAAuditQueueEncryptionKey
+      TargetKeyId: !Ref AuthInternalApiTxMAAuditQueueEncryptionKey
 
-  FrontendApiTxMAAuditQueueAccessPolicy:
+  AuthInternalApiTxMAAuditQueueAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM Policy for write access to the frontend-api TxMA audit queue"
+      Description: "IAM Policy for write access to the auth-internal-api TxMA audit queue"
       Path: !Sub
         - /${Env}/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -126,11 +126,11 @@ Resources:
             Action:
               - sqs:SendMessage
             Resource:
-              - !GetAtt FrontendApiTxMAAuditQueue.Arn
+              - !GetAtt AuthInternalApiTxMAAuditQueue.Arn
           - Sid: AllowAccessToKeyForEncryptingPayloads
             Effect: Allow
             Action:
               - kms:GenerateDataKey
               - kms:Decrypt
             Resource:
-              - !GetAtt FrontendApiTxMAAuditQueueEncryptionKey.Arn
+              - !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
