@@ -51,6 +51,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final StateStorageService stateStorageService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public static final String STATE_PARAM = "state";
@@ -62,11 +63,13 @@ public class DocAppAuthorisationService {
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
-            JwksService jwksService) {
+            JwksService jwksService,
+            StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.stateStorageService = stateStorageService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -112,6 +115,8 @@ public class DocAppAuthorisationService {
                     STATE_STORAGE_PREFIX + sessionId,
                     objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
+
+            stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state);
         } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
             throw new DocAppAuthorisationServiceException(e);

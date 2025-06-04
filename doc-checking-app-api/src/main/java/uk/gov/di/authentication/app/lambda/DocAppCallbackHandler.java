@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -119,7 +120,8 @@ public class DocAppCallbackHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
+                        new JwksService(configurationService, kmsConnectionService),
+                        new StateStorageService(configurationService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -143,7 +145,8 @@ public class DocAppCallbackHandler
                         configurationService,
                         redis,
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
+                        new JwksService(configurationService, kmsConnectionService),
+                        new StateStorageService(configurationService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
