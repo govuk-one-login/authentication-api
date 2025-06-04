@@ -9,7 +9,11 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OrchSessionServiceIntegrationTest {
@@ -65,6 +69,24 @@ class OrchSessionServiceIntegrationTest {
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(OrchSessionItem.AccountState.EXISTING));
         assertThat(retrievedSession.get().getProcessingIdentityAttempts(), equalTo(0));
+    }
+
+    @Test
+    void shouldGetSessionsByInternalCommonSubjectId() {
+        createSessionWithIcsid("test-session-1", "same-icsid");
+        createSessionWithIcsid("test-session-2", "same-icsid");
+        createSessionWithIcsid("test-session-3", "different-icsid");
+
+        var sessions = orchSessionExtension.getSessionsByInternalCommonSubjectId("same-icsid");
+        assertThat(sessions, hasSize(2));
+        var sessionIds = sessions.stream().map(OrchSessionItem::getSessionId).toList();
+        assertThat(sessionIds, containsInAnyOrder("test-session-1", "test-session-2"));
+        assertThat(sessionIds, not(contains("test-session-3")));
+    }
+
+    private void createSessionWithIcsid(String sessionId, String icsid) {
+        orchSessionExtension.addSession(
+                new OrchSessionItem(sessionId).withInternalCommonSubjectId(icsid));
     }
 
     private void withSession() {

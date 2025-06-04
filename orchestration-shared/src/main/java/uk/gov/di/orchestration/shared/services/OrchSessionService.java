@@ -10,6 +10,7 @@ import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -154,6 +155,11 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         }
 
         return sanitiseBase64(sessionId).flatMap(id -> getSession(sessionId));
+    }
+
+    public List<OrchSessionItem> getSessionsFromInternalCommonSubjectId(
+            String internalCommonSubjectId) {
+        return queryIndex("InternalCommonSubjectIdIndex", internalCommonSubjectId);
     }
 
     public void deleteSession(String sessionId) {
