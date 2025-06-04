@@ -2365,6 +2365,7 @@ Resources:
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5378,6 +5379,29 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
 
+  StateStorageTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
 
   TxmaQueueSendPermissionPolicy:
