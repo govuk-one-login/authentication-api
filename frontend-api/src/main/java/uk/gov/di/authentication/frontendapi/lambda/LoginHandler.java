@@ -485,8 +485,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (userProfile.getTermsAndConditions() == null) {
             return false;
         }
-        var isSmokeTestClient =
+        boolean isSmokeTestClient =
                 userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+        LOG.info(
+                "isSmokeTest on auth session equal to client registry? {}",
+                userContext.getAuthSession().getIsSmokeTest() == isSmokeTestClient);
         return TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
                 userProfile.getTermsAndConditions(),
                 configurationService.getTermsAndConditionsVersion(),

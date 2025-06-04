@@ -205,9 +205,12 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     private boolean isValidTestNumberForEnvironment(String phoneNumber) {
+        boolean isSmokeTestClient =
+                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+        LOG.info(
+                "isSmokeTest on auth session equal to client registry? {}",
+                userContext.getAuthSession().getIsSmokeTest() == isSmokeTestClient);
         return ValidationHelper.isValidTestNumberForEnvironment(
-                phoneNumber,
-                configurationService.getEnvironment(),
-                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false));
+                phoneNumber, configurationService.getEnvironment(), isSmokeTestClient);
     }
 }
