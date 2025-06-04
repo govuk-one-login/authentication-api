@@ -34,6 +34,7 @@ Resources:
     DependsOn:
       - AccountInterventionsEndpointMethod
       - StartEndpointMethod
+      - UserExistsEndpointMethod
     Properties:
       RestApiId: !Ref AuthInternalApi
 
