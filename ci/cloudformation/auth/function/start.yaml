@@ -1,16 +1,30 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  AuthUserInfoFunction:
+  StartFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-auth-userinfo-lambda
+        - ${Env}-start-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
-      Handler: uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest
       Environment:
         Variables:
+          CUSTOM_DOC_APP_CLAIM_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              customDocAppClaimEnabled,
+              DefaultValue: "false",
+            ]
+          DOC_APP_DOMAIN:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              docAppDomain,
+              DefaultValue: "undefined",
+            ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -19,6 +33,14 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          HEADERS_CASE_INSENSITIVE: "false"
+          IDENTITY_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              IPVApiEnabled,
+              DefaultValue: "false",
+            ]
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -27,18 +49,26 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
-          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthExternalApiTxMAAuditQueue.QueueUrl
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+              DefaultValue: "false",
+            ]
       LoggingConfig:
-        LogGroup: !Ref AuthUserInfoFunctionLogGroup
+        LogGroup: !Ref StartFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
-        - !Ref DynamoAccessTokenStoreAccessPolicy
-        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref DynamoAuthenticationAttemptReadPolicy
+        - !Ref DynamoAuthSessionStoreReadWriteDeleteAccessPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref AuthExternalApiTxMAAuditQueueAccessPolicy
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -47,47 +77,47 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  AuthUserInfoFunctionPermission:
+  StartFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AuthUserInfoFunction.Arn
+      FunctionName: !GetAtt StartFunction.Arn
       Principal: apigateway.amazonaws.com
 
-  AuthUserInfoFunctionAliasPermission:
+  StartFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref AuthUserInfoFunction.Alias
+      FunctionName: !Ref StartFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  AuthUserInfoEndpointResource:
+  StartEndpointResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: !Ref AuthExternalApi
-      ParentId: !GetAtt AuthExternalApi.RootResourceId
-      PathPart: "userinfo"
+      RestApiId: !Ref AuthInternalApi
+      ParentId: !GetAtt AuthInternalApi.RootResourceId
+      PathPart: "start"
 
-  AuthUserInfoEndpointMethod:
+  StartEndpointMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      ResourceId: !Ref AuthUserInfoEndpointResource
-      RestApiId: !Ref AuthExternalApi
-      HttpMethod: GET
+      ResourceId: !Ref StartEndpointResource
+      RestApiId: !Ref AuthInternalApi
+      HttpMethod: POST
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthUserInfoFunction.Arn}:active/invocations
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartFunction.Arn}:active/invocations
         PassthroughBehavior: WHEN_NO_MATCH
         TimeoutInMillis: 29000
 
-  AuthUserInfoFunctionLogGroup:
+  StartFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-auth-userinfo-lambda
+        - /aws/lambda/${Env}-start-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -98,29 +128,29 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-AuthUserInfoFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-StartFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/auth-userinfo.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/start.yaml
 
-  AuthUserInfoFunctionErrorMetricFilter:
+  StartFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-auth-userinfo-errors
+        - ${Env}-start-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
-      LogGroupName: !Ref AuthUserInfoFunctionLogGroup
+      LogGroupName: !Ref StartFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-auth-userinfo-error-count
+            - ${Env}-start-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
-  AuthUserInfoFunctionErrorCloudwatchAlarm:
+  StartFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -128,7 +158,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-auth-userinfo-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-start-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -140,17 +170,17 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "auth-userinfo",
+              "start",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-auth-userinfo-alarm
+        - ${Env}-start-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-auth-userinfo-error-count
+        - ${Env}-start-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -163,7 +193,7 @@ Resources:
           DefaultValue: 5,
         ]
 
-  AuthUserInfoFunctionErrorRateCloudwatchAlarm:
+  StartFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -171,7 +201,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-auth-userinfo-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-start-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -183,12 +213,12 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "auth-userinfo",
+              "start",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-auth-userinfo-error-rate-alarm
+        - ${Env}-start-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -207,7 +237,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-auth-userinfo-lambda
+                    - ${Env}-start-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -226,7 +256,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-auth-userinfo-lambda
+                    - ${Env}-start-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -244,19 +274,19 @@ Resources:
           DefaultValue: 10,
         ]
 
-  AuthUserInfoFunctionSubscriptionFilter:
+  StartFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref AuthUserInfoFunctionLogGroup
+      LogGroupName: !Ref StartFunctionLogGroup
 
-  AuthUserInfoFunctionScalableTarget:
+  StartFunctionScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Condition: NotSubEnvironment
     # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: AuthUserInfoFunctionAliasactive
+    DependsOn: StartFunctionAliasactive
     Properties:
       MinCapacity:
         !FindInMap [
@@ -276,24 +306,24 @@ Resources:
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt AuthUserInfoFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt StartFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
 
-  AuthUserInfoFunctionAutoScalingPolicy:
+  StartFunctionAutoScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Condition: NotSubEnvironment
-    DependsOn: AuthUserInfoFunctionScalableTarget
+    DependsOn: StartFunctionScalableTarget
     Properties:
       PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-auth-token-lambda"
+        - "LambdaProvisionedConcurrency:${Env}-start-lambda"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt AuthUserInfoFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt StartFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
