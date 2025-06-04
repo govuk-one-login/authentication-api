@@ -106,7 +106,7 @@ public class LogoutService {
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
-    private void destroySessions(DestroySessionsRequest request) {
+    protected void destroySessions(DestroySessionsRequest request) {
         for (String clientSessionId : request.getClientSessions()) {
             var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
 
