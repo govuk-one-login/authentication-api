@@ -113,7 +113,7 @@ if [[ ${O_DEPLOY} -eq 1 ]]; then
 
   echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${TEMPLATE_FILE}"
   # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f -name "*.yaml" -print) -o "${TEMPLATE_FILE}"
+  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${TEMPLATE_FILE}"
