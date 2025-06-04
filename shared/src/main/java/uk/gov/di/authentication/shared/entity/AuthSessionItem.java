@@ -40,6 +40,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_CLIENT_ID = "ClientId";
     public static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
     public static final String ATTRIBUTE_IS_SMOKE_TEST = "IsSmokeTest";
+    public static final String ATTRIBUTE_IS_ONE_LOGIN_SERVICE = "IsOneLoginService";
 
     public enum AccountState {
         NEW,
@@ -79,6 +80,7 @@ public class AuthSessionItem {
     private String clientId;
     private String clientName;
     private boolean isSmokeTest;
+    private boolean isOneLoginService;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -417,6 +419,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withIsSmokeTest(boolean isSmokeTest) {
         this.isSmokeTest = isSmokeTest;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_ONE_LOGIN_SERVICE)
+    public boolean getIsOneLoginService() {
+        return this.isOneLoginService;
+    }
+
+    public void setIsOneLoginService(boolean isOneLoginService) {
+        this.isOneLoginService = isOneLoginService;
+    }
+
+    public AuthSessionItem withIsOneLoginService(boolean isOneLoginService) {
+        this.isOneLoginService = isOneLoginService;
         return this;
     }
 

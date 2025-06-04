@@ -197,7 +197,10 @@ public class StartHandler
                             requestedCredentialTrustLevel,
                             authSession.getAchievedCredentialStrength());
 
-            authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
+            authSessionService.addSession(
+                    authSession
+                            .withUpliftRequired(upliftRequired)
+                            .withIsOneLoginService(startRequest.isOneLoginService()));
 
             var userContext = startService.buildUserContext(session, authSession);
 
@@ -207,13 +210,13 @@ public class StartHandler
             attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
             var clientStartInfo =
                     startService.buildClientStartInfo(
-                            userContext.getClient().orElseThrow(),
                             startRequest.serviceType(),
                             authSession.getClientName(),
                             scopes,
                             redirectURI,
                             state,
-                            startRequest.isCookieConsentShared());
+                            startRequest.isCookieConsentShared(),
+                            startRequest.isOneLoginService());
 
             var cookieConsent =
                     startService.getCookieConsentValue(

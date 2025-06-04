@@ -504,30 +504,18 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("clientStartInfo")
     void shouldCreateClientStartInfo(
-            boolean cookieConsentShared,
-            ClientType clientType,
-            SignedJWT signedJWT,
-            boolean oneLoginService) {
-        var userContext =
-                buildUserContext(
-                        cookieConsentShared,
-                        clientType,
-                        false,
-                        Optional.empty(),
-                        Optional.empty(),
-                        oneLoginService,
-                        Optional.of(ServiceType.MANDATORY.toString()));
+            boolean cookieConsentShared, SignedJWT signedJWT, boolean oneLoginService) {
         var scopes = Objects.nonNull(signedJWT) ? DOC_APP_SCOPES : SCOPES;
 
         var clientStartInfo =
                 startService.buildClientStartInfo(
-                        userContext.getClient().orElseThrow(),
                         ServiceType.MANDATORY.toString(),
                         CLIENT_NAME,
                         scopes.toStringList(),
                         REDIRECT_URI,
                         STATE,
-                        cookieConsentShared);
+                        cookieConsentShared,
+                        oneLoginService);
 
         assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
         assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
@@ -578,10 +566,10 @@ class StartServiceTest {
     private static Stream<Arguments> clientStartInfo()
             throws NoSuchAlgorithmException, JOSEException {
         return Stream.of(
-                Arguments.of(false, ClientType.WEB, null, false),
-                Arguments.of(true, ClientType.WEB, null, false),
-                Arguments.of(true, ClientType.WEB, null, true),
-                Arguments.of(true, ClientType.APP, generateSignedJWT(), false));
+                Arguments.of(false, null, false),
+                Arguments.of(true, null, false),
+                Arguments.of(true, null, true),
+                Arguments.of(true, generateSignedJWT(), false));
     }
 
     private ClientRegistry generateClientRegistry(

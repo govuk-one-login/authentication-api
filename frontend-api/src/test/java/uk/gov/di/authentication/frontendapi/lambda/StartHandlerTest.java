@@ -503,7 +503,7 @@ class StartHandlerTest {
         when(startService.buildUserContext(eq(session), any(AuthSessionItem.class)))
                 .thenReturn(userContext);
         when(startService.buildClientStartInfo(
-                        eq(clientRegistry), any(), any(), any(), any(), any(), anyBoolean()))
+                        any(), any(), any(), any(), any(), anyBoolean(), anyBoolean()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
                         eq(userContext),
@@ -555,6 +555,7 @@ class StartHandlerTest {
                         SCOPE.toString(),
                         CLIENT_NAME,
                         ServiceType.MANDATORY.toString(),
+                        false,
                         false,
                         false));
     }

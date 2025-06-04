@@ -75,13 +75,13 @@ public class StartService {
     }
 
     public ClientStartInfo buildClientStartInfo(
-            ClientRegistry clientRegistry,
             String serviceType,
             String clientName,
             List<String> scopes,
             URI redirectURI,
             State state,
-            boolean isCookieConsentShared) {
+            boolean isCookieConsentShared,
+            boolean isOneLoginService) {
         var clientInfo =
                 new ClientStartInfo(
                         clientName,
@@ -90,7 +90,7 @@ public class StartService {
                         isCookieConsentShared,
                         redirectURI,
                         state,
-                        clientRegistry.isOneLoginService());
+                        isOneLoginService);
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
                 clientName,

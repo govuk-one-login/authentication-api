@@ -521,27 +521,20 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CredentialTrustLevel requestedCredentialStrength) {
         Map<String, Object> requestBodyMap =
                 new HashMap<>(
-                        Map.of(
-                                "authenticated",
-                                isAuthenticated,
-                                "state",
-                                state,
-                                "requested_credential_strength",
-                                requestedCredentialStrength.getValue(),
-                                "scope",
-                                scope,
-                                "client_id",
-                                CLIENT_ID,
-                                "redirect_uri",
-                                redirectUri,
-                                "client_name",
-                                TEST_CLIENT_NAME,
-                                "service_type",
-                                ServiceType.MANDATORY.toString(),
-                                "cookie_consent_shared",
-                                false,
-                                "is_smoke_test",
-                                false));
+                        Map.ofEntries(
+                                Map.entry("authenticated", isAuthenticated),
+                                Map.entry("state", state),
+                                Map.entry(
+                                        "requested_credential_strength",
+                                        requestedCredentialStrength.getValue()),
+                                Map.entry("scope", scope),
+                                Map.entry("client_id", CLIENT_ID),
+                                Map.entry("redirect_uri", redirectUri),
+                                Map.entry("client_name", TEST_CLIENT_NAME),
+                                Map.entry("service_type", ServiceType.MANDATORY.toString()),
+                                Map.entry("cookie_consent_shared", false),
+                                Map.entry("is_smoke_test", false),
+                                Map.entry("is_one_login_service", false)));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(

@@ -52,6 +52,9 @@ public class ClientSubjectHelper {
 
     public static String getSectorIdentifierForClient(
             ClientRegistry client, AuthSessionItem authSession, String internalSectorUri) {
+        LOG.info(
+                "isOneLoginService is equal on authSession and registry {}",
+                authSession.getIsOneLoginService() == client.isOneLoginService());
         if (client.isOneLoginService()) {
             return returnHost(internalSectorUri);
         }
