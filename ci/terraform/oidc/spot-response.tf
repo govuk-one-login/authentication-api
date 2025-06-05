@@ -18,6 +18,7 @@ module "ipv_spot_response_role_2" {
     Service = "spot-response"
   }
 }
+//ATO-1471: Delete duplicated role, once we've swapped to the above one
 module "ipv_spot_response_role" {
   source      = "../modules/lambda-role"
   environment = var.environment

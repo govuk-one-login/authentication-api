@@ -20,6 +20,7 @@ module "ipv_processing_identity_role_2" {
     Service = "processing-identity"
   }
 }
+//ATO-1471: Delete duplicated role, once we've swapped to the above one
 module "ipv_processing_identity_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -45,6 +46,7 @@ module "ipv_processing_identity_role" {
   }
 }
 
+//ATO-1471: Delete duplicated role, once we've swapped to the below one
 module "ipv_processing_identity_role_with_orch_session_table_read_write_delete_access" {
   count = var.is_orch_stubbed ? 0 : 1
 

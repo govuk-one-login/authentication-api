@@ -19,6 +19,7 @@ module "identity_progress_role_2" {
   }
 }
 
+//ATO-1471: Delete duplicated role, once we've swapped to the above one
 module "identity_progress_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment

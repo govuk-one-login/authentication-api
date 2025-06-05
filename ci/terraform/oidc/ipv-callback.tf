@@ -22,7 +22,7 @@ module "ipv_callback_role_2" {
     Service = "ipv-callback"
   }
 }
-
+//ATO-1471: Delete duplicated role, once we've swapped to the above one
 module "ipv_callback_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
