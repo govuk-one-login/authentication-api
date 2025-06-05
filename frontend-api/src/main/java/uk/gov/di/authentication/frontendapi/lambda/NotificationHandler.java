@@ -84,6 +84,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());
         }
+
         for (SQSMessage msg : event.getRecords()) {
             LOG.info("Processing Notification message with id: {}", msg.getMessageId());
             var request = parseNotifyRequest(msg);
