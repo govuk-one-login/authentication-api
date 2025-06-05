@@ -143,6 +143,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f98d3388-f92d-48a0-a29b-dfd7f8a113fd
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/03871a19-836e-457e-9179-7870bcbe6c67
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/b5491829-ace6-4028-bf32-1886305daca7
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
@@ -156,6 +157,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e1d340f9-276d-4f56-b97d-799ae2ddce6f
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70a5d810-8dcf-449d-bdf0-aed149c52302
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/42f5a19c-11ce-4a0c-8b9d-c162a85d6f51
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -169,6 +171,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/99608aca-5a73-4073-abae-cdb29fc5b3f4
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e4c701a9-4073-4143-9f12-ddf110b9c720
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5103c4f-0fb1-4d89-b396-5a91dad9cb28
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       dataStoreAccountId: 653994557586
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
@@ -192,6 +195,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/d4ca8b09-1129-48fd-a8b9-483dece9128b
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/91e74f45-3473-4fa3-b35e-b6a1a1fe7a6d
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
       customDocAppClaimEnabled: true
       dataStoreAccountId: 761723964695
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -216,6 +220,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/b8ea7d99-8902-4d91-82a1-cb396d88f6db
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/4ee87f07-df3a-4745-9734-6e9cc7995270
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
       customDocAppClaimEnabled: true
       dataStoreAccountId: 758531536632
       docAppDomain: https://api.review-b.staging.account.gov.uk
@@ -561,6 +566,74 @@ Resources:
                     !Ref Environment,
                     auditPayloadSigningKey,
                   ]
+
+  DynamoAuthenticationAttemptReadWriteDeletePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+          - Sid: AllowRead
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   DynamoAuthenticationAttemptReadPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -1216,6 +1289,54 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     authSessionTableEncryptionKey,
+                  ]
+
+  DynamoCommonPasswordsReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo Common Passwords table"
+      Path: !Sub
+        - /${Env}/oidc-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-common-passwords
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToCommonPasswordsTableKmsEncryptionKey
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    commonPasswordsTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    commonPasswordsTableEncryptionKey,
                   ]
 
   RedisParametersAccessPolicy:
