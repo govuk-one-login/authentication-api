@@ -65,6 +65,25 @@ We will migrate all error counts and temporary state data to a single DynamoDB t
     - block_duration: number (optional)
     - intervention_state: string (optional)
 
+
+# Expected Access Paths for SK LOGIN#MFA#ERROR
+
+## Assume a User is trying to log in:
+```
+LOGIN#MFA#ERROR#EF444945-A8A9-4CBD-8E71-552C735E78A0
+LOGIN#MFA#ERROR#72CB4E28-CD8D-48A0-9899-02601480CE10
+```
+
+## Is user locked out?
+
+We can do a Query with Count parameter for SK=LOGIN#MFA#ERROR which will return 5 in a single call.  Then check its less than 11?
+
+## Has User tried this MFA method too many times?
+Query:  SK=LOGIN#MFA#ERROR#EF444945-A8A9-4CBD-8E71-552C735E78A0 will return 3 which can be checked against max allowed for an individual MFA device.
+
+## Increment login mfa error count for MFA.
+Update SK=LOGIN#MFA#ERROR#EF444945-A8A9-4CBD-8E71-552C735E78A0 increment count.
+
 Example Items:
 
 | PK                | SK                                               | count | ttl        | last_updated | notification_type | mfa_method_type | block_type | block_duration | intervention_state |
