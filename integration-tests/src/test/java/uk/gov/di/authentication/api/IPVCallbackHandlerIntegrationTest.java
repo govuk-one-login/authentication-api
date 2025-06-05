@@ -50,6 +50,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
@@ -101,6 +102,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
+
+    @RegisterExtension
+    protected static final StateStorageExtension stateStorageExtension =
+            new StateStorageExtension();
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();

@@ -227,6 +227,21 @@ class IPVAuthorisationServiceTest {
     }
 
     @Test
+    void shouldReadDynamoStateButDoNothingWithIt() throws Json.JsonException {
+        ;
+        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(objectMapper.writeValueAsString(STATE));
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("code", AUTH_CODE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(Optional.empty()));
+        verify(stateStorageService).getState(STATE_STORAGE_PREFIX + SESSION_ID);
+    }
+
+    @Test
     void shouldSaveStateToRedis() throws Json.JsonException {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
