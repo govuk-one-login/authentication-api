@@ -1,8 +1,5 @@
 shared_state_bucket = "di-auth-development-tfstate"
-
-
-# disaling OIDC temporarly
-oidc_cloudfront_enabled = false
+contra_state_bucket = "di-auth-development-tfstate"
 
 # FMS
 frontend_api_fms_tag_value = "authfrontendsp"
@@ -11,9 +8,6 @@ frontend_api_fms_tag_value = "authfrontendsp"
 # App-specific
 test_clients_enabled                        = true
 ipv_api_enabled                             = true
-ipv_authorisation_callback_uri              = ""
-ipv_authorisation_uri                       = ""
-ipv_authorisation_client_id                 = ""
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
@@ -21,7 +15,18 @@ send_storage_token_to_ipv_enabled           = true
 call_ticf_cri                               = true
 support_reauth_signout_enabled              = true
 authentication_attempts_service_enabled     = true
-auth_frontend_public_encryption_key         = <<-EOT
+
+ipv_backend_uri = "https://ipvstub.signin.authdev3.dev.account.gov.uk"
+
+ipv_authorisation_uri           = "https://ipvstub.signin.authdev3.dev.account.gov.uk/authorize/"
+ipv_auth_authorize_callback_uri = "https://signin.authdev3.dev.account.gov.uk/ipv/callback/authorize"
+ipv_auth_authorize_client_id    = "authTestClient"
+ipv_audience                    = "https://ipvstub.signin.authdev3.dev.account.gov.uk"
+evcs_audience                   = "https://credential-store.authdev3.dev.account.gov.uk"
+auth_issuer_claim_for_evcs      = "https://signin.authdev3.dev.account.gov.uk"
+
+
+auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuCRGXGEbDsWA/hW1vZUm
 GxTfr1u763wGQT03m3pvBUgKV3Mbs/+fJl2VJoAJboqDxn3lQVhP9r/Xj6/L7T69
@@ -43,22 +48,33 @@ EOT
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
-# lockout config
-lockout_duration                          = 60
-reduced_lockout_duration                  = 30
-incorrect_password_lockout_count_ttl      = 60
-lockout_count_ttl                         = 60
-otp_code_ttl_duration                     = 60
-email_acct_creation_otp_code_ttl_duration = 60
+## lockout config
+lockout_duration                          = 600
+reduced_lockout_duration                  = 300
+incorrect_password_lockout_count_ttl      = 600
+lockout_count_ttl                         = 600
+otp_code_ttl_duration                     = 600
+email_acct_creation_otp_code_ttl_duration = 600
+reauth_enter_email_count_ttl              = 120
+reauth_enter_password_count_ttl           = 120
+reauth_enter_auth_app_code_count_ttl      = 120
+reauth_enter_sms_code_count_ttl           = 120
 
+orch_account_id = "816047645251"
+is_orch_stubbed = true
 
 orch_frontend_api_gateway_integration_enabled = false
 
-orch_redirect_uri                  = "https://oidc.authdev3.dev.account.gov.uk/orchestration-redirect"
+orch_redirect_uri = "https://oidc.authdev3.dev.account.gov.uk/orchestration-redirect"
+
 authorize_protected_subnet_enabled = true
 
-contra_state_bucket = "di-auth-development-tfstate"
+use_strongly_consistent_reads = true
 
+# disaling OIDC temporarly
+oidc_cloudfront_enabled = false
+
+/*
 orch_openid_configuration_enabled    = true
 orch_doc_app_callback_enabled        = true
 orch_token_enabled                   = true
@@ -82,4 +98,4 @@ orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:8160
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4"
 
 cmk_for_back_channel_logout_enabled = true
-use_strongly_consistent_reads       = true
+*/
