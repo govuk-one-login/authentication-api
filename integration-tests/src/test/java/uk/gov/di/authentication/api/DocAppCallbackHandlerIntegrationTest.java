@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
@@ -103,6 +104,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(

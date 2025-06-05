@@ -129,6 +129,18 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
+    void shouldCallDynamoToCheckIfStateIsPresentButDoNothingWithIt() {
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(Optional.empty()));
+        verify(stateStorageService).getState(STATE_STORAGE_PREFIX + SESSION_ID);
+    }
+
+    @Test
     void shouldReturnErrorObjectWhenResponseContainsError() {
         ErrorObject errorObject =
                 new ErrorObject(

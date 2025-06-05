@@ -127,6 +127,9 @@ public class DocAppAuthorisationService {
         var value =
                 Optional.ofNullable(
                         redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
+        var dynamoState = stateStorageService.getState(STATE_STORAGE_PREFIX + sessionId);
+        logComparisonBetweenStateValues(value, dynamoState);
+
         if (value.isEmpty()) {
             LOG.info("No Doc Checking App state found in Redis");
             return false;
@@ -261,6 +264,38 @@ public class DocAppAuthorisationService {
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKs URL", e);
             throw new DocAppAuthorisationServiceException(e);
+        }
+    }
+
+    private void logComparisonBetweenStateValues(
+            Optional<String> redisStateOpt, Optional<State> dynamoStateOpt) {
+        try {
+            if (redisStateOpt.isEmpty() && dynamoStateOpt.isEmpty()) {
+                LOG.info("Both redis and dynamo state are empty");
+                return;
+            }
+            if (redisStateOpt.isPresent() && dynamoStateOpt.isEmpty()
+                    || redisStateOpt.isEmpty() && dynamoStateOpt.isPresent()) {
+                LOG.info(
+                        "Either one of redis or Dynamo state is not present. Redis present: {}, Dynamo present: {}",
+                        redisStateOpt.isPresent(),
+                        dynamoStateOpt.isPresent());
+                return;
+            }
+
+            var redisState = objectMapper.readValue(redisStateOpt.get(), State.class);
+            var dyanmoState = dynamoStateOpt.get();
+
+            LOG.info(
+                    "Dynamo state: {} and redis state: {}. Are equal: {}",
+                    dyanmoState.getValue(),
+                    redisState.getValue(),
+                    dyanmoState.getValue().equals(redisState.getValue()));
+
+        } catch (Exception e) {
+            LOG.warn(
+                    "Exception when comparing redis and dynamo state: {}. Continuing as normal",
+                    e.getMessage());
         }
     }
 }
