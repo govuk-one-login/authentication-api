@@ -5,7 +5,6 @@ module "oidc_userinfo_role_2" {
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
@@ -14,7 +13,6 @@ module "oidc_userinfo_role_2" {
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn,
     local.doc_app_credential_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn
   ]
@@ -22,7 +20,7 @@ module "oidc_userinfo_role_2" {
     Service = "userinfo"
   }
 }
-
+//ATO-1471: Remove old role once above is in use
 module "oidc_userinfo_role_1" {
   source      = "../modules/lambda-role"
   environment = var.environment
