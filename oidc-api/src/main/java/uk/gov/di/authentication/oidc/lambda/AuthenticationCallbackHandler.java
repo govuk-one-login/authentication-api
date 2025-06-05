@@ -147,7 +147,10 @@ public class AuthenticationCallbackHandler
                         configurationService,
                         auditService,
                         new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
+                                configurationService,
+                                redisConnectionService,
+                                kmsConnectionService,
+                                stateStorageService),
                         cloudwatchMetricsService,
                         new NoSessionOrchestrationService(configurationService),
                         new TokenService(
@@ -189,7 +192,10 @@ public class AuthenticationCallbackHandler
                         configurationService,
                         auditService,
                         new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
+                                configurationService,
+                                redisConnectionService,
+                                kmsConnectionService,
+                                stateStorageService),
                         cloudwatchMetricsService,
                         new NoSessionOrchestrationService(
                                 configurationService, redisConnectionService),

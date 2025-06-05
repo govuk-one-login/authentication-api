@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
@@ -54,6 +55,7 @@ public class IPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final StateStorageService stateStorageService;
     private final JwksService jwksService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
@@ -63,13 +65,15 @@ public class IPVAuthorisationService {
     public IPVAuthorisationService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            StateStorageService stateStorageService) {
         this(
                 configurationService,
                 redisConnectionService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
-                new NowClock(Clock.systemUTC()));
+                new NowClock(Clock.systemUTC()),
+                stateStorageService);
     }
 
     public IPVAuthorisationService(
@@ -77,12 +81,14 @@ public class IPVAuthorisationService {
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
-            NowClock nowClock) {
+            NowClock nowClock,
+            StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
         this.nowClock = nowClock;
+        this.stateStorageService = stateStorageService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {

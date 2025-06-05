@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
 import java.net.MalformedURLException;
@@ -96,13 +97,15 @@ class IPVAuthorisationServiceTest {
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
                     redisConnectionService,
                     kmsConnectionService,
                     jwksService,
-                    TestClockHelper.getInstance());
+                    TestClockHelper.getInstance(),
+                    stateStorageService);
     private PrivateKey privateKey;
 
     @BeforeEach
