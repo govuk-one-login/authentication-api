@@ -66,28 +66,6 @@ Resources:
       FunctionName: !Ref OrchAuthCodeFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  OrchAuthCodeEndpointResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-      ParentId: !GetAtt AuthInternalApi.RootResourceId
-      PathPart: "orch-auth-code"
-
-  OrchAuthCodeEndpointMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref OrchAuthCodeEndpointResource
-      RestApiId: !Ref AuthInternalApi
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OrchAuthCodeFunction.Arn}:active/invocations
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-
   OrchAuthCodeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

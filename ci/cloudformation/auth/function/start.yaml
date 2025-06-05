@@ -91,28 +91,6 @@ Resources:
       FunctionName: !Ref StartFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  StartEndpointResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-      ParentId: !GetAtt AuthInternalApi.RootResourceId
-      PathPart: "start"
-
-  StartEndpointMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref StartEndpointResource
-      RestApiId: !Ref AuthInternalApi
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartFunction.Arn}:active/invocations
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-
   StartFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

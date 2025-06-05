@@ -96,28 +96,6 @@ Resources:
       FunctionName: !Ref LoginFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  LoginEndpointResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-      ParentId: !GetAtt AuthInternalApi.RootResourceId
-      PathPart: "login"
-
-  LoginEndpointMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref LoginEndpointResource
-      RestApiId: !Ref AuthInternalApi
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginFunction.Arn}:active/invocations
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-
   LoginFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

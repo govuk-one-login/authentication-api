@@ -1,49 +1,13 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   AuthInternalApi:
-    Type: AWS::ApiGateway::RestApi
+    Type: AWS::Serverless::Api
     Properties:
       Name: !Sub
         - ${Env}-di-auth-internal-api
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      EndpointConfiguration:
-        Types:
-          - PRIVATE
-        VpcEndpointIds:
-          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-      Policy:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-          - Effect: Deny
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-            Condition:
-              StringNotEquals:
-                aws:SourceVpce:
-                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-
-  AuthInternalApiDeployment:
-    Type: AWS::ApiGateway::Deployment
-    DependsOn:
-      - AccountInterventionsEndpointMethod
-      - LoginEndpointMethod
-      - MfaEndpointMethod
-      - StartEndpointMethod
-      - OrchAuthCodeEndpointMethod
-      - UserExistsEndpointMethod
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-
-  AuthInternalApiStage:
-    Type: AWS::ApiGateway::Stage
-    Properties:
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlwaysDeploy: true
       AccessLogSetting:
         DestinationArn: !GetAtt AuthInternalApiAccessLogGroup.Arn
         Format:
@@ -60,8 +24,35 @@ Resources:
             integrationStatus: $context.integration.integrationStatus
             integrationLatency: $context.integration.latency
             integrationRequestId: $context.integration.requestId
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource:
+                - "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      DefinitionBody:
+        openapi: "3.0.1" # workaround to get `sam validate` to work
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./ci/openAPI/AuthInternalApi.yaml"
+      OpenApiVersion: 3.0.1
+      EndpointConfiguration:
+        Type: PRIVATE
+        VpcEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
       CacheClusterEnabled: false
-      DeploymentId: !Ref AuthInternalApiDeployment
       MethodSettings:
         - CachingEnabled: false
           DataTraceEnabled: false
@@ -69,8 +60,6 @@ Resources:
           ResourcePath: "/*"
           LoggingLevel: INFO
           MetricsEnabled: true
-      RestApiId: !Ref AuthInternalApi
-      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
 
   AuthInternalApiKey:
@@ -92,7 +81,7 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ApiStages:
         - ApiId: !Ref AuthInternalApi
-          Stage: !Ref AuthInternalApiStage
+          Stage: !Ref AuthInternalApi.Stage
 
   AuthInternalApiUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -133,8 +122,6 @@ Resources:
   AuthInternalApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
-    DependsOn:
-      - AuthInternalApiStage
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
