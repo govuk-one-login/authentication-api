@@ -13,7 +13,11 @@ public class SqsTestHelper {
     private SqsTestHelper() {}
 
     public static <T> SQSEvent sqsEventWithPayload(T payload) {
-        var messages = sqsMessageWithPayload(payload, "messageId");
+        return sqsEventWithPayload("messageId", payload);
+    }
+
+    public static <T> SQSEvent sqsEventWithPayload(String messageId, T payload) {
+        var messages = sqsMessageWithPayload(payload, messageId);
         var event = new SQSEvent();
         event.setRecords(messages.map(List::of).orElse(emptyList()));
 
