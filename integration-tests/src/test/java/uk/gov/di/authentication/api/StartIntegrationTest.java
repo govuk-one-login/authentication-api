@@ -67,6 +67,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
     private static final Optional<String> WITH_PREVIOUS_SESSION = Optional.of(PREVIOUS_SESSION_ID);
     private static final Optional<String> NO_PREVIOUS_SESSION = Optional.empty();
+    private static final String TEST_SUBJECT_TYPE = "pairwise";
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -169,6 +170,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(actualAuthSession.getClientId(), equalTo(CLIENT_ID));
         assertThat(actualAuthSession.getClientName(), equalTo(TEST_CLIENT_NAME));
         assertFalse(actualAuthSession.getIsSmokeTest());
+        assertThat(actualAuthSession.getSubjectType(), equalTo(TEST_SUBJECT_TYPE));
     }
 
     @Test
@@ -534,7 +536,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Map.entry("service_type", ServiceType.MANDATORY.toString()),
                                 Map.entry("cookie_consent_shared", false),
                                 Map.entry("is_smoke_test", false),
-                                Map.entry("is_one_login_service", false)));
+                                Map.entry("is_one_login_service", false),
+                                Map.entry("subject_type", TEST_SUBJECT_TYPE)));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(

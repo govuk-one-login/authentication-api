@@ -41,6 +41,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_CLIENT_NAME = "ClientName";
     public static final String ATTRIBUTE_IS_SMOKE_TEST = "IsSmokeTest";
     public static final String ATTRIBUTE_IS_ONE_LOGIN_SERVICE = "IsOneLoginService";
+    public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
 
     public enum AccountState {
         NEW,
@@ -81,6 +82,7 @@ public class AuthSessionItem {
     private String clientName;
     private boolean isSmokeTest;
     private boolean isOneLoginService;
+    private String subjectType;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -433,6 +435,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withIsOneLoginService(boolean isOneLoginService) {
         this.isOneLoginService = isOneLoginService;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_SUBJECT_TYPE)
+    public String getSubjectType() {
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+        this.subjectType = subjectType;
+    }
+
+    public AuthSessionItem withSubjectType(String subjectType) {
+        this.subjectType = subjectType;
         return this;
     }
 
