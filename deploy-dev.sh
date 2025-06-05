@@ -3,7 +3,7 @@ set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
-environments=("authdev1" "authdev2" "sandpit")
+environments=("authdev1" "authdev2" "authdev3" "sandpit")
 
 function usage() {
   cat <<- USAGE
