@@ -71,14 +71,14 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry2,
-                        AUTH_SESSION_FOR_CLIENT_2,
+                        AUTH_SESSION_FOR_CLIENT_2.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -98,14 +98,14 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry2,
-                        AUTH_SESSION_FOR_CLIENT_2,
+                        AUTH_SESSION_FOR_CLIENT_2.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -125,14 +125,14 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry2,
-                        AUTH_SESSION_FOR_CLIENT_2,
+                        AUTH_SESSION_FOR_CLIENT_2.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -150,7 +150,7 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -170,14 +170,14 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(true),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
         var subject2 =
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry2,
-                        AUTH_SESSION_FOR_CLIENT_2,
+                        AUTH_SESSION_FOR_CLIENT_2.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -195,7 +195,7 @@ class ClientSubjectHelperTest {
                 ClientSubjectHelper.getSubject(
                         userProfile,
                         clientRegistry1,
-                        AUTH_SESSION_FOR_CLIENT_1,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
                         authenticationService,
                         INTERNAL_SECTOR_URI);
 
@@ -211,7 +211,9 @@ class ClientSubjectHelperTest {
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
+                        clientRegistry,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
+                        INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.com"));
     }
@@ -223,7 +225,9 @@ class ClientSubjectHelperTest {
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
+                        clientRegistry,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(true),
+                        INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
@@ -236,7 +240,9 @@ class ClientSubjectHelperTest {
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
+                        clientRegistry,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(true),
+                        INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("test.account.gov.uk"));
     }
@@ -249,7 +255,9 @@ class ClientSubjectHelperTest {
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI);
+                        clientRegistry,
+                        AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
+                        INTERNAL_SECTOR_URI);
 
         assertThat(sectorId, equalTo("localhost"));
     }
@@ -269,7 +277,9 @@ class ClientSubjectHelperTest {
                 RuntimeException.class,
                 () ->
                         ClientSubjectHelper.getSectorIdentifierForClient(
-                                clientRegistry, AUTH_SESSION_FOR_CLIENT_1, INTERNAL_SECTOR_URI),
+                                clientRegistry,
+                                AUTH_SESSION_FOR_CLIENT_1.withIsOneLoginService(false),
+                                INTERNAL_SECTOR_URI),
                 "Expected to throw exception");
     }
 
