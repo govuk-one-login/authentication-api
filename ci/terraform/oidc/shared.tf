@@ -54,11 +54,9 @@ locals {
   di_auth_ext_api_id                          = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_id
   vpce_id                                     = data.terraform_remote_state.auth-ext-api.outputs.vpce_id
   client_registry_encryption_key_arn          = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
-  identity_credentials_encryption_key_arn     = data.terraform_remote_state.shared.outputs.identity_credentials_encryption_key_arn
   account_modifiers_encryption_policy_arn     = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
   common_passwords_encryption_policy_arn      = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
   client_registry_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
-  identity_credentials_encryption_policy_arn  = data.terraform_remote_state.shared.outputs.identity_credentials_encryption_policy_arn
   doc_app_credential_encryption_policy_arn    = data.terraform_remote_state.shared.outputs.doc_app_credential_encryption_policy_arn
   doc_app_credential_encryption_key_arn       = data.terraform_remote_state.shared.outputs.doc_app_credential_encryption_key_arn
   user_credentials_encryption_policy_arn      = data.terraform_remote_state.shared.outputs.user_credentials_encryption_policy_arn
