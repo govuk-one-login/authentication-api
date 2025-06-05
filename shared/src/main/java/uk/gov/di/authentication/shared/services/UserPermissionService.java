@@ -10,15 +10,22 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class UserPermissionService extends BaseDynamoService<AuthenticationAttempts> {
+public class UserPermissionService {
+    private final BaseDynamoService<AuthenticationAttempts> authenticationAttemptsDynamoService;
+
     public UserPermissionService(ConfigurationService configurationService) {
-        super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
+        this.authenticationAttemptsDynamoService =
+                new BaseDynamoService<>(
+                        AuthenticationAttempts.class,
+                        "authentication-attempt",
+                        configurationService);
     }
 
     public void createOrIncrementCount(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
         Optional<AuthenticationAttempts> authenticationAttempt =
-                get(internalSubjectId, buildSortKey(journeyType, countType));
+                authenticationAttemptsDynamoService.get(
+                        internalSubjectId, buildSortKey(journeyType, countType));
         if (authenticationAttempt.isPresent()) {
             if (isTTLExpired(authenticationAttempt.get().getTimeToLive())) {
                 authenticationAttempt.get().setTimeToLive(ttl);
@@ -37,13 +44,14 @@ public class UserPermissionService extends BaseDynamoService<AuthenticationAttem
                                     .withJourneyType(journeyType)
                                     .withTimeToLive(ttl));
         }
-        authenticationAttempt.ifPresent(this::update);
+        authenticationAttempt.ifPresent(authenticationAttemptsDynamoService::update);
     }
 
     public int getCount(String internalSubjectId, JourneyType journeyType, CountType countType) {
         long currentTimestamp = NowHelper.now().toInstant().getEpochSecond();
         var authenticationAttemptRecord =
-                get(internalSubjectId, buildSortKey(journeyType, countType))
+                authenticationAttemptsDynamoService
+                        .get(internalSubjectId, buildSortKey(journeyType, countType))
                         .filter(t -> t.getTimeToLive() > currentTimestamp);
         if (authenticationAttemptRecord.isEmpty()) {
             return 0;
@@ -86,7 +94,8 @@ public class UserPermissionService extends BaseDynamoService<AuthenticationAttem
 
     public void deleteCount(
             String internalSubjectId, JourneyType journeyType, CountType countType) {
-        delete(internalSubjectId, buildSortKey(journeyType, countType));
+        authenticationAttemptsDynamoService.delete(
+                internalSubjectId, buildSortKey(journeyType, countType));
     }
 
     public static String buildSortKey(JourneyType journeyType, CountType countType) {
