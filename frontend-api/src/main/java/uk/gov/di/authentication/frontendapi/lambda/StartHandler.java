@@ -199,8 +199,6 @@ public class StartHandler
                             requestedCredentialTrustLevel,
                             authSession.getAchievedCredentialStrength());
 
-            LOG.info("subject type is: {}", startRequest.subjectType());
-
             authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
             var userContext = startService.buildUserContext(session, authSession);
