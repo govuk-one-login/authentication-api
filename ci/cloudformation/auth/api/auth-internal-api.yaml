@@ -33,6 +33,7 @@ Resources:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - AccountInterventionsEndpointMethod
+      - LoginEndpointMethod
       - StartEndpointMethod
       - UserExistsEndpointMethod
     Properties:
