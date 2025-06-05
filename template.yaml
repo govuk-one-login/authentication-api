@@ -1605,6 +1605,7 @@ Resources:
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
