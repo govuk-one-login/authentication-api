@@ -35,6 +35,7 @@ Resources:
       - AccountInterventionsEndpointMethod
       - LoginEndpointMethod
       - StartEndpointMethod
+      - OrchAuthCodeEndpointMethod
       - UserExistsEndpointMethod
     Properties:
       RestApiId: !Ref AuthInternalApi
