@@ -148,7 +148,7 @@ module "processing-identity" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role.arn : module.ipv_processing_identity_role_with_orch_session_table_read_write_delete_access[0].arn
+  lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role_2.arn : module.ipv_processing_identity_role_with_orch_session_table_read_write_delete_access_2[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
