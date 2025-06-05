@@ -40,7 +40,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -48,6 +47,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.Instant;
@@ -145,8 +145,7 @@ class VerifyMfaCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     @RegisterExtension
@@ -193,7 +192,7 @@ class VerifyMfaCodeHandlerTest {
                         auditService,
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         authSessionService);
     }
 
@@ -577,7 +576,7 @@ class VerifyMfaCodeHandlerTest {
         if (journeyType != REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
-            verifyNoInteractions(authenticationAttemptsService);
+            verifyNoInteractions(userPermissionService);
         }
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP);
@@ -619,7 +618,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
@@ -658,7 +657,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
@@ -828,7 +827,7 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
-        verify(authenticationAttemptsService, times(1))
+        verify(userPermissionService, times(1))
                 .createOrIncrementCount(
                         TEST_SUBJECT_ID,
                         1704067200L,
@@ -848,7 +847,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
         when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + CLIENT_SECTOR_HOST);
@@ -862,9 +861,7 @@ class VerifyMfaCodeHandlerTest {
         List.of(TEST_SUBJECT_ID, expectedRpPairwiseSubjectId)
                 .forEach(
                         identifier ->
-                                verify(
-                                                authenticationAttemptsService,
-                                                times(CountType.values().length))
+                                verify(userPermissionService, times(CountType.values().length))
                                         .deleteCount(
                                                 eq(identifier),
                                                 eq(JourneyType.REAUTHENTICATION),
@@ -888,7 +885,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
 
@@ -896,7 +893,7 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
         makeCallWithCode(codeRequest);
 
-        verify(authenticationAttemptsService, times(1))
+        verify(userPermissionService, times(1))
                 .deleteCount(
                         TEST_SUBJECT_ID,
                         JourneyType.REAUTHENTICATION,
@@ -968,7 +965,7 @@ class VerifyMfaCodeHandlerTest {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+            when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
             when(configurationService.getInternalSectorUri())

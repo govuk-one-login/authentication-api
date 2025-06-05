@@ -20,12 +20,12 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
@@ -60,8 +60,7 @@ class CheckReAuthUserHandlerTest {
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -160,7 +159,7 @@ class CheckReAuthUserHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         cloudwatchMetricsService,
                         authSessionService);
     }
@@ -297,7 +296,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
@@ -314,7 +313,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
 
@@ -383,23 +382,22 @@ class CheckReAuthUserHandlerTest {
     }
 
     private void setupExistingEnterEmailAttemptsCountForIdentifier(int count, String identifier) {
-        when(authenticationAttemptsService.getCount(
+        when(userPermissionService.getCount(
                         identifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(count);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        identifier, JourneyType.REAUTHENTICATION))
+        when(userPermissionService.getCountsByJourney(identifier, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
     }
 
     private void setupExistingEnterEmailAttemptsCountForSubjectIdAndPairwiseId(
             int subjectIdCount, int pairwiseIdCount) {
-        when(authenticationAttemptsService.getCount(
+        when(userPermissionService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(subjectIdCount);
-        when(authenticationAttemptsService.getCount(
+        when(userPermissionService.getCount(
                         expectedRpPairwiseSub, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(pairwiseIdCount);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         TEST_SUBJECT_ID, TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, subjectIdCount + pairwiseIdCount));
     }

@@ -7,8 +7,8 @@ import org.mockito.Mockito;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 
 import java.time.Instant;
@@ -18,7 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class AuthenticationAttemptsServiceIntegrationTest {
+class UserPermissionServiceIntegrationTest {
 
     private static final String INTERNAL_SUBJECT_ID = "internal-sub-id";
     private static final String RP_PAIRWISE_ID = "RP_PAIRWISE_ID";
@@ -34,21 +34,20 @@ class AuthenticationAttemptsServiceIntegrationTest {
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
             new AuthenticationAttemptsStoreExtension();
 
-    AuthenticationAttemptsService authenticationAttemptsService =
-            new AuthenticationAttemptsService(ConfigurationService.getInstance());
+    UserPermissionService userPermissionService =
+            new UserPermissionService(ConfigurationService.getInstance());
 
     @Test
     void shouldGetIncorrectReauthEmailCountForUser() {
         var ttl = Instant.now().getEpochSecond() + 60L;
 
         // Setup the count
-        authenticationAttemptsService.createOrIncrementCount(
+        userPermissionService.createOrIncrementCount(
                 INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, COUNT_TYPE);
 
         // Retrieve the count
         var incorrectEmailCount =
-                authenticationAttemptsService.getCount(
-                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+                userPermissionService.getCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
 
         assertEquals(1, incorrectEmailCount);
     }
@@ -56,7 +55,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
     @Test
     void shouldNotRetrieveANonExistentCount() {
         var count =
-                authenticationAttemptsService.getCount(
+                userPermissionService.getCount(
                         NON_EXISTENT_INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
 
         assertEquals(0, count);
@@ -67,13 +66,11 @@ class AuthenticationAttemptsServiceIntegrationTest {
         long expiredTTL = Instant.now().getEpochSecond() - 1L;
 
         // Setup the count with an expired TTL
-        authenticationAttemptsService.createOrIncrementCount(
+        userPermissionService.createOrIncrementCount(
                 INTERNAL_SUBJECT_ID, expiredTTL, JOURNEY_TYPE, COUNT_TYPE);
 
         // Attempt to retrieve the count
-        var count =
-                authenticationAttemptsService.getCount(
-                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+        var count = userPermissionService.getCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
 
         assertEquals(0, count, "Expired attempt should not be retrieved");
     }
@@ -82,14 +79,12 @@ class AuthenticationAttemptsServiceIntegrationTest {
     void shouldIncrementExistingCountWhenAuthenticationAttemptFails() {
         var nonExpiredTTL = Instant.now().getEpochSecond() + 1000000L;
 
-        authenticationAttemptsService.createOrIncrementCount(
+        userPermissionService.createOrIncrementCount(
                 INTERNAL_SUBJECT_ID, nonExpiredTTL, JOURNEY_TYPE, COUNT_TYPE);
-        authenticationAttemptsService.createOrIncrementCount(
+        userPermissionService.createOrIncrementCount(
                 INTERNAL_SUBJECT_ID, nonExpiredTTL, JOURNEY_TYPE, COUNT_TYPE);
 
-        var count =
-                authenticationAttemptsService.getCount(
-                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+        var count = userPermissionService.getCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
         assertEquals(2, count);
     }
 
@@ -105,23 +100,20 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
 
             // Setup the count
-            authenticationAttemptsService.createOrIncrementCount(
+            userPermissionService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID, EXPECTEDTTL, JOURNEY_TYPE, COUNT_TYPE);
 
             // Read the count
             var authenticationAttempts =
-                    authenticationAttemptsService.getCount(
-                            INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+                    userPermissionService.getCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
             assertEquals(1, authenticationAttempts);
 
             // Delete the count
-            authenticationAttemptsService.deleteCount(
-                    INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+            userPermissionService.deleteCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
 
             // Verify the count is deleted
             authenticationAttempts =
-                    authenticationAttemptsService.getCount(
-                            INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+                    userPermissionService.getCount(INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
             assertEquals(0, authenticationAttempts);
         }
     }
@@ -150,9 +142,9 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     countTypesToCountsForRequestedJourney);
 
             // set up some other data which should not affect the result
-            authenticationAttemptsService.createOrIncrementCount(
+            userPermissionService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
-            authenticationAttemptsService.createOrIncrementCount(
+            userPermissionService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID,
                     EXPECTEDTTL,
                     otherJourneyType,
@@ -160,8 +152,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
 
             // Read the count
             var authenticationAttempts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            INTERNAL_SUBJECT_ID, JOURNEY_TYPE);
+                    userPermissionService.getCountsByJourney(INTERNAL_SUBJECT_ID, JOURNEY_TYPE);
             assertEquals(countTypesToCountsForRequestedJourney, authenticationAttempts);
         }
     }
@@ -196,9 +187,9 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     RP_PAIRWISE_ID, requestedJourneyType, countsForRpPairwiseId);
 
             // set up some other data which should not affect the result
-            authenticationAttemptsService.createOrIncrementCount(
+            userPermissionService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
-            authenticationAttemptsService.createOrIncrementCount(
+            userPermissionService.createOrIncrementCount(
                     INTERNAL_SUBJECT_ID,
                     EXPECTEDTTL,
                     otherJourneyType,
@@ -206,7 +197,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
 
             // Read the count
             var authenticationAttempts =
-                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                    userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, JOURNEY_TYPE);
 
             var expectedCountTypesAcrossBothIdentifiers =
@@ -228,7 +219,7 @@ class AuthenticationAttemptsServiceIntegrationTest {
                             var countType = entry.getKey();
                             var count = entry.getValue();
                             for (int i = 0; i < count; i++) {
-                                authenticationAttemptsService.createOrIncrementCount(
+                                userPermissionService.createOrIncrementCount(
                                         identifier, EXPECTEDTTL, journeyType, countType);
                             }
                         });

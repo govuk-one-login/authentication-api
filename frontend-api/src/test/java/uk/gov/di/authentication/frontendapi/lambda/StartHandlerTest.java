@@ -32,11 +32,11 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -99,8 +99,7 @@ class StartHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final StartService startService = mock(StartService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final UserContext userContext = mock(UserContext.class);
@@ -135,7 +134,7 @@ class StartHandlerTest {
                         startService,
                         authSessionService,
                         configurationService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         cloudwatchMetricsService);
     }
 
@@ -227,7 +226,7 @@ class StartHandlerTest {
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), any()))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
 
@@ -237,7 +236,7 @@ class StartHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -254,7 +253,7 @@ class StartHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
+        verify(userPermissionService)
                 .getCountsByJourney(TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION);
     }
 
@@ -415,7 +414,7 @@ class StartHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn("testSubjectId");
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 

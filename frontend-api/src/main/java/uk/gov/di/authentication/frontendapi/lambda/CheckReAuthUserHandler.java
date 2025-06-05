@@ -25,13 +25,13 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
@@ -56,7 +56,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
 
     private final AuditService auditService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public CheckReAuthUserHandler(
@@ -65,7 +65,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            AuthenticationAttemptsService authenticationAttemptsService,
+            UserPermissionService userPermissionService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthSessionService authSessionService) {
         super(
@@ -76,15 +76,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.userPermissionService = userPermissionService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         super(CheckReauthUserRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
@@ -92,8 +91,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(CheckReauthUserRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
@@ -187,7 +185,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             // but
             // once these are done, we should make this consistent and just get these counts once.
             var incorrectEmailCount =
-                    authenticationAttemptsService.getCount(
+                    userPermissionService.getCount(
                             userProfile.getSubjectID(),
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_EMAIL);
@@ -229,7 +227,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             uniqueUserIdentifier = rpPairwiseId;
         }
 
-        authenticationAttemptsService.createOrIncrementCount(
+        userPermissionService.createOrIncrementCount(
                 uniqueUserIdentifier,
                 NowHelper.nowPlus(
                                 configurationService.getReauthEnterEmailCountTTL(),
@@ -240,14 +238,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 CountType.ENTER_EMAIL);
 
         var updatedCount =
-                authenticationAttemptsService.getCount(
+                userPermissionService.getCount(
                                 uniqueUserIdentifier,
                                 JourneyType.REAUTHENTICATION,
                                 CountType.ENTER_EMAIL)
                         + additionalIdentifier
                                 .map(
                                         identifier ->
-                                                authenticationAttemptsService.getCount(
+                                                userPermissionService.getCount(
                                                         identifier,
                                                         JourneyType.REAUTHENTICATION,
                                                         CountType.ENTER_EMAIL))
@@ -269,12 +267,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
             var incorrectCounts =
                     additionalIdentifier.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            uniqueUserIdentifier,
-                                            additionalIdentifier.get(),
-                                            JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
+                            ? userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                    uniqueUserIdentifier,
+                                    additionalIdentifier.get(),
+                                    JourneyType.REAUTHENTICATION)
+                            : userPermissionService.getCountsByJourney(
                                     uniqueUserIdentifier, JourneyType.REAUTHENTICATION);
 
             auditService.submitAuditEvent(
@@ -315,7 +312,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserProfile userProfile, AuditContext auditContext, String pairwiseId)
             throws AccountLockedException {
         var countTypesToCounts =
-                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         userProfile.getSubjectID(), pairwiseId, JourneyType.REAUTHENTICATION);
 
         var exceededCountTypes =

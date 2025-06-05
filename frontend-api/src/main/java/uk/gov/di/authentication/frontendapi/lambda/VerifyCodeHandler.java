@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -43,6 +42,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -84,7 +84,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
     private final MFAMethodsService mfaMethodsService;
 
     protected VerifyCodeHandler(
@@ -96,7 +96,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoAccountModifiersService accountModifiersService,
-            AuthenticationAttemptsService authenticationAttemptsService,
+            UserPermissionService userPermissionService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService) {
         super(
@@ -110,7 +110,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.userPermissionService = userPermissionService;
         this.mfaMethodsService = mfaMethodsService;
     }
 
@@ -124,8 +124,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
@@ -136,8 +135,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
@@ -329,7 +327,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditContext auditContext) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                authenticationAttemptsService.createOrIncrementCount(
+                userPermissionService.createOrIncrementCount(
                         subjectId,
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterSMSCodeCountTTL(),
@@ -354,13 +352,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
                     maybeRpPairwiseId.isEmpty()
-                            ? authenticationAttemptsService.getCountsByJourney(
+                            ? userPermissionService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION);
+                            : userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                    subjectId,
+                                    maybeRpPairwiseId.get(),
+                                    JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
@@ -492,12 +489,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
+                            ? userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                    subjectId,
+                                    maybeRpPairwiseId.get(),
+                                    JourneyType.REAUTHENTICATION)
+                            : userPermissionService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
@@ -508,7 +504,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
-                                authenticationAttemptsService.deleteCount(
+                                userPermissionService.deleteCount(
                                         identifier, JourneyType.REAUTHENTICATION, countType));
     }
 

@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -34,6 +33,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -74,7 +74,7 @@ public class StartHandler
     private final StartService startService;
     private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -84,22 +84,21 @@ public class StartHandler
             StartService startService,
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
-            AuthenticationAttemptsService authenticationAttemptsService,
+            UserPermissionService userPermissionService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.userPermissionService = userPermissionService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public StartHandler(ConfigurationService configurationService) {
         this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
@@ -113,8 +112,7 @@ public class StartHandler
     public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
         this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
@@ -324,13 +322,13 @@ public class StartHandler
                 maybeInternalSubjectId
                         .map(
                                 subjectId ->
-                                        authenticationAttemptsService
+                                        userPermissionService
                                                 .getCountsByJourneyForSubjectIdAndRpPairwiseId(
                                                         subjectId,
                                                         startRequest.rpPairwiseIdForReauth(),
                                                         JourneyType.REAUTHENTICATION))
                         .orElse(
-                                authenticationAttemptsService.getCountsByJourney(
+                                userPermissionService.getCountsByJourney(
                                         startRequest.rpPairwiseIdForReauth(),
                                         JourneyType.REAUTHENTICATION));
         var blockedCountTypes =

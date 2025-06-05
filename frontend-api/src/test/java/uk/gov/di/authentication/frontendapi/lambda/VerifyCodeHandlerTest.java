@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -41,6 +40,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -140,8 +140,7 @@ class VerifyCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
@@ -201,7 +200,7 @@ class VerifyCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         accountModifiersService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         authSessionService,
                         mfaMethodsService);
 
@@ -288,7 +287,7 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -325,7 +324,7 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -359,7 +358,7 @@ class VerifyCodeHandlerTest {
                                 "account-recovery",
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
                         pair("journey-type", expectedJourneyType));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -395,7 +394,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -431,7 +430,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -457,7 +456,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -471,7 +470,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -485,7 +484,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -501,7 +500,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -531,7 +530,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @ParameterizedTest
@@ -593,7 +592,7 @@ class VerifyCodeHandlerTest {
                         "P0",
                         false,
                         true);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -622,7 +621,7 @@ class VerifyCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService)
                 .deleteOtpCode(EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
-        verifyNoInteractions(authenticationAttemptsService);
+        verifyNoInteractions(userPermissionService);
     }
 
     @Test
@@ -835,7 +834,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         withReauthTurnedOn();
         var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(REAUTHENTICATION)))
                 .thenReturn(existingCounts);
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
@@ -845,9 +844,7 @@ class VerifyCodeHandlerTest {
         List.of(TEST_SUBJECT_ID, expectedPairwiseId)
                 .forEach(
                         identifier ->
-                                verify(
-                                                authenticationAttemptsService,
-                                                times(CountType.values().length))
+                                verify(userPermissionService, times(CountType.values().length))
                                         .deleteCount(
                                                 eq(identifier),
                                                 eq(JourneyType.REAUTHENTICATION),
@@ -887,7 +884,7 @@ class VerifyCodeHandlerTest {
 
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.name(), REAUTHENTICATION);
 
-        verify(authenticationAttemptsService, times(1))
+        verify(userPermissionService, times(1))
                 .createOrIncrementCount(
                         TEST_SUBJECT_ID, 4070908800L, REAUTHENTICATION, ENTER_SMS_CODE);
         assertThat(result, hasStatus(400));
@@ -934,7 +931,7 @@ class VerifyCodeHandlerTest {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             withReauthTurnedOn();
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+            when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
             when(configurationService.getInternalSectorUri())

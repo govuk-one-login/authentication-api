@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -42,6 +41,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -85,7 +85,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
     private final MFAMethodsService mfaMethodsService;
 
     public LoginHandler(
@@ -98,7 +98,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             CommonPasswordsService commonPasswordsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
+            UserPermissionService userPermissionService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService) {
         super(
@@ -114,7 +114,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.userPermissionService = userPermissionService;
         this.mfaMethodsService = mfaMethodsService;
     }
 
@@ -127,8 +127,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
@@ -141,8 +140,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
@@ -199,7 +197,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
             var reauthCounts =
-                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                    userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             userProfile.getSubjectID(),
                             calculatedPairwiseId,
                             JourneyType.REAUTHENTICATION);
@@ -233,7 +231,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
             incorrectPasswordCount =
-                    authenticationAttemptsService.getCount(
+                    userPermissionService.getCount(
                             userProfile.getSubjectID(),
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_PASSWORD);
@@ -411,7 +409,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         auditContext,
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(
-                                        authenticationAttemptsService
+                                        userPermissionService
                                                 .getCountsByJourneyForSubjectIdAndRpPairwiseId(
                                                         userProfile.getSubjectID(),
                                                         calculatedPairwiseId,
@@ -448,7 +446,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile, boolean isReauthJourney) {
         if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                authenticationAttemptsService.createOrIncrementCount(
+                userPermissionService.createOrIncrementCount(
                         userProfile.getSubjectID(),
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterPasswordCountTTL(),

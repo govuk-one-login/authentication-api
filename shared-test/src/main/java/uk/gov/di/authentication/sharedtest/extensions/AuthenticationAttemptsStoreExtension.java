@@ -9,8 +9,8 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.ArrayList;
@@ -23,13 +23,13 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     public static final String AUTHENTICATION_JOURNEY_TYPE_COUNT_TYPE_FIELD = "SK";
     public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE = "local-authentication-attempt";
 
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
     private final ConfigurationService configuration;
 
     public AuthenticationAttemptsStoreExtension() {
         createInstance();
         this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
-        authenticationAttemptsService = new AuthenticationAttemptsService(configuration);
+        userPermissionService = new UserPermissionService(configuration);
     }
 
     @Override
@@ -50,13 +50,12 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
 
     public void createOrIncrementCount(
             String internalSubId, long ttl, JourneyType journeyType, CountType countType) {
-        authenticationAttemptsService.createOrIncrementCount(
-                internalSubId, ttl, journeyType, countType);
+        userPermissionService.createOrIncrementCount(internalSubId, ttl, journeyType, countType);
     }
 
     public int getAuthenticationAttempt(
             String internalSubId, JourneyType journeyType, CountType countType) {
-        return authenticationAttemptsService.getCount(internalSubId, journeyType, countType);
+        return userPermissionService.getCount(internalSubId, journeyType, countType);
     }
 
     private void createAuthenticationAttemptsTable() {

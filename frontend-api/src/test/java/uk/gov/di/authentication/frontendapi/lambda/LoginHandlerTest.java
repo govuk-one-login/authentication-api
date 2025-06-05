@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -136,8 +136,7 @@ class LoginHandlerTest {
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -211,7 +210,7 @@ class LoginHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         authSessionService,
                         mfaMethodsService);
     }

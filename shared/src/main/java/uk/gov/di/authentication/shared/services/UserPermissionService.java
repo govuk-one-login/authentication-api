@@ -10,8 +10,8 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
-    public AuthenticationAttemptsService(ConfigurationService configurationService) {
+public class UserPermissionService extends BaseDynamoService<AuthenticationAttempts> {
+    public UserPermissionService(ConfigurationService configurationService) {
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
 

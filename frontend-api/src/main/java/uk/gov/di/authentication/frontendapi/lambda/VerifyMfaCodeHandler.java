@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -43,6 +42,7 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
@@ -76,7 +76,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final AuditService auditService;
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final UserPermissionService userPermissionService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -87,7 +87,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuditService auditService,
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
+            UserPermissionService userPermissionService,
             AuthSessionService authSessionService) {
         super(
                 VerifyMfaCodeRequest.class,
@@ -100,7 +100,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.auditService = auditService;
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.userPermissionService = userPermissionService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -119,8 +119,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -136,8 +135,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+        this.userPermissionService = new UserPermissionService(configurationService);
     }
 
     @Override
@@ -226,13 +224,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && userProfile != null) {
             var counts =
                     maybeRpPairwiseId.isEmpty()
-                            ? authenticationAttemptsService.getCountsByJourney(
+                            ? userPermissionService.getCountsByJourney(
                                     userProfile.getSubjectID(), JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            userProfile.getSubjectID(),
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION);
+                            : userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                    userProfile.getSubjectID(),
+                                    maybeRpPairwiseId.get(),
+                                    JourneyType.REAUTHENTICATION);
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
@@ -320,7 +317,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
                     && configurationService.isAuthenticationAttemptsServiceEnabled()
                     && subjectId != null) {
-                authenticationAttemptsService.createOrIncrementCount(
+                userPermissionService.createOrIncrementCount(
                         subjectId,
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterAuthAppCodeCountTTL(),
@@ -461,7 +458,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
-                                authenticationAttemptsService.deleteCount(
+                                userPermissionService.deleteCount(
                                         uniqueIdentifier, JourneyType.REAUTHENTICATION, countType));
     }
 
@@ -475,12 +472,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
+                            ? userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                    subjectId,
+                                    maybeRpPairwiseId.get(),
+                                    JourneyType.REAUTHENTICATION)
+                            : userPermissionService.getCountsByJourney(
                                     subjectId, JourneyType.REAUTHENTICATION);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);

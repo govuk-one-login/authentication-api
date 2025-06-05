@@ -37,7 +37,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -45,6 +44,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.UserPermissionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -89,7 +89,7 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
+class LoginHandlerReauthenticationUsingUserPermissionServiceTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -149,8 +149,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
+    private final UserPermissionService userPermissionService = mock(UserPermissionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
@@ -190,7 +189,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
+                        userPermissionService,
                         authSessionService,
                         mfaMethodsService);
     }
@@ -210,10 +209,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
-            when(authenticationAttemptsService.getCount(
-                            any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
+            when(userPermissionService.getCount(any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
                     .thenReturn(MAX_ALLOWED_RETRIES - 1);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+            when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(String.class), any(String.class), eq(JourneyType.REAUTHENTICATION)))
                     .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1));
 
@@ -230,7 +228,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
 
-            verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
+            verify(userPermissionService, never()).deleteCount(any(), any(), any());
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -317,7 +315,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+            when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(JourneyType.REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
@@ -336,7 +334,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
-            verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
+            verify(userPermissionService, never()).deleteCount(any(), any(), any());
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -367,10 +365,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationAttemptsService.getCount(
-                        any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
+        when(userPermissionService.getCount(any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1))
                 .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
@@ -418,7 +415,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+        when(userPermissionService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
 
@@ -468,7 +465,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
-        when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
+        when(userPermissionService.getCount(any(), any(), any())).thenReturn(1);
 
         usingValidSession();
         usingValidAuthSession();
@@ -477,7 +474,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
+        verify(userPermissionService)
                 .createOrIncrementCount(
                         eq(userProfile.getSubjectID()),
                         longThat(
@@ -508,7 +505,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
-        when(authenticationAttemptsService.getCount(any(), any(), any()))
+        when(userPermissionService.getCount(any(), any(), any()))
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
         usingValidSession();
@@ -518,7 +515,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
+        verify(userPermissionService)
                 .createOrIncrementCount(
                         eq(userProfile.getSubjectID()),
                         longThat(
