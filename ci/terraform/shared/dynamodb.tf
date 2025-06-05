@@ -239,47 +239,6 @@ resource "aws_dynamodb_table" "client_registry_table" {
   )
 }
 
-resource "aws_dynamodb_table" "identity_credentials_table" {
-  name         = "${var.environment}-identity-credentials"
-  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
-
-  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-
-  deletion_protection_enabled = false
-
-  attribute {
-    name = "SubjectID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = true
-  }
-
-  tags = (
-    var.environment == "integration" || var.environment == "production" ?
-    {
-      "BackupFrequency" = "Bihourly"
-    } : {}
-  )
-}
-
 resource "aws_dynamodb_table" "doc_app_credential_table" {
   name         = "${var.environment}-doc-app-credential"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
@@ -658,11 +617,6 @@ resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
 
-resource "aws_dynamodb_resource_policy" "identity_credentials_table_policy" {
-  resource_arn = aws_dynamodb_table.identity_credentials_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_identity_credentials_table_resource_policy_document.json
-}
-
 resource "aws_dynamodb_resource_policy" "user_profile_table_policy" {
   resource_arn = aws_dynamodb_table.user_profile_table.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
@@ -679,27 +633,6 @@ data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
-    ]
-    effect = "Allow"
-    principals {
-      identifiers = local.authorized_account_ids
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
-}
-
-data "aws_iam_policy_document" "cross_account_identity_credentials_table_resource_policy_document" {
-  statement {
-    actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
     ]
     effect = "Allow"
     principals {
