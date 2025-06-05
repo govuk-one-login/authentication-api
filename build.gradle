@@ -164,7 +164,7 @@ subprojects {
                 "commons-io:commons-io:2.19.0",
                 "org.apache.commons:commons-lang3:3.17.0"
 
-        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.80"
+        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.81"
 
         cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
 
