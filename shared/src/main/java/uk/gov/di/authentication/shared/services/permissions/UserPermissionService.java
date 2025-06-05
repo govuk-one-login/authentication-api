@@ -3,26 +3,87 @@ package uk.gov.di.authentication.shared.services.permissions;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.BaseDynamoService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 
 public class UserPermissionService {
+    private final ConfigurationService configurationService;
     private final BaseDynamoService<AuthenticationAttempts> authenticationAttemptsDynamoService;
+    private final CodeStorageService codeStorageService;
 
     public UserPermissionService(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.authenticationAttemptsDynamoService =
                 new BaseDynamoService<>(
                         AuthenticationAttempts.class,
                         "authentication-attempt",
                         configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
+    public Result<UserPermissionCheckFailure, UserPermissionCheck> canVerifyPassword(
+            UserProfile userProfile, String requestedEmail, JourneyType journeyType) {
+        var isReauthJourney = journeyType.equals(JourneyType.REAUTHENTICATION);
+
+        int count;
+        if (isReauthJourney
+                && configurationService.supportReauthSignoutEnabled()
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+
+            count =
+                    this.getCount(
+                            userProfile.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_PASSWORD);
+        } else if (isReauthJourney) {
+            count = codeStorageService.getIncorrectPasswordCountReauthJourney(requestedEmail);
+        } else {
+            count = codeStorageService.getIncorrectPasswordCount(requestedEmail);
+        }
+
+        UserPermissionStatus status =
+                count >= configurationService.getMaxPasswordRetries()
+                        ? UserPermissionStatus.DENIED
+                        : UserPermissionStatus.ALLOWED;
+
+        return Result.success(
+                new UserPermissionCheck(status, new UserPermissionCheckContext(count)));
+    }
+
+    public void recordPasswordVerificationAttempt(
+            UserProfile userProfile, JourneyType journeyType) {
+        var isReauthJourney = journeyType.equals(JourneyType.REAUTHENTICATION);
+        if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                this.createOrIncrementCount(
+                        userProfile.getSubjectID(),
+                        NowHelper.nowPlus(
+                                        configurationService.getReauthEnterPasswordCountTTL(),
+                                        ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_PASSWORD);
+            } else {
+                codeStorageService.increaseIncorrectPasswordCountReauthJourney(
+                        userProfile.getEmail());
+            }
+        } else {
+            codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
+        }
+    }
+
+    // Below this line are deprecated public methods that need to go private
     public void createOrIncrementCount(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
         Optional<AuthenticationAttempts> authenticationAttempt =

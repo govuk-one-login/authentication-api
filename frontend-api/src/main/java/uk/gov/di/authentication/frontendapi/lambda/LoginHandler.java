@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -25,7 +24,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -43,9 +41,9 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.permissions.UserPermissionService;
+import uk.gov.di.authentication.shared.services.permissions.UserPermissionStatus;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -172,12 +170,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var journeyType =
+        var possibleJourneyType =
                 request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
-        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+        var isReauthJourney =
+                possibleJourneyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
+        attachLogFieldToLogs(JOURNEY_TYPE, possibleJourneyType);
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -227,18 +226,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
         }
 
-        int incorrectPasswordCount = 0;
-
-        if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
-            incorrectPasswordCount =
-                    userPermissionService.getCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD);
-        } else {
-            incorrectPasswordCount =
-                    retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
-        }
+        JourneyType journeyType =
+                JourneyType.valueOf(
+                        possibleJourneyType); // TODO handle when string is literally 'missing'
+        var canVerifyPasswordResult =
+                userPermissionService.canVerifyPassword(
+                        userProfile, request.getEmail(), journeyType);
+        int incorrectPasswordCount = canVerifyPasswordResult.getSuccess().context().count();
 
         if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
@@ -253,12 +247,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!credentialsAreValid(request, userProfile)) {
             return handleInvalidCredentials(
-                    request,
-                    incorrectPasswordCount,
-                    auditContext,
-                    userProfile,
-                    isReauthJourney,
-                    calculatedPairwiseId);
+                    request, auditContext, userProfile, journeyType, calculatedPairwiseId);
         }
 
         return handleValidCredentials(
@@ -386,23 +375,27 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     private APIGatewayProxyResponseEvent handleInvalidCredentials(
             LoginRequest request,
-            int incorrectPasswordCount,
             AuditContext auditContext,
             UserProfile userProfile,
-            boolean isReauthJourney,
+            JourneyType journeyType,
             String calculatedPairwiseId) {
-        var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
+        userPermissionService.recordPasswordVerificationAttempt(userProfile, journeyType);
 
-        incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
+        var canVerifyPasswordResult =
+                userPermissionService.canVerifyPassword(
+                        userProfile, request.getEmail(), journeyType);
+        var canVerifyPassword = canVerifyPasswordResult.getSuccess();
+        int incorrectPasswordCount = canVerifyPassword.context().count();
 
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
                 pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
-                pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
+                pair(INCORRECT_PASSWORD_COUNT, incorrectPasswordCount),
                 pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
 
-        if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+        if (canVerifyPassword.status().equals(UserPermissionStatus.DENIED)) {
+            var isReauthJourney = journeyType.equals(JourneyType.REAUTHENTICATION);
             if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
@@ -429,7 +422,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 blockUser(
                         userProfile.getSubjectID(),
                         request.getEmail(),
-                        updatedIncorrectPasswordCount,
+                        incorrectPasswordCount,
                         auditContext);
             }
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
@@ -440,34 +433,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     private boolean isJourneyWhereBlockingApplies(boolean isReauthJourney) {
         return !(isReauthJourney && configurationService.supportReauthSignoutEnabled());
-    }
-
-    private void incrementCountOfFailedAttemptsToProvidePassword(
-            UserProfile userProfile, boolean isReauthJourney) {
-        if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                userPermissionService.createOrIncrementCount(
-                        userProfile.getSubjectID(),
-                        NowHelper.nowPlus(
-                                        configurationService.getReauthEnterPasswordCountTTL(),
-                                        ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_PASSWORD);
-            } else {
-                codeStorageService.increaseIncorrectPasswordCountReauthJourney(
-                        userProfile.getEmail());
-            }
-        } else {
-            codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
-        }
-    }
-
-    private int retrieveIncorrectPasswordCount(String email, boolean isReauthJourney) {
-        return isReauthJourney
-                ? codeStorageService.getIncorrectPasswordCountReauthJourney(email)
-                : codeStorageService.getIncorrectPasswordCount(email);
     }
 
     private String getInternalCommonSubjectId(UserProfile userProfile) {
