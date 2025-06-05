@@ -6,7 +6,6 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -205,12 +204,9 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     private boolean isValidTestNumberForEnvironment(String phoneNumber) {
-        boolean isSmokeTestClient =
-                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-        LOG.info(
-                "isSmokeTest on auth session equal to client registry? {}",
-                userContext.getAuthSession().getIsSmokeTest() == isSmokeTestClient);
         return ValidationHelper.isValidTestNumberForEnvironment(
-                phoneNumber, configurationService.getEnvironment(), isSmokeTestClient);
+                phoneNumber,
+                configurationService.getEnvironment(),
+                userContext.getAuthSession().getIsSmokeTest());
     }
 }
