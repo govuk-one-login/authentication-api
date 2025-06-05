@@ -132,6 +132,8 @@ public class IPVAuthorisationService {
                     STATE_STORAGE_PREFIX + sessionId,
                     objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
+
+            stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state);
         } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
             throw new RuntimeException(e);

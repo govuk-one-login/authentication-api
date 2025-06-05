@@ -238,6 +238,14 @@ class IPVAuthorisationServiceTest {
                         SESSION_EXPIRY);
     }
 
+    @Test
+    void shouldSaveStateToDynamo() throws Json.JsonException {
+        var sessionId = "session-id";
+        authorisationService.storeState(sessionId, STATE);
+
+        verify(stateStorageService).storeState(STATE_STORAGE_PREFIX + sessionId, STATE);
+    }
+
     @Nested
     class SignedJwtRequest {
         @BeforeEach
