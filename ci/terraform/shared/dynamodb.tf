@@ -239,47 +239,6 @@ resource "aws_dynamodb_table" "client_registry_table" {
   )
 }
 
-resource "aws_dynamodb_table" "identity_credentials_table" {
-  name         = "${var.environment}-identity-credentials"
-  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
-
-  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
-  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
-
-  deletion_protection_enabled = false
-
-  attribute {
-    name = "SubjectID"
-    type = "S"
-  }
-
-  point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
-  }
-
-  lifecycle {
-    prevent_destroy = false
-  }
-
-  ttl {
-    attribute_name = "TimeToExist"
-    enabled        = true
-  }
-
-  tags = (
-    var.environment == "integration" || var.environment == "production" ?
-    {
-      "BackupFrequency" = "Bihourly"
-    } : {}
-  )
-}
-
 resource "aws_dynamodb_table" "doc_app_credential_table" {
   name         = "${var.environment}-doc-app-credential"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
