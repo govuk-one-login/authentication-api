@@ -276,7 +276,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             LOG.info(
                     LogMessageTemplates.NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
                     notificationType);
-
             String bucketName = configurationService.getAccountManagementNotifyBucketDestination();
 
             try {
