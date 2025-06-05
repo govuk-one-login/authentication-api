@@ -33,7 +33,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.UserPermissionService;
+import uk.gov.di.authentication.shared.services.permissions.UserPermissionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;

@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.UserPermissionService;
+import uk.gov.di.authentication.shared.services.permissions.UserPermissionService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.ArrayList;

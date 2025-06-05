@@ -36,7 +36,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.UserPermissionService;
+import uk.gov.di.authentication.shared.services.permissions.UserPermissionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;

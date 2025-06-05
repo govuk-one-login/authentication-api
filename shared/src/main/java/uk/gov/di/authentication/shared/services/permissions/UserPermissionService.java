@@ -1,9 +1,11 @@
-package uk.gov.di.authentication.shared.services;
+package uk.gov.di.authentication.shared.services.permissions;
 
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.BaseDynamoService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Arrays;
 import java.util.EnumMap;
