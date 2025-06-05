@@ -580,19 +580,6 @@ resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
   target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
 }
 
-resource "aws_kms_key" "identity_credentials_table_encryption_key" {
-  description              = "KMS encryption key for identity credentials table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
-}
-
-resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-identity-credentials-table-encryption-key"
-  target_key_id = aws_kms_key.identity_credentials_table_encryption_key.key_id
-}
 
 data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy" {
   statement {
