@@ -62,28 +62,6 @@ Resources:
       FunctionName: !Ref UserExistsFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  UserExistsEndpointResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-      ParentId: !GetAtt AuthInternalApi.RootResourceId
-      PathPart: "user-exists"
-
-  UserExistsEndpointMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref UserExistsEndpointResource
-      RestApiId: !Ref AuthInternalApi
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserExistsFunction.Arn}:active/invocations
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-
   UserExistsFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

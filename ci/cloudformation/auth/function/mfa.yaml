@@ -90,28 +90,6 @@ Resources:
       FunctionName: !Ref MfaFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  MfaEndpointResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref AuthInternalApi
-      ParentId: !GetAtt AuthInternalApi.RootResourceId
-      PathPart: "mfa"
-
-  MfaEndpointMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ResourceId: !Ref MfaEndpointResource
-      RestApiId: !Ref AuthInternalApi
-      HttpMethod: POST
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaFunction.Arn}:active/invocations
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-
   MfaFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

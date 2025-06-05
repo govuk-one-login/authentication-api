@@ -1,0 +1,60 @@
+---
+openapi: 3.0.1
+info:
+  title: "Authentication Internal API"
+  version: "1.0.0"
+paths:
+  /account-interventions:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /login:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /mfa:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /orch-auth-code:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OrchAuthCodeFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /start:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /user-exists:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UserExistsFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
