@@ -1,3 +1,27 @@
+module "ipv_spot_response_role_2" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "ipv-spot-response-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_identity_credentials_write_access_policy.arn,
+    aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
+    aws_iam_policy.dynamo_identity_credentials_delete_access_policy.arn,
+    aws_iam_policy.spot_response_sqs_read_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+    module.oidc_txma_audit.access_policy_arn,
+    local.identity_credentials_encryption_policy_arn
+  ]
+
+  depends_on = [
+    aws_iam_policy.spot_response_sqs_read_policy
+  ]
+  extra_tags = {
+    Service = "spot-response"
+  }
+}
 module "ipv_spot_response_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
