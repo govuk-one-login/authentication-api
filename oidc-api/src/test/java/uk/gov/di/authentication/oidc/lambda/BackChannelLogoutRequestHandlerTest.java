@@ -16,7 +16,6 @@ import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
@@ -28,10 +27,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.nimbusds.jose.JWSAlgorithm.*;
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.time.Clock.fixed;
 import static java.time.ZoneId.systemDefault;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
@@ -43,7 +41,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
+import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsEventWithPayload;
+import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsMessageWithPayload;
 
 class BackChannelLogoutRequestHandlerTest {
 
@@ -68,7 +67,7 @@ class BackChannelLogoutRequestHandlerTest {
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {
-        handler.handleRequest(inputEvent(null), context);
+        handler.handleRequest(sqsEventWithPayload(null), context);
 
         verify(tokenService, never())
                 .generateSignedJwtUsingExternalKey(any(), eq(Optional.of("logout+jwt")), eq(ES256));
@@ -89,7 +88,7 @@ class BackChannelLogoutRequestHandlerTest {
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
 
-        handler.handleRequest(inputEvent(input), context);
+        handler.handleRequest(sqsEventWithPayload(input), context);
 
         verify(request)
                 .post(URI.create("https://test.account.gov.uk"), "logout_token=serialized-payload");
@@ -118,8 +117,8 @@ class BackChannelLogoutRequestHandlerTest {
                         URI.create("https://test-2.account.gov.uk"),
                         "logout_token=serialized-payload");
 
-        var firstMessage = getMessages(firstInput, "firstMessageId");
-        var secondMessage = getMessages(secondInput, "secondMessageId");
+        var firstMessage = sqsMessageWithPayload(firstInput, "firstMessageId");
+        var secondMessage = sqsMessageWithPayload(secondInput, "secondMessageId");
         List<SQSEvent.SQSMessage> messageList = new ArrayList<>();
         firstMessage.ifPresent(messageList::add);
         secondMessage.ifPresent(messageList::add);
@@ -158,8 +157,8 @@ class BackChannelLogoutRequestHandlerTest {
                         URI.create("https://test-2.account.gov.uk"),
                         "logout_token=serialized-payload");
 
-        var firstMessage = getMessages(firstInput, "firstMessageId");
-        var secondMessage = getMessages(secondInput, "secondMessageId");
+        var firstMessage = sqsMessageWithPayload(firstInput, "firstMessageId");
+        var secondMessage = sqsMessageWithPayload(secondInput, "secondMessageId");
         List<SQSEvent.SQSMessage> messageList = new ArrayList<>();
         firstMessage.ifPresent(messageList::add);
         secondMessage.ifPresent(messageList::add);
@@ -211,27 +210,5 @@ class BackChannelLogoutRequestHandlerTest {
                 description.appendText("is a uuid");
             }
         };
-    }
-
-    private SQSEvent inputEvent(BackChannelLogoutMessage payload) {
-        var messages = getMessages(payload, "messageId");
-        var event = new SQSEvent();
-        event.setRecords(messages.map(List::of).orElse(emptyList()));
-
-        return event;
-    }
-
-    private Optional<SQSEvent.SQSMessage> getMessages(
-            BackChannelLogoutMessage payload, String messageId) {
-        return Optional.ofNullable(payload)
-                .map(unchecked(SerializationService.getInstance()::writeValueAsString))
-                .map(
-                        body -> {
-                            var message = new SQSEvent.SQSMessage();
-                            message.setBody(body);
-                            message.setMessageId(messageId);
-
-                            return message;
-                        });
     }
 }

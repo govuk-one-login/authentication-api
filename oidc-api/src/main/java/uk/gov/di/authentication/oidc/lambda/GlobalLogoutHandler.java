@@ -7,6 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.oidc.entity.GlobalLogoutMessage;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +37,10 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
             LOG.info("Handling global logout request with id: {}", message.getMessageId());
             try {
                 processMessage(message);
+            } catch (Json.JsonException e) {
+                LOG.error("Could not parse logout request payload", e);
+                batchItemFailures.add(
+                        new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
             } catch (RuntimeException e) {
                 LOG.warn(e.getMessage());
                 batchItemFailures.add(
@@ -43,8 +50,14 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
         return new SQSBatchResponse(batchItemFailures);
     }
 
-    private void processMessage(SQSEvent.SQSMessage message) {
-        // TODO: Add validation for message (ATO-1658)
-        //       Add logic for global logout (ATO-1660)
+    private void processMessage(SQSEvent.SQSMessage message) throws Json.JsonException {
+        var request =
+                SerializationService.getInstance()
+                        .readValue(message.getBody(), GlobalLogoutMessage.class);
+        LOG.info(
+                "Received request to global logout user with session {} and client session {}",
+                request.getSessionId(),
+                request.getClientSessionId());
+        // TODO: Add logic for global logout (ATO-1660)
     }
 }
