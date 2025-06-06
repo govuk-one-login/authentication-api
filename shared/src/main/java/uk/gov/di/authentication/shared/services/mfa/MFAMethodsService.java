@@ -44,6 +44,11 @@ public class MFAMethodsService {
     public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        return getMfaMethods(userProfile, userCredentials);
+    }
+
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
+            UserProfile userProfile, UserCredentials userCredentials) {
         if (userProfile == null || userCredentials == null) {
             return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
         }
