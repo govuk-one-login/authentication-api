@@ -851,6 +851,63 @@ Resources:
 
   #endregion
 
+  #region State Storage Table
+
+  StateStorageTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Orchestration State storage DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  StateStorageTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-State-Storage
+      AttributeDefinitions:
+        - AttributeName: PrefixedSessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PrefixedSessionId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt StateStorageTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: StateStorageTable
+
+  #endregion
+
   #region Fetch JWKS Lambda
 
   FetchJwksFunction:
@@ -1550,6 +1607,7 @@ Resources:
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2490,6 +2548,7 @@ Resources:
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3137,6 +3196,7 @@ Resources:
         - !Ref OrchSessionTableReadAndWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
+        - !Ref StateStorageTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4211,6 +4271,7 @@ Resources:
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5513,6 +5574,78 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
+
+  #region State Storage policies #
+
+  StateStorageTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
+  StateStorageTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem #We won't be updating items, only getting and putting
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
+  StateStorageTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+  #endregion
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy

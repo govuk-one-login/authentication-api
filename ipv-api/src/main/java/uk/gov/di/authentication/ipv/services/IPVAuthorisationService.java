@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
@@ -54,6 +55,7 @@ public class IPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final StateStorageService stateStorageService;
     private final JwksService jwksService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
@@ -63,13 +65,15 @@ public class IPVAuthorisationService {
     public IPVAuthorisationService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            StateStorageService stateStorageService) {
         this(
                 configurationService,
                 redisConnectionService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
-                new NowClock(Clock.systemUTC()));
+                new NowClock(Clock.systemUTC()),
+                stateStorageService);
     }
 
     public IPVAuthorisationService(
@@ -77,12 +81,14 @@ public class IPVAuthorisationService {
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
-            NowClock nowClock) {
+            NowClock nowClock,
+            StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
         this.nowClock = nowClock;
+        this.stateStorageService = stateStorageService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -126,6 +132,8 @@ public class IPVAuthorisationService {
                     STATE_STORAGE_PREFIX + sessionId,
                     objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
+
+            stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state);
         } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
             throw new RuntimeException(e);
@@ -136,6 +144,9 @@ public class IPVAuthorisationService {
         var value =
                 Optional.ofNullable(
                         redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
+
+        var dynamoState = stateStorageService.getState(STATE_STORAGE_PREFIX + sessionId);
+        logComparisonBetweenStateValues(value, dynamoState);
         if (value.isEmpty()) {
             LOG.info("No state found in Redis");
             return false;
@@ -283,6 +294,38 @@ public class IPVAuthorisationService {
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException(e);
+        }
+    }
+
+    private void logComparisonBetweenStateValues(
+            Optional<String> redisStateOpt, Optional<State> dynamoStateOpt) {
+        try {
+            if (redisStateOpt.isEmpty() && dynamoStateOpt.isEmpty()) {
+                LOG.info("Both redis and dynamo state are empty");
+                return;
+            }
+            if (redisStateOpt.isPresent() && dynamoStateOpt.isEmpty()
+                    || redisStateOpt.isEmpty() && dynamoStateOpt.isPresent()) {
+                LOG.info(
+                        "Either one of redis or Dynamo state is not present. Redis present: {}, Dynamo present: {}",
+                        redisStateOpt.isPresent(),
+                        dynamoStateOpt.isPresent());
+                return;
+            }
+
+            var redisState = objectMapper.readValue(redisStateOpt.get(), State.class);
+            var dyanmoState = dynamoStateOpt.get();
+
+            LOG.info(
+                    "Dynamo state: {} and redis state: {}. Are equal: {}",
+                    dyanmoState.getValue(),
+                    redisState.getValue(),
+                    dyanmoState.getValue().equals(redisState.getValue()));
+
+        } catch (Exception e) {
+            LOG.warn(
+                    "Exception when comparing redis and dynamo state: {}. Continuing as normal",
+                    e.getMessage());
         }
     }
 }

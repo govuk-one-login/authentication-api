@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.TestClockHelper;
 
 import java.net.MalformedURLException;
@@ -96,13 +97,15 @@ class IPVAuthorisationServiceTest {
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
                     redisConnectionService,
                     kmsConnectionService,
                     jwksService,
-                    TestClockHelper.getInstance());
+                    TestClockHelper.getInstance(),
+                    stateStorageService);
     private PrivateKey privateKey;
 
     @BeforeEach
@@ -224,6 +227,21 @@ class IPVAuthorisationServiceTest {
     }
 
     @Test
+    void shouldReadDynamoStateButDoNothingWithIt() throws Json.JsonException {
+        ;
+        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(objectMapper.writeValueAsString(STATE));
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("code", AUTH_CODE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(Optional.empty()));
+        verify(stateStorageService).getState(STATE_STORAGE_PREFIX + SESSION_ID);
+    }
+
+    @Test
     void shouldSaveStateToRedis() throws Json.JsonException {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
@@ -233,6 +251,14 @@ class IPVAuthorisationServiceTest {
                         STATE_STORAGE_PREFIX + sessionId,
                         objectMapper.writeValueAsString(STATE),
                         SESSION_EXPIRY);
+    }
+
+    @Test
+    void shouldSaveStateToDynamo() throws Json.JsonException {
+        var sessionId = "session-id";
+        authorisationService.storeState(sessionId, STATE);
+
+        verify(stateStorageService).storeState(STATE_STORAGE_PREFIX + sessionId, STATE);
     }
 
     @Nested

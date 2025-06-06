@@ -77,6 +77,7 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
@@ -192,7 +193,8 @@ public class AuthorisationHandler
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        jwksService);
+                        jwksService,
+                        new StateStorageService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
@@ -219,7 +221,11 @@ public class AuthorisationHandler
         var jwksService = new JwksService(configurationService, kmsConnectionService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
-                        configurationService, redis, kmsConnectionService, jwksService);
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        jwksService,
+                        new StateStorageService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);

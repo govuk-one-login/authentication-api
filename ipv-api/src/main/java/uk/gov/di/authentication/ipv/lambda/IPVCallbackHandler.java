@@ -57,6 +57,7 @@ import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.List;
 import java.util.Map;
@@ -138,7 +139,8 @@ public class IPVCallbackHandler
                 new IPVAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        kmsConnectionService);
+                        kmsConnectionService,
+                        new StateStorageService(configurationService));
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
@@ -164,7 +166,11 @@ public class IPVCallbackHandler
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
-                new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
+                new IPVAuthorisationService(
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        new StateStorageService(configurationService));
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
