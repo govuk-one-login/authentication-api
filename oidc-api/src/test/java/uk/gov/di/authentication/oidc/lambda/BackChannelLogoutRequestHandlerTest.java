@@ -41,8 +41,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.getMessages;
-import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.inputEvent;
+import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsEventWithPayload;
+import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsMessageWithPayload;
 
 class BackChannelLogoutRequestHandlerTest {
 
@@ -67,7 +67,7 @@ class BackChannelLogoutRequestHandlerTest {
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {
-        handler.handleRequest(inputEvent(null), context);
+        handler.handleRequest(sqsEventWithPayload(null), context);
 
         verify(tokenService, never())
                 .generateSignedJwtUsingExternalKey(any(), eq(Optional.of("logout+jwt")), eq(ES256));
@@ -88,7 +88,7 @@ class BackChannelLogoutRequestHandlerTest {
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
 
-        handler.handleRequest(inputEvent(input), context);
+        handler.handleRequest(sqsEventWithPayload(input), context);
 
         verify(request)
                 .post(URI.create("https://test.account.gov.uk"), "logout_token=serialized-payload");
@@ -117,8 +117,8 @@ class BackChannelLogoutRequestHandlerTest {
                         URI.create("https://test-2.account.gov.uk"),
                         "logout_token=serialized-payload");
 
-        var firstMessage = getMessages(firstInput, "firstMessageId");
-        var secondMessage = getMessages(secondInput, "secondMessageId");
+        var firstMessage = sqsMessageWithPayload(firstInput, "firstMessageId");
+        var secondMessage = sqsMessageWithPayload(secondInput, "secondMessageId");
         List<SQSEvent.SQSMessage> messageList = new ArrayList<>();
         firstMessage.ifPresent(messageList::add);
         secondMessage.ifPresent(messageList::add);
@@ -157,8 +157,8 @@ class BackChannelLogoutRequestHandlerTest {
                         URI.create("https://test-2.account.gov.uk"),
                         "logout_token=serialized-payload");
 
-        var firstMessage = getMessages(firstInput, "firstMessageId");
-        var secondMessage = getMessages(secondInput, "secondMessageId");
+        var firstMessage = sqsMessageWithPayload(firstInput, "firstMessageId");
+        var secondMessage = sqsMessageWithPayload(secondInput, "secondMessageId");
         List<SQSEvent.SQSMessage> messageList = new ArrayList<>();
         firstMessage.ifPresent(messageList::add);
         secondMessage.ifPresent(messageList::add);
