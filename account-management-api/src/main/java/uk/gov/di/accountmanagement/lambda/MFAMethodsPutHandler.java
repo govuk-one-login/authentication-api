@@ -176,7 +176,7 @@ public class MFAMethodsPutHandler
                     case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1074);
                     case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1012);
+                            400, ErrorResponse.INVALID_PHONE_NUMBER);
                 };
         if (response.getStatusCode() >= 500) {
             LOG.error("Update failed due to unexpected error {}", failureReason);

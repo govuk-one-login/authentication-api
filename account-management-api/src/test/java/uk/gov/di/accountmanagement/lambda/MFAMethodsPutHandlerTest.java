@@ -271,7 +271,7 @@ class MFAMethodsPutHandlerTest {
                 Arguments.of(
                         MfaUpdateFailureReason.INVALID_PHONE_NUMBER,
                         400,
-                        Optional.of(ErrorResponse.ERROR_1012)),
+                        Optional.of(ErrorResponse.INVALID_PHONE_NUMBER)),
                 Arguments.of(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD,
                         500,

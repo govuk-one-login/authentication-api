@@ -3,6 +3,8 @@ package uk.gov.di.authentication.sharedtest.extensions;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
@@ -11,17 +13,21 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -117,6 +123,32 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void createBulkTestUsers(Map<UserProfile, UserCredentials> testUsers) {
         dynamoService.createBatchTestUsers(testUsers);
+    }
+
+    public void deleteUserCredentials(String email) {
+        var userCredentialsTableName =
+                TableNameHelper.getFullTableName(
+                        "user-credentials", ConfigurationService.getInstance());
+        var dynamoDbEnhancedClient =
+                DynamoClientHelper.createDynamoEnhancedClient(ConfigurationService.getInstance());
+        var dynamoUserCredentialsTable =
+                dynamoDbEnhancedClient.table(
+                        userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
+        var key = Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build();
+        dynamoUserCredentialsTable.deleteItem(key);
+    }
+
+    public void deleteUserProfile(String email) {
+        var userProfileTableName =
+                TableNameHelper.getFullTableName(
+                        "user-profile", ConfigurationService.getInstance());
+        var dynamoDbEnhancedClient =
+                DynamoClientHelper.createDynamoEnhancedClient(ConfigurationService.getInstance());
+        var dynamoUserProfileTable =
+                dynamoDbEnhancedClient.table(
+                        userProfileTableName, TableSchema.fromBean(UserCredentials.class));
+        var key = Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build();
+        dynamoUserProfileTable.deleteItem(key);
     }
 
     public List<UserProfile> getAllTestUsers() {

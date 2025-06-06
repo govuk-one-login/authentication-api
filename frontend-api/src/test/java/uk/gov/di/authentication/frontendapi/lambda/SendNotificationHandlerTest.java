@@ -529,7 +529,7 @@ class SendNotificationHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
     }
