@@ -62,6 +62,8 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+  IsDevOrBuild:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   IsNotProduction: !Not [!Equals [!Ref Environment, production]]
   IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
   IsNotDevOrProd:
@@ -2081,6 +2083,186 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Global Logout Lambda
+  GlobalLogoutFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: Lambda is triggered by SQS so DLQ not needed
+
+    Properties:
+      FunctionName: !Sub ${Environment}-GlobalLogoutFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.GlobalLogoutHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref GlobalLogoutFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+      Policies:
+        - !Ref OrchSessionTableReadAndDeleteAccessPolicy
+        - !Ref ClientSessionTableReadAndDeleteAccessPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !If [
+            IsDevOrBuild,
+            !Ref GlobalLogoutTestQueueConsumePolicy,
+            !Ref AWS::NoValue,
+          ]
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  GlobalLogoutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-global-logout-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  GlobalLogoutFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref GlobalLogoutFunctionLogGroup
+
+  GlobalLogoutFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-global-logout-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref GlobalLogoutFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-global-logout-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  GlobalLogoutFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-global-logout-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-global-logout-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  GlobalLogoutFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-global-logout-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-GlobalLogoutFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-GlobalLogoutFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  GlobalLogoutTestQueue:
+    Condition: IsDevOrBuild
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-GlobalLogoutTestQueue
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt GlobalLogoutTestDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: !GetAtt GlobalLogoutTestQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+
+  GlobalLogoutTestDeadLetterQueue:
+    Condition: IsDevOrBuild
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-GlobalLogoutTestDlq
+      KmsMasterKeyId: !GetAtt GlobalLogoutTestQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      MessageRetentionPeriod: 259200
+
+  GlobalLogoutTestQueueEncryptionKey:
+    Condition: IsDevOrBuild
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for global logout test queue and dlq
+      PendingWindowInDays: 30
+      KeyUsage: ENCRYPT_DECRYPT
+      KeySpec: SYMMETRIC_DEFAULT
+      EnableKeyRotation: true
+
+  GlobalLogoutTestQueueEventSource:
+    Condition: IsDevOrBuild
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt GlobalLogoutTestQueue.Arn
+      FunctionName: !GetAtt GlobalLogoutFunction.Arn
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
   #endregion
 
   #region Authentication Callback Lambda
@@ -4668,7 +4850,38 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
-
+  OrchSessionTableReadAndDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableIndexQueryAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Query
+            Resource: !Sub ${OrchSessionTable.Arn}/index/*
+          - Sid: AllowOrchSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt OrchSessionTable.Arn
+          - Sid: AllowOrchSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt OrchSessionTableEncryptionKey.Arn
   # This combined read, write and delete policy is required because we've reached the managed polices per role quota limit (20). Ticket raised to requst quota increase (ATO-1056)
   OrchSessionTableReadWriteAndDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -4824,6 +5037,34 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: AllowClientSessionTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt ClientSessionTable.Arn
+          - Sid: AllowClientSessionTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt ClientSessionTableEncryptionKey.Arn
+
+  ClientSessionTableReadAndDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientSessionTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientSessionTable.Arn
           - Sid: AllowClientSessionTableDeleteAccess
             Effect: Allow
             Action:
@@ -5513,6 +5754,26 @@ Resources:
             Action:
               - kms:Decrypt
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+
+  GlobalLogoutTestQueueConsumePolicy:
+    Condition: IsDevOrBuild
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowConsumeFromGlobalLogoutTestQueue
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt GlobalLogoutTestQueue.Arn
+          - Sid: AllowDecryptGlobalLogoutTestQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt GlobalLogoutTestQueueEncryptionKey.Arn
 
   SpotResponseQueueConsumePolicy:
     Type: AWS::IAM::ManagedPolicy
