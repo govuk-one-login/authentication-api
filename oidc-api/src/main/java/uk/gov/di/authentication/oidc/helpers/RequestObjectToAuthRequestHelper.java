@@ -111,6 +111,10 @@ public class RequestObjectToAuthRequestHelper {
                 builder.loginHint(jwtClaimsSet.getStringClaim("login_hint"));
             }
 
+            if (Objects.nonNull(jwtClaimsSet.getStringClaim("channel"))) {
+                builder.customParameter("channel", jwtClaimsSet.getStringClaim("channel"));
+            }
+
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
