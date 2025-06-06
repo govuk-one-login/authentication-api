@@ -13,7 +13,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
@@ -29,10 +28,7 @@ public class ClientSubjectHelper {
             AuthSessionItem authSession,
             AuthenticationService authenticationService,
             String internalSectorURI) {
-        LOG.info(
-                "clientSubjectHelper subjectType is equal to auth session {}",
-                Objects.equals(client.getSubjectType(), authSession.getSubjectType()));
-        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
+        if (PUBLIC.toString().equalsIgnoreCase(authSession.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
             return new Subject(
