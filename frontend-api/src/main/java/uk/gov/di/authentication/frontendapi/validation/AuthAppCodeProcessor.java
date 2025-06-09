@@ -170,7 +170,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.empty();
         }
 
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             var maybeAuthAppMfaMethod =
                     userCredentials.getMfaMethods().stream()
                             .filter(

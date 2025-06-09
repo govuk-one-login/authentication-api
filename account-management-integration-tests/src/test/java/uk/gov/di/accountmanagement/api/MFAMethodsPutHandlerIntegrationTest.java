@@ -611,7 +611,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertTrue(userProfileAfterUpdate.isPresent());
 
             assertAll(
-                    () -> assertTrue(userProfileAfterUpdate.get().getMfaMethodsMigrated()),
+                    () -> assertTrue(userProfileAfterUpdate.get().isMfaMethodsMigrated()),
                     () -> assertFalse(userProfileAfterUpdate.get().isPhoneNumberVerified()),
                     () -> assertNull(userProfileAfterUpdate.get().getPhoneNumber()));
 

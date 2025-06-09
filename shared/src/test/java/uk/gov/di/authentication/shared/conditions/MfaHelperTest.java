@@ -183,7 +183,7 @@ class MfaHelperTest {
 
         @Test
         void shouldReturnRelevantMethodForAMigratedUser() {
-            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+            when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
 
             var phoneNumberOfMigratedMethod = "+447900000000";
             var isPhoneNumberVerifiedOnUserProfile = false;
@@ -218,7 +218,7 @@ class MfaHelperTest {
 
         @Test
         void shouldHandleErrorsRetrievingADefaultMethodForAMigratedUser() {
-            when(userProfile.getMfaMethodsMigrated()).thenReturn(true);
+            when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
 
             var isPhoneNumberVerifiedOnUserProfile = false;
             setupUserProfile(userProfile, null, isPhoneNumberVerifiedOnUserProfile, true);
@@ -336,6 +336,6 @@ class MfaHelperTest {
             boolean areMfaMethodsMigrated) {
         when(userProfile.getPhoneNumber()).thenReturn(phoneNumber);
         when(userProfile.isPhoneNumberVerified()).thenReturn(isPhoneNumberVerified);
-        when(userProfile.getMfaMethodsMigrated()).thenReturn(areMfaMethodsMigrated);
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(areMfaMethodsMigrated);
     }
 }

@@ -753,7 +753,7 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, true);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertTrue(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertTrue(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertFalse(userProfileAfterUpdate.isPhoneNumberVerified());
         assertNull(userProfileAfterUpdate.getPhoneNumber());
     }
@@ -769,7 +769,7 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, false);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertFalse(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertFalse(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
         assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
     }
