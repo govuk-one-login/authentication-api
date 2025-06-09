@@ -1,0 +1,289 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AccountRecoveryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-account-recovery-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler::handleRequest
+      Environment:
+        Variables:
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          HEADERS_CASE_INSENSITIVE: "false"
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          REDIS_KEY: "session"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref AccountRecoveryFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref AuditEventsSnsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref DynamoAccountModifiersReadPolicy
+        - !Ref DynamoAuthSessionStoreReadPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref RedisParametersAccessPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  AccountRecoveryFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt AccountRecoveryFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  AccountRecoveryFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AccountRecoveryFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  AccountRecoveryFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-account-recovery-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountRecoveryFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/account-recovery.yaml
+
+  AccountRecoveryFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-account-recovery-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AccountRecoveryFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-account-recovery-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AccountRecoveryFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-recovery-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "account-recovery",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-recovery-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-account-recovery-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  AccountRecoveryFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-recovery-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "account-recovery",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-recovery-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-recovery-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-recovery-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  AccountRecoveryFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountRecoveryFunctionLogGroup
+
+  AccountRecoveryFunctionScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Condition: NotSubEnvironment
+    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
+    DependsOn: AccountRecoveryFunctionAliasactive
+    Properties:
+      MinCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMinConcurrency,
+          DefaultValue: 0,
+        ]
+      MaxCapacity:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaMaxConcurrency,
+          DefaultValue: 5,
+        ]
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AccountRecoveryFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+
+  AccountRecoveryFunctionAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Condition: NotSubEnvironment
+    DependsOn: AccountRecoveryFunctionScalableTarget
+    Properties:
+      PolicyName: !Sub
+        - "LambdaProvisionedConcurrency:${Env}-account-recovery-lambda"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - "function"
+          - !Select [6, !Split [":", !GetAtt AccountRecoveryFunction.Arn]]
+          - "active"
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaAutoscalingTargetValue,
+            DefaultValue: "0.6",
+          ]

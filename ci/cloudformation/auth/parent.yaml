@@ -138,6 +138,7 @@ Mappings:
   EnvironmentConfiguration:
     authdev1:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/89650062-091c-465d-b1db-98ba23a72fc2
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/07ded8ad-6627-4827-adc6-5be6b0227b9b
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/a65848e5-74da-4ea2-9d6d-0a025c35a73f
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/85da3e1d-de4f-4f23-813f-efc4d42b10c8
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f98d3388-f92d-48a0-a29b-dfd7f8a113fd
@@ -153,6 +154,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
     authdev2:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/9f2c0adf-ca5d-42a2-966f-6424311c2ba7
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/0c1930f0-3cb2-4d71-b4a1-e2b9bdd6668c
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e1d340f9-276d-4f56-b97d-799ae2ddce6f
@@ -168,6 +170,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
     dev:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/af458b1c-b949-48ee-bc2d-a5a7931113d8
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/7c60a855-8b61-4d0e-be99-f12a22bd2001
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/99608aca-5a73-4073-abae-cdb29fc5b3f4
@@ -193,6 +196,7 @@ Mappings:
       UseAlarmActions: "No"
     build:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:761723964695:key/c00f8047-6688-4f72-a887-4ba6810f1ccb
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/ce2114cb-cfe3-4108-a738-4790dbe99f64
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/d4ca8b09-1129-48fd-a8b9-483dece9128b
@@ -219,6 +223,7 @@ Mappings:
       UseAlarmActions: "Yes"
     staging:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:758531536632:key/60b5781c-9507-4faf-ab0b-faef7cd7dbd6
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/b52a2843-0d62-404a-a04c-5d47ba9ae54e
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/b8ea7d99-8902-4d91-82a1-cb396d88f6db
@@ -584,6 +589,54 @@ Resources:
                     !Ref Environment,
                     auditPayloadSigningKey,
                   ]
+
+  DynamoAccountModifiersReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-modifiers
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   DynamoAuthenticationAttemptReadWriteDeletePolicy:
     Type: AWS::IAM::ManagedPolicy
