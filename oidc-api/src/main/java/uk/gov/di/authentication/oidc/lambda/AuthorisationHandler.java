@@ -44,7 +44,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
-import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -375,16 +374,6 @@ public class AuthorisationHandler
                     user);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
-
-        var channelParams = authRequest.getCustomParameter("channel");
-        if (channelParams != null) {
-            var channel = channelParams.stream().findFirst().orElse(null);
-            LOG.info("Channel parameter found: {}", channel);
-            LOG.info(
-                    "Is channel parameter valid? {}",
-                    List.of(Channel.WEB.getValue(), Channel.GENERIC_APP.getValue())
-                            .contains(channel));
-        }
 
         try {
             cloudwatchMetricsService.putEmbeddedValue(

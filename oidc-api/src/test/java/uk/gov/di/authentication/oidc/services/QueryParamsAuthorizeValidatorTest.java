@@ -24,6 +24,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -50,6 +51,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -148,6 +150,73 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
         assertEquals(STATE, errorObject.get().state());
+    }
+
+    private static Stream<Arguments> invalidChannelAttributes() {
+        return Stream.of(
+                Arguments.of(""),
+                Arguments.of(Channel.STRATEGIC_APP.getValue()),
+                Arguments.of("not-a-channel"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidChannelAttributes")
+    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel) {
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        REDIRECT_URI.toString(),
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        Optional.empty(),
+                        Optional.of(invalidChannel));
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+
+        assertTrue(errorObject.isPresent());
+
+        assertThat(
+                errorObject.get().errorObject(),
+                equalTo(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE, "Invalid channel in request.")));
+        assertEquals(STATE, errorObject.get().state());
+    }
+
+    private static Stream<Arguments> validChannelAttributes() {
+        return Stream.of(
+                Arguments.of(Channel.WEB.getValue()), Arguments.of(Channel.GENERIC_APP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validChannelAttributes")
+    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel) {
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        REDIRECT_URI.toString(),
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        Optional.empty(),
+                        Optional.of(validChannel));
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+        assertFalse(errorObject.isPresent());
+    }
+
+    @Test
+    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest() {
+        AuthenticationRequest authRequest =
+                generateAuthRequest(
+                        REDIRECT_URI.toString(),
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
+                        jsonArrayOf("Cl.Cm", "Cl"),
+                        Optional.empty(),
+                        Optional.empty());
+
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+        assertFalse(errorObject.isPresent());
     }
 
     @Test
@@ -769,6 +838,17 @@ class QueryParamsAuthorizeValidatorTest {
             Scope scope,
             String jsonArray,
             Optional<OIDCClaimsRequest> claimsRequest) {
+        return generateAuthRequest(
+                redirectUri, responseType, scope, jsonArray, claimsRequest, Optional.empty());
+    }
+
+    private AuthenticationRequest generateAuthRequest(
+            String redirectUri,
+            ResponseType responseType,
+            Scope scope,
+            String jsonArray,
+            Optional<OIDCClaimsRequest> claimsRequest,
+            Optional<String> channelOpt) {
         AuthenticationRequest.Builder authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 responseType, scope, CLIENT_ID, URI.create(redirectUri))
@@ -777,6 +857,7 @@ class QueryParamsAuthorizeValidatorTest {
                         .maxAge(MAX_AGE)
                         .customParameter("vtr", jsonArray);
         claimsRequest.ifPresent(authRequestBuilder::claims);
+        channelOpt.ifPresent(channel -> authRequestBuilder.customParameter("channel", channel));
 
         return authRequestBuilder.build();
     }
