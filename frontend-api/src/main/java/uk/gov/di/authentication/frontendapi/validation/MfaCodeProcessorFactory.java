@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
@@ -20,18 +21,21 @@ public class MfaCodeProcessorFactory {
     private final AuthenticationService authenticationService;
     private final AuditService auditService;
     private final DynamoAccountModifiersService accountModifiersService;
+    private final MFAMethodsService mfaMethodsService;
 
     public MfaCodeProcessorFactory(
             ConfigurationService configurationService,
             CodeStorageService codeStorageService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
@@ -52,7 +56,8 @@ public class MfaCodeProcessorFactory {
                                 codeMaxRetries,
                                 codeRequest,
                                 auditService,
-                                accountModifiersService));
+                                accountModifiersService,
+                                mfaMethodsService));
             }
             case SMS -> Optional.of(
                     new PhoneNumberCodeProcessor(
@@ -62,7 +67,8 @@ public class MfaCodeProcessorFactory {
                             codeRequest,
                             authenticationService,
                             auditService,
-                            accountModifiersService));
+                            accountModifiersService,
+                            mfaMethodsService));
             default -> Optional.empty();
         };
     }

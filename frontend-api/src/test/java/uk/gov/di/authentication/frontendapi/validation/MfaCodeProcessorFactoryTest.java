@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -24,6 +25,7 @@ class MfaCodeProcessorFactoryTest {
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuthSessionItem authSession = mock(AuthSessionItem.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
@@ -32,7 +34,8 @@ class MfaCodeProcessorFactoryTest {
                     codeStorageService,
                     authenticationService,
                     auditService,
-                    accountModifiersService);
+                    accountModifiersService,
+                    mfaMethodsService);
 
     @BeforeEach
     void setUp() {

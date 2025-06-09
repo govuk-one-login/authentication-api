@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -26,6 +27,7 @@ public abstract class MfaCodeProcessor {
     private final UserContext userContext;
     protected final AuthenticationService dynamoService;
     protected final AuditService auditService;
+    private final MFAMethodsService mfaMethodsService;
 
     MfaCodeProcessor(
             UserContext userContext,
@@ -33,7 +35,8 @@ public abstract class MfaCodeProcessor {
             int maxRetries,
             AuthenticationService dynamoService,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         this.emailAddress = userContext.getAuthSession().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
@@ -41,6 +44,7 @@ public abstract class MfaCodeProcessor {
         this.dynamoService = dynamoService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     boolean isCodeBlockedForSession(String codeBlockedKeyPrefix) {
