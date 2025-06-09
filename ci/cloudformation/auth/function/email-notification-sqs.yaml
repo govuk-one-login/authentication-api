@@ -1,100 +1,109 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  MfaFunction:
+  EmailNotificationQueueFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-mfa-lambda
+        - ${Env}-email-notification-sqs-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      Handler: uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest
+      Handler: uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest
       Environment:
         Variables:
-          DEFAULT_OTP_CODE_EXPIRY: !Sub
-            - "{{resolve:ssm:/deploy/${env}/otp_code_ttl_duration}}"
+          VERIFY_EMAIL_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_email_template_id}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          DYNAMO_ARN_PREFIX: !Sub
-            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !Sub
-            - "{{resolve:ssm:/deploy/${env}/email_acct_creation_otp_code_ttl_duration}}"
+          VERIFY_PHONE_NUMBER_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_phone_number_template_id}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
-          INTERNAl_SECTOR_URI: !If
+          MFA_SMS_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/mfa_sms_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/password_reset_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/account_created_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RESET_PASSWORD_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/reset_password_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RESET_PASSWORD_WITH_CODE_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/reset_password_with_code_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/password_reset_confirmation_sms_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/verify_change_how_get_security_codes_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID: !Sub
+            - "{{resolve:ssm:/deploy/${env}/change_how_get_security_codes_confirmation_template_id}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          FRONTEND_BASE_URL: !If
             - IsNotProduction
             - !If
               - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
-              - !Sub "https://identity.${Environment}.account.gov.uk"
-            - "https://identity.account.gov.uk"
-          LOCKOUT_DURATION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_duration}}"
+              - !Sub "https://signin.${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://signin.${Environment}.account.gov.uk/"
+            - "https://signin.account.gov.uk/"
+          ACCOUNT_MANAGEMENT_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://${Environment}.account.gov.uk/"
+            - "https://account.gov.uk/"
+          RESET_PASSWORD_ROUTE: "reset-password?code="
+          CONTACT_US_LINK_ROUTE: "contact-us"
+          GOV_UK_ACCOUNTS_URL: "https://www.gov.uk/account"
+          NOTIFY_API_KEY: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          LOCKOUT_COUNT_TTL: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_count_ttl}}"
+          NOTIFY_TEST_DESTINATIONS: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_test_destinations}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
+          SMOKETEST_SMS_BUCKET_NAME: !Sub
+            - ${env}-smoke-test-sms-codes
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TEST_CLIENTS_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/test_clients_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !Sub
-            - "{{resolve:ssm:/deploy/${env}/use_strongly_consistent_reads}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EmailNotificationQueue.Arn
       LoggingConfig:
-        LogGroup: !Ref MfaFunctionLogGroup
+        LogGroup: !Ref EmailNotificationQueueFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuditEventsSnsPolicy
-        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
-        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
-        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
-        - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref DynamoUserReadAccessPolicy
-        - !Ref RedisParametersAccessPolicy
+        - !Ref S3SmokeTestPolicy
       VpcConfig:
         SecurityGroupIds:
+          - !Ref HttpsEgressSecurityGroup
           - !Ref LambdaSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
-  MfaFunctionPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !GetAtt MfaFunction.Arn
-      Principal: apigateway.amazonaws.com
-
-  MfaFunctionAliasPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref MfaFunction.Alias
-      Principal: apigateway.amazonaws.com
-
-  MfaFunctionLogGroup:
+  EmailNotificationQueueFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-mfa-lambda
+        - /aws/lambda/${Env}-email-notification-sqs-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -105,29 +114,29 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-MfaFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-EmailNotificationQueueFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/mfa.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/email-notification-sqs.yaml
 
-  MfaFunctionErrorMetricFilter:
+  EmailNotificationQueueFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-mfa-errors
+        - ${Env}-email-notification-sqs-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
-      LogGroupName: !Ref MfaFunctionLogGroup
+      LogGroupName: !Ref EmailNotificationQueueFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-mfa-error-count
+            - ${Env}-email-notification-sqs-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
-  MfaFunctionErrorCloudwatchAlarm:
+  EmailNotificationQueueFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -135,7 +144,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-mfa-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-email-notification-sqs-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -147,17 +156,17 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "mfa",
+              "email-notification-sqs",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-mfa-alarm
+        - ${Env}-email-notification-sqs-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-mfa-error-count
+        - ${Env}-email-notification-sqs-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -170,7 +179,7 @@ Resources:
           DefaultValue: 5,
         ]
 
-  MfaFunctionErrorRateCloudwatchAlarm:
+  EmailNotificationQueueFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -178,7 +187,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-mfa-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-email-notification-sqs-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -190,12 +199,12 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "mfa",
+              "email-notification-sqs",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-mfa-error-rate-alarm
+        - ${Env}-email-notification-sqs-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -214,7 +223,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-mfa-lambda
+                    - ${Env}-email-notification-sqs-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -233,7 +242,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-mfa-lambda
+                    - ${Env}-email-notification-sqs-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -251,66 +260,10 @@ Resources:
           DefaultValue: 10,
         ]
 
-  MfaFunctionSubscriptionFilter:
+  EmailNotificationQueueFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref MfaFunctionLogGroup
-
-  MfaFunctionScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Condition: NotSubEnvironment
-    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: MfaFunctionAliasactive
-    Properties:
-      MinCapacity:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaMinConcurrency,
-          DefaultValue: 0,
-        ]
-      MaxCapacity:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaMaxConcurrency,
-          DefaultValue: 5,
-        ]
-      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
-      ResourceId: !Join
-        - ":"
-        - - "function"
-          - !Select [6, !Split [":", !GetAtt MfaFunction.Arn]]
-          - "active"
-      ScalableDimension: lambda:function:ProvisionedConcurrency
-      ServiceNamespace: lambda
-
-  MfaFunctionAutoScalingPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Condition: NotSubEnvironment
-    DependsOn: MfaFunctionScalableTarget
-    Properties:
-      PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-mfa-lambda"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyType: TargetTrackingScaling
-      ResourceId: !Join
-        - ":"
-        - - "function"
-          - !Select [6, !Split [":", !GetAtt MfaFunction.Arn]]
-          - "active"
-      ScalableDimension: lambda:function:ProvisionedConcurrency
-      ServiceNamespace: lambda
-      TargetTrackingScalingPolicyConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
-        TargetValue:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            lambdaAutoscalingTargetValue,
-            DefaultValue: "0.6",
-          ]
+      LogGroupName: !Ref EmailNotificationQueueFunctionLogGroup

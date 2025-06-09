@@ -392,6 +392,19 @@ Resources:
   # Common Resources
   # ----------------
 
+  HttpsEgressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow all outgoing HTTPS requests from security group
+          CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -1443,3 +1456,30 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
+
+  S3SmokeTestPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing S3 connection to the S3 Smoketest bucket"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - !If
+            - UseSubEnvironment
+            - Sid: AllowAccessToWriteToS3
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::${SubEnvironment}-smoke-test-sms-codes
+                - !Sub arn:aws:s3:::${SubEnvironment}-smoke-test-sms-codes/*
+            - Sid: AllowAccessToWriteToS3
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes
+                - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes/*
