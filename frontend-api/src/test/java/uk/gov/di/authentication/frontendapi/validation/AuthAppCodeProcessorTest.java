@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
@@ -60,6 +61,7 @@ class AuthAppCodeProcessorTest {
     AuditService mockAuditService;
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
+    MFAMethodsService mockMfaMethodsService;
     private Session session;
 
     private static final String AUTH_APP_SECRET =
@@ -99,6 +101,7 @@ class AuthAppCodeProcessorTest {
         this.mockAuditService = mock(AuditService.class);
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
+        this.mockMfaMethodsService = mock(MFAMethodsService.class);
         when(mockUserContext.getAuthSession()).thenReturn(authSession);
         when(mockDynamoService.getUserProfileByEmail(EMAIL))
                 .thenReturn(new UserProfile().withMfaMethodsMigrated(false));
@@ -180,7 +183,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
@@ -216,7 +220,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
@@ -388,7 +393,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpBlockedUser(CodeRequest codeRequest, CodeRequestType codeRequestType) {
@@ -405,7 +411,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpRetryLimitExceededUser(CodeRequest codeRequest) {
@@ -423,7 +430,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpNoAuthCodeForUser(CodeRequest codeRequest) {
@@ -441,7 +449,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpValidAuthCode(CodeRequest codeRequest) {
@@ -465,6 +474,7 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 }

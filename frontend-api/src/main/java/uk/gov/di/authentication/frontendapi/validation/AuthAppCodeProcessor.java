@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
@@ -45,14 +46,16 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 userContext,
                 codeStorageService,
                 maxRetries,
                 dynamoService,
                 auditService,
-                accountModifiersService);
+                accountModifiersService,
+                mfaMethodsService);
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.codeRequest = codeRequest;

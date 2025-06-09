@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -67,6 +68,7 @@ class PhoneNumberCodeProcessorTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
@@ -438,7 +440,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -462,7 +465,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     public void setUpBlockedPhoneNumberCode(
@@ -485,7 +489,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     private static Stream<Arguments> codeRequestTypes() {
