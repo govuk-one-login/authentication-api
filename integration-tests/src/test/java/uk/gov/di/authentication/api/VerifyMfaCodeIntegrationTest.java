@@ -650,12 +650,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, journeyType);
 
         for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
 
         assertEquals(
                 ConfigurationService.getInstance().getCodeMaxRetries(),
-                redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
+                redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -670,7 +670,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
-        assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
+        assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
         if (journeyType != JourneyType.REAUTHENTICATION) {
             assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
         } else {
@@ -686,7 +686,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
     void whenAuthAppCodeRetriesExceedFiveDontBlockAndReturn400(JourneyType journeyType) {
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         setUpAuthAppRequest(journeyType);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("some-other-secret");
@@ -707,34 +707,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
-    }
-
-    @Test
-    void
-            whenIncorrectAuthCodesInputtedUpToSmsRetriesLimitAllowSmsAttemptAndReturn400WithoutBlockingFurtherRetries() {
-        for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
-        }
-
-        String invalidCode = "999999";
-        VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, invalidCode, JourneyType.REGISTRATION, PHONE_NUMBER);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
-        assertEquals(1, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
         assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
     }
 

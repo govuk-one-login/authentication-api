@@ -572,8 +572,7 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
             verifyNoInteractions(authenticationAttemptsService);
         }
-        verify(codeStorageService)
-                .deleteIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
@@ -610,7 +609,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         verifyNoInteractions(authenticationAttemptsService);
         assertAuditEventSubmittedWithMetadata(
@@ -633,8 +631,7 @@ class VerifyMfaCodeHandlerTest {
                         ? null
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
-                .thenReturn(3);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);

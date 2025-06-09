@@ -47,18 +47,17 @@ public abstract class MfaCodeProcessor {
         return codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix);
     }
 
-    boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {
+    boolean hasExceededRetryLimit() {
         LOG.info("Max retries: {}", maxRetries);
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType)
-                >= maxRetries;
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) >= maxRetries;
     }
 
-    void incrementRetryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
+    void incrementRetryCount() {
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
-    void resetCodeIncorrectEntryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
+    void resetCodeIncorrectEntryCount() {
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     void submitAuditEvent(

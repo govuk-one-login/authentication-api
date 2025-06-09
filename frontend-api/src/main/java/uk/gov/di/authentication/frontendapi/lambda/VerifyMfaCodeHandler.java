@@ -506,11 +506,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     emailAddress, codeBlockedKeyPrefix, blockDuration);
         }
 
-        if (mfaMethodType == MFAMethodType.SMS) {
-            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
-        } else {
-            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
-        }
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
@@ -529,11 +525,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
-                                methodType.equals(MFAMethodType.AUTH_APP)
-                                        ? codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                                email, MFAMethodType.AUTH_APP)
-                                        : codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                                email);
+                                codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
                         yield List.of(
                                 pair("loginFailureCount", failureCount),
                                 pair("MFACodeEntered", codeRequest.getCode()));
