@@ -38,7 +38,6 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -68,11 +67,13 @@ class QueryParamsAuthorizeValidatorTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final int MAX_AGE = 1800;
+    private static final ResponseType VALID_RESPONSE_TYPE =
+            new ResponseType(ResponseType.Value.CODE);
+    private static final Scope VALID_SCOPES = new Scope(OIDCScopeValue.OPENID);
     private QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
-    private PrivateKey privateKey;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -84,7 +85,6 @@ class QueryParamsAuthorizeValidatorTest {
                 new QueryParamsAuthorizeValidator(
                         configurationService, dynamoClientService, ipvCapacityService);
         var keyPair = generateRsaKeyPair();
-        privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
                 "-----BEGIN PUBLIC KEY-----\n"
                         + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
@@ -92,6 +92,11 @@ class QueryParamsAuthorizeValidatorTest {
         when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
                 .thenReturn(publicCertificateAsPem);
         when(configurationService.getEnvironment()).thenReturn("test");
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
     }
 
     @AfterEach
@@ -102,19 +107,11 @@ class QueryParamsAuthorizeValidatorTest {
     @Test
     void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
-                        responseType,
-                        scope,
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -134,19 +131,11 @@ class QueryParamsAuthorizeValidatorTest {
     @ParameterizedTest
     @MethodSource("invalidVtrAttributes")
     void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest(String invalidVtrAttribute) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
-                        responseType,
-                        scope,
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
                         invalidVtrAttribute,
                         Optional.empty());
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -163,17 +152,10 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldSuccessfullyValidateAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(), VALID_RESPONSE_TYPE, VALID_SCOPES));
 
         assertTrue(errorObject.isEmpty());
     }
@@ -185,12 +167,11 @@ class QueryParamsAuthorizeValidatorTest {
     @ParameterizedTest
     @MethodSource("validClaims")
     void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent(String validClaim) {
-        var scope = new Scope(OIDCScopeValue.OPENID);
         var clientRegistry =
                 new ClientRegistry()
                         .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                         .withClientID(CLIENT_ID.toString())
-                        .withScopes(scope.toStringList())
+                        .withScopes(VALID_SCOPES.toStringList())
                         .withClaims(List.of(validClaim));
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(Optional.of(clientRegistry));
@@ -199,8 +180,8 @@ class QueryParamsAuthorizeValidatorTest {
         var authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
-                        new ResponseType(ResponseType.Value.CODE),
-                        scope,
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -210,21 +191,13 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         AuthenticationRequest authRequest =
                 generateAuthRequest(
                         REDIRECT_URI.toString(),
-                        responseType,
-                        scope,
+                        VALID_RESPONSE_TYPE,
+                        VALID_SCOPES,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -241,12 +214,6 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldAcceptEmptyClaimsObject() throws ParseException {
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-
         var authRequest =
                 AuthenticationRequest.parse(
                         "client_id="
@@ -260,8 +227,8 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldSuccessfullyValidateAccountManagementAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
+        Scope accountManagementScope =
+                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -271,23 +238,24 @@ class QueryParamsAuthorizeValidatorTest {
                                         List.of("openid", "am"))));
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                VALID_RESPONSE_TYPE,
+                                accountManagementScope));
 
         assertTrue(errorObject.isEmpty());
     }
 
     @Test
     void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        Scope accountManagementScope =
+                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(),
+                                VALID_RESPONSE_TYPE,
+                                accountManagementScope));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -296,37 +264,29 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenClientIdIsNotValidInAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
-
         var runtimeException =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 queryParamsAuthorizeValidator.validate(
                                         generateAuthRequest(
-                                                REDIRECT_URI.toString(), responseType, scope)),
+                                                REDIRECT_URI.toString(),
+                                                VALID_RESPONSE_TYPE,
+                                                VALID_SCOPES)),
                         "Expected to throw exception");
 
         assertThat(runtimeException.getMessage(), equalTo("No Client found with given ClientID"));
     }
 
     @Test
-    void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() {
-        ResponseType responseType =
+    void shouldReturnErrorWhenResponseTypeIsNotValidInAuthRequest() {
+        ResponseType invalidResponseType =
                 new ResponseType(ResponseType.Value.TOKEN, ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(), invalidResponseType, VALID_SCOPES));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
@@ -335,18 +295,13 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add(OIDCScopeValue.EMAIL);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        Scope invalidScopes = new Scope();
+        invalidScopes.add(OIDCScopeValue.OPENID);
+        invalidScopes.add(OIDCScopeValue.EMAIL);
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(
+                                REDIRECT_URI.toString(), VALID_RESPONSE_TYPE, invalidScopes));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -355,17 +310,12 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -382,8 +332,6 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         var clientRegitry =
                 generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
                         .withPermitMissingNonce(true);
@@ -392,7 +340,8 @@ class QueryParamsAuthorizeValidatorTest {
                 .thenReturn(Optional.of(clientRegitry));
 
         AuthenticationRequest authenticationRequest =
-                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .maxAge(MAX_AGE)
                         .build();
@@ -403,17 +352,12 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenNonceIsExpectedAndMissing() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
@@ -453,9 +397,6 @@ class QueryParamsAuthorizeValidatorTest {
     @MethodSource("requestVtrsNotPermitted")
     void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient(
             List<String> clientLoCs, String vtr) {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -464,7 +405,8 @@ class QueryParamsAuthorizeValidatorTest {
                                         clientLoCs,
                                         CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", vtr)
@@ -485,17 +427,12 @@ class QueryParamsAuthorizeValidatorTest {
     void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled() {
         when(configurationService.isPkceEnabled()).thenReturn(false);
 
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .build();
@@ -508,18 +445,12 @@ class QueryParamsAuthorizeValidatorTest {
     @Test
     void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled() {
         when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .build();
@@ -530,21 +461,19 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() throws ParseException {
+    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing() {
         var clientRegistry = generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString());
         clientRegistry.setPKCEEnforced(true);
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
         when(configurationService.isPkceEnabled()).thenReturn(true);
 
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .build();
@@ -570,17 +499,12 @@ class QueryParamsAuthorizeValidatorTest {
 
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
 
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .codeChallenge(codeChallenge, null)
@@ -608,17 +532,12 @@ class QueryParamsAuthorizeValidatorTest {
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.PLAIN;
 
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .codeChallenge(codeChallenge, codeChallengeMethod)
@@ -645,17 +564,12 @@ class QueryParamsAuthorizeValidatorTest {
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.S256;
 
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                                VALID_RESPONSE_TYPE,
+                                VALID_SCOPES,
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .codeChallenge(codeChallenge, codeChallengeMethod)
@@ -669,15 +583,9 @@ class QueryParamsAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
-        var responseType = new ResponseType(ResponseType.Value.CODE);
-        var scope = new Scope(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
@@ -693,8 +601,6 @@ class QueryParamsAuthorizeValidatorTest {
     void
             shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
-        var responseType = new ResponseType(ResponseType.Value.CODE);
-        var scope = new Scope(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -705,7 +611,8 @@ class QueryParamsAuthorizeValidatorTest {
                                         true,
                                         DEFAULT_CLIENT_LOCS)));
         var authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
                         .maxAge(MAX_AGE)
@@ -718,10 +625,7 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         String redirectUri = "http://localhost/redirect";
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -733,7 +637,8 @@ class QueryParamsAuthorizeValidatorTest {
                         ClientRedirectUriValidationException.class,
                         () ->
                                 queryParamsAuthorizeValidator.validate(
-                                        generateAuthRequest(redirectUri, responseType, scope)),
+                                        generateAuthRequest(
+                                                redirectUri, VALID_RESPONSE_TYPE, VALID_SCOPES)),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
@@ -742,17 +647,9 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenRequestURIIsPresent() {
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var authenticationRequest =
                 new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                REDIRECT_URI)
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .state(STATE)
                         .build();
@@ -768,16 +665,9 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldReturnErrorWhenMaxAgeIsInvalid() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest.Builder authRequestBuilder =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(NONCE)
                         .maxAge(-5);
@@ -795,16 +685,9 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldThrowInvalidResponseModeErrorWhenResponseModeIsInvalid() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest.Builder authRequestBuilder =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(NONCE)
                         .responseMode(new ResponseMode("code"));
@@ -816,18 +699,10 @@ class QueryParamsAuthorizeValidatorTest {
 
     @Test
     void shouldThrowWhenResponseModeIsInvalidBeforeValidatingARedirectingError() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-
         // No state is an error we redirect back to the RP with an error message with
         AuthenticationRequest.Builder authRequestBuilder =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .nonce(NONCE)
                         .responseMode(new ResponseMode("code"));
 
@@ -839,16 +714,9 @@ class QueryParamsAuthorizeValidatorTest {
     @ParameterizedTest
     @ValueSource(strings = {"query", "fragment"})
     void shouldAllowValidResponseModes(String responseMode) {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest.Builder authRequestBuilder =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                new AuthenticationRequest.Builder(
+                                VALID_RESPONSE_TYPE, VALID_SCOPES, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(NONCE)
                         .responseMode(new ResponseMode(responseMode));
