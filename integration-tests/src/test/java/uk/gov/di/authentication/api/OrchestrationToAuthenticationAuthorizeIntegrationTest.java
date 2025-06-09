@@ -373,6 +373,9 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("subject_type"),
                 equalTo(SubjectType.PUBLIC.toString()));
+        assertFalse(
+                Objects.isNull(
+                        signedJWT.getJWTClaimsSet().getClaim("is_identity_verification_required")));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
