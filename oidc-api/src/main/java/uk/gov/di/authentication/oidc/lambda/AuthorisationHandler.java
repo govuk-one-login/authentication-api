@@ -893,6 +893,10 @@ public class AuthorisationHandler
                         authenticationRequest.toParameters(),
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
+        var channel =
+                getCustomParameterOpt(authenticationRequest, "channel")
+                        .orElse(client.getChannel())
+                        .toLowerCase();
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -918,7 +922,7 @@ public class AuthorisationHandler
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthSub)
                         .claim("previous_govuk_signin_journey_id", reauthSid)
-                        .claim("channel", client.getChannel().toLowerCase())
+                        .claim("channel", channel)
                         .claim("authenticated", orchSession.getAuthenticated())
                         .claim("scope", authenticationRequest.getScope().toString())
                         .claim("login_hint", authenticationRequest.getLoginHint())
