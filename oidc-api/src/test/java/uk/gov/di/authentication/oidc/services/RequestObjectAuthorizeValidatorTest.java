@@ -109,18 +109,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldSuccessfullyProcessRequestUriPayload()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "1800")
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
@@ -133,17 +122,7 @@ class RequestObjectAuthorizeValidatorTest {
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("vtr", List.of("P2.Cl.Cm"))
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("vtr", List.of("P2.Cl.Cm")).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
@@ -154,18 +133,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldSuccessfullyProcessRequestObjectWithNumericalMaxAge()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", 1800)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", 1800).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
@@ -176,15 +144,8 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("redirect_uri", "https://invalid-redirect-uri")
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
@@ -215,17 +176,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldThrowWhenInvalidClient() throws JOSEException {
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         assertThrows(
@@ -245,17 +196,7 @@ class RequestObjectAuthorizeValidatorTest {
                                 CustomScopeValue.DOC_CHECKING_APP.getValue()));
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
@@ -271,15 +212,8 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldReturnErrorForInvalidResponseType()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
+                getDefaultJWTClaimsSetBuilder()
                         .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
@@ -295,18 +229,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForInvalidResponseTypeInQueryParams()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .build();
-
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.IDTOKEN,
@@ -331,16 +254,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldReturnErrorWhenClientIDIsInvalid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", "invalid-client-id")
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("client_id", "invalid-client-id").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -354,17 +268,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForUnsupportedScope()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid profile")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid profile").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -378,17 +282,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldReturnErrorIfVtrIsNotPermittedForGivenClient()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("vtr", jsonArrayOf("Cl.Cm.PCL250"))
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.PCL250")).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -404,20 +298,8 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldThrowErrorForInvalidResponseMode()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("response_mode", "code")
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+    void shouldThrowErrorForInvalidResponseMode() throws JOSEException {
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("response_mode", "code").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
     }
@@ -446,17 +328,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldNotErrorIfResponseModeValid(String responseMode)
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("response_mode", responseMode)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("response_mode", responseMode).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -468,17 +340,7 @@ class RequestObjectAuthorizeValidatorTest {
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(configurationService.isPkceEnabled()).thenReturn(false);
 
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         var requestObjectError = validator.validate(authRequest);
@@ -491,17 +353,7 @@ class RequestObjectAuthorizeValidatorTest {
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(configurationService.isPkceEnabled()).thenReturn(true);
 
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         var requestObjectError = validator.validate(authRequest);
@@ -520,17 +372,7 @@ class RequestObjectAuthorizeValidatorTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(configurationService.isPkceEnabled()).thenReturn(true);
 
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         var requestObjectError = validator.validate(authRequest);
@@ -553,16 +395,9 @@ class RequestObjectAuthorizeValidatorTest {
         when(configurationService.isPkceEnabled()).thenReturn(true);
 
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
                         .claim("code_challenge", PKCE_CODE_CHALLENGE)
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
@@ -585,19 +420,13 @@ class RequestObjectAuthorizeValidatorTest {
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(configurationService.isPkceEnabled()).thenReturn(true);
 
-        var codeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
+        var invalidCodeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
 
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
                         .claim("code_challenge", PKCE_CODE_CHALLENGE)
-                        .claim("code_challenge_method", codeChallengeMethod)
+                        .claim("code_challenge_method", invalidCodeChallengeMethod)
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -624,17 +453,10 @@ class RequestObjectAuthorizeValidatorTest {
         var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
 
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
                         .claim("code_challenge", PKCE_CODE_CHALLENGE)
                         .claim("code_challenge_method", codeChallengeMethod)
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
@@ -647,17 +469,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldNotReturnErrorWhenLoginHintIsValid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("login_hint", VALID_LOGIN_HINT)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("login_hint", VALID_LOGIN_HINT).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         var requestObjectError = validator.validate(authRequest);
@@ -669,17 +481,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldErrorWhenLoginHintIsInvalid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("login_hint", INVALID_LOGIN_HINT)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("login_hint", INVALID_LOGIN_HINT).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         var requestObjectError = validator.validate(authRequest);
@@ -705,17 +507,7 @@ class RequestObjectAuthorizeValidatorTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
 
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
@@ -729,17 +521,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError =
@@ -756,17 +538,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForUnregisteredScope()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid email")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid email").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -779,17 +551,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForInvalidAudience()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience("invalid-audience")
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().audience("invalid-audience").build();
 
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
@@ -803,17 +565,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForInvalidIssuer()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer("invalid-client")
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().issuer("invalid-client").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -828,16 +580,8 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldReturnErrorIfRequestClaimIsPresentJwt()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("request", "some-random-request-value")
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -853,16 +597,8 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldReturnErrorIfRequestUriClaimIsPresentJwt()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
+                getDefaultJWTClaimsSetBuilder()
                         .claim("request_uri", URI.create("https://localhost/request_uri"))
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
@@ -880,17 +616,7 @@ class RequestObjectAuthorizeValidatorTest {
                     ClientSignatureValidationException,
                     JwksException {
         var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
         doThrow(new RuntimeException())
                 .when(clientSignatureValidationService)
@@ -999,18 +725,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForInvalidUILocales()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("ui_locales", "123456")
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("ui_locales", "123456").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1023,18 +738,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForNegativeMaxAgeString()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "-5")
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "-5").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1047,18 +751,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForInvalidMaxAgeString()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "NotANumber")
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "NotANumber").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1071,18 +764,7 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldReturnErrorForNegativedMaxAgeInteger()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", -5)
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", -5).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1104,17 +786,7 @@ class RequestObjectAuthorizeValidatorTest {
                                                         ValidClaims.CORE_IDENTITY_JWT.getValue()))
                                         .add("https://vocab.example.com/v2/example-claim"));
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("claims", claimSet.toJSONString())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONString()).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1136,17 +808,7 @@ class RequestObjectAuthorizeValidatorTest {
                                                         ValidClaims.CORE_IDENTITY_JWT.getValue()))
                                         .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("claims", claimSet.toJSONString())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONString()).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1168,17 +830,7 @@ class RequestObjectAuthorizeValidatorTest {
                                                         ValidClaims.CORE_IDENTITY_JWT.getValue()))
                                         .add("https://vocab.example.com/v2/example-claim"));
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("claims", claimSet.toJSONObject())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONObject()).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1200,17 +852,7 @@ class RequestObjectAuthorizeValidatorTest {
                                                         ValidClaims.CORE_IDENTITY_JWT.getValue()))
                                         .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("claims", claimSet.toJSONObject())
-                        .build();
+                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONObject()).build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         var requestObjectError = validator.validate(authRequest);
 
@@ -1231,19 +873,7 @@ class RequestObjectAuthorizeValidatorTest {
     @MethodSource("invalidChannelAttributes")
     void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel)
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "1800")
-                        .claim("channel", invalidChannel)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("channel", invalidChannel).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(signedJWT);
 
@@ -1264,40 +894,7 @@ class RequestObjectAuthorizeValidatorTest {
     @MethodSource("validChannelAttributes")
     void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel)
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "1800")
-                        .claim("channel", validChannel)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-        var authRequest = generateAuthRequest(signedJWT);
-        var requestObjectError = validator.validate(authRequest);
-        assertFalse(requestObjectError.isPresent());
-    }
-
-    @Test
-    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("max_age", "1800")
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("channel", validChannel).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(signedJWT);
         var requestObjectError = validator.validate(authRequest);
@@ -1338,5 +935,17 @@ class RequestObjectAuthorizeValidatorTest {
                         .nonce(new Nonce())
                         .requestObject(signedJWT);
         return builder.build();
+    }
+
+    private JWTClaimsSet.Builder getDefaultJWTClaimsSetBuilder() {
+        return new JWTClaimsSet.Builder()
+                .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                .claim("redirect_uri", REDIRECT_URI)
+                .claim("response_type", ResponseType.CODE.toString())
+                .claim("scope", SCOPE)
+                .claim("nonce", NONCE.getValue())
+                .claim("state", STATE.toString())
+                .claim("client_id", CLIENT_ID.getValue())
+                .issuer(CLIENT_ID.getValue());
     }
 }
