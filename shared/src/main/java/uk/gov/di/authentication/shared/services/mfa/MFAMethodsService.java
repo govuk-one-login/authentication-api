@@ -127,6 +127,11 @@ public class MFAMethodsService {
         return Result.success(mfaIdentifier);
     }
 
+    public void deleteMigratedMFAsAndCreateNewDefault(String email, MFAMethod mfaMethod) {
+        persistentService.deleteMigratedMfaMethods(email);
+        persistentService.addMFAMethodSupportingMultiple(email, mfaMethod);
+    }
+
     private Result<MfaRetrieveFailureReason, Optional<MFAMethod>> getMfaMethodForNonMigratedUser(
             UserProfile userProfile, UserCredentials userCredentials, boolean readOnly) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);

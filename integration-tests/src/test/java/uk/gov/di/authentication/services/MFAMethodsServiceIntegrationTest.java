@@ -1263,6 +1263,25 @@ class MFAMethodsServiceIntegrationTest {
 
             assertEquals(methodsBeforeDelete, methodsAfterDelete);
         }
+
+        @Test
+        void shouldDeleteExistingMigratedMfaMethodsAndCreateNewDefaultMigratedMfa() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            var mfa =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            "07123456789",
+                            PriorityIdentifier.DEFAULT,
+                            UUID.randomUUID().toString());
+
+            mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(EMAIL, mfa);
+
+            var retrievedMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+            assertEquals(1, retrievedMfaMethods.size());
+            mfaMethodsAreEqualIgnoringUpdated(mfa, retrievedMfaMethods.get(0));
+        }
     }
 
     private boolean mfaMethodsAreEqualIgnoringUpdated(MFAMethod mfaMethod1, MFAMethod mfaMethod2) {
