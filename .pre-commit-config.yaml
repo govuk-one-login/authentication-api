@@ -73,7 +73,7 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
-        exclude: ./gradlew|./pre-commit.sh
+        exclude: "gradlew|pre-commit.sh"
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.7
