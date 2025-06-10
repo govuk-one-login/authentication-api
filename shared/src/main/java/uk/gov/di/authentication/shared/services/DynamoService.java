@@ -544,6 +544,20 @@ public class DynamoService implements AuthenticationService {
         return userProfile.get();
     }
 
+    @Override
+    public void deleteMigratedMfaMethods(String email) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withMfaMethods(null)
+                        .withUpdated(dateTime));
+    }
+
     public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());

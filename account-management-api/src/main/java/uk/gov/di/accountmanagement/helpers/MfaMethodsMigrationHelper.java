@@ -18,7 +18,7 @@ public class MfaMethodsMigrationHelper {
             UserProfile userProfile,
             MFAMethodsService mfaMethodsService,
             Logger loggerForCallingHandler) {
-        if (!userProfile.getMfaMethodsMigrated()) {
+        if (!userProfile.isMfaMethodsMigrated()) {
             Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
                     mfaMethodsService.migrateMfaCredentialsForUser(userProfile.getEmail());
 

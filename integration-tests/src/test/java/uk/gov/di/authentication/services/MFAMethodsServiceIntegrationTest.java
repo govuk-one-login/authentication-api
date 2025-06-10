@@ -253,7 +253,7 @@ class MFAMethodsServiceIntegrationTest {
                 UserProfile userProfileBefore =
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
-                assertFalse(userProfileBefore.getMfaMethodsMigrated());
+                assertFalse(userProfileBefore.isMfaMethodsMigrated());
                 assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, userProfileBefore.getPhoneNumber());
                 assertTrue(userProfileBefore.isPhoneNumberVerified());
 
@@ -281,7 +281,7 @@ class MFAMethodsServiceIntegrationTest {
                 UserProfile userProfileAfter =
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
-                assertTrue(userProfileAfter.getMfaMethodsMigrated());
+                assertTrue(userProfileAfter.isMfaMethodsMigrated());
                 assertNull(userProfileAfter.getPhoneNumber());
                 assertFalse(userProfileAfter.isPhoneNumberVerified());
                 assertNull(userProfileAfter.getMfaIdentifier());
@@ -302,7 +302,7 @@ class MFAMethodsServiceIntegrationTest {
                 UserProfile userProfileBefore =
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
-                assertFalse(userProfileBefore.getMfaMethodsMigrated());
+                assertFalse(userProfileBefore.isMfaMethodsMigrated());
                 assertEquals(PHONE_NUMBER_WITH_COUNTRY_CODE, userProfileBefore.getPhoneNumber());
                 assertTrue(userProfileBefore.isPhoneNumberVerified());
 
@@ -330,7 +330,7 @@ class MFAMethodsServiceIntegrationTest {
                 UserProfile userProfileAfter =
                         userStoreExtension.getUserProfileFromEmail(email).get();
 
-                assertTrue(userProfileAfter.getMfaMethodsMigrated());
+                assertTrue(userProfileAfter.isMfaMethodsMigrated());
                 assertNull(userProfileAfter.getPhoneNumber());
                 assertFalse(userProfileAfter.isPhoneNumberVerified());
                 assertNull(userProfileAfter.getMfaIdentifier());
@@ -366,7 +366,7 @@ class MFAMethodsServiceIntegrationTest {
                         userStoreExtension
                                 .getUserProfileFromEmail(email)
                                 .get()
-                                .getMfaMethodsMigrated();
+                                .isMfaMethodsMigrated();
                 assertTrue(isMigrated);
             }
 
@@ -403,7 +403,7 @@ class MFAMethodsServiceIntegrationTest {
                         userStoreExtension
                                 .getUserProfileFromEmail(email)
                                 .get()
-                                .getMfaMethodsMigrated();
+                                .isMfaMethodsMigrated();
                 assertTrue(isMigrated);
             }
 
@@ -1154,6 +1154,25 @@ class MFAMethodsServiceIntegrationTest {
             var methodsAfterDelete = userStoreExtension.getMfaMethod(EMAIL);
 
             assertEquals(methodsBeforeDelete, methodsAfterDelete);
+        }
+
+        @Test
+        void shouldDeleteExistingMigratedMfaMethodsAndCreateNewDefaultMigratedMfa() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            var mfa =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            "07123456789",
+                            PriorityIdentifier.DEFAULT,
+                            UUID.randomUUID().toString());
+
+            mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(EMAIL, mfa);
+
+            var retrievedMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
+            assertEquals(1, retrievedMfaMethods.size());
+            mfaMethodsAreEqualIgnoringUpdated(mfa, retrievedMfaMethods.get(0));
         }
     }
 

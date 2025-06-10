@@ -228,7 +228,8 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
-        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(authAppCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -300,7 +301,8 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
-        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(authAppCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -341,7 +343,8 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
-        verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(phoneNumberCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -381,7 +384,8 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(authAppCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -428,7 +432,8 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
-        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(authAppCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
