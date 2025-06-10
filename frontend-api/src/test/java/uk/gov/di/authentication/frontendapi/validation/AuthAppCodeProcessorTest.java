@@ -61,6 +61,7 @@ class AuthAppCodeProcessorTest {
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
     MFAMethodsService mockMfaMethodsService;
+    UserProfile mockUserProfile;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -99,6 +100,7 @@ class AuthAppCodeProcessorTest {
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         this.mockMfaMethodsService = mock(MFAMethodsService.class);
+        this.mockUserProfile = mock(UserProfile.class);
         when(mockUserContext.getAuthSession()).thenReturn(authSession);
         when(mockDynamoService.getUserProfileByEmail(EMAIL))
                 .thenReturn(new UserProfile().withMfaMethodsMigrated(false));
@@ -306,7 +308,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
@@ -329,7 +332,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
@@ -350,7 +354,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
@@ -368,7 +373,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService, never())

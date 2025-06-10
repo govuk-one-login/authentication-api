@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -27,7 +28,7 @@ public abstract class MfaCodeProcessor {
     private final UserContext userContext;
     protected final AuthenticationService dynamoService;
     protected final AuditService auditService;
-    private final MFAMethodsService mfaMethodsService;
+    protected final MFAMethodsService mfaMethodsService;
 
     MfaCodeProcessor(
             UserContext userContext,
@@ -114,5 +115,6 @@ public abstract class MfaCodeProcessor {
 
     public abstract Optional<ErrorResponse> validateCode();
 
-    public abstract void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId);
+    public abstract void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile);
 }
