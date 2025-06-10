@@ -17,6 +17,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -182,6 +183,17 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         var loginHint = Optional.ofNullable(authRequest.getLoginHint());
         if (loginHint.isPresent()) {
             LOG.info("login_hint attached to query params");
+        }
+
+        var channelOpt =
+                Optional.ofNullable(authRequest.getCustomParameter("channel"))
+                        .map(List::stream)
+                        .flatMap(Stream::findFirst);
+        if (channelOpt.isPresent()) {
+            var channelError = validateChannel(channelOpt.get());
+            if (channelError.isPresent()) {
+                return Optional.of(new AuthRequestError(channelError.get(), redirectURI, state));
+            }
         }
 
         return Optional.empty();

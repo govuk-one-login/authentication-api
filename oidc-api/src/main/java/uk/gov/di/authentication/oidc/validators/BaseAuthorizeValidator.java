@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -155,5 +156,19 @@ public abstract class BaseAuthorizeValidator {
             logErrorInProdElseWarn(errorMessage);
             throw new InvalidResponseModeException(errorMessage);
         }
+    }
+
+    protected Optional<ErrorObject> validateChannel(String channel) {
+        if (!Channel.WEB.getValue().equals(channel)
+                && !Channel.GENERIC_APP.getValue().equals(channel)) {
+            var errorMessage = String.format("Invalid channel included in request: %s", channel);
+
+            logErrorInProdElseWarn(errorMessage);
+            return Optional.of(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid value for channel parameter."));
+        }
+        return Optional.empty();
     }
 }

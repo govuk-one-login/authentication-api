@@ -18,9 +18,12 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -40,15 +43,16 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -77,14 +81,14 @@ class RequestObjectAuthorizeValidatorTest {
     private static final String VALID_LOGIN_HINT = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String INVALID_LOGIN_HINT =
             "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111@digital.cabinet-office.gov.uk";
-    private RequestObjectAuthorizeValidator service;
+    private RequestObjectAuthorizeValidator validator;
     private final OidcAPI oidcApi = mock(OidcAPI.class);
 
     @BeforeEach
     void setup() {
         when(oidcApi.authorizeURI()).thenReturn(OIDC_BASE_AUTHORIZE_URI);
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        service =
+        validator =
                 new RequestObjectAuthorizeValidator(
                         configurationService,
                         dynamoClientService,
@@ -105,16 +109,12 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldSuccessfullyProcessRequestUriPayload()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
+                        .claim("scope", SCOPE)
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
@@ -123,7 +123,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -132,16 +132,12 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
+                        .claim("scope", SCOPE)
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
@@ -150,7 +146,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -158,16 +154,12 @@ class RequestObjectAuthorizeValidatorTest {
     @Test
     void shouldSuccessfullyProcessRequestObjectWithNumericalMaxAge()
             throws JOSEException, JwksException, ClientSignatureValidationException {
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
+                        .claim("scope", SCOPE)
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
@@ -176,7 +168,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -197,7 +189,7 @@ class RequestObjectAuthorizeValidatorTest {
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
                 ClientRedirectUriValidationException.class,
-                () -> service.validate(authRequest),
+                () -> validator.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -216,7 +208,7 @@ class RequestObjectAuthorizeValidatorTest {
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
                 ClientRedirectUriValidationException.class,
-                () -> service.validate(authRequest),
+                () -> validator.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -238,7 +230,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         assertThrows(
                 RuntimeException.class,
-                () -> service.validate(generateAuthRequest(signedJWT)),
+                () -> validator.validate(generateAuthRequest(signedJWT)),
                 "Expected to throw exception");
     }
 
@@ -266,7 +258,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -290,7 +282,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -325,7 +317,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .nonce(new Nonce())
                         .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
                         .build();
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -350,7 +342,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("client_id", "invalid-client-id")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -374,7 +366,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -398,7 +390,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -427,7 +419,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(InvalidResponseModeException.class, () -> service.validate(authRequest));
+        assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
     }
 
     @Test
@@ -446,7 +438,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(InvalidResponseModeException.class, () -> service.validate(authRequest));
+        assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
     }
 
     @ParameterizedTest
@@ -466,7 +458,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isEmpty());
     }
@@ -489,7 +481,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isEmpty());
     }
@@ -512,7 +504,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isEmpty());
     }
@@ -541,7 +533,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -574,7 +566,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -610,7 +602,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -646,7 +638,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isEmpty());
     }
@@ -668,7 +660,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isEmpty());
     }
@@ -690,7 +682,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -726,7 +718,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -751,7 +743,7 @@ class RequestObjectAuthorizeValidatorTest {
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError =
-                service.validate(
+                validator.validate(
                         generateAuthRequest(
                                 signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
@@ -776,7 +768,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -800,7 +792,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
 
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
@@ -823,7 +815,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer("invalid-client")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -849,7 +841,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -873,7 +865,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -905,7 +897,7 @@ class RequestObjectAuthorizeValidatorTest {
                 .validate(any(SignedJWT.class), any(ClientRegistry.class));
         assertThrows(
                 RuntimeException.class,
-                () -> service.validate(authRequest),
+                () -> validator.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -924,7 +916,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -950,16 +942,12 @@ class RequestObjectAuthorizeValidatorTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
 
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
+                        .claim("scope", SCOPE)
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("vtr", List.of("P2.Cl.Cm"))
@@ -969,12 +957,15 @@ class RequestObjectAuthorizeValidatorTest {
 
         AuthenticationRequest authenticationRequest =
                 new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
+                                ResponseType.CODE,
+                                Scope.parse(SCOPE),
+                                CLIENT_ID,
+                                URI.create(REDIRECT_URI))
                         .state(STATE)
                         .requestObject(signedJWT)
                         .build();
 
-        var requestObjectError = service.validate(authenticationRequest);
+        var requestObjectError = validator.validate(authenticationRequest);
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -994,7 +985,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
+        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1021,7 +1012,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("ui_locales", "123456")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1045,7 +1036,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("max_age", "-5")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1069,7 +1060,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("max_age", "NotANumber")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1093,7 +1084,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("max_age", -5)
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1125,7 +1116,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("claims", claimSet.toJSONString())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1157,7 +1148,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("claims", claimSet.toJSONString())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1189,7 +1180,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("claims", claimSet.toJSONObject())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -1221,12 +1212,96 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("claims", claimSet.toJSONObject())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validate(authRequest);
+        var requestObjectError = validator.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
         assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    private static Stream<Arguments> invalidChannelAttributes() {
+        return Stream.of(
+                Arguments.of(""),
+                Arguments.of(Channel.STRATEGIC_APP.getValue()),
+                Arguments.of("not-a-channel"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidChannelAttributes")
+    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel)
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .claim("channel", invalidChannel)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+
+        var requestObjectError = validator.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    private static Stream<Arguments> validChannelAttributes() {
+        return Stream.of(
+                Arguments.of(Channel.WEB.getValue()), Arguments.of(Channel.GENERIC_APP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validChannelAttributes")
+    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel)
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .claim("channel", validChannel)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+        var requestObjectError = validator.validate(authRequest);
+        assertFalse(requestObjectError.isPresent());
+    }
+
+    @Test
+    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+        var requestObjectError = validator.validate(authRequest);
+        assertFalse(requestObjectError.isPresent());
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {

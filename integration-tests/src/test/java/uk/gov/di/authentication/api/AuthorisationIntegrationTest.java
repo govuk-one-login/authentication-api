@@ -1294,6 +1294,32 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(response, hasStatus(400));
             assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
         }
+
+        @Test
+        void shouldReturnBadRequestWhenUnsupportedChannelIsSentInRequest() {
+            registerClient(
+                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
+            queryParams.put("channel", "invalid-channel");
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            queryParams,
+                            Optional.of("GET"));
+
+            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+            assertThat(response, hasStatus(302));
+            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+            assertThat(
+                    locationHeaderUri.getQuery(),
+                    containsString(
+                            "error=invalid_request&error_description=Invalid+value+for+channel+parameter"));
+        }
     }
 
     @Nested
