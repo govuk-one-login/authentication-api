@@ -18,9 +18,12 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -43,11 +46,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1213,6 +1218,90 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
         assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    private static Stream<Arguments> invalidChannelAttributes() {
+        return Stream.of(
+                Arguments.of(""),
+                Arguments.of(Channel.STRATEGIC_APP.getValue()),
+                Arguments.of("not-a-channel"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidChannelAttributes")
+    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel)
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .claim("channel", invalidChannel)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+
+        var requestObjectError = validator.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    private static Stream<Arguments> validChannelAttributes() {
+        return Stream.of(
+                Arguments.of(Channel.WEB.getValue()), Arguments.of(Channel.GENERIC_APP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validChannelAttributes")
+    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel)
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .claim("channel", validChannel)
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+        var requestObjectError = validator.validate(authRequest);
+        assertFalse(requestObjectError.isPresent());
+    }
+
+    @Test
+    void shouldSuccessfullyValidateWhenNoChannelIsSentInRequest()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("max_age", "1800")
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(signedJWT);
+        var requestObjectError = validator.validate(authRequest);
+        assertFalse(requestObjectError.isPresent());
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {

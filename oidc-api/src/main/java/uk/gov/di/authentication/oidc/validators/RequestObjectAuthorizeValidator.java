@@ -247,6 +247,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 "login_hint parameter is invalid"),
                         state);
             }
+            var channel = jwtClaimsSet.getStringClaim("channel");
+            if (channel != null) {
+                var channelError = validateChannel(channel);
+                if (channelError.isPresent()) {
+                    return Optional.of(
+                            new AuthRequestError(channelError.get(), redirectURI, state));
+                }
+            }
 
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
