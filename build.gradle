@@ -139,6 +139,10 @@ subprojects {
                     because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
                 }
 
+                add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.13.0,)') {
+                    because 'CVE-2025-49128 is fixed in 2.13.0 and above'
+                }
+
                 add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
