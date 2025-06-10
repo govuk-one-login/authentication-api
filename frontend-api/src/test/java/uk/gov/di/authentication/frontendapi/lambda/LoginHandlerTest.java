@@ -50,7 +50,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -140,7 +139,6 @@ class LoginHandlerTest {
             mock(AuthenticationAttemptsService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -203,7 +201,6 @@ class LoginHandlerTest {
         handler =
                 new LoginHandler(
                         configurationService,
-                        sessionService,
                         authenticationService,
                         clientService,
                         codeStorageService,
@@ -223,7 +220,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
@@ -269,7 +265,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
@@ -322,7 +317,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
 
@@ -374,7 +368,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
 
@@ -425,7 +418,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -450,7 +442,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -472,7 +463,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -510,7 +500,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -583,7 +572,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(migratedUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -696,7 +684,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(testUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         // Act
@@ -718,7 +705,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -753,7 +739,6 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        usingValidSession();
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -778,7 +763,6 @@ class LoginHandlerTest {
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -817,7 +801,6 @@ class LoginHandlerTest {
                 .thenReturn(maxRetriesAllowed - 1);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -857,7 +840,6 @@ class LoginHandlerTest {
         when(codeStorageService.getIncorrectPasswordCount(EMAIL))
                 .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -898,7 +880,6 @@ class LoginHandlerTest {
                                                 ? DEFAULT_AUTH_APP_MFA_METHOD
                                                 : DEFAULT_SMS_MFA_METHOD)));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
-        usingValidSession();
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -922,7 +903,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -953,7 +933,6 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
-        usingValidSession();
         usingValidAuthSession();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
@@ -982,7 +961,6 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -999,7 +977,6 @@ class LoginHandlerTest {
         var bodyWithoutEmail = format("{ \"password\": \"%s\"}", CommonTestVariables.PASSWORD);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
 
-        usingValidSession();
         usingValidAuthSession();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -1013,7 +990,7 @@ class LoginHandlerTest {
     void shouldReturn400IfSessionIdIsInvalid() {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
+        when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -1039,7 +1016,6 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
-        usingValidSession();
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -1062,7 +1038,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1083,7 +1058,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -1113,7 +1087,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionInSmokeTest();
 
@@ -1138,7 +1111,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -1157,7 +1129,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSession();
 
@@ -1167,11 +1138,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
         verifyAuthSessionIsSaved();
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
     }
 
     private void usingValidAuthSessionWithAchievedCredentialStrength(

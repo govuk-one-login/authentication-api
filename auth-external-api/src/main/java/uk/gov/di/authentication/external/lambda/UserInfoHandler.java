@@ -16,7 +16,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -26,7 +25,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -47,7 +45,6 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
-    private final SessionService sessionService;
     private final AuthSessionService authSessionService;
 
     public UserInfoHandler(
@@ -55,13 +52,11 @@ public class UserInfoHandler
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            SessionService sessionService,
             AuthSessionService authSessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
-        this.sessionService = sessionService;
         this.authSessionService = authSessionService;
     }
 
@@ -77,7 +72,6 @@ public class UserInfoHandler
                 new AccessTokenService(
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.sessionService = new SessionService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
 
@@ -113,23 +107,6 @@ public class UserInfoHandler
                     new UserInfoErrorResponse(BearerTokenError.MISSING_TOKEN)
                             .toHTTPResponse()
                             .getHeaderMap());
-        }
-
-        try {
-
-            // ATO-982: We should remove this once auth is fully moved from
-            // using the shared session store
-            Optional<Session> optionalSession =
-                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
-
-            if (optionalSession.isEmpty()) {
-                LOG.warn("Session cannot be found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-
-        } catch (Exception e) {
-            LOG.error("Error retrieving session from redis: {}", e.getMessage());
-            throw new RuntimeException(e);
         }
 
         AuthSessionItem authSession;

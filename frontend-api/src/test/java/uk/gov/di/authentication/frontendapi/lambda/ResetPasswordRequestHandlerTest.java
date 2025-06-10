@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
@@ -39,7 +38,6 @@ import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -101,7 +99,6 @@ class ResetPasswordRequestHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -122,7 +119,6 @@ class ResetPasswordRequestHandlerTest {
                                     CommonTestVariables.EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
 
-    private final Session session = new Session();
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -133,7 +129,6 @@ class ResetPasswordRequestHandlerTest {
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
-                    sessionService,
                     clientService,
                     authenticationService,
                     awsSqsClient,
@@ -571,8 +566,8 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400WhenNoEmailIsPresentInSession() {
             when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-            when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(new Session()));
+            when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                    .thenReturn(Optional.of(new AuthSessionItem().withSessionId(SESSION_ID)));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -627,8 +622,6 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }
@@ -637,8 +630,6 @@ class ResetPasswordRequestHandlerTest {
         authSession.resetPasswordResetCount();
         IntStream.range(0, passwordResetCount)
                 .forEach((i) -> authSession.incrementPasswordResetCount());
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
     }

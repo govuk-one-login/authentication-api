@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -26,7 +25,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -66,7 +64,6 @@ class SignUpHandlerTest {
 
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final User user = mock(User.class);
@@ -92,8 +89,6 @@ class SignUpHandlerTest {
                     .withClientId(CLIENT_ID.getValue());
 
     private SignUpHandler handler;
-
-    private final Session session = new Session();
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -128,7 +123,6 @@ class SignUpHandlerTest {
         handler =
                 new SignUpHandler(
                         configurationService,
-                        sessionService,
                         clientService,
                         authenticationService,
                         auditService,
@@ -144,7 +138,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -187,7 +180,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -209,7 +201,6 @@ class SignUpHandlerTest {
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
@@ -248,7 +239,6 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        usingValidSession();
         withValidAuthSession();
         var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
@@ -262,7 +252,6 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfPasswordInvalid() {
-        usingValidSession();
         withValidAuthSession();
         var body =
                 format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase());
@@ -279,7 +268,6 @@ class SignUpHandlerTest {
     void shouldReturn400IfUserAlreadyExists() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
 
-        usingValidSession();
         withValidAuthSession();
 
         var body =
@@ -299,7 +287,6 @@ class SignUpHandlerTest {
     @Test
     void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        usingValidSession();
         withValidAuthSession();
         var body =
                 format(
@@ -320,7 +307,6 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfNoAuthSessionPresent() {
         withNoAuthSession();
-        usingValidSession();
 
         var body =
                 format(
@@ -333,11 +319,6 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(auditService);
-    }
-
-    private void usingValidSession() {
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
     }
 
     private ClientRegistry generateClientRegistry() {

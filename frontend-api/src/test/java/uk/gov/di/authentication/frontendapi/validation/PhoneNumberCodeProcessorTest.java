@@ -413,7 +413,6 @@ class PhoneNumberCodeProcessorTest {
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.isPhoneNumberVerified()).thenReturn(true);
@@ -445,7 +444,6 @@ class PhoneNumberCodeProcessorTest {
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
                 .thenReturn(6);
-        when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
@@ -469,7 +467,6 @@ class PhoneNumberCodeProcessorTest {
 
     public void setUpBlockedPhoneNumberCode(
             CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(userContext.getSession()).thenReturn(session);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
