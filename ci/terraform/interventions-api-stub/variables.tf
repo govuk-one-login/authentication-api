@@ -69,6 +69,12 @@ variable "orchestration_vpc_endpoint_id" {
   default     = ""
 }
 
+variable "new_auth_api_vpc_endpoint_id" {
+  description = "The ID of the Execute API Gateway vpc endpoint in the new Auth account"
+  type        = string
+  default     = ""
+}
+
 variable "dynamo_deletion_protection_enabled" {
   type    = bool
   default = false
