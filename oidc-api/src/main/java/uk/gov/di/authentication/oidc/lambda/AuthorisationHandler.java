@@ -918,6 +918,11 @@ public class AuthorisationHandler
                         .map(List::stream)
                         .flatMap(Stream::findFirst);
         var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
+        var isIdentityRequired =
+                identityRequired(
+                        authenticationRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -948,7 +953,8 @@ public class AuthorisationHandler
                         .claim("scope", authenticationRequest.getScope().toString())
                         .claim("login_hint", authenticationRequest.getLoginHint())
                         .claim("is_smoke_test", client.isSmokeTest())
-                        .claim("subject_type", client.getSubjectType());
+                        .claim("subject_type", client.getSubjectType())
+                        .claim("is_identity_verification_required", isIdentityRequired);
 
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
         gaOpt.ifPresent(ga -> claimsBuilder.claim("_ga", ga));
