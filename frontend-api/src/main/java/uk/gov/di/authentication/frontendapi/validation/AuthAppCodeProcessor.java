@@ -7,6 +7,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -27,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
@@ -129,8 +131,22 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         false);
                 break;
             case ACCOUNT_RECOVERY:
-                dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
-                        emailAddress, codeRequest.getProfileInformation());
+                if (userProfile.isMfaMethodsMigrated()) {
+                    String uuid = UUID.randomUUID().toString();
+                    MFAMethod authAppMfa =
+                            MFAMethod.authAppMfaMethod(
+                                    codeRequest.getProfileInformation(),
+                                    true,
+                                    true,
+                                    PriorityIdentifier.DEFAULT,
+                                    uuid);
+                    mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
+                            emailAddress, authAppMfa);
+                } else {
+                    dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                            emailAddress, codeRequest.getProfileInformation());
+                }
+
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         AUTH_APP,
