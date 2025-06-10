@@ -48,13 +48,34 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         if (authenticationAttemptRecord.isEmpty()) {
             return 0;
         }
-        return authenticationAttemptRecord.get().getCount();
+
+        int count = authenticationAttemptRecord.get().getCount();
+
+        // TODO remove temporary ZDD measure to sum deprecated count types
+        if (countType.equals(CountType.ENTER_MFA_CODE)) {
+            count +=
+                    get(internalSubjectId, buildSortKey(journeyType, CountType.ENTER_SMS_CODE))
+                                    .filter(t -> t.getTimeToLive() > currentTimestamp)
+                                    .map(AuthenticationAttempts::getCount)
+                                    .orElse(0)
+                            + get(
+                                            internalSubjectId,
+                                            buildSortKey(
+                                                    journeyType, CountType.ENTER_AUTH_APP_CODE))
+                                    .filter(t -> t.getTimeToLive() > currentTimestamp)
+                                    .map(AuthenticationAttempts::getCount)
+                                    .orElse(0);
+        }
+
+        return count;
     }
 
     public Map<CountType, Integer> getCountsByJourney(
             String internalSubjectId, JourneyType journeyType) {
         Map<CountType, Integer> results = new EnumMap<>(CountType.class);
         Arrays.stream(CountType.values())
+                // TODO remove temporary ZDD measure to sum deprecated count types
+                .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
                 .forEach(
                         countType -> {
                             var count = getCount(internalSubjectId, journeyType, countType);
@@ -62,6 +83,7 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                                 results.put(countType, count);
                             }
                         });
+
         return results;
     }
 
@@ -72,6 +94,8 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
             String internalSubjectId, String rpPairwiseId, JourneyType journeyType) {
         Map<CountType, Integer> results = new EnumMap<>(CountType.class);
         Arrays.stream(CountType.values())
+                // TODO remove temporary ZDD measure to sum deprecated count types
+                .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
                 .forEach(
                         countType -> {
                             var count =
@@ -81,6 +105,7 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                                 results.put(countType, count);
                             }
                         });
+
         return results;
     }
 

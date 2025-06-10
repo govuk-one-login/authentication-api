@@ -322,7 +322,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 .toInstant()
                                 .getEpochSecond(),
                         JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
+                        CountType.ENTER_MFA_CODE);
             }
             auditFailure(codeRequest, errorResponse, authSession, auditContext);
         } else {

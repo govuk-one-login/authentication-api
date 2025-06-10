@@ -28,11 +28,10 @@ class ReauthAuthenticationAttemptsHelperTest {
                 Map.ofEntries(
                         Map.entry(CountType.ENTER_EMAIL, maxEmailRetries + 1),
                         Map.entry(CountType.ENTER_PASSWORD, maxPasswordRetries - 1),
-                        Map.entry(CountType.ENTER_AUTH_APP_CODE, maxCodeRetries),
+                        Map.entry(CountType.ENTER_MFA_CODE, maxCodeRetries),
                         Map.entry(CountType.ENTER_EMAIL_CODE, 100));
 
-        var expectedReauthCountsExceeded =
-                List.of(CountType.ENTER_EMAIL, CountType.ENTER_AUTH_APP_CODE);
+        var expectedReauthCountsExceeded = List.of(CountType.ENTER_EMAIL, CountType.ENTER_MFA_CODE);
         var actualReauthCountsExceeded =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                         retrievedCountTypesToCounts, configurationService);

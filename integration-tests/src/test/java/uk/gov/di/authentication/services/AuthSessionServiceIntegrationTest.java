@@ -128,7 +128,7 @@ class AuthSessionServiceIntegrationTest {
                 new HashMap<CountType, Integer>() {
                     {
                         put(CountType.ENTER_EMAIL, 1);
-                        put(CountType.ENTER_SMS_CODE, 3);
+                        put(CountType.ENTER_MFA_CODE, 3);
                     }
                 };
 

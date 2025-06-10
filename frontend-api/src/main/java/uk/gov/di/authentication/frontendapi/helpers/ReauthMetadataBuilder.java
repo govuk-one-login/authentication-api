@@ -37,8 +37,7 @@ public class ReauthMetadataBuilder {
         this.incorrectOtpAttemptCount =
                 pair(
                         "incorrect_otp_code_attempt_count",
-                        (countsByJourney.getOrDefault(CountType.ENTER_SMS_CODE, 0))
-                                + (countsByJourney.getOrDefault(CountType.ENTER_AUTH_APP_CODE, 0)));
+                        (countsByJourney.getOrDefault(CountType.ENTER_MFA_CODE, 0)));
         return this;
     }
 
@@ -75,7 +74,7 @@ public class ReauthMetadataBuilder {
         return switch (exceededType) {
             case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
             case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
-            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
+            case ENTER_MFA_CODE -> ReauthFailureReasons.INCORRECT_OTP;
             default -> null;
         };
     }
