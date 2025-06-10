@@ -16,6 +16,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -107,7 +108,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestUriPayload()
+    void shouldSuccessfullyValidateWithDefaultClaimSet()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -117,439 +118,671 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
 
-    @Test
-    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("vtr", List.of("P2.Cl.Cm")).build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+    @Nested
+    class VtrClaim {
+        @Test
+        void shouldSuccessfullyValidateWhenVtrIsPresentAndVtrIsPermittedForClient()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("vtr", List.of("P2.Cl.Cm")).build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
 
-        assertThat(requestObjectError, equalTo(Optional.empty()));
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
+
+        @Test
+        void shouldReturnErrorWhenVtrIsPresentAndVtrIsNotPermittedForClient()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("vtr", jsonArrayOf("Cl.Cm.PCL250"))
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request vtr is not permitted")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        }
+    }
+
+    @Nested
+    class MaxAgeClaim {
+        @Test
+        void shouldSuccessfullyValidateWhenMaxAgeIsNumerical()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", 1800).build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
+
+        @Test
+        void shouldReturnErrorWhenMaxAgeIsString()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "-5").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenMaxAgeIsInvalidString()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("max_age", "NotANumber").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenMaxAgeIsNegativeInteger()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", -5).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class RedirectUriClaim {
+        @Test
+        void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("redirect_uri", "https://invalid-redirect-uri")
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            assertThrows(
+                    ClientRedirectUriValidationException.class,
+                    () -> validator.validate(authRequest),
+                    "Expected to throw exception");
+        }
+
+        @Test
+        void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            assertThrows(
+                    ClientRedirectUriValidationException.class,
+                    () -> validator.validate(authRequest),
+                    "Expected to throw exception");
+        }
+    }
+
+    @Nested
+    class Client {
+        @Test
+        void shouldThrowWhenClientIDIsNotFound() throws JOSEException {
+            when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            assertThrows(
+                    RuntimeException.class,
+                    () -> validator.validate(generateAuthRequest(signedJWT)),
+                    "Expected to throw exception");
+        }
+
+        @Test
+        void shouldReturnErrorWhenClientTypeIsNotAppOrWeb()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var clientRegistry =
+                    generateClientRegistry(
+                            "not-app-or-web",
+                            new Scope(
+                                    OIDCScopeValue.OPENID.getValue(),
+                                    CustomScopeValue.DOC_CHECKING_APP.getValue()));
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(),
+                    equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenClientIDIsInvalid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("client_id", "invalid-client-id").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(),
+                    equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class ResponseTypeClaim {
+        @Test
+        void shouldReturnErrorWhenResponseTypeIsInvalidInJWTClaimSet()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(),
+                    equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenResponseTypeIsInvalidInQueryParams()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
+            var authRequest =
+                    new AuthenticationRequest.Builder(
+                                    ResponseType.IDTOKEN,
+                                    new Scope(OIDCScopeValue.OPENID),
+                                    CLIENT_ID,
+                                    URI.create(REDIRECT_URI))
+                            .state(STATE)
+                            .nonce(new Nonce())
+                            .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
+                            .build();
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(),
+                    equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class ScopeClaim {
+
+        @Test
+        void shouldReturnErrorWhenScopeIsUnsupported()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("scope", "openid profile").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var clientRegistry =
+                    generateClientRegistry(
+                            ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError =
+                    validator.validate(
+                            generateAuthRequest(
+                                    signedJWT,
+                                    new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenUnregisteredScope()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("scope", "openid email").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class ResponseModeClaim {
+        @Test
+        void shouldThrowErrorWhenResponseModeIsInvalid() throws JOSEException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("response_mode", "code").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
+        }
+
+        @Test
+        void shouldThrowErrorWhenResponseModeIsInvalidBeforeValidatingARedirectingError()
+                throws JOSEException {
+            // No state is an error we redirect back to the  RP for
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("response_mode", "code")
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"query", "fragment"})
+        void shouldValidateSuccessfullyWhenResponseModeIsValid(String responseMode)
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("response_mode", responseMode).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isEmpty());
+        }
+    }
+
+    @Nested
+    class Pkce {
+        @Test
+        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(configurationService.isPkceEnabled()).thenReturn(false);
+
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isEmpty());
+        }
+
+        @Test
+        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(configurationService.isPkceEnabled()).thenReturn(true);
+
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isEmpty());
+        }
+
+        @Test
+        void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var clientRegistry =
+                    generateClientRegistry(
+                            ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+            clientRegistry.setPKCEEnforced(true);
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+            when(configurationService.isPkceEnabled()).thenReturn(true);
+
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request is missing code_challenge parameter, but PKCE is enforced.")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(configurationService.isPkceEnabled()).thenReturn(true);
+
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("scope", "openid")
+                            .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Request is missing code_challenge_method parameter. code_challenge_method is required when code_challenge is present.")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(configurationService.isPkceEnabled()).thenReturn(true);
+
+            var invalidCodeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
+
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("scope", "openid")
+                            .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                            .claim("code_challenge_method", invalidCodeChallengeMethod)
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "Invalid value for code_challenge_method parameter.")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(configurationService.isPkceEnabled()).thenReturn(true);
+
+            var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
+
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("scope", "openid")
+                            .claim("code_challenge", PKCE_CODE_CHALLENGE)
+                            .claim("code_challenge_method", codeChallengeMethod)
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isEmpty());
+        }
+    }
+
+    @Nested
+    class LoginHintClaim {
+        @Test
+        void shouldValidateSuccessfullyWhenLoginHintIsValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("login_hint", VALID_LOGIN_HINT).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isEmpty());
+        }
+
+        @Test
+        void shouldReturnErrorWhenLoginHintIsInvalid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("login_hint", INVALID_LOGIN_HINT).build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject().toJSONObject(),
+                    equalTo(
+                            new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "login_hint parameter is invalid")
+                                    .toJSONObject()));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class ClaimsJson {
+        @Test
+        void shouldReturnErrorWhenUnknownClaimsInJsonString()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var claimSet =
+                    new OIDCClaimsRequest()
+                            .withUserInfoClaimsRequest(
+                                    new ClaimsSetRequest()
+                                            .add(
+                                                    new ClaimsSetRequest.Entry(
+                                                            ValidClaims.CORE_IDENTITY_JWT
+                                                                    .getValue()))
+                                            .add("https://vocab.example.com/v2/example-claim"));
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("claims", claimSet.toJSONString())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonString()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var claimSet =
+                    new OIDCClaimsRequest()
+                            .withUserInfoClaimsRequest(
+                                    new ClaimsSetRequest()
+                                            .add(
+                                                    new ClaimsSetRequest.Entry(
+                                                            ValidClaims.CORE_IDENTITY_JWT
+                                                                    .getValue()))
+                                            .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("claims", claimSet.toJSONString())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenUnknownClaimsInJsonObject()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var claimSet =
+                    new OIDCClaimsRequest()
+                            .withUserInfoClaimsRequest(
+                                    new ClaimsSetRequest()
+                                            .add(
+                                                    new ClaimsSetRequest.Entry(
+                                                            ValidClaims.CORE_IDENTITY_JWT
+                                                                    .getValue()))
+                                            .add("https://vocab.example.com/v2/example-claim"));
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("claims", claimSet.toJSONObject())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        @Test
+        void shouldReturnErrorWhenClaimsNotSupportedByClientInJsonObject()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var claimSet =
+                    new OIDCClaimsRequest()
+                            .withUserInfoClaimsRequest(
+                                    new ClaimsSetRequest()
+                                            .add(
+                                                    new ClaimsSetRequest.Entry(
+                                                            ValidClaims.CORE_IDENTITY_JWT
+                                                                    .getValue()))
+                                            .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .claim("claims", claimSet.toJSONObject())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+    }
+
+    @Nested
+    class ChannelClaim {
+        private static Stream<Arguments> invalidChannelAttributes() {
+            return Stream.of(
+                    Arguments.of(""),
+                    Arguments.of(Channel.STRATEGIC_APP.getValue()),
+                    Arguments.of("not-a-channel"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("invalidChannelAttributes")
+        void shouldReturnErrorWhenChannelIsInvalid(String invalidChannel)
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("channel", invalidChannel).build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+            var authRequest = generateAuthRequest(signedJWT);
+
+            var requestObjectError = validator.validate(authRequest);
+
+            assertTrue(requestObjectError.isPresent());
+            assertThat(
+                    requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+            assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+            assertEquals(STATE, requestObjectError.get().state());
+        }
+
+        private static Stream<Arguments> validChannelAttributes() {
+            return Stream.of(
+                    Arguments.of(Channel.WEB.getValue()),
+                    Arguments.of(Channel.GENERIC_APP.getValue()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("validChannelAttributes")
+        void shouldSuccessfullyValidateWhenChannelIsValid(String validChannel)
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder().claim("channel", validChannel).build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+            var authRequest = generateAuthRequest(signedJWT);
+            var requestObjectError = validator.validate(authRequest);
+            assertFalse(requestObjectError.isPresent());
+        }
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestObjectWithNumericalMaxAge()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", 1800).build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-
-        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
-
-        assertThat(requestObjectError, equalTo(Optional.empty()));
-    }
-
-    @Test
-    void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder()
-                        .claim("redirect_uri", "https://invalid-redirect-uri")
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(
-                ClientRedirectUriValidationException.class,
-                () -> validator.validate(authRequest),
-                "Expected to throw exception");
-    }
-
-    @Test
-    void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(
-                ClientRedirectUriValidationException.class,
-                () -> validator.validate(authRequest),
-                "Expected to throw exception");
-    }
-
-    @Test
-    void shouldThrowWhenInvalidClient() throws JOSEException {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-
-        assertThrows(
-                RuntimeException.class,
-                () -> validator.validate(generateAuthRequest(signedJWT)),
-                "Expected to throw exception");
-    }
-
-    @Test
-    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var clientRegistry =
-                generateClientRegistry(
-                        "not-app-or-web",
-                        new Scope(
-                                OIDCScopeValue.OPENID.getValue(),
-                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-
-        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForInvalidResponseType()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder()
-                        .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(),
-                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForInvalidResponseTypeInQueryParams()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.IDTOKEN,
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                URI.create(REDIRECT_URI))
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
-                        .build();
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(),
-                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorWhenClientIDIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("client_id", "invalid-client-id").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForUnsupportedScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid profile").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("vtr", jsonArrayOf("Cl.Cm.PCL250")).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request vtr is not permitted")
-                                .toJSONObject()));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-    }
-
-    @Test
-    void shouldThrowErrorForInvalidResponseMode() throws JOSEException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("response_mode", "code").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
-    }
-
-    @Test
-    void shouldThrowErrorForInvalidResponseModeBeforeValidatingARedirectingError()
-            throws JOSEException {
-        // No state is an error we redirect back to the  RP for
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("response_mode", "code")
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        assertThrows(InvalidResponseModeException.class, () -> validator.validate(authRequest));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"query", "fragment"})
-    void shouldNotErrorIfResponseModeValid(String responseMode)
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("response_mode", responseMode).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isEmpty());
-    }
-
-    @Test
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(configurationService.isPkceEnabled()).thenReturn(false);
-
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isEmpty());
-    }
-
-    @Test
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isEmpty());
-    }
-
-    @Test
-    void shouldReturnErrorWhenPkceIsEnforcedAndCodeChallengeMissing()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var clientRegistry =
-                generateClientRegistry(
-                        ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
-        clientRegistry.setPKCEEnforced(true);
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing code_challenge parameter, but PKCE is enforced.")
-                                .toJSONObject()));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder()
-                        .claim("scope", "openid")
-                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing code_challenge_method parameter. code_challenge_method is required when code_challenge is present.")
-                                .toJSONObject()));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        var invalidCodeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
-
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder()
-                        .claim("scope", "openid")
-                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
-                        .claim("code_challenge_method", invalidCodeChallengeMethod)
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Invalid value for code_challenge_method parameter.")
-                                .toJSONObject()));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
-        var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
-
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder()
-                        .claim("scope", "openid")
-                        .claim("code_challenge", PKCE_CODE_CHALLENGE)
-                        .claim("code_challenge_method", codeChallengeMethod)
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isEmpty());
-    }
-
-    @Test
-    void shouldNotReturnErrorWhenLoginHintIsValid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("login_hint", VALID_LOGIN_HINT).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isEmpty());
-    }
-
-    @Test
-    void shouldErrorWhenLoginHintIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("login_hint", INVALID_LOGIN_HINT).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "login_hint parameter is invalid")
-                                .toJSONObject()));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var clientRegistry =
-                generateClientRegistry(
-                        ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-
-        var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-
-        var requestObjectError =
-                validator.validate(
-                        generateAuthRequest(
-                                signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForUnregisteredScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid email").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForInvalidAudience()
+    void shouldReturnErrorWhenAudienceIsInvalid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().audience("invalid-audience").build();
 
@@ -563,7 +796,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidIssuer()
+    void shouldReturnErrorWhenIssuerIsInvalid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().issuer("invalid-client").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -577,7 +810,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestClaimIsPresentJwt()
+    void shouldReturnErrorWhenRequestClaimIsPresentInJwt()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 getDefaultJWTClaimsSetBuilder()
@@ -594,7 +827,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestUriClaimIsPresentJwt()
+    void shouldReturnErrorWhenRequestUriClaimIsPresentInJwt()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 getDefaultJWTClaimsSetBuilder()
@@ -628,7 +861,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfStateIsMissingFromRequestObject()
+    void shouldReturnErrorWhenStateIsMissing()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -654,7 +887,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestWhenNonceNotExpectedAndMissing()
+    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         var clientRegistry =
@@ -697,7 +930,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfNonceIsExpectedAndMissingFromRequestObject()
+    void shouldReturnErrorWhenNonceIsExpectedAndMissing()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -723,7 +956,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidUILocales()
+    void shouldReturnErrorWhenUILocalesIsInvalid()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("ui_locales", "123456").build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -733,172 +966,6 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
         assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForNegativeMaxAgeString()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "-5").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForInvalidMaxAgeString()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", "NotANumber").build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForNegativedMaxAgeInteger()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("max_age", -5).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForAnUnknownClaimsJsonString()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var claimSet =
-                new OIDCClaimsRequest()
-                        .withUserInfoClaimsRequest(
-                                new ClaimsSetRequest()
-                                        .add(
-                                                new ClaimsSetRequest.Entry(
-                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
-                                        .add("https://vocab.example.com/v2/example-claim"));
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONString()).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForAnClaimsNotSupportedByClientJsonString()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var claimSet =
-                new OIDCClaimsRequest()
-                        .withUserInfoClaimsRequest(
-                                new ClaimsSetRequest()
-                                        .add(
-                                                new ClaimsSetRequest.Entry(
-                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
-                                        .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONString()).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForAnUnknownClaimsJsonObject()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var claimSet =
-                new OIDCClaimsRequest()
-                        .withUserInfoClaimsRequest(
-                                new ClaimsSetRequest()
-                                        .add(
-                                                new ClaimsSetRequest.Entry(
-                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
-                                        .add("https://vocab.example.com/v2/example-claim"));
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONObject()).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    @Test
-    void shouldReturnErrorForAnClaimsNotSupportedByClientJsonObject()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var claimSet =
-                new OIDCClaimsRequest()
-                        .withUserInfoClaimsRequest(
-                                new ClaimsSetRequest()
-                                        .add(
-                                                new ClaimsSetRequest.Entry(
-                                                        ValidClaims.CORE_IDENTITY_JWT.getValue()))
-                                        .add(ValidClaims.INHERITED_IDENTITY_JWT.getValue()));
-        var jwtClaimsSet =
-                getDefaultJWTClaimsSetBuilder().claim("claims", claimSet.toJSONObject()).build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    private static Stream<Arguments> invalidChannelAttributes() {
-        return Stream.of(
-                Arguments.of(""),
-                Arguments.of(Channel.STRATEGIC_APP.getValue()),
-                Arguments.of("not-a-channel"));
-    }
-
-    @ParameterizedTest
-    @MethodSource("invalidChannelAttributes")
-    void shouldReturnErrorWhenInvalidChannelIsSentInRequest(String invalidChannel)
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("channel", invalidChannel).build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-        var authRequest = generateAuthRequest(signedJWT);
-
-        var requestObjectError = validator.validate(authRequest);
-
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
-        assertEquals(STATE, requestObjectError.get().state());
-    }
-
-    private static Stream<Arguments> validChannelAttributes() {
-        return Stream.of(
-                Arguments.of(Channel.WEB.getValue()), Arguments.of(Channel.GENERIC_APP.getValue()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("validChannelAttributes")
-    void shouldSuccessfullyValidateWhenValidChannelIsSentInRequest(String validChannel)
-            throws JOSEException, JwksException, ClientSignatureValidationException {
-        var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("channel", validChannel).build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-        var authRequest = generateAuthRequest(signedJWT);
-        var requestObjectError = validator.validate(authRequest);
-        assertFalse(requestObjectError.isPresent());
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
