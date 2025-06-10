@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -43,6 +44,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
@@ -266,6 +268,86 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(ALTERNATIVE_AUTH_APP_SECRET_BASE_32));
         assertThat(userStore.getPhoneNumberForUser(EMAIL_ADDRESS), equalTo(Optional.empty()));
         assertThat(userStore.isPhoneNumberVerified(EMAIL_ADDRESS), equalTo(false));
+    }
+
+    @Test
+    void
+            shouldReturn204DeleteMigratedMFAsAndCreateNewDefaultAuthAppWhenMigratedUserGoesThroughAccountRecovery() {
+        userStore.setMfaMethodsMigrated(EMAIL_ADDRESS, true);
+        userStore.addMfaMethodSupportingMultiple(
+                EMAIL_ADDRESS,
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        PHONE_NUMBER,
+                        PriorityIdentifier.DEFAULT,
+                        "some-mfa-identifier"));
+        userStore.setAccountVerified(EMAIL_ADDRESS);
+
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        code,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        AUTH_APP_SECRET_BASE_32);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP), true);
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+
+        var retrievedMfaMethods = userStore.getMfaMethod(EMAIL_ADDRESS);
+        assertEquals(1, retrievedMfaMethods.size());
+        var mfaMethod = retrievedMfaMethods.get(0);
+
+        assertEquals(AUTH_APP_SECRET_BASE_32, mfaMethod.getCredentialValue());
+        assertEquals(PriorityIdentifier.DEFAULT.toString(), mfaMethod.getPriority());
+        assertTrue(mfaMethod.isEnabled());
+        assertTrue(mfaMethod.isMethodVerified());
+        assertInstanceOf(UUID.class, UUID.fromString(mfaMethod.getMfaIdentifier()));
+    }
+
+    @Test
+    void
+            shouldReturn204DeleteMigratedMFAsAndCreateNewDefaultSMSWhenMigratedUserGoesThroughAccountRecovery() {
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS.concat(PHONE_NUMBER), 900);
+        userStore.setMfaMethodsMigrated(EMAIL_ADDRESS, true);
+        userStore.setAccountVerified(EMAIL_ADDRESS);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, code, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+
+        var retrievedMfaMethods = userStore.getMfaMethod(EMAIL_ADDRESS);
+        assertEquals(1, retrievedMfaMethods.size());
+
+        var mfaMethod = retrievedMfaMethods.get(0);
+        assertEquals(PHONE_NUMBER, mfaMethod.getDestination());
+        assertEquals(PriorityIdentifier.DEFAULT.toString(), mfaMethod.getPriority());
+        assertTrue(mfaMethod.isEnabled());
+        assertTrue(mfaMethod.isMethodVerified());
+        assertInstanceOf(UUID.class, UUID.fromString(mfaMethod.getMfaIdentifier()));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue,
+                List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_PHONE_NUMBER),
+                true);
     }
 
     @Test
