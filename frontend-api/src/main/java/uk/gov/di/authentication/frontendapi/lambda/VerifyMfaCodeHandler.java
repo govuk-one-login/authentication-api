@@ -190,7 +190,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, client);
+                    input,
+                    codeRequest,
+                    userContext,
+                    subjectID,
+                    maybeRpPairwiseId,
+                    client,
+                    userProfile);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -270,7 +276,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             Optional<String> maybeRpPairwiseId,
-            ClientRegistry client) {
+            ClientRegistry client,
+            UserProfile userProfile) {
 
         var authSession = userContext.getAuthSession();
         var auditContext =
@@ -336,7 +343,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     subjectId,
                     codeRequest,
                     mfaCodeProcessor,
-                    maybeRpPairwiseId);
+                    maybeRpPairwiseId,
+                    userProfile);
         }
 
         authSessionService.updateSession(authSession);
@@ -415,7 +423,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor,
-            Optional<String> maybeRpPairwiseId) {
+            Optional<String> maybeRpPairwiseId,
+            UserProfile userProfile) {
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
@@ -429,7 +438,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
         mfaCodeProcessor.processSuccessfulCodeRequest(
                 IpAddressHelper.extractIpAddress(input),
-                extractPersistentIdFromHeaders(input.getHeaders()));
+                extractPersistentIdFromHeaders(input.getHeaders()),
+                userProfile);
 
         if (JourneyType.ACCOUNT_RECOVERY.equals(codeRequest.getJourneyType())) {
             authSessionService.updateSession(

@@ -7,6 +7,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -113,7 +114,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.setAuthAppAndAccountVerified(

@@ -10,7 +10,9 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -28,6 +30,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -146,7 +149,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile) {
         JourneyType journeyType = codeRequest.getJourneyType();
         if (journeyType == JourneyType.REGISTRATION
                 || journeyType == JourneyType.ACCOUNT_RECOVERY) {
@@ -161,11 +165,25 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
             }
 
-            switch (journeyType) {
-                case REGISTRATION -> dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+            if (journeyType.equals(JourneyType.REGISTRATION)) {
+                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, phoneNumber, true, true);
-                case ACCOUNT_RECOVERY -> dynamoService
-                        .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(emailAddress, phoneNumber);
+            }
+
+            if (journeyType.equals(JourneyType.ACCOUNT_RECOVERY)) {
+                if (userProfile.isMfaMethodsMigrated()) {
+                    String uuid = UUID.randomUUID().toString();
+                    var smsMfa =
+                            MFAMethod.smsMfaMethod(
+                                    true, true, phoneNumber, PriorityIdentifier.DEFAULT, uuid);
+
+                    mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
+                            userProfile.getEmail(), smsMfa);
+
+                } else {
+                    dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                            emailAddress, phoneNumber);
+                }
             }
 
             submitAuditEvent(
