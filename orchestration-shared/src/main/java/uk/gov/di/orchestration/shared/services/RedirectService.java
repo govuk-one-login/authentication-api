@@ -29,8 +29,9 @@ public class RedirectService {
         LOG.atWarn()
                 .withThrowable(error)
                 .log(
-                        "Redirecting to frontend error page for no session cookies: {}",
-                        errorPageUriStr);
+                        "Redirecting to frontend error page for no session: {}. Error: {}",
+                        errorPageUriStr,
+                        error.getMessage());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
     }
