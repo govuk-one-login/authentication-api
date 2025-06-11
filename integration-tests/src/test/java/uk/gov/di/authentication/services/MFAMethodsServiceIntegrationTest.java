@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 class MFAMethodsServiceIntegrationTest {
 
@@ -86,6 +88,84 @@ class MFAMethodsServiceIntegrationTest {
     @RegisterExtension static UserStoreExtension userStoreExtension = new UserStoreExtension();
 
     @Nested
+    class CheckIfPhoneNumberInUse {
+        private static final String NON_MIGRATED_USER_EMAIL = "not-migrated@example.com";
+
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.signUp(NON_MIGRATED_USER_EMAIL, "password-1", new Subject());
+            userStoreExtension.setMfaMethodsMigrated(NON_MIGRATED_USER_EMAIL, false);
+        }
+
+        @Test
+        void guardsAgainstInvalidPhoneNumbers() {
+            userStoreExtension.addVerifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, "not a phone number");
+
+            assertTrue(result.isFailure());
+            assertEquals(ErrorResponse.INVALID_PHONE_NUMBER, result.getFailure());
+        }
+
+        @Test
+        void confirmsVerifiedPhoneNumberIsInUse() {
+            userStoreExtension.addVerifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            assertTrue(result.isSuccess());
+            assertEquals(true, result.getSuccess());
+        }
+
+        @Test
+        void confirmsNewPhoneNumberIsNotInUse() {
+            userStoreExtension.addVerifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, "07900000001");
+
+            assertTrue(result.isSuccess());
+            assertEquals(false, result.getSuccess());
+        }
+
+        @Test
+        void ignoresUnverifiedPhoneNumber() {
+            userStoreExtension.addUnverifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            var result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+
+            assertTrue(result.isSuccess());
+            assertEquals(false, result.getSuccess());
+        }
+
+        @Test
+        void findsUserHasNoAccount() {
+            userStoreExtension.addVerifiedPhoneNumber(
+                    NON_MIGRATED_USER_EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+            userStoreExtension.deleteUserCredentials(NON_MIGRATED_USER_EMAIL);
+
+            Result<ErrorResponse, Boolean> result =
+                    mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            NON_MIGRATED_USER_EMAIL, "07900000001");
+
+            assertTrue(result.isFailure());
+            assertEquals(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT, result.getFailure());
+        }
+    }
+
+    @Nested
     class RetrieveWhenAUserIsNotMigrated {
 
         private static final String EXPLICITLY_NON_MIGRATED_USER_EMAIL = "not-migrated@example.com";
@@ -96,6 +176,34 @@ class MFAMethodsServiceIntegrationTest {
             userStoreExtension.signUp(
                     EXPLICITLY_NON_MIGRATED_USER_EMAIL, "password-1", new Subject());
             userStoreExtension.setMfaMethodsMigrated(EXPLICITLY_NON_MIGRATED_USER_EMAIL, false);
+        }
+
+        @Test
+        void userDoesNotHaveAnAccount() {
+            var result = mfaMethodsService.getMfaMethods("no-account@gov.uk");
+
+            assertTrue(result.isFailure());
+            assertEquals(USER_DOES_NOT_HAVE_ACCOUNT, result.getFailure());
+        }
+
+        @Test
+        void missingUserCredentials() {
+            userStoreExtension.deleteUserCredentials(EXPLICITLY_NON_MIGRATED_USER_EMAIL);
+
+            var result = mfaMethodsService.getMfaMethods(EXPLICITLY_NON_MIGRATED_USER_EMAIL);
+
+            assertTrue(result.isFailure());
+            assertEquals(USER_DOES_NOT_HAVE_ACCOUNT, result.getFailure());
+        }
+
+        @Test
+        void missingUserProfile() {
+            userStoreExtension.deleteUserProfile(EXPLICITLY_NON_MIGRATED_USER_EMAIL);
+
+            var result = mfaMethodsService.getMfaMethods(EXPLICITLY_NON_MIGRATED_USER_EMAIL);
+
+            assertTrue(result.isFailure());
+            assertEquals(USER_DOES_NOT_HAVE_ACCOUNT, result.getFailure());
         }
 
         @ParameterizedTest

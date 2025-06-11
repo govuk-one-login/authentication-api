@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services.mfa;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -41,16 +42,55 @@ public class MFAMethodsService {
         this.persistentService = new DynamoService(configurationService);
     }
 
+    public Result<ErrorResponse, Boolean> isPhoneAlreadyInUseAsAVerifiedMfa(
+            String email, String phoneNumber) {
+
+        try {
+            PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        } catch (Exception e) {
+            return Result.failure(ErrorResponse.INVALID_PHONE_NUMBER);
+        }
+
+        var result = getMfaMethods(email, true);
+
+        if (result.isFailure()) {
+            return Result.failure(ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT);
+        }
+
+        var mfaMethods = result.getSuccess();
+
+        boolean isPhoneNumberInUse = isPhoneNumberUsedAsVerifiedMfaMethod(mfaMethods, phoneNumber);
+
+        if (isPhoneNumberInUse) {
+            LOG.error("number already in use");
+            return Result.success(true);
+        } else {
+            return Result.success(false);
+        }
+    }
+
+    private boolean isPhoneNumberUsedAsVerifiedMfaMethod(
+            List<MFAMethod> mfaMethods, String phoneNumber) {
+        return mfaMethods.stream()
+                .filter(method -> method.getMfaMethodType().equals(SMS.name()))
+                .anyMatch(method -> method.getDestination().equalsIgnoreCase(phoneNumber));
+    }
+
     public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(String email) {
+        return getMfaMethods(email, false);
+    }
+
+    private Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
+            String email, boolean readOnly) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
         if (userProfile == null || userCredentials == null) {
             return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
         }
-        if (Boolean.TRUE.equals(userProfile.getMfaMethodsMigrated())) {
+        if (userProfile.getMfaMethodsMigrated()) {
             return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
-            return getMfaMethodForNonMigratedUser(userProfile, userCredentials)
+            return getMfaMethodForNonMigratedUser(userProfile, userCredentials, readOnly)
                     .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
     }
@@ -89,7 +129,7 @@ public class MFAMethodsService {
     }
 
     private Result<MfaRetrieveFailureReason, Optional<MFAMethod>> getMfaMethodForNonMigratedUser(
-            UserProfile userProfile, UserCredentials userCredentials) {
+            UserProfile userProfile, UserCredentials userCredentials, boolean readOnly) {
         var enabledAuthAppMethod = getPrimaryMFAMethod(userCredentials);
         if (enabledAuthAppMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             var method = enabledAuthAppMethod.get();
@@ -119,8 +159,10 @@ public class MFAMethodsService {
                 mfaIdentifier = userProfile.getMfaIdentifier();
             } else {
                 mfaIdentifier = UUID.randomUUID().toString();
-                persistentService.setMfaIdentifierForNonMigratedSmsMethod(
-                        userProfile.getEmail(), mfaIdentifier);
+                if (!readOnly) {
+                    persistentService.setMfaIdentifierForNonMigratedSmsMethod(
+                            userProfile.getEmail(), mfaIdentifier);
+                }
             }
             return Result.success(
                     Optional.of(
@@ -306,104 +348,121 @@ public class MFAMethodsService {
             return Result.failure(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
         }
 
-        Result<String, List<MFAMethod>> databaseUpdateResult;
-
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            var maybePhoneNumberWithCountryCode =
-                    getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
-
-            if (maybePhoneNumberWithCountryCode.isFailure()) {
-                LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
-                return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
-            }
-
-            var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
-
-            var isExistingDefaultPhoneNumber =
-                    phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
-
-            if (isExistingDefaultPhoneNumber) {
-                return Result.failure(
-                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
-            }
-
-            var otherMethods =
-                    allMethodsForUser.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
-                            .toList();
-
-            var isExistingBackupPhoneNumber =
-                    otherMethods.stream()
-                            .anyMatch(
-                                    mfaMethod ->
-                                            phoneNumberWithCountryCode.equals(
-                                                    mfaMethod.getDestination()));
-
-            if (isExistingBackupPhoneNumber) {
-                return Result.failure(
-                        MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
-            }
-
-            MFAMethod updMethod = new MFAMethod();
-            updMethod.setMfaMethodType(SMS.name());
-            updMethod.setDestination(phoneNumberWithCountryCode);
-            updMethod.setEnabled(true);
-            updMethod.setMethodVerified(true);
-            updMethod.setPriority(DEFAULT.name());
-            updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
-            updMethod.setMfaIdentifier(mfaIdentifier);
-
-            var updatedMethods =
-                    allMethodsForUser.stream()
-                            .map(
-                                    method ->
-                                            method.getMfaIdentifier().equals(mfaIdentifier)
-                                                    ? updMethod
-                                                    : method)
-                            .toList();
-
-            databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
-
+            return updateSmsMethod(
+                    defaultMethod, email, mfaIdentifier, allMethodsForUser, updatedSmsDetail);
         } else {
-            var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
+            return updateAuthApp(
+                    defaultMethod, updatedMethod, email, mfaIdentifier, allMethodsForUser);
+        }
+    }
 
-            if (allMethodsForUser.stream()
-                    .anyMatch(
-                            method ->
-                                    method.getMfaMethodType().equalsIgnoreCase(AUTH_APP.getValue())
-                                            && !method.getPriority()
-                                                    .equalsIgnoreCase(DEFAULT.name()))) {
-                return Result.failure(MfaUpdateFailureReason.CANNOT_ADD_SECOND_AUTH_APP);
-            }
+    private Result<MfaUpdateFailureReason, List<MFAMethod>> updateSmsMethod(
+            MFAMethod defaultMethod,
+            String email,
+            String mfaIdentifier,
+            List<MFAMethod> allMethodsForUser,
+            RequestSmsMfaDetail updatedSmsDetail) {
+        Result<String, List<MFAMethod>> databaseUpdateResult;
+        var maybePhoneNumberWithCountryCode =
+                getPhoneNumberWithCountryCode(updatedSmsDetail.phoneNumber());
 
-            if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
-                return Result.failure(
-                        MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
-            }
-
-            MFAMethod updMethod = new MFAMethod();
-            updMethod.setMfaMethodType(AUTH_APP.name());
-            updMethod.setCredentialValue(authAppDetail.credential());
-            updMethod.setEnabled(true);
-            updMethod.setMethodVerified(true);
-            updMethod.setPriority(DEFAULT.name());
-            updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
-            updMethod.setMfaIdentifier(mfaIdentifier);
-
-            var updatedMethods =
-                    allMethodsForUser.stream()
-                            .map(
-                                    method ->
-                                            method.getMfaIdentifier().equals(mfaIdentifier)
-                                                    ? updMethod
-                                                    : method)
-                            .toList();
-
-            databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
+        if (maybePhoneNumberWithCountryCode.isFailure()) {
+            LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
+            return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
         }
 
+        var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
+
+        var isExistingDefaultPhoneNumber =
+                phoneNumberWithCountryCode.equals(defaultMethod.getDestination());
+
+        if (isExistingDefaultPhoneNumber) {
+            return Result.failure(
+                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+        }
+
+        var otherMethods =
+                allMethodsForUser.stream()
+                        .filter(mfaMethod -> !mfaMethod.getMfaIdentifier().equals(mfaIdentifier))
+                        .toList();
+
+        var isExistingBackupPhoneNumber =
+                otherMethods.stream()
+                        .anyMatch(
+                                mfaMethod ->
+                                        phoneNumberWithCountryCode.equals(
+                                                mfaMethod.getDestination()));
+
+        if (isExistingBackupPhoneNumber) {
+            return Result.failure(
+                    MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
+        }
+
+        MFAMethod updMethod = new MFAMethod();
+        updMethod.setMfaMethodType(SMS.name());
+        updMethod.setDestination(phoneNumberWithCountryCode);
+        updMethod.setEnabled(true);
+        updMethod.setMethodVerified(true);
+        updMethod.setPriority(DEFAULT.name());
+        updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
+        updMethod.setMfaIdentifier(mfaIdentifier);
+
+        var updatedMethods =
+                allMethodsForUser.stream()
+                        .map(
+                                method ->
+                                        method.getMfaIdentifier().equals(mfaIdentifier)
+                                                ? updMethod
+                                                : method)
+                        .toList();
+
+        databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
+    }
+
+    private Result<MfaUpdateFailureReason, List<MFAMethod>> updateAuthApp(
+            MFAMethod defaultMethod,
+            MfaMethodUpdateRequest.MfaMethod updatedMethod,
+            String email,
+            String mfaIdentifier,
+            List<MFAMethod> allMethodsForUser) {
+        Result<String, List<MFAMethod>> databaseUpdateResult;
+        var authAppDetail = (RequestAuthAppMfaDetail) updatedMethod.method();
+
+        if (allMethodsForUser.stream()
+                .anyMatch(
+                        method ->
+                                method.getMfaMethodType().equalsIgnoreCase(AUTH_APP.getValue())
+                                        && !method.getPriority()
+                                                .equalsIgnoreCase(DEFAULT.name()))) {
+            return Result.failure(MfaUpdateFailureReason.CANNOT_ADD_SECOND_AUTH_APP);
+        }
+
+        if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
+            return Result.failure(
+                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+        }
+
+        MFAMethod updMethod = new MFAMethod();
+        updMethod.setMfaMethodType(AUTH_APP.name());
+        updMethod.setCredentialValue(authAppDetail.credential());
+        updMethod.setEnabled(true);
+        updMethod.setMethodVerified(true);
+        updMethod.setPriority(DEFAULT.name());
+        updMethod.setUpdated(NowHelper.toTimestampString(NowHelper.now()));
+        updMethod.setMfaIdentifier(mfaIdentifier);
+
+        var updatedMethods =
+                allMethodsForUser.stream()
+                        .map(
+                                method ->
+                                        method.getMfaIdentifier().equals(mfaIdentifier)
+                                                ? updMethod
+                                                : method)
+                        .toList();
+
+        databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
         return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
     }
 
@@ -425,7 +484,7 @@ public class MFAMethodsService {
         }
 
         var nonMigratedRetrieveResult =
-                getMfaMethodForNonMigratedUser(userProfile, userCredentials);
+                getMfaMethodForNonMigratedUser(userProfile, userCredentials, false);
 
         if (nonMigratedRetrieveResult.isFailure()) {
             return Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
