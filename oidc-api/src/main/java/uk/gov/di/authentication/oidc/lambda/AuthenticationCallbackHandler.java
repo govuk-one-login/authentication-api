@@ -258,9 +258,13 @@ public class AuthenticationCallbackHandler
                     sessionService
                             .getSession(sessionId)
                             .orElseThrow(
-                                    () ->
-                                            new AuthenticationCallbackException(
-                                                    "Shared session not found in Redis"));
+                                    () -> {
+                                        LOG.warn(
+                                                "Shared session not found in redis for ID: {}",
+                                                sessionId);
+                                        return new AuthenticationCallbackException(
+                                                "Shared session not found in Redis");
+                                    });
             var orchSession =
                     orchSessionService
                             .getSession(sessionId)
