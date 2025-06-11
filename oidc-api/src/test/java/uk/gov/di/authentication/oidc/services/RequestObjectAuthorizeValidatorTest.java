@@ -466,7 +466,7 @@ class RequestObjectAuthorizeValidatorTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(configurationService.isPkceEnabled()).thenReturn(false);
 
-            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
             var requestObjectError = validator.validate(authRequest);
@@ -479,7 +479,7 @@ class RequestObjectAuthorizeValidatorTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(configurationService.isPkceEnabled()).thenReturn(true);
 
-            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
+            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
             var requestObjectError = validator.validate(authRequest);
@@ -492,7 +492,8 @@ class RequestObjectAuthorizeValidatorTest {
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             var clientRegistry =
                     generateClientRegistry(
-                            ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+                            ClientType.APP.getValue(),
+                            new Scope(OIDCScopeValue.OPENID.getValue(), "doc-checking-app"));
             clientRegistry.setPKCEEnforced(true);
             when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                     .thenReturn(Optional.of(clientRegistry));
@@ -522,7 +523,6 @@ class RequestObjectAuthorizeValidatorTest {
 
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
-                            .claim("scope", "openid")
                             .claim("code_challenge", PKCE_CODE_CHALLENGE)
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -550,7 +550,6 @@ class RequestObjectAuthorizeValidatorTest {
 
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
-                            .claim("scope", "openid")
                             .claim("code_challenge", PKCE_CODE_CHALLENGE)
                             .claim("code_challenge_method", invalidCodeChallengeMethod)
                             .issuer(CLIENT_ID.getValue())
@@ -580,7 +579,6 @@ class RequestObjectAuthorizeValidatorTest {
 
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
-                            .claim("scope", "openid")
                             .claim("code_challenge", PKCE_CODE_CHALLENGE)
                             .claim("code_challenge_method", codeChallengeMethod)
                             .build();
