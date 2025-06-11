@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.net.URI;
 import java.util.Map;
@@ -25,7 +24,7 @@ public class RedirectService {
     }
 
     public static APIGatewayProxyResponseEvent redirectToFrontendErrorPageForNoSessionCookies(
-            URI errorPageUri, NoSessionException error) {
+            URI errorPageUri, Exception error) {
         var errorPageUriStr = errorPageUri.toString();
         LOG.atWarn()
                 .withThrowable(error)
