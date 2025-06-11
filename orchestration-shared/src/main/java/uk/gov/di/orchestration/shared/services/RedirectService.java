@@ -23,7 +23,7 @@ public class RedirectService {
                 302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
     }
 
-    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPageForNoSessionCookies(
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPageForNoSession(
             URI errorPageUri, Exception error) {
         var errorPageUriStr = errorPageUri.toString();
         LOG.atWarn()
