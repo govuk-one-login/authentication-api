@@ -467,6 +467,9 @@ public class AuthorisationHandler
             auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
         }
 
+        getCustomParameterOpt(authRequest, "channel")
+                .ifPresent(channel -> auditEventExtensions.add(pair("channel", channel)));
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
