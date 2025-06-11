@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
+import uk.gov.di.orchestration.shared.exceptions.SessionNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -262,7 +263,7 @@ public class AuthenticationCallbackHandler
                                         LOG.warn(
                                                 "Shared session not found in redis for ID: {}",
                                                 sessionId);
-                                        return new AuthenticationCallbackException(
+                                        return new SessionNotFoundException(
                                                 "Shared session not found in Redis");
                                     });
             var orchSession =
@@ -270,7 +271,7 @@ public class AuthenticationCallbackHandler
                             .getSession(sessionId)
                             .orElseThrow(
                                     () ->
-                                            new AuthenticationCallbackException(
+                                            new SessionNotFoundException(
                                                     "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(sessionId);
@@ -608,7 +609,7 @@ public class AuthenticationCallbackHandler
             return RedirectService.redirectToFrontendErrorPage(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
-        } catch (NoSessionException e) {
+        } catch (NoSessionException | SessionNotFoundException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.errorURI(), e);
         }
