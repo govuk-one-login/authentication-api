@@ -35,7 +35,7 @@ Resources:
         - !Ref AuditEventsSnsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoAccessTokenStoreAccessPolicy
-        - !Ref DynamoAuthSessionStoreAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref AuthExternalApiTxMAAuditQueueAccessPolicy

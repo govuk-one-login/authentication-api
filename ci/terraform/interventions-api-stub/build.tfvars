@@ -2,6 +2,7 @@ shared_state_bucket = "digital-identity-dev-tfstate"
 
 # VPC
 orchestration_vpc_endpoint_id = "vpce-0867442e4d95fb43e"
+new_auth_api_vpc_endpoint_id  = "vpce-042c5d3d97d7438d9"
 
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]

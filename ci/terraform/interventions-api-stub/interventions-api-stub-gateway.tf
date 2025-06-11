@@ -15,8 +15,10 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 }
 
 locals {
-  vpc_endpoint_ids = var.orchestration_vpc_endpoint_id == "" ? [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id] : [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id, var.orchestration_vpc_endpoint_id]
-  vpc_environment  = var.vpc_environment == null ? var.environment : var.vpc_environment
+  orch_api_vpc_endpoint     = var.orchestration_vpc_endpoint_id != "" ? [var.orchestration_vpc_endpoint_id] : []
+  new_auth_api_vpc_endpoint = var.new_auth_api_vpc_endpoint_id != "" ? [var.new_auth_api_vpc_endpoint_id] : []
+  vpc_endpoint_ids          = concat(local.orch_api_vpc_endpoint, local.new_auth_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
+  vpc_environment           = var.vpc_environment == null ? var.environment : var.vpc_environment
 }
 
 resource "aws_api_gateway_rest_api" "interventions_api_stub" {
@@ -135,6 +137,7 @@ resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_rest_api.interventions_api_stub.body,
+      data.aws_iam_policy_document.interventions_api_stub_policy.json,
       local.vpc_endpoint_ids
     ]))
   }

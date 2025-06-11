@@ -138,10 +138,14 @@ Mappings:
   EnvironmentConfiguration:
     authdev1:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/89650062-091c-465d-b1db-98ba23a72fc2
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/07ded8ad-6627-4827-adc6-5be6b0227b9b
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/a65848e5-74da-4ea2-9d6d-0a025c35a73f
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/85da3e1d-de4f-4f23-813f-efc4d42b10c8
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f98d3388-f92d-48a0-a29b-dfd7f8a113fd
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/03871a19-836e-457e-9179-7870bcbe6c67
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/b5491829-ace6-4028-bf32-1886305daca7
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
+      emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
@@ -149,10 +153,14 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
     authdev2:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/9f2c0adf-ca5d-42a2-966f-6424311c2ba7
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/0c1930f0-3cb2-4d71-b4a1-e2b9bdd6668c
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e1d340f9-276d-4f56-b97d-799ae2ddce6f
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70a5d810-8dcf-449d-bdf0-aed149c52302
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/42f5a19c-11ce-4a0c-8b9d-c162a85d6f51
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
+      emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -160,15 +168,21 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
     dev:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/af458b1c-b949-48ee-bc2d-a5a7931113d8
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/7c60a855-8b61-4d0e-be99-f12a22bd2001
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/99608aca-5a73-4073-abae-cdb29fc5b3f4
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e4c701a9-4073-4143-9f12-ddf110b9c720
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5103c4f-0fb1-4d89-b396-5a91dad9cb28
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       dataStoreAccountId: 653994557586
+      emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
       IsSplunkEnabled: "No"
@@ -179,17 +193,24 @@ Mappings:
       UseAlarmActions: "No"
     build:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:761723964695:key/c00f8047-6688-4f72-a887-4ba6810f1ccb
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/ce2114cb-cfe3-4108-a738-4790dbe99f64
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/d4ca8b09-1129-48fd-a8b9-483dece9128b
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/91e74f45-3473-4fa3-b35e-b6a1a1fe7a6d
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
+      customDocAppClaimEnabled: true
       dataStoreAccountId: 761723964695
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
+      emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
@@ -198,17 +219,24 @@ Mappings:
       UseAlarmActions: "Yes"
     staging:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
       auditPayloadSigningKey: arn:aws:kms:eu-west-2:758531536632:key/60b5781c-9507-4faf-ab0b-faef7cd7dbd6
       authCodeStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/b52a2843-0d62-404a-a04c-5d47ba9ae54e
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/b8ea7d99-8902-4d91-82a1-cb396d88f6db
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/4ee87f07-df3a-4745-9734-6e9cc7995270
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
+      customDocAppClaimEnabled: true
       dataStoreAccountId: 758531536632
+      docAppDomain: https://api.review-b.staging.account.gov.uk
+      emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
@@ -218,8 +246,11 @@ Mappings:
       UseAlarmActions: "Yes"
     integration:
       cloudwatchLogRetentionInDays: 30
+      customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      docAppDomain: https://api.review-b.integration.account.gov.uk
       EnableSnapStart: "No"
+      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
       orchApiVpcEndpointId: vpce-0704b783d794cea52
@@ -227,8 +258,11 @@ Mappings:
       UseAlarmActions: "Yes"
     production:
       cloudwatchLogRetentionInDays: 30
+      customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      docAppDomain: https://api.review-b.account.gov.uk
       EnableSnapStart: "No"
+      IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
@@ -355,6 +389,19 @@ Resources:
   # ----------------
   # Common Resources
   # ----------------
+
+  HttpsEgressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow all outgoing HTTPS requests from security group
+          CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -536,6 +583,238 @@ Resources:
                     auditPayloadSigningKey,
                   ]
 
+  DynamoAccountModifiersReadWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing write permissions to the Dynamo Account Modifiers table"
+      Path: !Sub
+        - /${Env}/oidc-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-modifiers
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  DynamoAccountModifiersReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-modifiers
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  DynamoAuthenticationAttemptReadWriteDeletePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+          - Sid: AllowRead
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  DynamoAuthenticationAttemptReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDecryption
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticationAttemptTableEncryptionKey,
+                  ]
+          - Sid: AllowRead
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authentication-attempt/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
   DynamoAuthCodeStoreAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -707,6 +986,73 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     clientRegistryTableEncryptionKey,
+                  ]
+
+  DynamoEmailCheckResultReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo User tables"
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-email-check-result/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-email-check-result
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToEmailCheckResultsTableKmsEncryptionKey
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    emailCheckResultsTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    emailCheckResultsTableEncryptionKey,
                   ]
 
   DynamoUserReadAccessPolicy:
@@ -934,7 +1280,75 @@ Resources:
                     userCredentialsTableEncryptionKey,
                   ]
 
-  DynamoAuthSessionStoreAccessPolicy:
+  DynamoAuthSessionStoreReadWriteDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read, write and delete permissions to the auth session table"
+      Path: !Sub
+        - /${Env}/auth-ext/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-auth-session
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-auth-session/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authSessionTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authSessionTableEncryptionKey,
+                  ]
+
+  DynamoAuthSessionStoreReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing read and write permissions to the auth session table"
@@ -1063,6 +1477,54 @@ Resources:
                     authSessionTableEncryptionKey,
                   ]
 
+  DynamoCommonPasswordsReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing read permissions to the Dynamo Common Passwords table"
+      Path: !Sub
+        - /${Env}/oidc-default/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-common-passwords
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToCommonPasswordsTableKmsEncryptionKey
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    commonPasswordsTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    commonPasswordsTableEncryptionKey,
+                  ]
+
   RedisParametersAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -1095,3 +1557,30 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
+
+  S3SmokeTestPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing S3 connection to the S3 Smoketest bucket"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - !If
+            - UseSubEnvironment
+            - Sid: AllowAccessToWriteToS3
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::${SubEnvironment}-smoke-test-sms-codes
+                - !Sub arn:aws:s3:::${SubEnvironment}-smoke-test-sms-codes/*
+            - Sid: AllowAccessToWriteToS3
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes
+                - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes/*
