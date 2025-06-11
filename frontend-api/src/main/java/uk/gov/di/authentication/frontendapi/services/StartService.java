@@ -102,7 +102,8 @@ public class StartService {
             boolean reauthenticate,
             boolean isBlockedForReauth,
             boolean isAuthenticated,
-            boolean upliftRequired) {
+            boolean upliftRequired,
+            boolean identityRequiredFromFrontend) {
         var identityRequired = false;
         var clientRegistry = userContext.getClient().orElseThrow();
         identityRequired =
@@ -110,6 +111,10 @@ public class StartService {
                         levelOfConfidence,
                         clientRegistry.isIdentityVerificationSupported(),
                         identityEnabled);
+
+        LOG.info(
+                "isIdentityVerificationRequired is equal {}",
+                identityRequired == identityRequiredFromFrontend);
 
         var userIsAuthenticated = isAuthenticated && !reauthenticate;
 

@@ -22,4 +22,6 @@ public record StartRequest(
         @Expose @SerializedName("cookie_consent_shared") boolean isCookieConsentShared,
         @Expose @SerializedName("is_smoke_test") boolean isSmokeTest,
         @Expose @SerializedName("is_one_login_service") boolean isOneLoginService,
-        @Expose @SerializedName("subject_type") String subjectType) {}
+        @Expose @SerializedName("subject_type") String subjectType,
+        @Expose @SerializedName("is_identity_verification_required")
+                boolean isIdentityVerificationRequired) {}

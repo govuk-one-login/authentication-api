@@ -260,7 +260,8 @@ public class StartHandler
                             reauthenticate,
                             isBlockedForReauth,
                             isUserAuthenticatedWithValidProfile,
-                            upliftRequired);
+                            upliftRequired,
+                            startRequest.isIdentityVerificationRequired());
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 

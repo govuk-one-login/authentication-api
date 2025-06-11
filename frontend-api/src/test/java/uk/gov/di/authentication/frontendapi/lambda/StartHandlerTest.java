@@ -305,6 +305,7 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(false),
+                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -331,6 +332,7 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(true),
+                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -486,6 +488,7 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
+                        anyBoolean(),
                         anyBoolean()))
                 .thenReturn(userStartInfo);
     }
@@ -530,6 +533,7 @@ class StartHandlerTest {
                         false,
                         false,
                         false,
-                        TEST_SUBJECT_TYPE));
+                        TEST_SUBJECT_TYPE,
+                        false));
     }
 }
