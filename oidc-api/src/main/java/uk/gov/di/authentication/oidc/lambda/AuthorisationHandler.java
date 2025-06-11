@@ -388,36 +388,10 @@ public class AuthorisationHandler
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
                         && authRequest.getPrompt() != null
                         && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
-        var identityRequested =
-                identityRequired(
-                        authRequest.toParameters(),
-                        client.isIdentityVerificationSupported(),
-                        configurationService.isIdentityEnabled());
         var vtrList = getVtrList(reauthRequested, authRequest);
         var requestedVtr = VectorOfTrust.getLowestVtr(vtrList);
 
-        var auditEventExtensions =
-                new ArrayList<>(
-                        List.of(
-                                pair("rpSid", getRpSid(authRequest)),
-                                pair("identityRequested", identityRequested),
-                                pair("reauthRequested", reauthRequested),
-                                pair(
-                                        "credential_trust_level",
-                                        requestedVtr.getCredentialTrustLevel().toString())));
-
-        var maxAgeParam = getMaxAge(authRequest);
-        if (configurationService.supportMaxAgeEnabled()
-                && client.getMaxAgeEnabled()
-                && maxAgeParam.isPresent()) {
-            auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
-        }
-
-        auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                authRequest.getClientID().getValue(),
-                user,
-                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
+        sendAuthRequestParsedAuditEvent(authRequest, client, reauthRequested, requestedVtr, user);
 
         Optional<String> sessionId =
                 CookieHelper.getSessionIdFromRequestHeaders(input.getHeaders());
@@ -462,6 +436,42 @@ public class AuthorisationHandler
                 reauthRequested,
                 requestedVtr,
                 user);
+    }
+
+    private void sendAuthRequestParsedAuditEvent(
+            AuthenticationRequest authRequest,
+            ClientRegistry client,
+            boolean reauthRequested,
+            VectorOfTrust requestedVtr,
+            TxmaAuditUser user) {
+        var identityRequested =
+                identityRequired(
+                        authRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
+
+        var auditEventExtensions =
+                new ArrayList<>(
+                        List.of(
+                                pair("rpSid", getRpSid(authRequest)),
+                                pair("identityRequested", identityRequested),
+                                pair("reauthRequested", reauthRequested),
+                                pair(
+                                        "credential_trust_level",
+                                        requestedVtr.getCredentialTrustLevel().toString())));
+
+        var maxAgeParam = getMaxAge(authRequest);
+        if (configurationService.supportMaxAgeEnabled()
+                && client.getMaxAgeEnabled()
+                && maxAgeParam.isPresent()) {
+            auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
+        }
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                authRequest.getClientID().getValue(),
+                user,
+                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
