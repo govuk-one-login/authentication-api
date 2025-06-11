@@ -89,7 +89,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
@@ -98,6 +97,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -385,8 +385,7 @@ public class AuthorisationHandler
         }
 
         boolean reauthRequested =
-                authRequest.getCustomParameter("id_token_hint") != null
-                        && !authRequest.getCustomParameter("id_token_hint").isEmpty()
+                getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
                         && authRequest.getPrompt() != null
                         && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
         var identityRequested =
@@ -467,10 +466,7 @@ public class AuthorisationHandler
 
     private static String getRpSid(AuthenticationRequest authRequest) {
         try {
-            if (authRequest.getCustomParameter("rp_sid") != null) {
-                return authRequest.getCustomParameter("rp_sid").get(0);
-            }
-            return AuditService.UNKNOWN;
+            return getCustomParameterOpt(authRequest, "rp_sid").orElse(AuditService.UNKNOWN);
         } catch (Exception e) {
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
@@ -847,19 +843,10 @@ public class AuthorisationHandler
                         ? Optional.of(Prompt.Type.LOGIN)
                         : Optional.empty();
 
-        List<String> optionalGaTrackingParameter =
-                authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
-        Optional<String> googleAnalytics =
-                Objects.nonNull(optionalGaTrackingParameter)
-                                && !optionalGaTrackingParameter.isEmpty()
-                        ? Optional.of(optionalGaTrackingParameter.get(0))
-                        : Optional.empty();
-        if (Objects.nonNull(optionalGaTrackingParameter)
-                && !optionalGaTrackingParameter.isEmpty()) {
-            googleAnalytics = Optional.of(optionalGaTrackingParameter.get(0));
-        }
+        var googleAnalyticsOpt =
+                getCustomParameterOpt(authenticationRequest, GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
 
-        var redirectURI = authFrontend.authorizeURI(prompt, googleAnalytics).toString();
+        var redirectURI = authFrontend.authorizeURI(prompt, googleAnalyticsOpt).toString();
 
         List<String> cookies =
                 handleCookies(
@@ -898,14 +885,8 @@ public class AuthorisationHandler
             }
         }
 
-        var cookieConsentOpt =
-                Optional.ofNullable(authenticationRequest.getCustomParameter("cookie_consent"))
-                        .map(List::stream)
-                        .flatMap(Stream::findFirst);
-        var gaOpt =
-                Optional.ofNullable(authenticationRequest.getCustomParameter("_ga"))
-                        .map(List::stream)
-                        .flatMap(Stream::findFirst);
+        var cookieConsentOpt = getCustomParameterOpt(authenticationRequest, "cookie_consent");
+        var gaOpt = getCustomParameterOpt(authenticationRequest, "_ga");
         var levelOfConfidenceOpt = Optional.ofNullable(requestedVtr.getLevelOfConfidence());
         var isIdentityRequired =
                 identityRequired(
