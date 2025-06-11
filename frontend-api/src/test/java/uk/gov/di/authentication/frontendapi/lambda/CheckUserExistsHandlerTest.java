@@ -278,9 +278,7 @@ class CheckUserExistsHandlerTest {
             when(codeStorageService.getMfaCodeBlockTimeToLive(
                             EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
                     .thenReturn(15L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
-                    .thenReturn(6);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS)).thenReturn(6);
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));

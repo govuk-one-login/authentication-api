@@ -310,7 +310,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
+                .thenReturn(Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES));
 
         var result =
                 handler.handleRequestWithUserContext(

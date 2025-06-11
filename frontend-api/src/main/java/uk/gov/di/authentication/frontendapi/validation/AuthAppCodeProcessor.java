@@ -76,10 +76,10 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
-            incrementRetryCount(MFAMethodType.AUTH_APP);
+            incrementRetryCount();
         }
 
-        if (hasExceededRetryLimit(MFAMethodType.AUTH_APP)) {
+        if (hasExceededRetryLimit()) {
             LOG.info("Exceeded code retry limit");
             return Optional.of(ErrorResponse.ERROR_1042);
         }
@@ -104,7 +104,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
         LOG.info("Auth code valid. Resetting code request count");
-        resetCodeIncorrectEntryCount(MFAMethodType.AUTH_APP);
+        resetCodeIncorrectEntryCount();
 
         return Optional.empty();
     }

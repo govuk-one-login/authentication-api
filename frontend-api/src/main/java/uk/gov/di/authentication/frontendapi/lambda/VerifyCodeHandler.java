@@ -332,7 +332,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                 .toInstant()
                                 .getEpochSecond(),
                         JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_SMS_CODE);
+                        CountType.ENTER_MFA_CODE);
             }
         } else {
             processBlockedCodeSession(

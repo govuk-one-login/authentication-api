@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -269,15 +268,20 @@ class CodeStorageServiceTest {
         assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(4));
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturnNumberOfIncorrectMfaCodeAttemptsMfaSpecificKeys(MFAMethodType mfaMethodType) {
+    @Test
+    void shouldReturnSumOfNumberOfIncorrectMfaCodeAttemptsWithDeprecatedKeys() {
         when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
-                .thenReturn(String.valueOf(4));
-        assertThat(
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType),
-                equalTo(4));
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
+                .thenReturn(String.valueOf(1));
+        when(redisConnectionService.getValue(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
+                                MFAMethodType.SMS)))
+                .thenReturn(String.valueOf(2));
+        when(redisConnectionService.getValue(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
+                                MFAMethodType.AUTH_APP)))
+                .thenReturn(String.valueOf(3));
+        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(6));
     }
 
     @ParameterizedTest
@@ -304,22 +308,6 @@ class CodeStorageServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
-                        String.valueOf(1),
-                        CODE_EXPIRY_TIME);
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptMfaSpecificKeys(
-            MFAMethodType mfaMethodType) {
-        when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
-                .thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
-
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType),
                         String.valueOf(1),
                         CODE_EXPIRY_TIME);
     }
@@ -353,39 +341,20 @@ class CodeStorageServiceTest {
                         ACCOUNT_CREATION_CODE_EXPIRY_TIME);
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldIncrementCountWhenThereHasBeenPreviousIncorrectMfaCodeAttemptMfaSpecificKeys(
-            MFAMethodType mfaMethodType) {
-        when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
-                .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
-
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType),
-                        String.valueOf(4),
-                        CODE_EXPIRY_TIME);
-    }
-
     @Test
     void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCountGenericKey() {
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash());
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCountMfaSpecificKeys(
-            MFAMethodType mfaMethodType) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
-
         verify(redisConnectionService)
                 .deleteValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType));
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
+                                MFAMethodType.SMS));
+        verify(redisConnectionService)
+                .deleteValue(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
+                                MFAMethodType.AUTH_APP));
     }
 
     @Test

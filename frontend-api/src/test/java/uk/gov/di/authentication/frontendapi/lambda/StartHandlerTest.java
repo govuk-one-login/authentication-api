@@ -60,10 +60,9 @@ import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyReques
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -383,13 +382,7 @@ class StartHandlerTest {
                         0,
                         ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
                 Arguments.arguments(
-                        ENTER_SMS_CODE,
-                        0,
-                        0,
-                        MAX_ALLOWED_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
-                Arguments.arguments(
-                        ENTER_AUTH_APP_CODE,
+                        ENTER_MFA_CODE,
                         0,
                         0,
                         MAX_ALLOWED_RETRIES,

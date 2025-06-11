@@ -6,10 +6,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.List;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 
 public class ReauthAuthenticationAttemptsHelper {
 
@@ -22,8 +21,7 @@ public class ReauthAuthenticationAttemptsHelper {
                 Map.ofEntries(
                         Map.entry(ENTER_EMAIL, configurationService.getMaxEmailReAuthRetries()),
                         Map.entry(ENTER_PASSWORD, configurationService.getMaxPasswordRetries()),
-                        Map.entry(ENTER_SMS_CODE, configurationService.getCodeMaxRetries()),
-                        Map.entry(ENTER_AUTH_APP_CODE, configurationService.getCodeMaxRetries()));
+                        Map.entry(ENTER_MFA_CODE, configurationService.getCodeMaxRetries()));
 
         return reauthRelevantCountsToMaxRetries.entrySet().stream()
                 .filter(

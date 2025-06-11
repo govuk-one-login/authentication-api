@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -104,14 +103,6 @@ public class RedisExtension
 
     public int getMfaCodeAttemptsCount(String email) {
         return codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-    }
-
-    public int getMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
-    }
-
-    public void increaseMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
     }
 
     public void increaseMfaCodeAttemptsCount(String email) {

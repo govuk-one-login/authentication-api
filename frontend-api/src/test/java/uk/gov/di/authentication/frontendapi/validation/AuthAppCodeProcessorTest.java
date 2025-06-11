@@ -408,7 +408,7 @@ class AuthAppCodeProcessorTest {
     private void setUpRetryLimitExceededUser(CodeRequest codeRequest) {
         when(mockCodeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES + 1);
 
         this.authAppCodeProcessor =

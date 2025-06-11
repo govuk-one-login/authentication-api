@@ -71,10 +71,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -864,7 +863,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldIncrementEnterSMSAuthenticationAttemptCountOnFailedReauthenticationAttempt() {
+    void shouldIncrementEnterMFAAuthenticationAttemptCountOnFailedReauthenticationAttempt() {
         long ttl = 120L;
         withReauthTurnedOn();
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -879,7 +878,7 @@ class VerifyCodeHandlerTest {
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
-                        TEST_SUBJECT_ID, 4070908800L, REAUTHENTICATION, ENTER_SMS_CODE);
+                        TEST_SUBJECT_ID, 4070908800L, REAUTHENTICATION, ENTER_MFA_CODE);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         mockedNowHelperClass.close();
@@ -900,13 +899,7 @@ class VerifyCodeHandlerTest {
                         0,
                         ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
                 Arguments.arguments(
-                        ENTER_SMS_CODE,
-                        0,
-                        0,
-                        MAX_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
-                Arguments.arguments(
-                        ENTER_AUTH_APP_CODE,
+                        ENTER_MFA_CODE,
                         0,
                         0,
                         MAX_RETRIES,

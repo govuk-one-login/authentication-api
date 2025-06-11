@@ -67,26 +67,24 @@ public class CodeStorageService {
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX)
+                // TODO remove temporary ZDD measure to fetch existing counts using deprecated
+                //  prefixes
+                + getCount(
+                        email,
+                        MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.SMS.getValue())
+                + getCount(
+                        email,
+                        MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                + MFAMethodType.AUTH_APP.getValue());
     }
 
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
         deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
-    }
-
-    public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        increaseCount(email, prefix, configurationService.getLockoutCountTTL());
-    }
-
-    public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        var prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        return getCount(email, prefix);
-    }
-
-    public void deleteIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        deleteCount(email, prefix);
+        // TODO remove temporary ZDD measure to delete existing counts using deprecated prefixes
+        deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.SMS.getValue());
+        deleteCount(
+                email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue());
     }
 
     public void increaseIncorrectPasswordCount(String email) {

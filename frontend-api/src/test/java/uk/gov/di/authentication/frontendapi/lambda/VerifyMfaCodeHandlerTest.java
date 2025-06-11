@@ -77,10 +77,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
-import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -572,8 +571,7 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
             verifyNoInteractions(authenticationAttemptsService);
         }
-        verify(codeStorageService)
-                .deleteIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
@@ -610,7 +608,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         verifyNoInteractions(authenticationAttemptsService);
         assertAuditEventSubmittedWithMetadata(
@@ -633,8 +630,7 @@ class VerifyMfaCodeHandlerTest {
                         ? null
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
-                .thenReturn(3);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
@@ -804,7 +800,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
-    void shouldIncrementAuthAppAuthenticationAttemptsCountIfIncorrectCodeEntered()
+    void shouldIncrementMFAAuthenticationAttemptsCountIfIncorrectCodeEntered()
             throws Json.JsonException {
         long ttl = 3600L;
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
@@ -823,10 +819,7 @@ class VerifyMfaCodeHandlerTest {
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
-                        TEST_SUBJECT_ID,
-                        1704067200L,
-                        REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
+                        TEST_SUBJECT_ID, 1704067200L, REAUTHENTICATION, ENTER_MFA_CODE);
 
         mockedNowHelperClass.close();
     }
@@ -840,7 +833,7 @@ class VerifyMfaCodeHandlerTest {
         withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
+        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
@@ -880,7 +873,7 @@ class VerifyMfaCodeHandlerTest {
         withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
-        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
+        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
@@ -890,10 +883,7 @@ class VerifyMfaCodeHandlerTest {
         makeCallWithCode(codeRequest);
 
         verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
+                .deleteCount(TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, ENTER_MFA_CODE);
 
         verify(authSessionService, never())
                 .updateSession(
@@ -936,13 +926,7 @@ class VerifyMfaCodeHandlerTest {
                         0,
                         ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
                 Arguments.arguments(
-                        ENTER_SMS_CODE,
-                        0,
-                        0,
-                        MAX_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
-                Arguments.arguments(
-                        ENTER_AUTH_APP_CODE,
+                        ENTER_MFA_CODE,
                         0,
                         0,
                         MAX_RETRIES,
