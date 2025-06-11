@@ -62,7 +62,6 @@ public class MFAMethodsService {
         boolean isPhoneNumberInUse = isPhoneNumberUsedAsVerifiedMfaMethod(mfaMethods, phoneNumber);
 
         if (isPhoneNumberInUse) {
-            LOG.error("number already in use");
             return Result.success(true);
         } else {
             return Result.success(false);
