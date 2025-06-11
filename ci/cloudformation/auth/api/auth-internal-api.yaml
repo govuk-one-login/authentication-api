@@ -119,16 +119,35 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref AuthInternalApiAccessLogGroup
 
+  AuthInternalApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AuthInternalApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AuthInternalApiExecutionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/auth-internal-api.yaml
+
   AuthInternalApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Sub
-        - API-Gateway-Execution-Logs_${AuthInternalApi}/${StageName}
-        - StageName:
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      LogGroupName: !Ref AuthInternalApiExecutionLogGroup
 
   AuthInternalApiDashboard:
     Type: AWS::CloudWatch::Dashboard
