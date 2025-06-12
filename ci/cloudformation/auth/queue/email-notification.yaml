@@ -42,6 +42,8 @@ Resources:
             Principal:
               AWS:
                 - !GetAtt MfaFunctionRole.Arn
+                - !GetAtt ResetPasswordFunctionRole.Arn
+                - !GetAtt ResetPasswordRequestFunctionRole.Arn
           - Sid: ReceiveSQS
             Effect: Allow
             Action:
