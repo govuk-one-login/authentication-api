@@ -352,7 +352,7 @@ public class DocAppCallbackHandler
         } catch (DocAppCallbackException | OrchAuthCodeException e) {
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
         } catch (NoSessionException e) {
-            return RedirectService.redirectToFrontendErrorPageForNoSessionCookies(
+            return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.errorURI(), e);
         } catch (ParseException e) {
             return RedirectService.redirectToFrontendErrorPage(
