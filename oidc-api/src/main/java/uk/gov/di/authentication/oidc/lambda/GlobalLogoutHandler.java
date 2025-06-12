@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.GlobalLogoutMessage;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.GlobalLogoutService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.ArrayList;
@@ -21,8 +23,19 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 
 public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
     private static final Logger LOG = LogManager.getLogger(GlobalLogoutHandler.class);
+    private final GlobalLogoutService globalLogoutService;
 
-    public GlobalLogoutHandler() {}
+    public GlobalLogoutHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
+    public GlobalLogoutHandler(ConfigurationService configurationService) {
+        this(new GlobalLogoutService(configurationService));
+    }
+
+    public GlobalLogoutHandler(GlobalLogoutService globalLogoutService) {
+        this.globalLogoutService = globalLogoutService;
+    }
 
     @Override
     public Object handleRequest(SQSEvent sqsEvent, Context context) {
@@ -60,6 +73,6 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
                 "Received request to global logout user with session {} and client session {}",
                 request.sessionId(),
                 request.clientSessionId());
-        // TODO: Add logic for global logout (ATO-1660)
+        globalLogoutService.logoutAllSessions(request.internalCommonSubjectId());
     }
 }
