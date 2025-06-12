@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -55,8 +54,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
-import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class StartServiceTest {
@@ -120,14 +117,13 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl"), "some-cookie-consent", null, false, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), null, "ga-tracking-id", false, true));
+                Arguments.of("some-cookie-consent", null, false, false),
+                Arguments.of(null, "ga-tracking-id", false, true));
     }
 
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
-            String vtr,
             String cookieConsent,
             String gaTrackingId,
             boolean rpSupportsIdentity,
@@ -146,7 +142,6 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
-                        LevelOfConfidence.NONE,
                         cookieConsent,
                         gaTrackingId,
                         false,
@@ -163,47 +158,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(false));
     }
 
-    private static Stream<Arguments> userStartIdentityInfo() {
-        return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), "P0", false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), "P2", false, false, false));
-    }
-
-    @ParameterizedTest
-    @MethodSource("userStartIdentityInfo")
-    void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
-            String vtr,
-            String levelOfConfidence,
-            boolean expectedIdentityRequiredValue,
-            boolean rpSupportsIdentity,
-            boolean identityEnabled) {
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        rpSupportsIdentity,
-                        Optional.empty(),
-                        Optional.empty(),
-                        false);
-        var userStartInfo =
-                startService.buildUserStartInfo(
-                        userContext,
-                        retrieveLevelOfConfidence(levelOfConfidence),
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        identityEnabled,
-                        false,
-                        false,
-                        false,
-                        false);
-
-        assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-    }
-
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void shouldCreateUserStartInfoWithCorrectReauthBlockedValue(boolean isBlockedForReauth) {
@@ -214,7 +168,6 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
-                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -278,68 +231,52 @@ class StartServiceTest {
         return Stream.of(
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         authAppUserProfileUnverified,
-                        authAppUserCredentialsUnverified,
-                        null),
+                        authAppUserCredentialsUnverified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         true,
                         smsUserProfileVerified,
-                        smsUserCredentialsVerified,
-                        MFAMethodType.SMS),
+                        smsUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         smsUserProfileUnverified,
-                        smsUserCredentialsUnverified,
-                        null),
+                        smsUserCredentialsUnverified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         null,
                         false,
                         unverifiedUserProfile,
-                        unverifiedUserCredentials,
-                        null),
+                        unverifiedUserCredentials),
                 Arguments.of(
                         jsonArrayOf("Cl"),
-                        false,
                         CredentialTrustLevel.LOW_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP),
+                        authAppUserCredentialsVerified),
                 Arguments.of(
                         jsonArrayOf("P2.Cl.Cm"),
-                        true,
                         CredentialTrustLevel.MEDIUM_LEVEL,
                         false,
                         authAppUserProfileVerified,
-                        authAppUserCredentialsVerified,
-                        MFAMethodType.AUTH_APP));
+                        authAppUserCredentialsVerified));
     }
 
     @Test
@@ -349,7 +286,6 @@ class StartServiceTest {
         var userStartInfo =
                 startService.buildUserStartInfo(
                         basicUserContext,
-                        NONE,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -365,12 +301,10 @@ class StartServiceTest {
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
             String vtrString,
-            boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
             boolean expectedUpliftRequiredValue,
             UserProfile userProfile,
-            UserCredentials userCredentials,
-            MFAMethodType expectedMfaMethodType) {
+            UserCredentials userCredentials) {
         var userContext =
                 buildUserContext(
                         true,
@@ -382,13 +316,11 @@ class StartServiceTest {
         var requestedVtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtrString));
         var requestedCredentialTrustLevel = requestedVtr.getCredentialTrustLevel();
-        var levelOfConfidence = requestedVtr.getLevelOfConfidence();
         var upliftRequired =
                 startService.isUpliftRequired(requestedCredentialTrustLevel, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
-                        levelOfConfidence,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -467,7 +399,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
+                        userContext, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
@@ -491,7 +423,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, NONE, "true", "tracking-id", true, false, false, false, false);
+                        userContext, "true", "tracking-id", true, false, false, false, false);
 
         assertThat(userStartInfo.mfaMethodType(), equalTo(MFAMethodType.NONE));
     }

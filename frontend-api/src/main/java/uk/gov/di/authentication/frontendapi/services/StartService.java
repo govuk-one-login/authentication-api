@@ -5,12 +5,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
-import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -95,21 +93,13 @@ public class StartService {
 
     public UserStartInfo buildUserStartInfo(
             UserContext userContext,
-            LevelOfConfidence levelOfConfidence,
             String cookieConsent,
             String gaTrackingId,
-            boolean identityEnabled,
+            boolean identityRequired,
             boolean reauthenticate,
             boolean isBlockedForReauth,
             boolean isAuthenticated,
             boolean upliftRequired) {
-        var identityRequired = false;
-        var clientRegistry = userContext.getClient().orElseThrow();
-        identityRequired =
-                IdentityHelper.identityRequired(
-                        levelOfConfidence,
-                        clientRegistry.isIdentityVerificationSupported(),
-                        identityEnabled);
 
         var userIsAuthenticated = isAuthenticated && !reauthenticate;
 

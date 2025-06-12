@@ -119,7 +119,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         scope.toString(),
                                         REDIRECT_URI.toString(),
                                         requestedLevelOfConfidenceOpt,
-                                        requestedCredentialTrustLevel)),
+                                        requestedCredentialTrustLevel,
+                                        identityRequired)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -198,7 +199,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         scope.toString(),
                                         REDIRECT_URI.toString(),
                                         Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                        MEDIUM_LEVEL)),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -258,7 +260,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         scope.toString(),
                                         REDIRECT_URI.toString(),
                                         Optional.empty(),
-                                        MEDIUM_LEVEL)),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -309,7 +312,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         scope.toString(),
                                         "invalid-redirect-uri/@'[]l.#,;][",
                                         Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                        MEDIUM_LEVEL)),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(400));
@@ -321,7 +325,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var isAuthenticated = true;
-        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(sessionId);
         registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
@@ -336,7 +339,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         scope.toString(),
                                         REDIRECT_URI.toString(),
                                         Optional.empty(),
-                                        MEDIUM_LEVEL)),
+                                        MEDIUM_LEVEL,
+                                        false)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 
@@ -381,7 +385,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     scope.toString(),
                                     REDIRECT_URI.toString(),
                                     Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                    MEDIUM_LEVEL)),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -404,7 +409,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     scope.toString(),
                                     REDIRECT_URI.toString(),
                                     Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                    MEDIUM_LEVEL)),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -425,7 +431,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     scope.toString(),
                                     REDIRECT_URI.toString(),
                                     Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                    MEDIUM_LEVEL)),
+                                    MEDIUM_LEVEL,
+                                    false)),
                     standardHeadersWithSessionId(sessionId),
                     Map.of());
 
@@ -465,7 +472,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             scope.toString(),
                                             REDIRECT_URI.toString(),
                                             Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                            MEDIUM_LEVEL)),
+                                            MEDIUM_LEVEL,
+                                            false)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -494,7 +502,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             scope.toString(),
                                             REDIRECT_URI.toString(),
                                             Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                            requestedCredentialStrength)),
+                                            requestedCredentialStrength,
+                                            false)),
                             standardHeadersWithSessionId(sessionId),
                             Map.of());
 
@@ -519,7 +528,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String scope,
             String redirectUri,
             Optional<LevelOfConfidence> requestedLevelOfConfidenceOpt,
-            CredentialTrustLevel requestedCredentialStrength) {
+            CredentialTrustLevel requestedCredentialStrength,
+            boolean isIdentityRequired) {
         Map<String, Object> requestBodyMap =
                 new HashMap<>(
                         Map.ofEntries(
@@ -536,7 +546,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Map.entry("cookie_consent_shared", false),
                                 Map.entry("is_smoke_test", false),
                                 Map.entry("is_one_login_service", false),
-                                Map.entry("subject_type", TEST_SUBJECT_TYPE)));
+                                Map.entry("subject_type", TEST_SUBJECT_TYPE),
+                                Map.entry(
+                                        "is_identity_verification_required", isIdentityRequired)));
         previousSessionIdOpt.ifPresent(
                 previousSessionId -> requestBodyMap.put("previous-session-id", previousSessionId));
         requestedLevelOfConfidenceOpt.ifPresent(
