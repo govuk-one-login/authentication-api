@@ -2111,12 +2111,21 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2125,14 +2134,18 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref OrchSessionTableReadAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadAndDeleteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref BackChannelLogoutQueueWritePolicy
         - !If [
             IsDevOrBuild,
             !Ref GlobalLogoutTestQueueConsumePolicy,
