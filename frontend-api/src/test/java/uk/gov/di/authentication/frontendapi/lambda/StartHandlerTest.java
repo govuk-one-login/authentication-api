@@ -299,12 +299,10 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         eq(false),
-                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -326,12 +324,10 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         eq(true),
-                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -476,8 +472,6 @@ class StartHandlerTest {
                         eq(userContext),
                         any(),
                         any(),
-                        any(),
-                        anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
