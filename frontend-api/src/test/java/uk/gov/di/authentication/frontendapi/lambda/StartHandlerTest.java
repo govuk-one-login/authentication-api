@@ -304,7 +304,6 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(false),
-                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -331,7 +330,6 @@ class StartHandlerTest {
                         anyBoolean(),
                         anyBoolean(),
                         eq(true),
-                        anyBoolean(),
                         anyBoolean());
     }
 
@@ -477,7 +475,6 @@ class StartHandlerTest {
                         any(),
                         any(),
                         any(),
-                        anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
                         anyBoolean(),
