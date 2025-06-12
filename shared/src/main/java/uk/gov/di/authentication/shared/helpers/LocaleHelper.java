@@ -77,9 +77,6 @@ public class LocaleHelper {
                         USER_LANGUAGE_HEADER,
                         configurationService.getHeadersCaseInsensitive());
 
-        if (userLanguage.isEmpty()) {
-            LOG.warn("Value not found for User-Language header");
-        }
         return userLanguage.flatMap(InputSanitiser::sanitiseBase64);
     }
 }

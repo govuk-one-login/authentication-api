@@ -22,7 +22,6 @@ public class TestClientHelper {
         if (configurationService.isTestClientsEnabled()) {
             LOG.warn("TestClients are ENABLED");
         } else {
-            LOG.info("TestClients are Disabled");
             return false;
         }
         var clientRegistry =
@@ -36,9 +35,9 @@ public class TestClientHelper {
                                 userContext.getAuthSession().getEmailAddress(),
                                 clientRegistry.getTestClientEmailAllowlist()));
 
-        LOG.info(
-                "Is request from a test client with a test client email address: {}",
-                isTestClientWithAllowedEmail);
+        if (isTestClientWithAllowedEmail) {
+            LOG.info("Is request from a test client with a test client email address: true");
+        }
 
         return isTestClientWithAllowedEmail;
     }
