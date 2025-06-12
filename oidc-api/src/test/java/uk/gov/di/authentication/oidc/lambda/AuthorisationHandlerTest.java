@@ -1255,6 +1255,30 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldSendAuditRequestParsedWithChannel() {
+            var client = generateClientRegistry();
+            client.setMaxAgeEnabled(true);
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            when(clientService.getClient(anyString())).thenReturn(Optional.of(client));
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("channel", Channel.GENERIC_APP.toString()));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            makeHandlerRequest(event);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair("rpSid", ""),
+                            pair("identityRequested", false),
+                            pair("reauthRequested", false),
+                            pair("credential_trust_level", "MEDIUM_LEVEL"),
+                            pair("channel", Channel.GENERIC_APP.toString()));
+        }
+
+        @Test
         void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
             when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
