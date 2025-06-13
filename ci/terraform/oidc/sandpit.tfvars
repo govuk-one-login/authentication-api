@@ -4,6 +4,8 @@ shared_state_bucket = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendsp"
 
+# Auth new strategic account
+auth_new_account_id = "975050272416"
 
 # App-specific
 test_clients_enabled                        = true

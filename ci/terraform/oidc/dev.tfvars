@@ -3,6 +3,9 @@ shared_state_bucket = "di-auth-development-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontenddev"
 
+# Auth new strategic account
+auth_new_account_id = "975050272416"
+
 # App-specific
 test_clients_enabled = true
 internal_sector_uri  = "https://identity.dev.account.gov.uk"

@@ -650,6 +650,11 @@ variable "support_reauth_signout_enabled" {
   description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
 }
 
+variable "auth_new_account_id" {
+  type    = string
+  default = ""
+}
+
 variable "orch_account_id" {
   type    = string
   default = ""
