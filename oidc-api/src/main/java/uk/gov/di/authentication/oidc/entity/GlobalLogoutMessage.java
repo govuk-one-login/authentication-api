@@ -4,21 +4,21 @@ import com.google.gson.annotations.Expose;
 import uk.gov.di.orchestration.shared.validation.Required;
 
 public class GlobalLogoutMessage {
-    @Expose @Required private String internalCommonSubjectId;
+    @Expose @Required private String userId;
     @Expose @Required private String sessionId;
-    @Expose @Required private String clientSessionId;
+    @Expose @Required private String govukSigninJourneyId;
 
     public GlobalLogoutMessage() {}
 
     public GlobalLogoutMessage(
             String internalCommonSubjectId, String sessionId, String clientSessionId) {
-        this.internalCommonSubjectId = internalCommonSubjectId;
+        this.userId = internalCommonSubjectId;
         this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
+        this.govukSigninJourneyId = clientSessionId;
     }
 
     public String getInternalCommonSubjectId() {
-        return internalCommonSubjectId;
+        return userId;
     }
 
     public String getSessionId() {
@@ -26,6 +26,6 @@ public class GlobalLogoutMessage {
     }
 
     public String getClientSessionId() {
-        return clientSessionId;
+        return govukSigninJourneyId;
     }
 }

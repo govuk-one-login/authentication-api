@@ -23,22 +23,22 @@ public class GlobalLogoutHandlerTest {
         return Stream.of(
                 Arguments.of(
                         Named.of(
-                                "Missing internal_common_subject_id",
+                                "Missing user_id",
                                 Map.ofEntries(
                                         Map.entry("session_id", "sid"),
-                                        Map.entry("client_session_id", "csid")))),
+                                        Map.entry("govuk_signin_journey_id", "csid")))),
                 Arguments.of(
                         Named.of(
                                 "Missing session_id",
                                 Map.ofEntries(
-                                        Map.entry("internal_common_subject_id", "icsid"),
-                                        Map.entry("client_session_id", "csid")))),
+                                        Map.entry("user_id", "icsid"),
+                                        Map.entry("govuk_signin_journey_id", "csid")))),
                 Arguments.of(
                         Named.of(
-                                "Missing client_session_id",
+                                "Missing govuk_signin_journey_id",
                                 Map.ofEntries(
                                         Map.entry("session_id", "sid"),
-                                        Map.entry("internal_common_subject_id", "icsid")))),
+                                        Map.entry("user_id", "icsid")))),
                 Arguments.of(Named.of("Invalid JSON", "{")));
     }
 
