@@ -1002,10 +1002,10 @@ resource "aws_api_gateway_resource" "orch_authorisation_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_authorisation_method" {
-  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  count       = var.orch_authorisation_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
-  http_method = each.key
+  http_method = "GET"
 
   depends_on = [
     aws_api_gateway_resource.orch_authorisation_resource
