@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.orchestration.shared.services.GlobalLogoutService;
 
 import java.util.Map;
 import java.util.stream.Stream;
@@ -17,7 +18,8 @@ import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsEventWi
 
 public class GlobalLogoutHandlerTest {
     private final Context context = mock(Context.class);
-    private final GlobalLogoutHandler globalLogoutHandler = new GlobalLogoutHandler();
+    private final GlobalLogoutHandler globalLogoutHandler =
+            new GlobalLogoutHandler(mock(GlobalLogoutService.class));
 
     private static Stream<Arguments> invalidMessages() {
         return Stream.of(

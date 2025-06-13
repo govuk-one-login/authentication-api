@@ -2111,11 +2111,33 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
+          DYNAMO_ARN_PREFIX: !Sub
+            - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          REDIS_KEY: session
+          BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
               idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
             ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
@@ -2125,14 +2147,26 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
+          AUTH_FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseStronglyConsistentReads
+            - true
+            - false
       Policies:
         - !Ref OrchSessionTableReadAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadAndDeleteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref BackChannelLogoutQueueWritePolicy
         - !If [
             IsDevOrBuild,
             !Ref GlobalLogoutTestQueueConsumePolicy,
