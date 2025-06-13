@@ -82,12 +82,14 @@ class DocAppAuthorisationServiceTest {
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
                     configurationService,
                     redisConnectionService,
                     kmsConnectionService,
-                    jwksService);
+                    jwksService,
+                    stateStorageService);
     private PrivateKey privateKey;
 
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -124,6 +126,18 @@ class DocAppAuthorisationServiceTest {
         assertThat(
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldCallDynamoToCheckIfStateIsPresentButDoNothingWithIt() {
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(Optional.empty()));
+        verify(stateStorageService).getState(STATE_STORAGE_PREFIX + SESSION_ID);
     }
 
     @Test
@@ -209,6 +223,14 @@ class DocAppAuthorisationServiceTest {
                         STATE_STORAGE_PREFIX + sessionId,
                         objectMapper.writeValueAsString(STATE),
                         SESSION_EXPIRY);
+    }
+
+    @Test
+    void shouldSaveStateToDynamo() {
+        var sessionId = "session-id";
+        authorisationService.storeState(sessionId, STATE);
+
+        verify(stateStorageService).storeState(STATE_STORAGE_PREFIX + sessionId, STATE);
     }
 
     @ParameterizedTest

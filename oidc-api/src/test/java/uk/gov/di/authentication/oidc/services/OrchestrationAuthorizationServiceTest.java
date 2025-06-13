@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -94,6 +95,7 @@ class OrchestrationAuthorizationServiceTest {
             mock(RedisConnectionService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -109,7 +111,8 @@ class OrchestrationAuthorizationServiceTest {
                         ipvCapacityService,
                         kmsConnectionService,
                         redisConnectionService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        stateStorageService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -315,6 +318,18 @@ class OrchestrationAuthorizationServiceTest {
                 .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(clientSessionId, state);
+    }
+
+    @Test
+    void shouldSaveStateInDynamo() {
+        when(configurationService.getSessionExpiry()).thenReturn(3600L);
+        var sessionId = "new-session-id";
+        var clientSessionId = "new-client-session-id";
+        var state = new State();
+
+        orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
+
+        verify(stateStorageService).storeState("auth-state:" + sessionId, state);
     }
 
     @ParameterizedTest

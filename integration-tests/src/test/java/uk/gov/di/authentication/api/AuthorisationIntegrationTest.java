@@ -53,6 +53,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -94,6 +95,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.ADDRESS;
@@ -142,6 +144,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchClientSessionExtension orchClientSessionExtention =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
 
@@ -241,6 +246,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -273,6 +279,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -320,6 +327,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -373,6 +381,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -412,6 +421,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -475,6 +485,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -517,6 +528,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -573,6 +585,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -619,6 +632,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -664,6 +678,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -718,6 +733,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -766,6 +782,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -816,6 +833,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -866,6 +884,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_RECEIVED,
                             AUTHORISATION_REQUEST_PARSED,
                             AUTHORISATION_INITIATED));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @Test
@@ -932,6 +951,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             .get(ADDRESS.getValue())
                             .getClaimRequirement(),
                     equalTo(ClaimRequirement.ESSENTIAL));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @ParameterizedTest
@@ -976,6 +996,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             }
             assertResponseJarHasClaimsWithValues(response, expectedClaims);
             assertResponseJarHasClaims(response, List.of("state"));
+            assertStateSavedInRedisAndDynamo(response);
         }
 
         @ParameterizedTest
@@ -1050,6 +1071,20 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             MEDIUM_LEVEL,
                             LevelOfConfidence.HMRC200),
                     Arguments.of(null, MEDIUM_LEVEL, null));
+        }
+
+        private void assertStateSavedInRedisAndDynamo(APIGatewayProxyResponseEvent response) {
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            var sid = sessionCookie.get().getValue().split("\\.")[0];
+
+            var redisState = redis.getFromRedis(AUTHENTICATION_STATE_STORAGE_PREFIX + sid);
+            assertNotNull(redisState);
+            var dynamoState =
+                    stateStorageExtension.getStateFromDyamo(
+                            AUTHENTICATION_STATE_STORAGE_PREFIX + sid);
+            assertTrue(dynamoState.isPresent());
         }
     }
 
