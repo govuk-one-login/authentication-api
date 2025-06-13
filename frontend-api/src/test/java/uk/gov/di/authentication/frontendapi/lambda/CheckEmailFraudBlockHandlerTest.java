@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -182,7 +183,8 @@ class CheckEmailFraudBlockHandlerTest {
                                     IP_ADDRESS,
                                     AuditService.UNKNOWN,
                                     DI_PERSISTENT_SESSION_ID,
-                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                                    Optional.of(ENCODED_DEVICE_DETAILS),
+                                    new ArrayList<>()),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),
                             AuditService.MetadataPair.pair(

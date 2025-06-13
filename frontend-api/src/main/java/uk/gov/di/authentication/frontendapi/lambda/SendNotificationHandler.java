@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -165,6 +166,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SendNotificationRequest request,
             UserContext userContext) {
 
+
+
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
         var auditContext =
                 auditContextFromUserContext(
@@ -175,19 +178,20 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        try {
-            if (!userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
-                LOG.info("Placing message on queue for {}", request.getNotificationType());
-                var notifyRequest =
-                        new NotifyRequest(
-                                request.getEmail(),
-                                request.getNotificationType(),
-                                userContext.getUserLanguage(),
-                                userContext.getAuthSession().getSessionId(),
-                                userContext.getClientSessionId());
+        if (!userContext.getAuthSession().validateSession(request.getEmail())) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
+            LOG.info("Placing message on queue for {}", request.getNotificationType());
+            var notifyRequest =
+                    new NotifyRequest(
+                            request.getEmail(),
+                            request.getNotificationType(),
+                            userContext.getUserLanguage(),
+                            userContext.getAuthSession().getSessionId(),
+                            userContext.getClientSessionId());
+            try {
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
@@ -195,24 +199,29 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             notifyRequest.getNotificationType(),
                             notifyRequest.getUniqueNotificationReference());
                 }
-                return generateEmptySuccessApiGatewayResponse();
+            } catch (Exception ex) {
+
             }
+            return generateEmptySuccessApiGatewayResponse();
+        }
 
-            Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
-                    isCodeRequestAttemptValid(
-                            request.getEmail(),
-                            userContext.getAuthSession(),
-                            request.getNotificationType(),
-                            request.getJourneyType());
+        Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
+                isCodeRequestAttemptValid(
+                        request.getEmail(),
+                        userContext.getAuthSession(),
+                        request.getNotificationType(),
+                        request.getJourneyType());
 
-            if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
-                auditService.submitAuditEvent(
-                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        auditContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, userHasExceededMaximumAllowedCodeRequests.get());
-            }
+        if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
+            auditService.submitAuditEvent(
+                    getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
+                    auditContext);
+            return generateApiGatewayProxyErrorResponse(
+                    400, userHasExceededMaximumAllowedCodeRequests.get());
+        }
 
+
+        try {
             incrementCountOfNotificationsSent(request, userContext.getAuthSession());
 
             Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
@@ -244,15 +253,43 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
                     }
+
                     boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
+
                     var errorResponse =
                             ValidationHelper.validatePhoneNumber(
                                     request.getPhoneNumber(),
                                     configurationService.getEnvironment(),
                                     isSmokeTest);
+
                     if (errorResponse.isPresent()) {
                         return generateApiGatewayProxyResponse(400, errorResponse.get());
                     }
+
+                    if (userContext.getUserCredentials().isEmpty()) {
+                        return generateApiGatewayProxyErrorResponse(
+                                400, ErrorResponse.ERROR_1000);
+                    }
+
+                    var mfaMethods = userContext.getUserCredentials().get().getMfaMethods();
+
+                    var mfaMethod = mfaMethods.stream()
+                            .filter(m -> m.getDestination().equalsIgnoreCase(request.getPhoneNumber()))
+                            .findFirst();
+
+                    var mfaMethodType = mfaMethod.get().getMfaMethodType();
+
+                    auditContext.withMetadataItem(new AuditService.MetadataPair(
+                            "mfa-method",
+                            mfaMethodType,
+                            false));
+
+                    auditContext.withMetadataItem(
+                            new AuditService.MetadataPair(
+                                    "journey-type",
+                                    request.getJourneyType(),
+                                    false));
+
                     return handleNotificationRequest(
                             PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
                                     request.getPhoneNumber()),
@@ -384,7 +421,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
-                auditContext);
+                auditContext,
+                new AuditService.MetadataPair("mfa-method", "", false));
+
+        // and journey typeJourneyType
+
+
         return generateEmptySuccessApiGatewayResponse();
     }
 

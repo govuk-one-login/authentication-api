@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -127,7 +128,8 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()),
+                        new ArrayList<>());
 
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
