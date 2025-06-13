@@ -42,7 +42,7 @@ dependencies {
             configurations.kms,
             configurations.dynamodb,
             configurations.pact_consumer,
-            'org.wiremock:wiremock-jetty12:3.13.0'
+            'org.wiremock:wiremock-jetty12:3.13.1'
 
     testRuntimeOnly configurations.test_runtime
 }

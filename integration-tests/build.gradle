@@ -38,7 +38,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
     testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.8")
     testImplementation("org.awaitility:awaitility:4.3.0")
-    testImplementation('org.wiremock:wiremock-jetty12:3.13.0')
+    testImplementation('org.wiremock:wiremock-jetty12:3.13.1')
 }
 
 test {
