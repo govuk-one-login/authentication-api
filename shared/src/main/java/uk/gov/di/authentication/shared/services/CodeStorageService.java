@@ -22,6 +22,10 @@ public class CodeStorageService {
 
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
+    
+    public RedisConnectionService getRedisConnectionService() {
+        return redisConnectionService;
+    }
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";

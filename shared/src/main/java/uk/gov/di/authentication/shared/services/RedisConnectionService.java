@@ -78,6 +78,25 @@ public class RedisConnectionService implements AutoCloseable {
         return segmentedFunctionCall(
                 "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
     }
+    
+    public java.util.List<String> scanKeys(final String pattern) {
+        return segmentedFunctionCall(
+                "Redis: scanKeys", 
+                () -> executeCommand(commands -> {
+                    java.util.List<String> keys = new java.util.ArrayList<>();
+                    io.lettuce.core.ScanCursor cursor = io.lettuce.core.ScanCursor.INITIAL;
+                    
+                    do {
+                        io.lettuce.core.KeyScanCursor<String> scanResult = commands.scan(
+                                cursor, 
+                                io.lettuce.core.ScanArgs.Builder.matches(pattern).limit(100));
+                        keys.addAll(scanResult.getKeys());
+                        cursor = scanResult;
+                    } while (!cursor.isFinished());
+                    
+                    return keys;
+                }));
+    }
 
     public long deleteValue(final String key) {
         return segmentedFunctionCall(

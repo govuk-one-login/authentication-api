@@ -135,6 +135,24 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
+            // Log all Redis keys for this user
+            String hashedEmail = uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String(emailAddress);
+            LOG.info("Hashed email for Redis keys: {}", hashedEmail);
+            
+            try {
+                // Get all Redis keys for this user
+                java.util.List<String> allUserKeys = codeStorageService.getRedisConnectionService().scanKeys("*" + hashedEmail);
+                LOG.info("All Redis keys for user {}: {}", emailAddress, allUserKeys);
+                
+                // Get values for each key
+                for (String key : allUserKeys) {
+                    String value = codeStorageService.getRedisConnectionService().getValue(key);
+                    LOG.info("Redis key: {}, value: {}", key, value);
+                }
+            } catch (Exception e) {
+                LOG.error("Error scanning Redis keys for user: {}", emailAddress, e);
+            }
+            
             // Check for password reset block
             String passwordResetBlockPrefix = CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
             LOG.info("Checking if user is blocked with prefix: {}, email: {}", passwordResetBlockPrefix, emailAddress);
