@@ -416,8 +416,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.info(
-                    "User has requested too many OTP codes. Setting block with prefix: {}",
-                    newCodeRequestBlockPrefix);
+                    "User has requested too many OTP codes. Setting block with prefix: {}, email: {}, notificationType: {}, journeyType: {}, codeRequestType: {}",
+                    newCodeRequestBlockPrefix, email, notificationType, journeyType, codeRequestType);
             codeStorageService.saveBlockedForEmail(
                     email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
 
@@ -428,14 +428,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         }
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
             LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}, email: {}, notificationType: {}, journeyType: {}",
+                    newCodeRequestBlockPrefix, email, notificationType, journeyType);
             return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
             LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    codeAttemptsBlockedPrefix);
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}, email: {}, notificationType: {}, journeyType: {}",
+                    codeAttemptsBlockedPrefix, email, notificationType, journeyType);
             return Optional.of(getErrorResponseForMaxCodeAttempts(notificationType));
         }
         return Optional.empty();

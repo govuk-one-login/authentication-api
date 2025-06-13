@@ -135,10 +135,27 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
-            if (codeStorageService.isBlockedForEmail(
-                    emailAddress,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
-                LOG.info("User account is locked");
+            // Check for password reset block
+            String passwordResetBlockPrefix = CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+            LOG.info("Checking if user is blocked with prefix: {}, email: {}", passwordResetBlockPrefix, emailAddress);
+            boolean isPasswordResetBlocked = codeStorageService.isBlockedForEmail(emailAddress, passwordResetBlockPrefix);
+            LOG.info("User blocked with PASSWORD_RESET prefix: {}", isPasswordResetBlocked);
+            
+            // Check for SMS sign-in block
+            String smsSignInBlockPrefix = CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX + "SMS_SIGN_IN";
+            LOG.info("Checking if user is blocked with prefix: {}, email: {}", smsSignInBlockPrefix, emailAddress);
+            boolean isSmsSignInBlocked = codeStorageService.isBlockedForEmail(emailAddress, smsSignInBlockPrefix);
+            LOG.info("User blocked with SMS_SIGN_IN prefix: {}", isSmsSignInBlocked);
+            
+            // Check for AUTH_APP sign-in block
+            String authAppSignInBlockPrefix = CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX + "AUTH_APP_SIGN_IN";
+            LOG.info("Checking if user is blocked with prefix: {}, email: {}", authAppSignInBlockPrefix, emailAddress);
+            boolean isAuthAppSignInBlocked = codeStorageService.isBlockedForEmail(emailAddress, authAppSignInBlockPrefix);
+            LOG.info("User blocked with AUTH_APP_SIGN_IN prefix: {}", isAuthAppSignInBlocked);
+            
+            if (isPasswordResetBlocked || isSmsSignInBlocked || isAuthAppSignInBlocked) {
+                LOG.info("User account is locked. Password reset blocked: {}, SMS sign-in blocked: {}, AUTH_APP sign-in blocked: {}", 
+                        isPasswordResetBlocked, isSmsSignInBlocked, isAuthAppSignInBlocked);
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 authSessionService.updateSession(userContext.getAuthSession());
 

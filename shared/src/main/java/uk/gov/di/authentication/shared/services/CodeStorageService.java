@@ -160,9 +160,11 @@ public class CodeStorageService {
     }
 
     public boolean isBlockedForEmail(String emailAddress, String prefix) {
-        String value =
-                redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress));
-        LOG.info("block value: {}", value);
+        String hashedEmail = HashHelper.hashSha256String(emailAddress);
+        String key = prefix + hashedEmail;
+        String value = redisConnectionService.getValue(key);
+        LOG.info("Checking block for email: {}, prefix: {}, key: {}, block value: {}", 
+                emailAddress, prefix, key, value);
         return value != null;
     }
 
