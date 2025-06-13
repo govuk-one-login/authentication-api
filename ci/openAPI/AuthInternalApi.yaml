@@ -94,3 +94,120 @@ paths:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyCodeFunction.Arn}:active/invocations
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+  /.well-known/mfa-reset-jwk.json:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /.well-known/reverification-jwk.json:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /check-email-fraud-block:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /check-reauth-user:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /id-reverification-state:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /identity-progress:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /mfa-reset-authorize:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /processing-identity:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /reverification-result:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /send-notification:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /signup:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-profile:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /verify-mfa-code:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${FubarFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
