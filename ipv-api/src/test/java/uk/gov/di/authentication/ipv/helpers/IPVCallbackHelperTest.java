@@ -33,9 +33,7 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -435,13 +433,12 @@ class IPVCallbackHelperTest {
     }
 
     @Test
-    void shouldGenerateAndSaveAuthorisationCode() throws UserNotFoundException {
+    void shouldGenerateAndSaveAuthorisationCode() {
         OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID).withAuthTime(AUTH_TIME);
 
         helper.generateReturnCodeAuthenticationResponse(
                 generateAuthRequest(new OIDCClaimsRequest()),
                 CLIENT_SESSION_ID,
-                new Session(),
                 SESSION_ID,
                 orchSession,
                 CLIENT_NAME,

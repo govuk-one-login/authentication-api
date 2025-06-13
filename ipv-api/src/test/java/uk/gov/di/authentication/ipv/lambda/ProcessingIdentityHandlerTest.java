@@ -24,7 +24,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -106,7 +105,6 @@ class ProcessingIdentityHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(PAIRWISE_SUBJECT);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -155,7 +153,6 @@ class ProcessingIdentityHandlerTest {
 
     @Test
     void shouldReturnErrorIfOrchSessionIsNotFound() throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.empty());
 
         var result = handler.handleRequest(event, context);
@@ -167,7 +164,6 @@ class ProcessingIdentityHandlerTest {
 
     @Test
     void shouldReturnErrorIfOrchSessionHasNoInternalCommonSubjectId() throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString()))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
 
@@ -398,7 +394,6 @@ class ProcessingIdentityHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 

@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -181,7 +180,6 @@ class LogoutServiceTest {
         orchSession = new OrchSessionItem(SESSION_ID);
         setUpClientSession(CLIENT_SESSION_ID, CLIENT_ID, rpPairwiseId.get());
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(new Session()));
         destroySessionsRequest = new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID));
     }
 

@@ -22,7 +22,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
@@ -43,7 +42,6 @@ class DocAppUserHelperTest {
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final String SESSION_ID = "a-session-id";
-    private static final Session SESSION = new Session();
     private static final String AUDIENCE = "oidc-audience";
     private static final Scope VALID_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -191,7 +189,7 @@ class DocAppUserHelperTest {
                         .withClientName(CLIENT_NAME)
                         .withCookieConsentShared(false)
                         .withClientType(clientType.getValue());
-        return UserContext.builder(SESSION)
+        return UserContext.builder()
                 .withSessionId(SESSION_ID)
                 .withOrchClientSession(orchClientSession)
                 .withClient(clientRegistry)

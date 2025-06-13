@@ -10,7 +10,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -134,14 +133,8 @@ public abstract class BaseFrontendHandler<T>
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         onRequestReceived(clientSessionId);
-        Optional<Session> session = sessionService.getSession(sessionId);
         var orchClientSession =
                 orchClientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
-
-        if (session.isEmpty()) {
-            LOG.warn("Session cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        }
 
         Optional<OrchSessionItem> orchSession = orchSessionService.getSession(sessionId);
         if (orchSession.isEmpty()) {
@@ -171,7 +164,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+        UserContext.Builder userContextBuilder = UserContext.builder();
 
         userContextBuilder.withSessionId(sessionId).withClientSessionId(clientSessionId);
         userContextBuilder.withOrchSession(orchSession.get());

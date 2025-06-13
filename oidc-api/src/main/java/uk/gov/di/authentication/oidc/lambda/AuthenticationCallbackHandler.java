@@ -255,17 +255,6 @@ public class AuthenticationCallbackHandler
 
             var sessionId = sessionCookiesIds.getSessionId();
             var clientSessionId = sessionCookiesIds.getClientSessionId();
-            var session =
-                    sessionService
-                            .getSession(sessionId)
-                            .orElseThrow(
-                                    () -> {
-                                        LOG.warn(
-                                                "Shared session not found in redis for ID: {}",
-                                                sessionId);
-                                        return new SessionNotFoundException(
-                                                "Shared session not found in Redis");
-                                    });
             var orchSession =
                     orchSessionService
                             .getSession(sessionId)
@@ -416,7 +405,6 @@ public class AuthenticationCallbackHandler
                 orchClientSession.setPublicSubjectId(
                         userInfo.getStringClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
 
-                sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
@@ -560,7 +548,6 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.storeOrUpdateSession(session, sessionId);
                 orchSessionService.updateSession(orchSession);
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
@@ -807,10 +794,9 @@ public class AuthenticationCallbackHandler
 
     private void handleMaxAgeSession(OrchSessionItem currentOrchSession, TxmaAuditUser user) {
         var previousSessionId = currentOrchSession.getPreviousSessionId();
-        var previousSharedSession = sessionService.getSession(previousSessionId);
         var previousOrchSession = orchSessionService.getSession(previousSessionId);
 
-        if (previousSharedSession.isEmpty() || previousOrchSession.isEmpty()) {
+        if (previousOrchSession.isEmpty()) {
             LOG.warn(
                     "Cannot retrieve previous OrchSession or previous shared session required for to handle max_age");
             currentOrchSession.setPreviousSessionId(null);
