@@ -105,7 +105,7 @@ resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
 
 resource "aws_lambda_function" "spot_response_lambda" {
   function_name = "${var.environment}-spot-response-lambda"
-  role          = module.ipv_spot_response_role.arn
+  role          = module.ipv_spot_response_role_2.arn
   handler       = "uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
