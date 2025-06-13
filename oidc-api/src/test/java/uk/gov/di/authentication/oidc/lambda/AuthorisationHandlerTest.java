@@ -94,8 +94,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.text.ParseException;
@@ -868,8 +866,8 @@ class AuthorisationHandlerTest {
         }
 
         @ParameterizedTest
-        @ValueSource(strings = {"PUT", "DELETE", "PATCH"})
-        void shouldThrowExceptionWhenMethodIsNotGetOrPost(String method) {
+        @ValueSource(strings = {"POST", "PUT", "DELETE", "PATCH"})
+        void shouldThrowExceptionWhenMethodIsNotGet(String method) {
             APIGatewayProxyRequestEvent event =
                     withRequestEvent(
                             Map.of(
@@ -1007,61 +1005,6 @@ class AuthorisationHandlerTest {
             verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_INITIATED,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
-                            pair("client-name", RP_CLIENT_NAME),
-                            pair("new_authentication_required", false));
-            verify(cloudwatchMetricsService)
-                    .putEmbeddedValue(
-                            "AuthRedirectQueryParamSize",
-                            48,
-                            Map.of("clientId", CLIENT_ID.getValue()));
-        }
-
-        @Test
-        void shouldRedirectToLoginWhenPostRequestObjectIsValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(Optional.empty());
-
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            var event =
-                    withPostRequestEvent(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "scope",
-                                    "openid",
-                                    "response_type",
-                                    "code",
-                                    "request",
-                                    URLEncoder.encode(
-                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
-                                                    .serialize(),
-                                            Charset.defaultCharset())));
-
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_NEW_SESSION_COOKIE_STRING));
-            var diPersistentCookieString =
-                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
-            var sessionId =
-                    extractSessionId(
-                            diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-
-            verify(orchSessionService).addSession(any());
 
             verify(auditService)
                     .submitAuditEvent(
@@ -2301,39 +2244,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void
-                shouldReturnReturn302WithErrorQueryParamsWhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setBody(
-                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
-            event.setHttpMethod("POST");
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
-        }
-
-        @Test
         void shouldReturnRedirectWithErrorWhenInvalidAuthParameters()
                 throws InvalidAuthenticationRequestException,
                         ClientNotFoundException,
@@ -2366,40 +2276,6 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER,
                             pair("description", INVALID_REQUEST.getDescription()));
-        }
-
-        @Test
-        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
-                    .thenReturn(
-                            Optional.of(
-                                    new AuthRequestError(
-                                            OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"),
-                                            new State("test-state"))));
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            var event =
-                    withPostRequestEvent(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "redirect_uri",
-                                    REDIRECT_URI,
-                                    "scope",
-                                    "openid unknown-scope",
-                                    "request",
-                                    URLEncoder.encode(
-                                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR)
-                                                    .serialize(),
-                                            Charset.defaultCharset())));
-
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
         }
 
         @Test
@@ -2851,31 +2727,6 @@ class AuthorisationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHttpMethod("GET");
         event.setQueryStringParameters(requestParams);
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        event.withHeaders(
-                Map.of(
-                        "txma-audit-encoded",
-                        TXMA_ENCODED_HEADER_VALUE,
-                        "Cookie",
-                        format("%s;bsid=%s", SESSION_COOKIE, BROWSER_SESSION_ID)));
-        return event;
-    }
-
-    private APIGatewayProxyRequestEvent withPostRequestEvent(Map<String, String> requestParams) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHttpMethod("POST");
-        event.setBody(
-                requestParams.entrySet().stream()
-                        .map(
-                                p ->
-                                        URLEncoder.encode(p.getKey(), Charset.defaultCharset())
-                                                + "="
-                                                + URLEncoder.encode(
-                                                        p.getValue(), Charset.defaultCharset()))
-                        .reduce((p1, p2) -> p1 + "&" + p2)
-                        .orElse(""));
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
