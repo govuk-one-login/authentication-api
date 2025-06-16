@@ -75,7 +75,6 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -121,7 +120,6 @@ class IPVCallbackHandlerTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final IPVAuthorisationService responseService = mock(IPVAuthorisationService.class);
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
@@ -282,7 +280,6 @@ class IPVCallbackHandlerTest {
                         configService,
                         responseService,
                         ipvTokenService,
-                        sessionService,
                         orchSessionService,
                         authUserInfoStorageService,
                         orchClientSessionService,
