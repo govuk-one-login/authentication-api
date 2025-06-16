@@ -637,16 +637,12 @@ public class AuthorisationHandler
                 browserSessionIdFromSession.isPresent()
                         && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
 
-        Session session;
         OrchSessionItem orchSession;
         var newSessionId = IdGenerator.generate();
         var newBrowserSessionId = IdGenerator.generate();
-        var existingSession = previousSessionIdFromCookie.flatMap(sessionService::getSession);
         if (previousSessionIdFromCookie.isEmpty()
-                || existingSession.isEmpty()
                 || existingOrchSessionOptional.isEmpty()
                 || doesBrowserSessionIdFromSessionNotMatchCookie) {
-            session = sessionService.generateSession();
             orchSession = createNewOrchSession(newSessionId, newBrowserSessionId);
             LOG.info("Created session with id: {}", newSessionId);
             // We re-assign here to ensure that we only pass auth previous session id
@@ -665,7 +661,6 @@ public class AuthorisationHandler
                             maxAgeParam,
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
-                session = new Session();
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -686,7 +681,6 @@ public class AuthorisationHandler
 
             } else {
                 var previousSessionId = previousSessionIdFromCookie.get();
-                session = new Session();
 
                 orchSession =
                         updateOrchSession(newSessionId, existingOrchSessionOptional.get(), timeNow);
@@ -714,7 +708,6 @@ public class AuthorisationHandler
         orchSession.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.storeOrUpdateSession(session, newSessionId);
         orchSessionService.addSession(orchSession);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(

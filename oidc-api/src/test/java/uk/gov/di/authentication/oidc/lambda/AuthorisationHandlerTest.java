@@ -338,7 +338,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
@@ -595,7 +595,6 @@ class AuthorisationHandlerTest {
                                 .contains("lng="));
             }
 
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -1006,7 +1005,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -1063,7 +1062,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
 
             verify(auditService)
@@ -1149,7 +1148,6 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -1741,10 +1739,6 @@ class AuthorisationHandlerTest {
             withExistingOrchSession(null);
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
             assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
@@ -1769,10 +1763,6 @@ class AuthorisationHandlerTest {
             withExistingSession(null);
             withExistingOrchSession(null);
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1799,10 +1789,6 @@ class AuthorisationHandlerTest {
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
 
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
             assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
@@ -1827,10 +1813,6 @@ class AuthorisationHandlerTest {
             withExistingSession(session);
             withExistingOrchSession(orchSession.withBrowserSessionId(null));
             var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-            verify(sessionService, never()).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1861,10 +1843,6 @@ class AuthorisationHandlerTest {
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
 
-            verify(sessionService, never()).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
-
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
             assertEquals(NEW_SESSION_ID, actualOrchSession.getSessionId());
@@ -1890,10 +1868,6 @@ class AuthorisationHandlerTest {
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response =
                     makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
