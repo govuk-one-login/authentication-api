@@ -2265,6 +2265,29 @@ Resources:
       FunctionName: !GetAtt GlobalLogoutFunction.Arn
       FunctionResponseTypes:
         - ReportBatchItemFailures
+
+  GlobalLogoutTestDLQAlarm:
+    Condition: IsDevOrBuild
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-global-logout-test-dlq-alarm
+      AlarmDescription: !Sub "${Environment} global logout test DLQ has a message.ACCOUNT: di-orchestration-${Environment}."
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - GlobalLogoutTestDeadLetterQueue
+              - QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
   #endregion
 
   #region Authentication Callback Lambda
