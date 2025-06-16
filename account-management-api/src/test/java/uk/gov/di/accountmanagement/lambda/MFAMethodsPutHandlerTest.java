@@ -16,7 +16,9 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -173,6 +175,66 @@ class MFAMethodsPutHandlerTest {
                 }]
                 """,
                         MFA_IDENTIFIER, phoneNumber);
+        var expectedResponseParsedToString =
+                JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
+        assertEquals(expectedResponseParsedToString, result.getBody());
+    }
+
+    @Test
+    void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabledAndNotificationIdentifierProvided() {
+        var credential = "some credential";
+        var notificationIdentifier = MFAMethodNotificationIdentifier.CHANGED_AUTHENTICATOR_APP;
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestAuthAppMfaDetail(credential),
+                        notificationIdentifier);
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+
+        var eventWithUpdateRequestBody =
+                format(
+                        """
+        {
+          "mfaMethod": {
+            "priorityIdentifier": "DEFAULT",
+            "method": {
+                "mfaMethodType": "AUTH_APP",
+                "credential": "%s"
+            }
+          },
+          "notificationIdentifier": "%s"
+        }
+        """,
+                        credential, notificationIdentifier.getValue());
+
+        var eventWithUpdateRequest = event.withBody(eventWithUpdateRequestBody);
+
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var updatedMfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        credential, true, true, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
+                .thenReturn(Result.success(List.of(updatedMfaMethod)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+        var expectedResponse =
+                format(
+                        """
+                [{
+                  "mfaIdentifier": "%s",
+                  "priorityIdentifier": "DEFAULT",
+                  "methodVerified": true,
+                  "method": {
+                    "mfaMethodType": "AUTH_APP",
+                    "credential": "%s"
+                  }
+                }]
+                """,
+                        MFA_IDENTIFIER, credential);
         var expectedResponseParsedToString =
                 JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
         assertEquals(expectedResponseParsedToString, result.getBody());

@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
@@ -860,7 +861,9 @@ class MFAMethodsServiceIntegrationTest {
                         new RequestAuthAppMfaDetail(AUTH_APP_CREDENTIAL_TWO);
                 var request =
                         MfaMethodUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, detailWithUpdatedCredential);
+                                PriorityIdentifier.DEFAULT,
+                                detailWithUpdatedCredential,
+                                MFAMethodNotificationIdentifier.CHANGED_AUTHENTICATOR_APP);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -931,6 +934,25 @@ class MFAMethodsServiceIntegrationTest {
                                 expectedMethods, methodsInDatabase));
             }
 
+            @Test
+            void returnsSuccessWhenAttemptingToUpdateWithoutANotificationIdentifier() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                var detailWithUpdatedNumber = new RequestSmsMfaDetail("+447900000000", "123456");
+
+                // NOTE: the notification identifier arg is purposely missing here.
+                var request =
+                        MfaMethodUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT, detailWithUpdatedNumber, null);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, defaultPriorityAuthApp.getMfaIdentifier(), request);
+
+                assertTrue(result.isSuccess());
+            }
+
             @ParameterizedTest
             @MethodSource("phoneNumbersToPhoneNumbersWithCountryCodes")
             void
@@ -978,7 +1000,9 @@ class MFAMethodsServiceIntegrationTest {
 
                 var request =
                         MfaMethodUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, detailWithUpdatedNumber);
+                                PriorityIdentifier.DEFAULT,
+                                detailWithUpdatedNumber,
+                                MFAMethodNotificationIdentifier.CHANGED_DEFAULT_MFA);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1000,7 +1024,9 @@ class MFAMethodsServiceIntegrationTest {
 
                 var request =
                         MfaMethodUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, newAuthAppCredential);
+                                PriorityIdentifier.DEFAULT,
+                                newAuthAppCredential,
+                                MFAMethodNotificationIdentifier.CHANGED_DEFAULT_MFA);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1022,7 +1048,9 @@ class MFAMethodsServiceIntegrationTest {
 
                 var request =
                         MfaMethodUpdateRequest.from(
-                                PriorityIdentifier.DEFAULT, newAuthAppCredential);
+                                PriorityIdentifier.DEFAULT,
+                                newAuthAppCredential,
+                                MFAMethodNotificationIdentifier.CHANGED_DEFAULT_MFA);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1101,7 +1129,11 @@ class MFAMethodsServiceIntegrationTest {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
 
-                var request = MfaMethodUpdateRequest.from(PriorityIdentifier.DEFAULT, null);
+                var request =
+                        MfaMethodUpdateRequest.from(
+                                PriorityIdentifier.DEFAULT,
+                                null,
+                                MFAMethodNotificationIdentifier.SWITCHED_MFA_METHODS);
 
                 var result =
                         mfaMethodsService.updateMfaMethod(
@@ -1132,6 +1164,21 @@ class MFAMethodsServiceIntegrationTest {
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethodsAfterUpdate, remainingMfaMethods));
+            }
+
+            @Test
+            void returnsSuccessWhenAttemptingToUpdateWithoutANotificationIdentifier() {
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+                userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+                // NOTE: the notification identifier arg is purposely missing here.
+                var request = MfaMethodUpdateRequest.from(PriorityIdentifier.DEFAULT, null, null);
+
+                var result =
+                        mfaMethodsService.updateMfaMethod(
+                                EMAIL, backupPrioritySms.getMfaIdentifier(), request);
+
+                assertTrue(result.isSuccess());
             }
 
             private static Stream<Arguments> existingBackupMethodsAndRequestedUpdates() {
