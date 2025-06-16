@@ -33,6 +33,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.orchestration.shared.domain.GlobalLogoutAuditableEvent.GLOBAL_LOG_OUT_SUCCESS;
+import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.SqsTestHelper.sqsEventWithPayload;
 
 public class GlobalLogoutIntegrationTest extends IntegrationTest {
@@ -81,6 +84,7 @@ public class GlobalLogoutIntegrationTest extends IntegrationTest {
         var response = handler.handleRequest(input, mock(Context.class));
 
         assertThat(response, equalTo(batchItemFailures("test-message-id")));
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -93,6 +97,7 @@ public class GlobalLogoutIntegrationTest extends IntegrationTest {
                 handler.handleRequest(sqsEventWithPayload(inputMessage), mock(Context.class));
 
         assertThat(response, equalTo(noBatchItemFailures()));
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -114,6 +119,8 @@ public class GlobalLogoutIntegrationTest extends IntegrationTest {
 
         assertTrue(sessionsExist(SESSION_ID_3));
         assertTrue(clientSessionsExist(CLIENT_SESSION_ID_3));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(GLOBAL_LOG_OUT_SUCCESS));
     }
 
     private static GlobalLogoutMessage createGlobalLogoutMessage(
