@@ -166,7 +166,7 @@ public class MFAMethodsPutHandler
                             400, ErrorResponse.ERROR_1077);
                     case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.ERROR_1071);
-                    case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                    case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
                             404, ErrorResponse.ERROR_1065);
                     case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1073);

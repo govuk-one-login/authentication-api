@@ -327,7 +327,7 @@ class MFAMethodsPutHandlerTest {
                         400,
                         Optional.of(ErrorResponse.ERROR_1073)),
                 Arguments.of(
-                        MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER,
+                        MfaUpdateFailureReason.UNKNOWN_MFA_IDENTIFIER,
                         404,
                         Optional.of(ErrorResponse.ERROR_1065)),
                 Arguments.of(

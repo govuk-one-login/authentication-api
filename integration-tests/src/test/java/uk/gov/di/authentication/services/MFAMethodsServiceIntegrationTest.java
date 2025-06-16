@@ -844,7 +844,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.updateMfaMethod(EMAIL, "some-other-identifier", request);
 
-            assertEquals(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER, result.getFailure());
+            assertEquals(MfaUpdateFailureReason.UNKNOWN_MFA_IDENTIFIER, result.getFailure());
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
             assertEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
