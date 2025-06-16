@@ -150,7 +150,6 @@ class AuthenticationCallbackHandlerTest {
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
 
-    private static final Session session = new Session();
     public static final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withAuthenticated(false);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -288,8 +287,6 @@ class AuthenticationCallbackHandlerTest {
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         verifyUserInfoRequest();
-
-        assertSessionUpdatedAuthJourney();
 
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
@@ -576,8 +573,6 @@ class AuthenticationCallbackHandlerTest {
 
         var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
-        verify(sessionService, times(2))
-                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 OrchSessionItem.AccountState.UNKNOWN,
@@ -632,7 +627,6 @@ class AuthenticationCallbackHandlerTest {
     @Test
     void shouldAuditMediumCredentialTrustLevelOn1FARequestWhenAuthReportPreviouslyMediumLevel()
             throws UnsuccessfulCredentialResponseException {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(new Session()));
         when(orchSessionService.getSession(SESSION_ID))
                 .thenReturn(Optional.of(new OrchSessionItem(SESSION_ID)));
         usingValidClientSession();
@@ -739,7 +733,6 @@ class AuthenticationCallbackHandlerTest {
         void shouldSetOrNotSetAuthTimeDependingOnValuesOfAuthenticatedAndUpliftRequired(
                 Boolean authenticated, Boolean upliftRequired, boolean authTimeSet)
                 throws UnsuccessfulCredentialResponseException {
-            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
             when(orchSessionService.getSession(SESSION_ID))
                     .thenReturn(
                             Optional.of(
@@ -1116,9 +1109,7 @@ class AuthenticationCallbackHandlerTest {
         void itCopiesThePreviousClientSessionsToTheCurrentSessionIfInternalCommonSubjectIdsMatch()
                 throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             withPreviousOrchSessionDueToMaxAge();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1143,7 +1134,6 @@ class AuthenticationCallbackHandlerTest {
                     expectedClientSessions.stream().toList());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
@@ -1158,9 +1148,7 @@ class AuthenticationCallbackHandlerTest {
         void itDoesNotAssignClientSessionsIfItCannotFindThePreviousOrchSession()
                 throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             withNoPreviousOrchSession();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1180,7 +1168,6 @@ class AuthenticationCallbackHandlerTest {
             assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
@@ -1189,45 +1176,6 @@ class AuthenticationCallbackHandlerTest {
                                                     && s.getClientSessions().size() == 1
                                                     && s.getClientSessions()
                                                             .equals(List.of(CLIENT_SESSION_ID))));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
-        }
-
-        @Test
-        void itDoesNotAssignClientSessionsIfItCannotFindThePreviousSharedSession()
-                throws UnsuccessfulCredentialResponseException {
-            var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
-            withPreviousOrchSessionDueToMaxAge();
-            withNoPreviousSharedSession();
-
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
-            when(USER_INFO.getSubject()).thenReturn(new Subject(INTERNAL_COMMON_SUBJECT_ID));
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-            var response = handler.handleRequest(event, CONTEXT);
-
-            assertThat(response, hasStatus(302));
-            String redirectLocation = response.getHeaders().get("Location");
-            assertThat(
-                    redirectLocation,
-                    equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
-
-            assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
-            assertNull(maxAgeOrchSession.getPreviousSessionId());
-            verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(orchSessionService, times(3))
-                    .updateSession(
-                            argThat(
-                                    s ->
-                                            s.getPreviousSessionId() == null
-                                                    && s.getClientSessions().size() == 1
-                                                    && s.getClientSessions()
-                                                            .equals(List.of(CLIENT_SESSION_ID))));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
         }
 
         @Test
@@ -1235,9 +1183,7 @@ class AuthenticationCallbackHandlerTest {
                 itSendsBackChannelLogoutNotificationForThePreviousSessionIfTheInternalCommonSubjectIdsDoNotMatch()
                         throws UnsuccessfulCredentialResponseException {
             var maxAgeOrchSession = withMaxAgeOrchSession(INTERNAL_COMMON_SUBJECT_ID);
-            withMaxAgeSharedSession();
             var previousOrchSession = withPreviousOrchSessionDueToMaxAge();
-            withPreviousSharedSessionDueToMaxAge();
 
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
@@ -1258,14 +1204,12 @@ class AuthenticationCallbackHandlerTest {
             assertEquals(List.of(CLIENT_SESSION_ID), maxAgeOrchSession.getClientSessions());
             assertNull(maxAgeOrchSession.getPreviousSessionId());
             verify(orchSessionService).getSession(PREVIOUS_SESSION_ID);
-            verify(sessionService).getSession(PREVIOUS_SESSION_ID);
             verify(orchSessionService, times(3))
                     .updateSession(
                             argThat(
                                     s ->
                                             s.getPreviousSessionId() == null
                                                     && s.getClientSessions().size() == 1));
-            verify(sessionService, times(2)).storeOrUpdateSession(any(Session.class), anyString());
 
             verify(logoutService, times(1))
                     .handleMaxAgeLogout(
@@ -1286,16 +1230,6 @@ class AuthenticationCallbackHandlerTest {
             return previousOrchSession;
         }
 
-        private void withPreviousSharedSessionDueToMaxAge() {
-            var previousSharedSession = new Session();
-            when(sessionService.getSession(PREVIOUS_SESSION_ID))
-                    .thenReturn(Optional.of(previousSharedSession));
-        }
-
-        private void withNoPreviousSharedSession() {
-            when(sessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
-        }
-
         private void withNoPreviousOrchSession() {
             when(orchSessionService.getSession(PREVIOUS_SESSION_ID)).thenReturn(Optional.empty());
         }
@@ -1309,11 +1243,6 @@ class AuthenticationCallbackHandlerTest {
             when(orchSessionService.getSession(SESSION_ID))
                     .thenReturn(Optional.of(maxAgeOrchSession));
             return maxAgeOrchSession;
-        }
-
-        private void withMaxAgeSharedSession() {
-            var session = new Session();
-            when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         }
     }
 
@@ -1344,7 +1273,6 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
@@ -1441,12 +1369,6 @@ class AuthenticationCallbackHandlerTest {
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
                 .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
-    }
-
-    private void assertSessionUpdatedAuthJourney() {
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2))
-                .storeOrUpdateSession(sessionSaveCaptor.capture(), anyString());
     }
 
     private void assertOrchSessionUpdated() {

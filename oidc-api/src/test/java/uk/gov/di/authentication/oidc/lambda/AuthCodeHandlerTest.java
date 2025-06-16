@@ -39,7 +39,6 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -144,7 +143,6 @@ class AuthCodeHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private AuthCodeHandler handler;
 
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
                     .withAccountState(OrchSessionItem.AccountState.NEW)
@@ -196,13 +194,7 @@ class AuthCodeHandlerTest {
                             return null;
                         })
                 .when(authCodeResponseService)
-                .saveSession(
-                        false,
-                        sessionService,
-                        session,
-                        SESSION_ID,
-                        orchSessionService,
-                        orchSession);
+                .saveSession(false, orchSessionService, orchSession);
         when(dynamoClientService.getClient(anyString()))
                 .thenReturn(
                         Optional.of(
@@ -299,13 +291,7 @@ class AuthCodeHandlerTest {
         assertTrue(orchSession.getAuthenticated());
 
         verify(authCodeResponseService, times(1))
-                .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        eq(orchSessionService),
-                        eq(orchSession));
+                .saveSession(anyBoolean(), eq(orchSessionService), eq(orchSession));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -419,12 +405,7 @@ class AuthCodeHandlerTest {
         assertFalse(orchSession.getAuthenticated());
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -675,7 +656,6 @@ class AuthCodeHandlerTest {
                         SESSION_ID,
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_SESSION_ID));
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -774,12 +754,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(200));
         verify(authCodeResponseService, times(1))
                 .saveSession(
-                        anyBoolean(),
-                        eq(sessionService),
-                        eq(session),
-                        eq(SESSION_ID),
-                        any(OrchSessionService.class),
-                        any(OrchSessionItem.class));
+                        anyBoolean(), any(OrchSessionService.class), any(OrchSessionItem.class));
     }
 
     private AuthenticationRequest generateValidSessionAndAuthRequest(
@@ -804,7 +779,6 @@ class AuthCodeHandlerTest {
 
     private void generateValidSession(
             Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
         when(orchClientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(orchClientSession));

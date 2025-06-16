@@ -23,7 +23,6 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
@@ -92,7 +91,6 @@ public class IdentityProgressFrontendHandlerTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
-    private final Session session = new Session();
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -133,7 +131,6 @@ public class IdentityProgressFrontendHandlerTest {
 
     @Test
     void shouldReturnErrorIfOrchSessionIsNotFound() throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.empty());
         var result = handler.handleRequest(event, context);
 
@@ -145,7 +142,6 @@ public class IdentityProgressFrontendHandlerTest {
     @Test
     void shouldReturnErrorWhenInternalCommonSubjectIdIsNullOnOrchSession()
             throws Json.JsonException {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString()))
                 .thenReturn(
                         Optional.of(
@@ -338,7 +334,6 @@ public class IdentityProgressFrontendHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 }

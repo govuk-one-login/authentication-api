@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -71,7 +70,6 @@ class LogoutRequestTest {
     private final ClientRegistry clientRegistry = createClientRegistry();
     private String idTokenHint;
     private String rpPairwiseId;
-    private Session session;
     private OrchSessionItem orchSession;
 
     @RegisterExtension
@@ -104,7 +102,6 @@ class LogoutRequestTest {
 
     @BeforeEach
     void sessionExistsSetup() throws ParseException {
-        session = generateSession();
         orchSession =
                 new OrchSessionItem(SESSION_ID).withInternalCommonSubjectId(SUBJECT.getValue());
         idTokenHint = signedIDToken.serialize();
@@ -132,7 +129,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -162,7 +158,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -200,7 +195,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.empty(), logoutRequest.session());
         assertEquals(Optional.empty(), logoutRequest.orchSession());
         assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.empty(), logoutRequest.sessionId());
@@ -219,7 +213,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWithNoTokenHint() {
-        session = generateSession();
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -228,7 +221,7 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         orchSession.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
@@ -238,7 +231,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -257,7 +249,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseALogoutRequestWhenSignatureIdTokenIsInvalid() throws JOSEException {
-        session = generateSession();
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -272,7 +263,7 @@ class LogoutRequestTest {
                                 "post_logout_redirect_uri",
                                 CLIENT_LOGOUT_URI.toString()));
         orchSession.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
@@ -282,7 +273,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -307,7 +297,6 @@ class LogoutRequestTest {
     @Test
     void shouldCorrectlyParseALogoutRequestWhenClientIsNotFoundInClientRegistry()
             throws JOSEException {
-        session = generateSession();
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -325,7 +314,7 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         orchSession.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
@@ -335,7 +324,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -357,9 +345,8 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenRedirectUriIsMissing() {
-        session = generateSession();
         orchSession.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
 
         when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
@@ -376,7 +363,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -395,7 +381,6 @@ class LogoutRequestTest {
 
     @Test
     void shouldCorrectlyParseLogoutRequestWhenLogoutUriInRequestDoesNotMatchClientRegistry() {
-        session = generateSession();
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id")).thenReturn(Optional.of(clientRegistry));
@@ -409,7 +394,7 @@ class LogoutRequestTest {
                                 "state",
                                 STATE.toString()));
         orchSession.getClientSessions().add(CLIENT_SESSION_ID);
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
@@ -419,7 +404,6 @@ class LogoutRequestTest {
                         event,
                         orchSessionService);
 
-        assertEquals(Optional.of(session), logoutRequest.session());
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
@@ -441,12 +425,7 @@ class LogoutRequestTest {
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
 
-    private Session generateSession() {
-        return new Session();
-    }
-
-    private void generateSessionFromCookie(Session session, OrchSessionItem orchSession) {
-        when(sessionService.getSession(anyString())).thenReturn(Optional.of(session));
+    private void generateSessionFromCookie(OrchSessionItem orchSession) {
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
     }
 
@@ -486,7 +465,7 @@ class LogoutRequestTest {
     private void setupSessions() {
         setUpClientSession("client-session-id-2", "client-id-2");
         setUpClientSession("client-session-id-3", "client-id-3");
-        generateSessionFromCookie(session, orchSession);
+        generateSessionFromCookie(orchSession);
     }
 
     private void setUpClientSession(String clientSessionId, String clientId) {

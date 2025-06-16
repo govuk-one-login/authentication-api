@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -202,8 +201,6 @@ class IPVCallbackHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension redirectLogging =
             new CaptureLoggingExtension(RedirectService.class);
-
-    private final Session session = new Session();
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
@@ -398,7 +395,6 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
                         any(),
                         any(),
@@ -478,7 +474,6 @@ class IPVCallbackHandlerTest {
             when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                            any(),
                             any(),
                             any(),
                             any(),
@@ -582,7 +577,6 @@ class IPVCallbackHandlerTest {
                         any(),
                         any(),
                         any(),
-                        any(),
                         anyString(),
                         any(),
                         any(),
@@ -605,7 +599,6 @@ class IPVCallbackHandlerTest {
                 .generateReturnCodeAuthenticationResponse(
                         any(),
                         eq(CLIENT_SESSION_ID),
-                        eq(session),
                         eq(SESSION_ID),
                         any(OrchSessionItem.class),
                         eq(CLIENT_NAME),
@@ -743,19 +736,6 @@ class IPVCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(awsSqsClient);
         verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() {
-        var request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(Collections.emptyMap());
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
-        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -1162,7 +1142,6 @@ class IPVCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
