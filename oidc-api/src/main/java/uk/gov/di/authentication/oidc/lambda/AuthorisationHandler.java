@@ -665,12 +665,7 @@ public class AuthorisationHandler
                             maxAgeParam,
                             timeNow)) {
                 var newSessionIdForPreviousSession = IdGenerator.generate();
-                session =
-                        updateSharedSessionDueToMaxAgeExpiry(
-                                existingSession.get(),
-                                previousSessionIdFromCookie.get(),
-                                newSessionIdForPreviousSession,
-                                newSessionId);
+                session = new Session();
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -782,18 +777,6 @@ public class AuthorisationHandler
                         .withPreviousSessionId(newSessionIdForPreviousSession);
         newSession.resetProcessingIdentityAttempts();
         newSession.resetClientSessions();
-        return newSession;
-    }
-
-    private Session updateSharedSessionDueToMaxAgeExpiry(
-            Session previousSession,
-            String previousSessionId,
-            String newSessionIdForPreviousSession,
-            String newSessionId) {
-        sessionService.updateWithNewSessionId(
-                previousSession, previousSessionId, newSessionIdForPreviousSession);
-        var newSession = sessionService.copySessionForMaxAge(previousSession);
-        sessionService.storeOrUpdateSession(newSession, newSessionId);
         return newSession;
     }
 
