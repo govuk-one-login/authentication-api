@@ -685,11 +685,8 @@ public class AuthorisationHandler
                         newSessionId);
 
             } else {
-                var previousSession = existingSession.get();
                 var previousSessionId = previousSessionIdFromCookie.get();
-                session =
-                        sessionService.updateWithNewSessionId(
-                                previousSession, previousSessionId, newSessionId);
+                session = new Session();
 
                 orchSession =
                         updateOrchSession(newSessionId, existingOrchSessionOptional.get(), timeNow);

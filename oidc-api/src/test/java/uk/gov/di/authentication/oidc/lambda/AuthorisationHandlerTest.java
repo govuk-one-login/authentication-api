@@ -662,7 +662,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -734,7 +733,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -783,7 +781,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -2778,6 +2775,7 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<OrchSessionItem> addSessionCaptor =
                     ArgumentCaptor.forClass(OrchSessionItem.class);
+            ArgumentCaptor<Session> newSharedSesisonCaptor = ArgumentCaptor.forClass(Session.class);
             if (maxAgeExpired) {
                 verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
