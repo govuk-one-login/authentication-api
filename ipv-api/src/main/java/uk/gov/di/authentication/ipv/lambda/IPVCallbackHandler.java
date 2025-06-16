@@ -181,7 +181,7 @@ public class IPVCallbackHandler
                         auditService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
-        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService, redis);
+        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = getFrontend(configurationService);
     }
 
