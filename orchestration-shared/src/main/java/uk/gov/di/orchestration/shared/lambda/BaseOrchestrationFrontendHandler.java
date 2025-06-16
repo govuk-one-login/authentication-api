@@ -14,7 +14,6 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -32,24 +31,20 @@ public abstract class BaseOrchestrationFrontendHandler
     private static final Logger LOG = LogManager.getLogger(BaseOrchestrationFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
     protected final ConfigurationService configurationService;
-    protected final SessionService sessionService;
     protected final OrchSessionService orchSessionService;
     protected final OrchClientSessionService orchClientSessionService;
 
     protected BaseOrchestrationFrontendHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         this.configurationService = configurationService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
     }
 
     protected BaseOrchestrationFrontendHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
