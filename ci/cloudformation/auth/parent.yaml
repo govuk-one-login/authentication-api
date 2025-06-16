@@ -649,7 +649,7 @@ Resources:
                       !Ref Environment,
                     ]
 
-  DynamoAccountModifiersReadPolicy:
+  DynamoAccountModifiersReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
@@ -1080,6 +1080,56 @@ Resources:
                     emailCheckResultsTableEncryptionKey,
                   ]
 
+  DynamoIdReverificationStateReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-id-reverification-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-id-reverification-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    idReverificationStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    idReverificationStateTableEncryptionKey,
+                  ]
+
   DynamoIdReverificationStateWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -1497,7 +1547,7 @@ Resources:
                     authSessionTableEncryptionKey,
                   ]
 
-  DynamoAuthSessionStoreReadPolicy:
+  DynamoAuthSessionStoreReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
