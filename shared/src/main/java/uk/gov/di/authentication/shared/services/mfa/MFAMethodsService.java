@@ -268,7 +268,7 @@ public class MFAMethodsService {
                                     case BACKUP -> handleBackupMethodUpdate(
                                             method, request.mfaMethod(), email, mfaMethods);
                                 })
-                .orElse(Result.failure(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
+                .orElse(Result.failure(MfaUpdateFailureReason.UNKNOWN_MFA_IDENTIFIER));
     }
 
     public static Optional<MFAMethod> getMfaMethodOrDefaultMfaMethod(
