@@ -38,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
+import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_REMOVED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
@@ -323,6 +324,28 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_ADDED))));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessBackupRemovedMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_REMOVED, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), BACKUP_METHOD_REMOVED);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_REMOVED))));
     }
 
     @Test

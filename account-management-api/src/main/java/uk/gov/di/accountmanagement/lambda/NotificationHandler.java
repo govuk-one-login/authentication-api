@@ -115,6 +115,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case PHONE_NUMBER_UPDATED -> sendPhoneNumberUpdatedNotification(notifyRequest);
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
             case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
+            case BACKUP_METHOD_REMOVED -> sendBackupRemovedNotification(notifyRequest);
         }
     }
 
@@ -176,6 +177,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 Collections.emptyMap(),
                 String.valueOf(NotificationType.BACKUP_METHOD_ADDED));
+    }
+
+    private void sendBackupRemovedNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.BACKUP_METHOD_REMOVED));
     }
 
     private void sendEmailNotification(
