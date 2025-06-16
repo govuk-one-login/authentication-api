@@ -407,6 +407,7 @@ paths:
               $ref: "#/components/schemas/MfaMethodUpdateRequest"
             examples:
               update-sms:
+                summary: a user with a default mfa method of SMS before update who has changed their phone number
                 value:
                   {
                     "mfaMethod":
@@ -420,9 +421,27 @@ paths:
                           },
                       },
                   }
-              update-auth-app:
+              change-default-mfa:
+                summary: a user with a default mfa method of auth app before update who is changing their default to SMS
                 value:
                   {
+                    "notificationIdentifier": "CHANGED_DEFAULT_MFA",
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "DEFAULT",
+                        "method":
+                          {
+                            "mfaMethodType": "SMS",
+                            "phoneNumber": "070",
+                            "otp": "123456",
+                          },
+                      },
+                  }
+              change-auth-app:
+                summary: a user with a default mfa method of auth app before update who is changing to a new auth app
+                value:
+                  {
+                    "notificationIdentifier": "CHANGED_AUTHENTICATOR_APP",
                     "mfaMethod":
                       {
                         "priorityIdentifier": "DEFAULT",
@@ -434,7 +453,12 @@ paths:
                       },
                   }
               swap-backup-with-default:
-                value: { "mfaMethod": { "priorityIdentifier": "DEFAULT" } }
+                value:
+                  {
+                    "notificationIdentifier": "SWITCHED_MFA_METHODS",
+                    "mfaMethod": { "priorityIdentifier": "DEFAULT" },
+                  }
+
         required: true
       responses:
         "200":
@@ -763,14 +787,25 @@ components:
             mfaMethodType: AUTH_APP
             credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
 
+    MfaMethodUpdateNotificationEnum:
+      type: string
+      enum:
+        - CHANGED_AUTHENTICATOR_APP
+        - CHANGED_DEFAULT_MFA
+        - SWITCHED_MFA_METHODS
+
     MfaMethodUpdateRequest:
       required:
         - mfaMethod
       type: object
       properties:
+        notificationIdentifier:
+          $ref: "#/components/schemas/MfaMethodUpdateNotificationEnum"
+          description: "Identifier for the confirmation notification to be sent."
         mfaMethod:
           $ref: "#/components/schemas/MfaMethodCreate"
       example:
+        notificationIdentifier: CHANGED_AUTHENTICATOR_APP
         mfaMethod:
           priorityIdentifier: DEFAULT
           method:
