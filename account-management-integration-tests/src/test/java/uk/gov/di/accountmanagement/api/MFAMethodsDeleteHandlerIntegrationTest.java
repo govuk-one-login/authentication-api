@@ -2,21 +2,26 @@ package uk.gov.di.accountmanagement.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsDeleteHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_REMOVED;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -43,14 +48,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @BeforeEach
     void setUp() {
-        ConfigurationService mfaMethodEnabledConfigurationService =
-                new ConfigurationService() {
-                    @Override
-                    public boolean isMfaMethodManagementApiEnabled() {
-                        return true;
-                    }
-                };
-        handler = new MFAMethodsDeleteHandler(mfaMethodEnabledConfigurationService);
+        handler = new MFAMethodsDeleteHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
         publicSubjectId = userStore.signUp(EMAIL, PASSWORD);
         byte[] salt = userStore.addSalt(EMAIL);
         testInternalSubject =
@@ -58,6 +56,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                         userStore.getUserProfileFromEmail(EMAIL).get().getSubjectID(),
                         INTERNAL_SECTOR_HOST,
                         salt);
+
+        notificationsQueue.clear();
     }
 
     @Test
@@ -87,6 +87,12 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertEquals(MFAMethodType.AUTH_APP.getValue(), mfaMethod.getMfaMethodType());
         assertEquals(DEFAULT_PRIORITY_AUTH_APP.getMfaIdentifier(), mfaMethod.getMfaIdentifier());
+
+        assertNotificationsReceived(
+                notificationsQueue,
+                List.of(
+                        new NotifyRequest(
+                                EMAIL, BACKUP_METHOD_REMOVED, LocaleHelper.SupportedLanguage.EN)));
     }
 
     @Test
@@ -106,6 +112,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 
     @Test
@@ -129,6 +137,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1065));
 
         assertEquals(2, userStore.getMfaMethod(EMAIL).size());
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 
     @Test
@@ -152,6 +162,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1066));
 
         assertEquals(2, userStore.getMfaMethod(EMAIL).size());
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 
     @Test
@@ -175,6 +187,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1067));
 
         assertEquals(1, userStore.getMfaMethod(EMAIL).size());
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 
     @Test
@@ -193,6 +207,8 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertEquals(401, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 
     @Test
@@ -211,5 +227,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertEquals(404, response.getStatusCode());
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        assertNoNotificationsReceived(notificationsQueue);
     }
 }
