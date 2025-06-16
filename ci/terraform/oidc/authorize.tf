@@ -30,7 +30,7 @@ module "authorize" {
 
   endpoint_name   = "authorize"
   path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"
-  endpoint_method = ["GET", "POST"]
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
