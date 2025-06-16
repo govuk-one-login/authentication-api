@@ -24,6 +24,7 @@ variable "notify_template_map" {
     PHONE_NUMBER_UPDATED_TEMPLATE_ID   = "8274a2a3-5121-4630-a27e-e8578f8cba59"
     PASSWORD_UPDATED_TEMPLATE_ID       = "323ebef4-cfa7-414f-bfba-1db324acdd66"
     BACKUP_METHOD_ADDED_TEMPLATE_ID    = "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+    BACKUP_METHOD_REMOVED_TEMPLATE_ID  = "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
   }
 }
 

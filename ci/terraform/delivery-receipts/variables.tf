@@ -74,6 +74,7 @@ variable "notify_template_map" {
     TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID            = "067548f2-420d-4da9-923f-ec9a941706cf"
     REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "2b3170b5-159e-457f-a282-f30f6006dc32"
     BACKUP_METHOD_ADDED_TEMPLATE_ID                        = "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+    BACKUP_METHOD_REMOVED_TEMPLATE_ID                      = "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
   }
 }
 
