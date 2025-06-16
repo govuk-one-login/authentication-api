@@ -147,6 +147,7 @@ Mappings:
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7a47b7cb-f6f2-40bb-b159-869ccc41837b
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5a160ba9-10ee-4e48-bcec-de21275f9201
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
@@ -163,6 +164,7 @@ Mappings:
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d8cdded0-8805-430a-9ae9-139a776ecd02
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9b906941-9de4-400e-84ac-65af1eccc831
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -180,6 +182,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3e9da4da-711f-49c2-a8ec-d4fddf8a6ff9
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -208,6 +211,7 @@ Mappings:
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/8bc6ccd4-6803-4642-ab90-76ba3b871dd5
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
@@ -235,6 +239,7 @@ Mappings:
       docAppDomain: https://api.review-b.staging.account.gov.uk
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ca8b1d2d-cad1-4019-a0d3-7801ecfe05f2
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
@@ -1659,6 +1664,51 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     commonPasswordsTableEncryptionKey,
+                  ]
+
+  ExperianPhoneCheckQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for send access to the experian phone check queue"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToExperianPhoneCheckQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !Sub
+              - arn:aws:sqs:eu-west-2:${DataStoreAccountId}:${Env}-experian-phone-check-queue
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowLambdasToEncryptWithCustomKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    experianPhoneCheckQueueEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    experianPhoneCheckQueueEncryptionKey,
                   ]
 
   IPVReverificationRequestSigningKeyPolicy:
