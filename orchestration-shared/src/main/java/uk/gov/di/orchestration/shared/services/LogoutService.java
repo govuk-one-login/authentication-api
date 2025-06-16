@@ -114,8 +114,6 @@ public class LogoutService {
             LOG.info("Deleting Orch Client session");
             orchClientSessionService.deleteStoredClientSession(clientSessionId);
         }
-        LOG.info("Deleting Session");
-        sessionService.deleteStoredSession(request.getSessionId());
 
         LOG.info("Deleting Orch Session");
         orchSessionService.deleteSession(request.getSessionId());
