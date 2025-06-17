@@ -116,6 +116,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             case PASSWORD_UPDATED -> sendPasswordUpdatedNotification(notifyRequest);
             case BACKUP_METHOD_ADDED -> sendBackupAddedNotification(notifyRequest);
             case BACKUP_METHOD_REMOVED -> sendBackupRemovedNotification(notifyRequest);
+            case CHANGED_AUTHENTICATOR_APP -> sendChangedAuthenticatorAppNotification(
+                    notifyRequest);
+            case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
+            case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
         }
     }
 
@@ -184,6 +188,27 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 Collections.emptyMap(),
                 String.valueOf(NotificationType.BACKUP_METHOD_REMOVED));
+    }
+
+    private void sendChangedAuthenticatorAppNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.CHANGED_AUTHENTICATOR_APP));
+    }
+
+    private void sendChangedDefaultMFANotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.CHANGED_DEFAULT_MFA));
+    }
+
+    private void sendSwitchedMFAMethodsNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.SWITCHED_MFA_METHODS));
     }
 
     private void sendEmailNotification(
