@@ -76,16 +76,15 @@ public enum CodeRequestType {
     private record CodeRequestTypeKey(MFAMethodType mfaMethodType, JourneyType journeyType) {
 
         @Override
-            public boolean equals(Object obj) {
-                if (this == obj) {
-                    return true;
-                }
-                if (obj == null || getClass() != obj.getClass()) {
-                    return false;
-                }
-                CodeRequestTypeKey other = (CodeRequestTypeKey) obj;
-                return mfaMethodType == other.mfaMethodType && journeyType == other.journeyType;
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
             }
-
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            CodeRequestTypeKey other = (CodeRequestTypeKey) obj;
+            return mfaMethodType == other.mfaMethodType && journeyType == other.journeyType;
+        }
     }
 }

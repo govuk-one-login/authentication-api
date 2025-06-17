@@ -136,6 +136,7 @@ public class CodeStorageService {
             String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
         var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        LOG.info("AIDAN: Redis Key getMfaCodeBlockTimeToLive - {}", codeBlockedKeyPrefix);
         return getTTL(email, codeBlockedKeyPrefix);
     }
 
@@ -143,6 +144,7 @@ public class CodeStorageService {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
         try {
+            LOG.info("AIDAN: Redis Key saveBlockedForEmail - {}", key);
             redisConnectionService.saveWithExpiry(key, CODE_BLOCKED_VALUE, codeBlockedTime);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -160,6 +162,9 @@ public class CodeStorageService {
     }
 
     public boolean isBlockedForEmail(String emailAddress, String prefix) {
+        LOG.info(
+                "AIDAN: Redis Key isBlockedForEmail - {}",
+                prefix + HashHelper.hashSha256String(emailAddress));
         String value =
                 redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress));
         LOG.info("block value: {}", value);
