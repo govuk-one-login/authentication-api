@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -29,19 +28,9 @@ public class RedisExtension
         this.configurationService = configurationService;
     }
 
-    public String createSession(String sessionId) throws Json.JsonException {
-        Session session = new Session();
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-        return sessionId;
-    }
-
     public Session addSessionWithId(Session session, String sessionId) throws Json.JsonException {
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
         return session;
-    }
-
-    public String createSession() throws Json.JsonException {
-        return createSession(IdGenerator.generate());
     }
 
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {

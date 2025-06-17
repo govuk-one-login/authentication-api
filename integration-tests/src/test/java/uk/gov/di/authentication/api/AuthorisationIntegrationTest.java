@@ -2183,7 +2183,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private String givenAnExistingSession() throws Json.JsonException {
         var sessionId = IdGenerator.generate();
         orchSessionExtension.addSession(new OrchSessionItem(sessionId));
-        redis.createSession(sessionId);
         return sessionId;
     }
 

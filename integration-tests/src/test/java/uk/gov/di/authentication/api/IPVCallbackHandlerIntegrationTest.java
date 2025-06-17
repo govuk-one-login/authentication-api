@@ -169,7 +169,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(RP_STATE);
-        redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
@@ -301,7 +300,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(RP_STATE);
-        redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
@@ -461,7 +459,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE)
                         .claims(oidcValidClaimsRequest);
-        redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
@@ -553,7 +550,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .state(RP_STATE)
                         .claims(oidcValidClaimsRequest);
 
-        redis.createSession(SESSION_ID);
         var clientCreationTime = LocalDateTime.now();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
@@ -609,7 +605,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce())
                         .state(RP_STATE);
 
-        redis.createSession(sessionId);
         var clientCreationTime = LocalDateTime.now();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(

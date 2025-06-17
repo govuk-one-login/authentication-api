@@ -1200,7 +1200,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setupSession() throws Json.JsonException {
-        redis.createSession(SESSION_ID);
         redis.addStateToRedis(
                 AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                 ORCH_TO_AUTH_STATE,
