@@ -57,7 +57,6 @@ import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -568,7 +567,6 @@ class AuthenticationCallbackHandlerTest {
 
         handler.handleRequest(event, CONTEXT);
 
-        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
         var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
         verify(orchSessionService, times(3)).updateSession(orchSessionCaptor.capture());
         assertThat(

@@ -43,7 +43,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -906,7 +905,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         private void setupMaxAgeSession() throws Json.JsonException {
-            var session = new Session();
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,
@@ -920,7 +918,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousSessions(String internalCommonSubjectId)
                 throws Json.JsonException {
-            var session = new Session();
             var orchSession =
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(internalCommonSubjectId)
