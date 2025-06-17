@@ -8,13 +8,19 @@ FetchJwksErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-FetchJwksFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-FetchJwksFunction
+            - !Sub ${Environment}-FetchJwksFunction
 
 FetchJwksErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-FetchJwks-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-FetchJwks-error-anomaly-alarm
+        - !Sub ${Environment}-FetchJwks-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -35,7 +41,10 @@ FetchJwksErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-FetchJwksFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-FetchJwksFunction
+                    - !Sub ${Environment}-FetchJwksFunction
           Period: 60
           Stat: Average
 
@@ -52,13 +61,19 @@ OpenIdConfigurationErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-OpenIdConfigurationFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+            - !Sub ${Environment}-OpenIdConfigurationFunction
 
 OpenIdConfigurationErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-OpenIdConfiguration-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-OpenIdConfiguration-error-anomaly-alarm
+        - !Sub ${Environment}-OpenIdConfiguration-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -79,7 +94,10 @@ OpenIdConfigurationErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-OpenIdConfigurationFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+                    - !Sub ${Environment}-OpenIdConfigurationFunction
           Period: 60
           Stat: Average
 
@@ -96,13 +114,19 @@ TrustmarkFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-TrustmarkFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-TrustmarkFunction
+            - !Sub ${Environment}-TrustmarkFunction
 
 TrustmarkFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-trustmark-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-error-anomaly-alarm
+        - !Sub ${Environment}-trustmark-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -123,7 +147,10 @@ TrustmarkFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-TrustmarkFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TrustmarkFunction
+                    - !Sub ${Environment}-TrustmarkFunction
           Period: 60
           Stat: Average
 
@@ -139,13 +166,19 @@ BackChannelLogoutRequestErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-BackChannelLogoutRequestFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-BackChannelLogoutRequestFunction
+            - !Sub ${Environment}-BackChannelLogoutRequestFunction
 
 BackChannelLogoutRequestErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-BackChannelLogoutRequest-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-BackChannelLogoutRequest-error-anomaly-alarm
+        - !Sub ${Environment}-BackChannelLogoutRequest-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} BackChannelLogoutRequest lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -166,7 +199,10 @@ BackChannelLogoutRequestErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-BackChannelLogoutRequestFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-BackChannelLogoutRequestFunction
+                    - !Sub ${Environment}-BackChannelLogoutRequestFunction
           Period: 60
           Stat: Average
 
@@ -182,13 +218,19 @@ DocAppCallbackErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-DocAppCallbackFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-DocAppCallbackFunction
+            - !Sub ${Environment}-DocAppCallbackFunction
 
 DocAppCallbackErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-DocAppCallback-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-DocAppCallback-error-anomaly-alarm
+        - !Sub ${Environment}-DocAppCallback-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -209,7 +251,10 @@ DocAppCallbackErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-DocAppCallbackFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
           Period: 60
           Stat: Average
 #endregion
@@ -224,13 +269,19 @@ TokenFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-TokenFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-TokenFunction
+            - !Sub ${Environment}-TokenFunction
 
 TokenFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-TokenFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-TokenFunction-error-anomaly-alarm
+        - !Sub ${Environment}-TokenFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -251,7 +302,10 @@ TokenFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-TokenFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TokenFunction
+                    - !Sub ${Environment}-TokenFunction
           Period: 60
           Stat: Average
 #endregion
@@ -266,13 +320,19 @@ LogoutFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-LogoutFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-LogoutFunction
+            - !Sub ${Environment}-LogoutFunction
 
 LogoutFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-LogoutFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-LogoutFunction-error-anomaly-alarm
+        - !Sub ${Environment}-LogoutFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -293,7 +353,10 @@ LogoutFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-LogoutFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-LogoutFunction
+                    - !Sub ${Environment}-LogoutFunction
           Period: 60
           Stat: Average
 #endregion
@@ -308,13 +371,19 @@ AuthenticationCallbackFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-AuthenticationCallbackFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+            - !Sub ${Environment}-AuthenticationCallbackFunction
 
 AuthenticationCallbackFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthenticationCallbackFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -335,7 +404,10 @@ AuthenticationCallbackFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-AuthenticationCallbackFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
           Period: 60
           Stat: Average
 
@@ -351,13 +423,19 @@ JwksFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-JwksFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-JwksFunction
+            - !Sub ${Environment}-JwksFunction
 
 JwksFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-JwksFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-JwksFunction-error-anomaly-alarm
+        - !Sub ${Environment}-JwksFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -378,7 +456,10 @@ JwksFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-JwksFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-JwksFunction
+                    - !Sub ${Environment}-JwksFunction
           Period: 60
           Stat: Average
 
@@ -394,13 +475,19 @@ AuthorisationFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-AuthorisationFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthorisationFunction
+            - !Sub ${Environment}-AuthorisationFunction
 
 AuthorisationFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-AuthorisationFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthorisationFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthorisationFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -421,7 +508,10 @@ AuthorisationFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-AuthorisationFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
           Period: 60
           Stat: Average
 
@@ -437,13 +527,19 @@ UserInfoFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-UserInfoFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-UserInfoFunction
+            - !Sub ${Environment}-UserInfoFunction
 
 UserInfoFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-UserInfoFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-UserInfoFunction-error-anomaly-alarm
+        - !Sub ${Environment}-UserInfoFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -464,7 +560,10 @@ UserInfoFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-UserInfoFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-UserInfoFunction
+                    - !Sub ${Environment}-UserInfoFunction
           Period: 60
           Stat: Average
 
@@ -480,13 +579,19 @@ AuthCodeFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-AuthCodeFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthCodeFunction
+            - !Sub ${Environment}-AuthCodeFunction
 
 AuthCodeFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-AuthCodeFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthCodeFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthCodeFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -507,7 +612,10 @@ AuthCodeFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-AuthCodeFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthCodeFunction
+                    - !Sub ${Environment}-AuthCodeFunction
           Period: 60
           Stat: Average
 
@@ -524,14 +632,20 @@ UpdateClientConfigFunctionAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-UpdateClientConfigFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-UpdateClientConfigFunction
+            - !Sub ${Environment}-UpdateClientConfigFunction
 
 UpdateClientConfigFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Condition: IsNotProduction
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-UpdateClientConfigFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-UpdateClientConfigFunction-error-anomaly-alarm
+        - !Sub ${Environment}-UpdateClientConfigFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -552,7 +666,10 @@ UpdateClientConfigFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-UpdateClientConfigFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-UpdateClientConfigFunction
+                    - !Sub ${Environment}-UpdateClientConfigFunction
           Period: 60
           Stat: Average
 
@@ -569,14 +686,20 @@ ClientRegistrationFunctionAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-ClientRegistrationFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ClientRegistrationFunction
+            - !Sub ${Environment}-ClientRegistrationFunction
 
 ClientRegistrationFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Condition: IsNotProduction
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ClientRegistrationFunction-error-anomaly-alarm
+        - !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -597,7 +720,10 @@ ClientRegistrationFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-ClientRegistrationFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-ClientRegistrationFunction
+                    - !Sub ${Environment}-ClientRegistrationFunction
           Period: 60
           Stat: Average
 
@@ -613,13 +739,19 @@ IpvCallbackFunctionAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-IpvCallbackFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-IpvCallbackFunction
+            - !Sub ${Environment}-IpvCallbackFunction
 
 IpvCallbackFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-IpvCallbackFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-IpvCallbackFunction-error-anomaly-alarm
+        - !Sub ${Environment}-IpvCallbackFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -640,7 +772,10 @@ IpvCallbackFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-IpvCallbackFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvCallbackFunction
+                    - !Sub ${Environment}-IpvCallbackFunction
           Period: 60
           Stat: Average
 
@@ -657,14 +792,20 @@ SpotResponseFunctionAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-SpotResponseFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-SpotResponseFunction
+            - !Sub ${Environment}-SpotResponseFunction
 
 SpotResponseFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Condition: IpvExists
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-SpotResponseFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-SpotResponseFunction-error-anomaly-alarm
+        - !Sub ${Environment}-SpotResponseFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -685,7 +826,10 @@ SpotResponseFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-SpotResponseFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-SpotResponseFunction
+                    - !Sub ${Environment}-SpotResponseFunction
           Period: 60
           Stat: Average
 
@@ -701,13 +845,19 @@ StorageTokenJwkFunctionErrorAnomalyDetector:
     Dimensions:
       - Name: FunctionName
         Value:
-          Fn::Sub: ${Environment}-StorageTokenJwkFunction
+          Fn::Sub: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+            - !Sub ${Environment}-StorageTokenJwkFunction
 
 StorageTokenJwkFunctionErrorAnomalyAlarm:
   Type: AWS::CloudWatch::Alarm
   Properties:
     AlarmName:
-      Fn::Sub: ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
+      Fn::Sub: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-StorageTokenJwkFunction-error-anomaly-alarm
+        - !Sub ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
     AlarmDescription:
       Fn::Sub: "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}"
     ActionsEnabled: false
@@ -728,7 +878,10 @@ StorageTokenJwkFunctionErrorAnomalyAlarm:
             Dimensions:
               - Name: FunctionName
                 Value:
-                  Fn::Sub: ${Environment}-StorageTokenJwkFunction
+                  Fn::Sub: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+                    - !Sub ${Environment}-StorageTokenJwkFunction
           Period: 60
           Stat: Average
 #endregion

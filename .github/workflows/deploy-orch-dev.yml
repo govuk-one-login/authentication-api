@@ -4,7 +4,13 @@ permissions:
   id-token: write
   contents: read
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run against"
+        type: environment
+        required: true
 
 jobs:
   deploy:
