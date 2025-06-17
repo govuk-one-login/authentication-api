@@ -18,6 +18,24 @@ data "aws_iam_policy_document" "pending_email_check_queue_subscription_policy_do
       aws_sqs_queue.pending_email_check_queue.arn,
     ]
   }
+
+  dynamic "statement" {
+    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    content {
+      sid    = "AllowSenderWriteAccessToPendingEmailCheckQueue"
+      effect = "Allow"
+      principals {
+        type        = "AWS"
+        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+      }
+      actions = [
+        "sqs:SendMessage"
+      ]
+      resources = [
+        aws_sqs_queue.pending_email_check_queue.arn,
+      ]
+    }
+  }
 }
 
 resource "aws_sqs_queue_policy" "pending_email_check_queue_subscription" {

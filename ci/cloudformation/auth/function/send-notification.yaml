@@ -43,7 +43,16 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/lockout_count_ttl}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          PENDING_EMAIL_CHECK_QUEUE_URL: "" # TODO
+          PENDING_EMAIL_CHECK_QUEUE_URL: !Sub
+            - https://sqs.eu-west-2.amazonaws.com/${DataStoreAccountId}/${Env}-pending-email-check-queue
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
           SUPPORT_EMAIL_CHECK_ENABLED: true
           SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
@@ -78,8 +87,8 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoEmailCheckResultReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref PendingEmailCheckQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        # TODO local.pending_email_check_queue_access_policy_arn,
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
