@@ -90,7 +90,6 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -350,8 +349,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -376,8 +373,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), true, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -400,8 +395,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -424,8 +417,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -448,8 +439,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -475,8 +464,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -501,8 +488,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -529,8 +514,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -553,8 +536,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -574,8 +555,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         setupTestWithAbortOnAisErrorResponseFlagOn();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -598,8 +577,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithoutOptionalFields(
                 SUBJECT_ID.getValue(), false, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -629,8 +606,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -653,8 +628,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), true, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -677,8 +650,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -702,8 +673,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -726,8 +695,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, false);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -755,8 +722,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -784,8 +749,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -806,8 +769,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         setupTestWithAbortOnAisErrorResponseFlagOn();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
-        var session = redis.getSession(SESSION_ID);
-        assertNotNull(session);
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 

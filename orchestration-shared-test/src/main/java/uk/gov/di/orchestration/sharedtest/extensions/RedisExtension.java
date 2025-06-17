@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -39,10 +38,6 @@ public class RedisExtension
 
     public void addClientSessionAndStateToRedis(State state, String clientSessionId) {
         redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
-    }
-
-    public Session getSession(String sessionId) throws Json.JsonException {
-        return objectMapper.readValue(redis.getValue(sessionId), Session.class);
     }
 
     public void addToRedis(String key, String value, Long expiry) {
