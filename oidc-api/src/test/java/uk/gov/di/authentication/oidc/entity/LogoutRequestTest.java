@@ -23,7 +23,6 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -51,7 +50,6 @@ class LogoutRequestTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
@@ -123,11 +121,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -152,11 +146,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -189,11 +179,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.empty(), logoutRequest.orchSession());
         assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
@@ -225,11 +211,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -267,11 +249,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -318,11 +296,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -357,11 +331,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
@@ -398,11 +368,7 @@ class LogoutRequestTest {
 
         LogoutRequest logoutRequest =
                 new LogoutRequest(
-                        sessionService,
-                        tokenValidationService,
-                        dynamoClientService,
-                        event,
-                        orchSessionService);
+                        tokenValidationService, dynamoClientService, event, orchSessionService);
 
         assertEquals(Optional.of(orchSession), logoutRequest.orchSession());
         assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());

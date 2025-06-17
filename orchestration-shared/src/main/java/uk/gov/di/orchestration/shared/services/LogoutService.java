@@ -33,7 +33,6 @@ public class LogoutService {
 
     private static final Logger LOG = LogManager.getLogger(LogoutService.class);
 
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final DynamoClientService dynamoClientService;
     private final OrchClientSessionService orchClientSessionService;
@@ -47,20 +46,6 @@ public class LogoutService {
 
     public LogoutService(ConfigurationService configurationService) {
         this(
-                new SessionService(configurationService),
-                new OrchSessionService(configurationService),
-                new DynamoClientService(configurationService),
-                new OrchClientSessionService(configurationService),
-                new AuditService(configurationService),
-                new CloudwatchMetricsService(),
-                new BackChannelLogoutService(configurationService),
-                new AuthFrontend(configurationService),
-                new NowClock(Clock.systemUTC()));
-    }
-
-    public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
-        this(
-                new SessionService(configurationService, redis),
                 new OrchSessionService(configurationService),
                 new DynamoClientService(configurationService),
                 new OrchClientSessionService(configurationService),
@@ -72,7 +57,6 @@ public class LogoutService {
     }
 
     public LogoutService(
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             DynamoClientService dynamoClientService,
             OrchClientSessionService orchClientSessionService,
@@ -81,7 +65,6 @@ public class LogoutService {
             BackChannelLogoutService backChannelLogoutService,
             AuthFrontend authFrontend,
             NowClock nowClock) {
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.dynamoClientService = dynamoClientService;
         this.orchClientSessionService = orchClientSessionService;

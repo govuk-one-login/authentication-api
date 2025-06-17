@@ -75,7 +75,6 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
@@ -123,7 +122,6 @@ public class AuthorisationHandler
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
     private final ConfigurationService configurationService;
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
@@ -140,7 +138,6 @@ public class AuthorisationHandler
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
@@ -155,7 +152,6 @@ public class AuthorisationHandler
             AuthFrontend authFrontend,
             AuthorisationService authorisationService) {
         this.configurationService = configurationService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
@@ -173,7 +169,6 @@ public class AuthorisationHandler
 
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
@@ -203,7 +198,6 @@ public class AuthorisationHandler
     public AuthorisationHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
-        this.sessionService = new SessionService(configurationService, redis);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =

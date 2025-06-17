@@ -13,7 +13,6 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
@@ -47,7 +46,6 @@ public class LogoutRequest {
     private Optional<OrchSessionItem> orchSession = Optional.empty();
 
     public LogoutRequest(
-            SessionService sessionService,
             TokenValidationService tokenValidationService,
             DynamoClientService dynamoClientService,
             APIGatewayProxyRequestEvent input,

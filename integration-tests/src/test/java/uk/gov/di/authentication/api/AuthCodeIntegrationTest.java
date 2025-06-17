@@ -88,7 +88,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
         sessionID = redis.createSession();
     }

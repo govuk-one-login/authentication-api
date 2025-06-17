@@ -22,7 +22,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
 import java.util.Map;
@@ -60,11 +59,10 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
             DynamoIdentityService dynamoIdentityService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            SessionService sessionService,
             AuthenticationUserInfoStorageService userInfoStorageService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
-        super(configurationService, sessionService, orchSessionService, orchClientSessionService);
+        super(configurationService, orchSessionService, orchClientSessionService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;

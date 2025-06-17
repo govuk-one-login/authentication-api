@@ -86,7 +86,6 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -154,7 +153,6 @@ class AuthorisationHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final DocAppAuthorisationService docAppAuthorisationService =
             mock(DocAppAuthorisationService.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -288,7 +286,6 @@ class AuthorisationHandlerTest {
         handler =
                 new AuthorisationHandler(
                         configService,
-                        sessionService,
                         orchSessionService,
                         orchClientSessionService,
                         orchestrationAuthorizationService,
@@ -305,7 +302,6 @@ class AuthorisationHandlerTest {
         session = new Session();
         newSession = new Session();
         orchSession = new OrchSessionItem(SESSION_ID);
-        when(sessionService.generateSession()).thenReturn(newSession);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
         when(clientService.getClient(anyString()))
@@ -1723,11 +1719,6 @@ class AuthorisationHandlerTest {
                 ArgumentCaptor.forClass(Session.class);
         private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
                 ArgumentCaptor.forClass(OrchSessionItem.class);
-
-        @BeforeEach
-        void setup() {
-            when(sessionService.generateSession()).thenReturn(new Session());
-        }
 
         @Test
         void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
