@@ -131,7 +131,7 @@ locals {
 }
 
 variable "snapstart_enabled" {
-  description = "The flag to enable AWS Lambda SnapStart for Lambdas , make sure you set prvsoned_concurrency to 0 for the lambda to work with SnapStart"
+  description = "The flag to enable AWS Lambda SnapStart for Lambdas, Make sure you set Provisoned_concurrency to 0 for the lambda to work with SnapStart"
   type        = bool
   default     = false
 }
