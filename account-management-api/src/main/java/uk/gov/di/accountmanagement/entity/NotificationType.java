@@ -28,7 +28,17 @@ public enum NotificationType implements TemplateAware {
             new EnumMap<>(Map.of(SupportedLanguage.CY, "PASSWORD_UPDATED_TEMPLATE_ID_CY"))),
     BACKUP_METHOD_ADDED(
             "BACKUP_METHOD_ADDED_TEMPLATE_ID",
-            new EnumMap<>(Map.of(SupportedLanguage.CY, "BACKUP_METHOD_ADDED_TEMPLATE_ID_CY")));
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "BACKUP_METHOD_ADDED_TEMPLATE_ID_CY"))),
+    CHANGED_AUTHENTICATOR_APP(
+            "CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID",
+            new EnumMap<>(
+                    Map.of(SupportedLanguage.CY, "CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID_CY"))),
+    CHANGED_DEFAULT_MFA(
+            "CHANGED_DEFAULT_MFA_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "CHANGED_DEFAULT_MFA_TEMPLATE_ID_CY"))),
+    SWITCHED_MFA_METHODS(
+            "SWITCHED_MFA_METHODS_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "SWITCHED_MFA_METHODS_TEMPLATE_ID_CY")));
 
     private final String templateName;
 
