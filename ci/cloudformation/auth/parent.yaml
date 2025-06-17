@@ -9,6 +9,7 @@ Metadata:
       ignore_checks:
         - W1028
         - W8003
+        - E1011
 
 Description: >
   Auth API template for backend
@@ -153,6 +154,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
+      useStronglyConsistentReads: true
     authdev2:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -170,6 +172,7 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
+      useStronglyConsistentReads: true
     dev:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -197,6 +200,7 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
       UseAlarmActions: "No"
+      useStronglyConsistentReads: true
     build:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -225,6 +229,7 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: true
     staging:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -254,6 +259,7 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: true
     integration:
       cloudwatchLogRetentionInDays: 30
       customDocAppClaimEnabled: true
@@ -266,6 +272,7 @@ Mappings:
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: false
     production:
       cloudwatchLogRetentionInDays: 30
       customDocAppClaimEnabled: true
@@ -279,6 +286,7 @@ Mappings:
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: false
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"

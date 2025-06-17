@@ -54,10 +54,18 @@ Resources:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !Sub
-            - "{{resolve:ssm:/deploy/${env}/use_strongly_consistent_reads}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                useStronglyConsistentReads,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                useStronglyConsistentReads,
+              ]
       LoggingConfig:
         LogGroup: !Ref ReverificationResultFunctionLogGroup
       Policies:
