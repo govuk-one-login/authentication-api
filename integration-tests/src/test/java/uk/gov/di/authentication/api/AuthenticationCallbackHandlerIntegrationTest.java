@@ -946,7 +946,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupMaxAgeSession() throws Json.JsonException {
             var session = new Session();
-            redis.addSessionWithId(session, SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,
@@ -969,7 +968,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                             .toInstant()
                                             .getEpochSecond());
             PREVIOUS_CLIENT_SESSIONS.forEach(orchSession::addClientSession);
-            redis.addSessionWithId(session, PREVIOUS_SESSION_ID);
             redis.addStateToRedis(
                     AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                     ORCH_TO_AUTH_STATE,

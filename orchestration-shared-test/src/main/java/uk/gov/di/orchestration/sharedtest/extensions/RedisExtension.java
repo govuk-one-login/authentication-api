@@ -28,11 +28,6 @@ public class RedisExtension
         this.configurationService = configurationService;
     }
 
-    public Session addSessionWithId(Session session, String sessionId) throws Json.JsonException {
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-        return session;
-    }
-
     public void addStateToRedis(State state, String sessionId) throws Json.JsonException {
         addStateToRedis("state:", state, sessionId);
     }
