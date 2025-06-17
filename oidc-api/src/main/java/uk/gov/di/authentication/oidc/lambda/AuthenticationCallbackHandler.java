@@ -65,7 +65,6 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
@@ -104,7 +103,6 @@ public class AuthenticationCallbackHandler
     private final ConfigurationService configurationService;
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
-    private final SessionService sessionService;
     private final OrchSessionService orchSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
@@ -130,7 +128,6 @@ public class AuthenticationCallbackHandler
         this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -171,7 +168,6 @@ public class AuthenticationCallbackHandler
         this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
-        this.sessionService = new SessionService(configurationService, redisConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -207,7 +203,6 @@ public class AuthenticationCallbackHandler
             ConfigurationService configurationService,
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
-            SessionService sessionService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
@@ -223,7 +218,6 @@ public class AuthenticationCallbackHandler
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
-        this.sessionService = sessionService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
