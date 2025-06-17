@@ -52,6 +52,8 @@ module "auth_token" {
   max_provisioned_concurrency = lookup(var.performance_tuning, "auth-token", local.default_performance_parameters).max_concurrency
   scaling_trigger             = lookup(var.performance_tuning, "auth-token", local.default_performance_parameters).scaling_trigger
 
+  snapstart = var.snapstart_enabled
+
   source_bucket           = aws_s3_bucket.auth_ext_source_bucket.bucket
   lambda_zip_file         = aws_s3_object.auth_ext_api_release_zip.key
   lambda_zip_file_version = aws_s3_object.auth_ext_api_release_zip.version_id

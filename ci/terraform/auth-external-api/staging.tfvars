@@ -14,6 +14,5 @@ new_auth_api_vpc_endpoint_id = "vpce-07078f5f005fe5efc"
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
 
-# Sizing
-lambda_max_concurrency = 10
-lambda_min_concurrency = 3
+# Performance Tuning
+snapstart_enabled = true

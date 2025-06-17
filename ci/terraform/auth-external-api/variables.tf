@@ -130,6 +130,12 @@ locals {
   }
 }
 
+variable "snapstart_enabled" {
+  description = "The flag to enable AWS Lambda SnapStart for Lambdas, Make sure you set Provisoned_concurrency to 0 for the lambda to work with SnapStart"
+  type        = bool
+  default     = false
+}
+
 variable "vpc_environment" {
   description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
   type        = string
