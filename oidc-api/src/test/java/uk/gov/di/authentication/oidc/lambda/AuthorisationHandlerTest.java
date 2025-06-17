@@ -311,8 +311,6 @@ class AuthorisationHandlerTest {
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
-        when(sessionService.updateWithNewSessionId(any(Session.class), anyString(), anyString()))
-                .then(invocation -> invocation.<Session>getArgument(0));
     }
 
     @Nested
@@ -338,7 +336,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
@@ -509,7 +507,7 @@ class AuthorisationHandlerTest {
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated) {
-            withExistingSession(session);
+            withExistingSession();
             withExistingOrchSession(
                     new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(isAuthenticated));
 
@@ -595,7 +593,6 @@ class AuthorisationHandlerTest {
                                 .contains("lng="));
             }
 
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verify(auditService)
@@ -614,7 +611,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldResetProcessingIdentityAttemptsWhenUpdatingAnExistingSession() {
-            withExistingSession(session);
+            withExistingSession();
             var previousOrchSession = new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(true);
             previousOrchSession.incrementProcessingIdentityAttempts();
             withExistingOrchSession(previousOrchSession);
@@ -638,7 +635,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWithPromptParamWhenSetToLoginAndExistingSessionIsPresent() {
-            withExistingSession(session);
+            withExistingSession();
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
@@ -662,7 +659,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -685,7 +681,7 @@ class AuthorisationHandlerTest {
         @ValueSource(booleans = {true, false})
         void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
                 boolean isAuthOrchSplitEnabled) {
-            withExistingSession(session);
+            withExistingSession();
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
 
@@ -709,7 +705,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenSingleFactorInVtr() {
-            withExistingSession(session);
+            withExistingSession();
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl"))).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -734,7 +730,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -758,7 +753,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenIdentityIsPresentInVtr() {
-            withExistingSession(session);
+            withExistingSession();
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -783,7 +778,6 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
-            verify(sessionService).storeOrUpdateSession(session, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
             verify(orchSessionService).deleteSession(SESSION_ID);
             verify(orchClientSessionService).storeClientSession(orchClientSession);
@@ -1009,7 +1003,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -1066,7 +1060,7 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
+
             verify(orchSessionService).addSession(any());
 
             verify(auditService)
@@ -1152,7 +1146,6 @@ class AuthorisationHandlerTest {
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
-            verify(sessionService).storeOrUpdateSession(newSession, NEW_SESSION_ID);
             verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -1256,7 +1249,6 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
-            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
 
             var requestParams =
@@ -1276,7 +1268,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldNotAddPreviousSessionIdWhenSessionCookiePresentButNotOrchSession()
                 throws ParseException {
-            when(sessionService.getSession(any())).thenReturn(Optional.of(new Session()));
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
 
             var requestParams =
@@ -1707,7 +1698,7 @@ class AuthorisationHandlerTest {
     @Test
     void shouldAddANewClientSessionToAnExistingOrchSession() {
         withExistingOrchSession(orchSession.addClientSession("previous-client-session"));
-        withExistingSession(session);
+        withExistingSession();
         var requestParams =
                 buildRequestParams(
                         Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
@@ -1740,13 +1731,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
-            withExistingSession(null);
             withExistingOrchSession(null);
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1769,13 +1755,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
-            withExistingSession(null);
             withExistingOrchSession(null);
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1798,13 +1779,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
-            withExistingSession(session);
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(null);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1827,13 +1803,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-            withExistingSession(session);
             withExistingOrchSession(orchSession.withBrowserSessionId(null));
             var response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-            verify(sessionService, never()).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1860,13 +1831,8 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldUseExistingSessionWhenSessionBSIDMatchesBSIDInCookie() {
-            withExistingSession(session);
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response = makeRequestWithBSIDInCookie(BROWSER_SESSION_ID);
-
-            verify(sessionService, never()).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1889,14 +1855,9 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
-            withExistingSession(session);
             withExistingOrchSession(orchSession.withBrowserSessionId(BROWSER_SESSION_ID));
             APIGatewayProxyResponseEvent response =
                     makeRequestWithBSIDInCookie(DIFFERENT_BROWSER_SESSION_ID);
-
-            verify(sessionService).generateSession();
-            verify(sessionService)
-                    .storeOrUpdateSession(sessionCaptor.capture(), eq(NEW_SESSION_ID));
 
             verify(orchSessionService).addSession(orchSessionCaptor.capture());
             var actualOrchSession = orchSessionCaptor.getValue();
@@ -1915,10 +1876,6 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME),
                             pair("new_authentication_required", true));
-        }
-
-        private void withExistingSession(Session session) {
-            when(sessionService.getSession(any())).thenReturn(Optional.ofNullable(session));
         }
 
         private APIGatewayProxyResponseEvent makeRequestWithBSIDInCookie(
@@ -2009,7 +1966,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldUpdateOrchSessionWhenThereIsAnExistingSession() throws JOSEException {
-            withExistingSession(session);
+            withExistingSession();
             when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
 
             makeDocAppHandlerRequest();
@@ -2599,8 +2556,7 @@ class AuthorisationHandlerTest {
             when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             orchSession.incrementProcessingIdentityAttempts();
-            withExistingSession(session);
-            when(sessionService.copySessionForMaxAge(any(Session.class))).thenCallRealMethod();
+            withExistingSession();
         }
 
         @Test
@@ -2781,8 +2737,6 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<Session> newSharedSesisonCaptor = ArgumentCaptor.forClass(Session.class);
             if (maxAgeExpired) {
                 verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
-                verify(sessionService, times(2))
-                        .storeOrUpdateSession(newSharedSesisonCaptor.capture(), anyString());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
                 OrchSessionItem newOrchSession = addSessionCaptor.getAllValues().get(1);
 
@@ -2965,13 +2919,11 @@ class AuthorisationHandlerTest {
         when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
     }
 
-    private void withExistingSession(Session session) {
-        when(sessionService.getSession(any())).thenReturn(Optional.of(session));
+    private void withExistingSession() {
         when(orchSessionService.getSession(any())).thenReturn(Optional.of(orchSession));
     }
 
     private void withNoSession() {
-        when(sessionService.getSession(any())).thenReturn(Optional.empty());
         when(orchSessionService.getSession(any())).thenReturn(Optional.empty());
     }
 
