@@ -29,7 +29,6 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.util.Map;
@@ -60,18 +59,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
-    }
-
-    public ProcessingIdentityHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(ProcessingIdentityRequest.class, configurationService);
-        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
-        this.logoutService = new LogoutService(configurationService, redis);
     }
 
     public ProcessingIdentityHandler() {

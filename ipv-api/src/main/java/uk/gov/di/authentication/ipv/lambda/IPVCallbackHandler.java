@@ -167,7 +167,7 @@ public class IPVCallbackHandler
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.logoutService = new LogoutService(configurationService, redis);
+        this.logoutService = new LogoutService(configurationService);
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService,

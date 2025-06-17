@@ -193,7 +193,7 @@ public class AuthenticationCallbackHandler
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
-        this.logoutService = new LogoutService(configurationService, redisConnectionService);
+        this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redisConnectionService);

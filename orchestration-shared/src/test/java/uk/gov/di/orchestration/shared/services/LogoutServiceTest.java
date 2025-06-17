@@ -73,7 +73,6 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final OrchClientSessionService orchClientSessionService =
@@ -158,7 +157,6 @@ class LogoutServiceTest {
 
         logoutService =
                 new LogoutService(
-                        sessionService,
                         orchSessionService,
                         dynamoClientService,
                         orchClientSessionService,
@@ -604,7 +602,6 @@ class LogoutServiceTest {
 
     private LogoutService logoutServiceWithClock(Clock clock) {
         return new LogoutService(
-                sessionService,
                 orchSessionService,
                 dynamoClientService,
                 orchClientSessionService,

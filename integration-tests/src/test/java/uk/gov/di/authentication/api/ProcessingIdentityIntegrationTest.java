@@ -71,9 +71,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setup() {
-        handler =
-                new ProcessingIdentityHandler(
-                        TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new ProcessingIdentityHandler(TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
