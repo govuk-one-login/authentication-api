@@ -56,7 +56,6 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
@@ -117,7 +116,6 @@ class AuthCodeHandlerTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
             mock(OrchestrationAuthorizationService.class);
-    private final SessionService sessionService = mock(SessionService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final AuthenticationUserInfoStorageService authUserInfoService =
             mock(AuthenticationUserInfoStorageService.class);
@@ -172,7 +170,6 @@ class AuthCodeHandlerTest {
     void setUp() {
         handler =
                 new AuthCodeHandler(
-                        sessionService,
                         orchSessionService,
                         authUserInfoService,
                         authCodeResponseService,
