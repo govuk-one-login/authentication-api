@@ -15,6 +15,7 @@ module "account_management_api_send_notification_role" {
     local.pending_email_check_queue_access_policy_arn,
     local.email_check_results_encryption_policy_arn,
     aws_iam_policy.check_email_fraud_block_read_dynamo_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_user_write_access_policy.arn,
   ]
   extra_tags = {
     Service = "send-otp-notification"
