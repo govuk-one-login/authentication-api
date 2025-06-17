@@ -70,7 +70,6 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -223,8 +222,6 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private Session session;
-    private Session newSession;
     private OrchSessionItem orchSession;
     private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
@@ -299,8 +296,6 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService);
-        session = new Session();
-        newSession = new Session();
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
@@ -1715,8 +1710,6 @@ class AuthorisationHandlerTest {
 
     @Nested
     class BrowserSessionId {
-        private final ArgumentCaptor<Session> sessionCaptor =
-                ArgumentCaptor.forClass(Session.class);
         private final ArgumentCaptor<OrchSessionItem> orchSessionCaptor =
                 ArgumentCaptor.forClass(OrchSessionItem.class);
 
@@ -2725,7 +2718,6 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<OrchSessionItem> addSessionCaptor =
                     ArgumentCaptor.forClass(OrchSessionItem.class);
-            ArgumentCaptor<Session> newSharedSesisonCaptor = ArgumentCaptor.forClass(Session.class);
             if (maxAgeExpired) {
                 verify(orchSessionService, times(2)).addSession(addSessionCaptor.capture());
                 OrchSessionItem updatedPreviousSession = addSessionCaptor.getAllValues().get(0);
