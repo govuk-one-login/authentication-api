@@ -44,6 +44,7 @@ Resources:
                 - !GetAtt MfaFunctionRole.Arn
                 - !GetAtt ResetPasswordFunctionRole.Arn
                 - !GetAtt ResetPasswordRequestFunctionRole.Arn
+                - !GetAtt SendNotificationFunctionRole.Arn
           - Sid: ReceiveSQS
             Effect: Allow
             Action:

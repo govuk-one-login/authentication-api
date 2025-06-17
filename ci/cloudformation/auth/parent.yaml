@@ -1031,7 +1031,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-email-check-result table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/auth-ext/
+        - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
