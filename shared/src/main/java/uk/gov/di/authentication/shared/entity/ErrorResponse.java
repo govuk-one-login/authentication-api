@@ -97,7 +97,8 @@ public enum ErrorResponse {
     ERROR_1083(1083, "User's account is suspended"),
     ERROR_1084(1084, "User's account is blocked"),
     NO_USER_PROFILE_FOR_EMAIL(1085, "Email from request does not have a user profile"),
-    USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials");
+    USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials"),
+    ERROR_1087(1087, "Unsupported notification identifier in request");
 
     private int code;
 

@@ -8,14 +8,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -35,16 +39,21 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class MFAMethodsPutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private final Json objectMapper = SerializationService.getInstance();
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodsPutHandler.class);
     private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
+    private final AwsSqsClient sqsClient;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -58,17 +67,24 @@ public class MFAMethodsPutHandler
         this.authenticationService = new DynamoService(configurationService);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     public MFAMethodsPutHandler(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -81,7 +97,7 @@ public class MFAMethodsPutHandler
     }
 
     public APIGatewayProxyResponseEvent updateMFAMethodsHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+            APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
 
         addSessionIdToLogs(input);
 
@@ -97,6 +113,11 @@ public class MFAMethodsPutHandler
         if (validRequestOrErrorResponse.isFailure()) {
             return validRequestOrErrorResponse.getFailure();
         }
+
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
 
@@ -145,6 +166,19 @@ public class MFAMethodsPutHandler
                     "Error converting mfa methods to response; update may still have occurred. Error: {}",
                     methodsAsResponse.getFailure());
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+        }
+
+        var notificationIdentifier = putRequest.request().notificationIdentifier();
+
+        if (notificationIdentifier != null) {
+            var notificationType = mapNotificationIdentifierToType(notificationIdentifier);
+
+            if (notificationType.isFailure()) {
+                return notificationType.getFailure();
+            }
+
+            sendNotification(
+                    notificationType.getSuccess(), putRequest.userProfile.getEmail(), userLanguage);
         }
 
         try {
@@ -253,5 +287,44 @@ public class MFAMethodsPutHandler
         Map<String, String> headers = input.getHeaders();
         String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
         attachSessionIdToLogs(sessionId);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, NotificationType> mapNotificationIdentifierToType(
+            MFAMethodNotificationIdentifier notificationIdentifier)
+            throws IllegalArgumentException {
+        if (notificationIdentifier == null) {
+            throw new IllegalArgumentException("notificationIdentifier cannot be null.");
+        }
+
+        return switch (notificationIdentifier) {
+            case CHANGED_AUTHENTICATOR_APP -> Result.success(
+                    NotificationType.CHANGED_AUTHENTICATOR_APP);
+            case CHANGED_DEFAULT_MFA -> Result.success(NotificationType.CHANGED_DEFAULT_MFA);
+            case SWITCHED_MFA_METHODS -> Result.success(NotificationType.SWITCHED_MFA_METHODS);
+            default -> {
+                LOG.error(
+                        "Notification identifier '{}' is not supported by the PUT endpoint.",
+                        notificationIdentifier.getValue());
+                yield Result.failure(
+                        generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1087));
+            }
+        };
+    }
+
+    private void sendNotification(
+            NotificationType notificationType,
+            String userEmail,
+            LocaleHelper.SupportedLanguage userLanguage)
+            throws Json.JsonException {
+        LOG.info(
+                "Backup method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
+                notificationType.name());
+
+        NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType, userLanguage);
+        sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+
+        LOG.info(
+                "Message successfully added to queue (notification type: '{}'). Generating successful response.",
+                notificationType.name());
     }
 }
