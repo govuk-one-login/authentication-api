@@ -21,6 +21,9 @@ notify_template_map = {
   REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "0674c6e3-219c-4e3a-b04c-3786bac7f228"
   BACKUP_METHOD_ADDED_TEMPLATE_ID                        = "569ae40c-2631-4de3-9d85-7f8ffd9182e9"
   BACKUP_METHOD_REMOVED_TEMPLATE_ID                      = "8c8d2392-cecc-452d-88a5-2bd8418fb257"
+  CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID                  = "de419864-17bf-488c-93e5-da791352e2db"
+  CHANGED_DEFAULT_MFA_TEMPLATE_ID                        = "2d17c6db-8d2d-42af-95f1-5d096cd74212"
+  SWITCHED_MFA_METHODS_TEMPLATE_ID                       = "0b856ef8-07d6-4dca-ab6a-8a45044182cc"
 }
 
 # Logging
