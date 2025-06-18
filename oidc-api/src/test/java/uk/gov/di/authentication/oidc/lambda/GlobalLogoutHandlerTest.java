@@ -25,6 +25,10 @@ public class GlobalLogoutHandlerTest {
                         Named.of(
                                 "Missing required fields",
                                 new GlobalLogoutMessage(null, null, null, null, null, null, null))),
+                Arguments.of(
+                        Named.of(
+                                "Fields are empty strings",
+                                new GlobalLogoutMessage("", "", "", "", "", "", ""))),
                 Arguments.of(Named.of("Invalid JSON", "{")));
     }
 

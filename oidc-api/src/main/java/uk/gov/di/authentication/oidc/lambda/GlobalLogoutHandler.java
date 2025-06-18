@@ -14,6 +14,7 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import java.util.ArrayList;
 import java.util.List;
 
+import static uk.gov.di.authentication.oidc.validators.GlobalLogoutValidator.validate;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -54,6 +55,7 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
         var request =
                 SerializationService.getInstance()
                         .readValue(message.getBody(), GlobalLogoutMessage.class);
+        validate(request);
         LOG.info(
                 "Received request to global logout user with session {} and client session {}",
                 request.sessionId(),
