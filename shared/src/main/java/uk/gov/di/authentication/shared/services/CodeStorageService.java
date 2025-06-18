@@ -140,6 +140,12 @@ public class CodeStorageService {
         return getTTL(email, codeBlockedKeyPrefix);
     }
 
+    public long getSmsMfaCodeRequestBlockTimeToLive(String email, JourneyType journeyType) {
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
+        var codeBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        return getTTL(email, codeBlockedKeyPrefix);
+    }
+
     public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;

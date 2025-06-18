@@ -212,8 +212,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                     }));
 
             long requestTtl =
-                    codeStorageService.getMfaCodeBlockTimeToLive(
-                            emailAddress, MFAMethodType.SMS, JourneyType.SIGN_IN);
+                    codeStorageService.getSmsMfaCodeRequestBlockTimeToLive(
+                            emailAddress, JourneyType.SIGN_IN);
             if (requestTtl > 0) {
                 lockoutInformation.add(
                         new LockoutInformation(
