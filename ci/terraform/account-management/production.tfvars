@@ -1,8 +1,5 @@
 common_state_bucket = "digital-identity-prod-tfstate"
 
-# FMS
-am_api_fms_tag_value = "accountmanagementprod"
-
 # URIs
 internal_sector_uri = "https://identity.account.gov.uk"
 
@@ -15,10 +12,6 @@ notify_template_map = {
   PHONE_NUMBER_UPDATED_TEMPLATE_ID   = "8907d080-e69c-42c6-8cf5-54ca1558a2e4"
   PASSWORD_UPDATED_TEMPLATE_ID       = "ebf3730c-0769-462b-ab39-7d9a7439bac1"
 }
-
-# Logging
-cloudwatch_log_retention = 30
-logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
 
 # Sizing
 redis_node_size = "cache.m4.xlarge"
@@ -35,5 +28,15 @@ performance_tuning = {
 lambda_max_concurrency = 10
 lambda_min_concurrency = 3
 
+# App-specific
+openapi_spec_filename = "openapi_v2.yaml"
+
 # Feature flags
 mfa_method_management_api_enabled = false
+
+# Logging
+cloudwatch_log_retention = 30
+logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+
+# FMS
+am_api_fms_tag_value = "accountmanagementprod"
