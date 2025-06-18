@@ -56,8 +56,8 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
                         .readValue(message.getBody(), GlobalLogoutMessage.class);
         LOG.info(
                 "Received request to global logout user with session {} and client session {}",
-                request.getSessionId(),
-                request.getClientSessionId());
+                request.sessionId(),
+                request.clientSessionId());
         // TODO: Add logic for global logout (ATO-1660)
     }
 }

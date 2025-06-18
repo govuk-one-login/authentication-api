@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.oidc.entity.GlobalLogoutMessage;
 
 import java.util.stream.Stream;
 
@@ -20,7 +21,10 @@ public class GlobalLogoutHandlerTest {
 
     private static Stream<Arguments> invalidMessages() {
         return Stream.of(
-                Arguments.of(Named.of("Missing required fields", "{}")),
+                Arguments.of(
+                        Named.of(
+                                "Missing required fields",
+                                new GlobalLogoutMessage(null, null, null, null, null, null, null))),
                 Arguments.of(Named.of("Invalid JSON", "{")));
     }
 
