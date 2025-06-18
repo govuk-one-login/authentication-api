@@ -260,7 +260,6 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         new Date());
         idTokenClaims.setNonce(nonce);
         SignedJWT signedJWT = externalTokenSigner.signJwt(idTokenClaims.toJWTClaimsSet());
-        redis.createSession(sessionId);
         orchSessionExtension.addSession(new OrchSessionItem(sessionId));
         var authRequestParams = generateAuthRequest(nonce).toParameters();
         var creationDate = LocalDateTime.now();

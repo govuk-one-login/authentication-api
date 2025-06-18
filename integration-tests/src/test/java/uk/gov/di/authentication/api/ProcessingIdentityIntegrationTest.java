@@ -201,7 +201,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                                 URI.create("http://localhost/redirect"))
                         .state(STATE)
                         .nonce(new Nonce());
-        redis.createSession(SESSION_ID);
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)
                         .withInternalCommonSubjectId(INTERNAL_SUBJECT.getValue()));
