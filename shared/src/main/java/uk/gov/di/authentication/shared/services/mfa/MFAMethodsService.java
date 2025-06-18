@@ -158,7 +158,8 @@ public class MFAMethodsService {
             return Result.success(
                     Optional.of(
                             method.withMfaIdentifier(mfaIdentifier).withPriority(DEFAULT.name())));
-        } else if (userProfile.isPhoneNumberVerified()) {
+        } else if (Objects.nonNull(userProfile.getPhoneNumber())
+                && userProfile.isPhoneNumberVerified()) {
             String mfaIdentifier;
             if (Objects.nonNull(userProfile.getMfaIdentifier())) {
                 mfaIdentifier = userProfile.getMfaIdentifier();
