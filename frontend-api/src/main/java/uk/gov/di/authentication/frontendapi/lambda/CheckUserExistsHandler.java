@@ -31,8 +31,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
@@ -188,24 +189,39 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            var lockoutInformation =
-                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .flatMap(journeyType ->
-                                    Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS)
-                                            .map(methodType -> {
-                                                var ttl = codeStorageService.getMfaCodeBlockTimeToLive(
-                                                        emailAddress,
-                                                        methodType,
-                                                        journeyType);
-                                                return new LockoutInformation(
-                                                        "codeBlock",
-                                                        methodType,
-                                                        ttl,
-                                                        journeyType);
-                                            })
-                            )
-                            .filter(info -> info.lockTTL() > 0)
-                            .toList();
+            var journeyTypes = List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+            var methodTypes = List.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS);
+
+            var lockoutInformation = new ArrayList<LockoutInformation>();
+
+            journeyTypes.forEach(
+                    journeyType ->
+                            methodTypes.forEach(
+                                    methodType -> {
+                                        long ttl =
+                                                codeStorageService.getMfaCodeBlockTimeToLive(
+                                                        emailAddress, methodType, journeyType);
+                                        if (ttl > 0) {
+                                            lockoutInformation.add(
+                                                    new LockoutInformation(
+                                                            "codeBlock",
+                                                            methodType,
+                                                            ttl,
+                                                            journeyType));
+                                        }
+                                    }));
+
+            long requestTtl =
+                    codeStorageService.getMfaCodeBlockTimeToLive(
+                            emailAddress, MFAMethodType.SMS, JourneyType.SIGN_IN);
+            if (requestTtl > 0) {
+                lockoutInformation.add(
+                        new LockoutInformation(
+                                "codeRequestBlock",
+                                MFAMethodType.SMS,
+                                requestTtl,
+                                JourneyType.SIGN_IN));
+            }
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
