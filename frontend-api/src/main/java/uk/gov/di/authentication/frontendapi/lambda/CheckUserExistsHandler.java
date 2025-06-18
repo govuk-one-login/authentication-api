@@ -190,19 +190,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(
-                                    journeyType -> {
-                                        var ttl =
-                                                codeStorageService.getMfaCodeBlockTimeToLive(
+                            .flatMap(journeyType ->
+                                    Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS)
+                                            .map(methodType -> {
+                                                var ttl = codeStorageService.getMfaCodeBlockTimeToLive(
                                                         emailAddress,
-                                                        MFAMethodType.AUTH_APP,
+                                                        methodType,
                                                         journeyType);
-                                        return new LockoutInformation(
-                                                "codeBlock",
-                                                MFAMethodType.AUTH_APP,
-                                                ttl,
-                                                journeyType);
-                                    })
+                                                return new LockoutInformation(
+                                                        "codeBlock",
+                                                        methodType,
+                                                        ttl,
+                                                        journeyType);
+                                            })
+                            )
                             .filter(info -> info.lockTTL() > 0)
                             .toList();
 
