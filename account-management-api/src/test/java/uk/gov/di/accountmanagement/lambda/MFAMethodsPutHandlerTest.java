@@ -182,7 +182,7 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedEmail))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
                 .thenReturn(Optional.empty());
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
@@ -289,7 +289,7 @@ class MFAMethodsPutHandlerTest {
     private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
         return Stream.of(
                 Arguments.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS, 500),
-                Arguments.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL, 404),
+                Arguments.of(MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER, 404),
                 Arguments.of(MfaMigrationFailureReason.ALREADY_MIGRATED, 200));
     }
 
@@ -327,7 +327,7 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedEmail))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
                 .thenReturn(Optional.of(migrationFailureReason));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
