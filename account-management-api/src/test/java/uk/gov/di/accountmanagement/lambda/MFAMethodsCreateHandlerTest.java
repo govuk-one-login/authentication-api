@@ -113,7 +113,7 @@ class MFAMethodsCreateHandlerTest {
     private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
         return Stream.of(
                 Arguments.of(
-                        MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
+                        MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
                         ErrorResponse.ERROR_1056,
                         404),
                 Arguments.of(
