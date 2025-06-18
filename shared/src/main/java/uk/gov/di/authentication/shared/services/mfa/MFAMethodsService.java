@@ -524,20 +524,15 @@ public class MFAMethodsService {
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
-        String mfaIdentifier;
-        if (Objects.isNull(nonMigratedMfaMethod.getMfaIdentifier())) {
-            mfaIdentifier = UUID.randomUUID().toString();
-        } else {
-            mfaIdentifier = nonMigratedMfaMethod.getMfaIdentifier();
-        }
-
         return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
             case SMS -> migrateSmsToNewFormat(
-                    userProfile.getEmail(), nonMigratedMfaMethod.getDestination(), mfaIdentifier);
+                    userProfile.getEmail(),
+                    nonMigratedMfaMethod.getDestination(),
+                    nonMigratedMfaMethod.getMfaIdentifier());
             case AUTH_APP -> migrateAuthAppToNewFormat(
                     userProfile.getEmail(),
                     nonMigratedMfaMethod.getCredentialValue(),
-                    mfaIdentifier);
+                    nonMigratedMfaMethod.getMfaIdentifier());
             default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         };
     }
