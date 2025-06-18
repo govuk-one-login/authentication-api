@@ -211,17 +211,22 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         }
                                     }));
 
-            long requestTtl =
-                    codeStorageService.getSmsMfaCodeRequestBlockTimeToLive(
-                            emailAddress, JourneyType.SIGN_IN);
-            if (requestTtl > 0) {
-                lockoutInformation.add(
-                        new LockoutInformation(
-                                "codeRequestBlock",
-                                MFAMethodType.SMS,
-                                requestTtl,
-                                JourneyType.SIGN_IN));
-            }
+            journeyTypes.forEach(
+                    journeyType ->
+                            methodTypes.forEach(
+                                    methodType -> {
+                                        long ttl =
+                                                codeStorageService.getMfaCodeRequestBlockTimeToLive(
+                                                        emailAddress, methodType, journeyType);
+                                        if (ttl > 0) {
+                                            lockoutInformation.add(
+                                                    new LockoutInformation(
+                                                            "codeRequestBlock",
+                                                            methodType,
+                                                            ttl,
+                                                            journeyType));
+                                        }
+                                    }));
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(

@@ -140,8 +140,9 @@ public class CodeStorageService {
         return getTTL(email, codeBlockedKeyPrefix);
     }
 
-    public long getSmsMfaCodeRequestBlockTimeToLive(String email, JourneyType journeyType) {
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
+    public long getMfaCodeRequestBlockTimeToLive(
+            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
+        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
         var codeBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         return getTTL(email, codeBlockedKeyPrefix);
     }
