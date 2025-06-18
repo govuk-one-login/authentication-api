@@ -20,6 +20,13 @@ The Orchestration codebase is gradually being separated from the Authentication 
 - `doc-checking-app-api`
 - Any directory starting with `orchestration-*`
 
+Each of these directories corresponds to separate modules with some shared code. A brief description of each provided below:
+
+- IPV API: Manages the redirect and callback from the IPV component.
+- OIDC API: Manages the OIDC interactions with Relying Parties and the callback from the Authentication component.
+- Client Registry API: Exposes some API endpoints to allow interactions with the [SSE Admin Tool](https://github.com/govuk-one-login/onboarding-self-service-experience).
+- Doc Checking App API: Manages the interactions between Orchestration and the Document Checking App service.
+
 ## Testing:
 
 ### Unit tests:
@@ -60,7 +67,8 @@ We currently use a [workflow in GitHub Actions](../../.github/workflows/deploy-o
 
 ## Documentation:
 
-If a lambda has specific documentation, it will live under `docs/<lambdaName>` for example the [Authorisation Handler.](../../oidc-api/docs/AuthorisationHandler.md)
+If a lambda has specific documentation, it will live under `docs/<lambdaName>` for example the [Authorisation Handler](../../oidc-api/docs/AuthorisationHandler.md).
+Most of our documentation can be found in confluence.
 
 ## Useful links:
 
