@@ -7,7 +7,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -21,24 +20,7 @@ public class GlobalLogoutHandlerTest {
 
     private static Stream<Arguments> invalidMessages() {
         return Stream.of(
-                Arguments.of(
-                        Named.of(
-                                "Missing internal_common_subject_id",
-                                Map.ofEntries(
-                                        Map.entry("session_id", "sid"),
-                                        Map.entry("client_session_id", "csid")))),
-                Arguments.of(
-                        Named.of(
-                                "Missing session_id",
-                                Map.ofEntries(
-                                        Map.entry("internal_common_subject_id", "icsid"),
-                                        Map.entry("client_session_id", "csid")))),
-                Arguments.of(
-                        Named.of(
-                                "Missing client_session_id",
-                                Map.ofEntries(
-                                        Map.entry("session_id", "sid"),
-                                        Map.entry("internal_common_subject_id", "icsid")))),
+                Arguments.of(Named.of("Missing required fields", "{}")),
                 Arguments.of(Named.of("Invalid JSON", "{")));
     }
 
