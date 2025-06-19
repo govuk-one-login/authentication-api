@@ -67,24 +67,11 @@ public class CodeStorageService {
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX)
-                // TODO remove temporary ZDD measure to fetch existing counts using deprecated
-                //  prefixes
-                + getCount(
-                        email,
-                        MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.SMS.getValue())
-                + getCount(
-                        email,
-                        MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
-                                + MFAMethodType.AUTH_APP.getValue());
+        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
     }
 
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
         deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
-        // TODO remove temporary ZDD measure to delete existing counts using deprecated prefixes
-        deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.SMS.getValue());
-        deleteCount(
-                email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue());
     }
 
     public void increaseIncorrectPasswordCount(String email) {

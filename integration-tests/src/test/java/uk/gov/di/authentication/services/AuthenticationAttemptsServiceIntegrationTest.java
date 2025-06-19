@@ -37,42 +37,6 @@ class AuthenticationAttemptsServiceIntegrationTest {
     AuthenticationAttemptsService authenticationAttemptsService =
             new AuthenticationAttemptsService(ConfigurationService.getInstance());
 
-    // TODO remove temporary ZDD measure to sum deprecated count types
-    @Test
-    void shouldIncludeDeprecatedMfaCountsWhenFetching() {
-        var ttl = Instant.now().getEpochSecond() + 60L;
-
-        authenticationAttemptsService.createOrIncrementCount(
-                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_SMS_CODE);
-        authenticationAttemptsService.createOrIncrementCount(
-                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_AUTH_APP_CODE);
-        authenticationAttemptsService.createOrIncrementCount(
-                INTERNAL_SUBJECT_ID, ttl, JOURNEY_TYPE, CountType.ENTER_MFA_CODE);
-
-        authenticationAttemptsService.createOrIncrementCount(
-                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_SMS_CODE);
-        authenticationAttemptsService.createOrIncrementCount(
-                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_AUTH_APP_CODE);
-        authenticationAttemptsService.createOrIncrementCount(
-                RP_PAIRWISE_ID, ttl, JOURNEY_TYPE, CountType.ENTER_MFA_CODE);
-
-        assertEquals(
-                3,
-                authenticationAttemptsService.getCount(
-                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, CountType.ENTER_MFA_CODE));
-        assertEquals(
-                3,
-                authenticationAttemptsService
-                        .getCountsByJourney(INTERNAL_SUBJECT_ID, JOURNEY_TYPE)
-                        .get(CountType.ENTER_MFA_CODE));
-        assertEquals(
-                6,
-                authenticationAttemptsService
-                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, JOURNEY_TYPE)
-                        .get(CountType.ENTER_MFA_CODE));
-    }
-
     @Test
     void shouldGetIncorrectReauthEmailCountForUser() {
         var ttl = Instant.now().getEpochSecond() + 60L;

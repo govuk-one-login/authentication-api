@@ -268,22 +268,6 @@ class CodeStorageServiceTest {
         assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(4));
     }
 
-    @Test
-    void shouldReturnSumOfNumberOfIncorrectMfaCodeAttemptsWithDeprecatedKeys() {
-        when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
-                .thenReturn(String.valueOf(1));
-        when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
-                                MFAMethodType.SMS)))
-                .thenReturn(String.valueOf(2));
-        when(redisConnectionService.getValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
-                                MFAMethodType.AUTH_APP)))
-                .thenReturn(String.valueOf(3));
-        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(6));
-    }
-
     @ParameterizedTest
     @CsvSource({"AUTH_APP", "SMS"})
     void shouldReturnMfaCodeBlockTimeForAuthAppAndSMS(MFAMethodType mfaMethodType) {
@@ -347,14 +331,6 @@ class CodeStorageServiceTest {
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash());
-        verify(redisConnectionService)
-                .deleteValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
-                                MFAMethodType.SMS));
-        verify(redisConnectionService)
-                .deleteValue(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(
-                                MFAMethodType.AUTH_APP));
     }
 
     @Test
