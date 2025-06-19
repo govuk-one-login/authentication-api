@@ -175,7 +175,7 @@ class PhoneNumberCodeProcessorTest {
                         INVALID_CODE,
                         REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -190,7 +190,7 @@ class PhoneNumberCodeProcessorTest {
                         INVALID_CODE,
                         JourneyType.PASSWORD_RESET_MFA,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.PW_RESET_MFA_SMS);
+                CodeRequestType.MFA_PW_RESET_MFA);
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -285,7 +285,7 @@ class PhoneNumberCodeProcessorTest {
                         INVALID_CODE,
                         JourneyType.SIGN_IN,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_SIGN_IN);
+                CodeRequestType.MFA_SIGN_IN);
 
         var expectedException =
                 assertThrows(
@@ -306,7 +306,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -352,7 +352,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_ACCOUNT_RECOVERY);
+                CodeRequestType.MFA_ACCOUNT_RECOVERY);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -394,7 +394,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         JourneyType.SIGN_IN,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -413,7 +413,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         journeyType,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -440,7 +440,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_ACCOUNT_RECOVERY);
+                CodeRequestType.MFA_ACCOUNT_RECOVERY);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
@@ -458,7 +458,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -474,7 +474,7 @@ class PhoneNumberCodeProcessorTest {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER),
-                CodeRequestType.SMS_REGISTRATION);
+                CodeRequestType.MFA_REGISTRATION);
         authSession.setIsSmokeTest(true);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
@@ -495,7 +495,7 @@ class PhoneNumberCodeProcessorTest {
                         VALID_CODE,
                         JourneyType.ACCOUNT_RECOVERY,
                         CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_ACCOUNT_RECOVERY);
+                CodeRequestType.MFA_ACCOUNT_RECOVERY);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);
@@ -595,15 +595,15 @@ class PhoneNumberCodeProcessorTest {
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
                 Arguments.of(
-                        CodeRequestType.PW_RESET_MFA_SMS,
+                        CodeRequestType.MFA_PW_RESET_MFA,
                         JourneyType.PASSWORD_RESET_MFA,
                         NotificationType.MFA_SMS),
                 Arguments.of(
-                        CodeRequestType.SMS_REAUTHENTICATION,
+                        CodeRequestType.MFA_REAUTHENTICATION,
                         JourneyType.REAUTHENTICATION,
                         NotificationType.MFA_SMS),
                 Arguments.of(
-                        CodeRequestType.SMS_REGISTRATION,
+                        CodeRequestType.MFA_REGISTRATION,
                         REGISTRATION,
                         NotificationType.VERIFY_PHONE_NUMBER));
     }

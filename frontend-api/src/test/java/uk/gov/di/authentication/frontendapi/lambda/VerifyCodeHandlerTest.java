@@ -735,7 +735,7 @@ class VerifyCodeHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         }
 
-        if (codeRequestType != CodeRequestType.SMS_REAUTHENTICATION) {
+        if (codeRequestType != CodeRequestType.MFA_REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
                             EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
@@ -1008,10 +1008,10 @@ class VerifyCodeHandlerTest {
 
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
-                Arguments.of(CodeRequestType.PW_RESET_MFA_SMS, JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, REAUTHENTICATION),
-                Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
-                Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
+                Arguments.of(CodeRequestType.MFA_PW_RESET_MFA, JourneyType.PASSWORD_RESET_MFA),
+                Arguments.of(CodeRequestType.MFA_REAUTHENTICATION, REAUTHENTICATION),
+                Arguments.of(CodeRequestType.MFA_SIGN_IN, JourneyType.SIGN_IN),
+                Arguments.of(CodeRequestType.MFA_SIGN_IN, null));
     }
 
     private void withReauthTurnedOn() {

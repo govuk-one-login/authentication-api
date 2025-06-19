@@ -124,19 +124,15 @@ class AuthAppCodeProcessorTest {
 
     private static Stream<Arguments> validatorParams() {
         return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.MFA_SIGN_IN),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA,
-                        null,
-                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
+                        JourneyType.PASSWORD_RESET_MFA, null, CodeRequestType.MFA_PW_RESET_MFA),
                 Arguments.of(
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET,
-                        CodeRequestType.AUTH_APP_REGISTRATION),
+                        CodeRequestType.MFA_REGISTRATION),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATION,
-                        null,
-                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
+                        JourneyType.REAUTHENTICATION, null, CodeRequestType.MFA_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -154,15 +150,11 @@ class AuthAppCodeProcessorTest {
 
     private static Stream<Arguments> validatorParamsWithoutRegistrationJourney() {
         return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.MFA_SIGN_IN),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA,
-                        null,
-                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
+                        JourneyType.PASSWORD_RESET_MFA, null, CodeRequestType.MFA_PW_RESET_MFA),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATION,
-                        null,
-                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
+                        JourneyType.REAUTHENTICATION, null, CodeRequestType.MFA_REAUTHENTICATION));
     }
 
     @ParameterizedTest

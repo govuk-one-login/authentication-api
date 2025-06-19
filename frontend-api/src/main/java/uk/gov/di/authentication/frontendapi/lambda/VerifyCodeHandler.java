@@ -261,7 +261,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
+            if (codeRequestType.equals(CodeRequestType.MFA_PW_RESET_MFA)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
                         authSessionService,
