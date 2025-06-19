@@ -67,13 +67,22 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
     }
 
-    public JWK getIpvJwk() {
+    public JWK getEncryptionJwkAndCacheFromJwksUrl(URL jwksUrl, int expiry) {
         EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
-        var ipvJwkCacheEntry =
-                encryptionJwkCache.getOrCreateEntry(
-                        configurationService.getIPVJwksUrl(),
-                        configurationService.getIPVJwkCacheExpirationInSeconds());
-        return ipvJwkCacheEntry.getKey();
+        var cacheEntry = encryptionJwkCache.getOrCreateEntry(jwksUrl, expiry);
+        return cacheEntry.getKey();
+    }
+
+    public JWK getIpvJwk() {
+        return getEncryptionJwkAndCacheFromJwksUrl(
+                configurationService.getIPVJwksUrl(),
+                configurationService.getIPVJwkCacheExpirationInSeconds());
+    }
+
+    public JWK getDocAppJwk() {
+        return getEncryptionJwkAndCacheFromJwksUrl(
+                configurationService.getDocAppJwksUrl(),
+                configurationService.getDocAppJwkCacheExpirationInSeconds());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {

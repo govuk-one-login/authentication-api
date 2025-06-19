@@ -174,6 +174,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("DOC_APP_JWKS_URL");
     }
 
+    public URL getDocAppJwksUrl() {
+        return getURLOrThrow("DOC_APP_JWKS_URL");
+    }
+
     public boolean isUseAnyKeyFromDocAppJwks() {
         return getFlagOrFalse("USE_ANY_KEY_FROM_DOC_APP_JWKS");
     }
