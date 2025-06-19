@@ -112,7 +112,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSes
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
-import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthorisationHandler
@@ -259,21 +258,17 @@ public class AuthorisationHandler
 
         AuthenticationRequest authRequest;
         try {
-            Map<String, String> parameterMap =
-                    switch (input.getHttpMethod()) {
-                        case "GET" -> input.getQueryStringParameters();
-                        case "POST" -> parseRequestBody(input.getBody());
-                        default -> {
-                            LOG.warn(
-                                    String.format(
-                                            "Authentication request sent with invalid HTTP method %s",
-                                            input.getHttpMethod()));
-                            throw new InvalidHttpMethodException(
-                                    String.format(
-                                            "Authentication request does not support %s requests",
-                                            input.getHttpMethod()));
-                        }
-                    };
+            if (!"GET".equals(input.getHttpMethod())) {
+                LOG.warn(
+                        String.format(
+                                "Authentication request sent with invalid HTTP method %s",
+                                input.getHttpMethod()));
+                throw new InvalidHttpMethodException(
+                        String.format(
+                                "Authentication request does not support %s requests",
+                                input.getHttpMethod()));
+            }
+            Map<String, String> parameterMap = input.getQueryStringParameters();
             Map<String, List<String>> requestParameters =
                     parameterMap.entrySet().stream()
                             .collect(
