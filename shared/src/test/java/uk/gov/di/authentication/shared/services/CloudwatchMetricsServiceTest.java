@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -108,16 +109,16 @@ class CloudwatchMetricsServiceTest {
         @Nested
         class IncrementMfaMethodCounter {
             @Test
-            void shouldIncrementMfaMethodCounterWithCorrectDimensions1() {
+            void shouldIncrementMfaMethodCounterWithCorrectDimensions() {
                 var spyService = Mockito.spy(CloudwatchMetricsService.class);
 
                 spyService.incrementMfaMethodCounter(
-                        "SomeMfaMethodName",
                         "test",
                         "SomeOperation",
                         "SomeResult",
                         ACCOUNT_MANAGEMENT,
-                        MFAMethodType.AUTH_APP);
+                        MFAMethodType.AUTH_APP,
+                        PriorityIdentifier.BACKUP);
 
                 var expectedDimensions =
                         Map.of(
@@ -130,9 +131,12 @@ class CloudwatchMetricsServiceTest {
                                 "JourneyType",
                                 "ACCOUNT_MANAGEMENT",
                                 "MfaMethodType",
-                                "AUTH_APP");
+                                "AUTH_APP",
+                                "PriorityIdentifier",
+                                "BACKUP");
 
-                verify(spyService).putEmbeddedValue("SomeMfaMethodName", 1, expectedDimensions);
+                verify(spyService)
+                        .putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
             }
         }
 

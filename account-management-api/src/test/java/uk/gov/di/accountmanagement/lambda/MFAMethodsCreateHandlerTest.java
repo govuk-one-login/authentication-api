@@ -57,6 +57,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -118,6 +119,7 @@ class MFAMethodsCreateHandlerTest {
 
     @Nested
     class SuccessfulRequest {
+
         @Test
         void shouldReturn200AndCreateMfaSmsMfaMethod() throws Json.JsonException {
             var backupMfa =
@@ -222,6 +224,37 @@ class MFAMethodsCreateHandlerTest {
                                             TEST_EMAIL,
                                             NotificationType.BACKUP_METHOD_ADDED,
                                             LocaleHelper.SupportedLanguage.EN)));
+        }
+
+        @Test
+        void shouldIncrementTheCorrectMfaMethodCounter() {
+            var authAppBackup =
+                    MFAMethod.authAppMfaMethod(
+                            TEST_CREDENTIAL,
+                            true,
+                            true,
+                            PriorityIdentifier.BACKUP,
+                            TEST_AUTH_APP_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(authAppBackup));
+            when(configurationService.getEnvironment()).thenReturn("test");
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
+
+            handler.handleRequest(event, context);
+
+            verify(cloudwatchMetricsService)
+                    .incrementMfaMethodCounter(
+                            "test",
+                            "CreateMfaMethod",
+                            "SUCCESS",
+                            ACCOUNT_MANAGEMENT,
+                            MFAMethodType.AUTH_APP,
+                            PriorityIdentifier.BACKUP);
         }
     }
 
