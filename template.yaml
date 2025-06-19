@@ -3182,23 +3182,6 @@ Resources:
           ApiId:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
-  AuthorisationFunctionCrossAccountPostPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref AuthorisationFunction.Alias
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub
-        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
-
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
