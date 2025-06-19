@@ -4,13 +4,14 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.Collections;
@@ -28,6 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
+import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
@@ -80,13 +86,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final MFAMethod backupAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL, true, true, BACKUP, UUID.randomUUID().toString());
-    private final ConfigurationService mfaMethodEnabledConfigurationService =
-            new ConfigurationService() {
-                @Override
-                public boolean isMfaMethodManagementApiEnabled() {
-                    return true;
-                }
-            };
 
     @BeforeEach
     void setUp() {
@@ -100,7 +99,9 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         userProfile.getSubjectID(), INTERNAL_SECTOR_HOST, salt);
 
-        handler = new MFAMethodsPutHandler(mfaMethodEnabledConfigurationService);
+        handler = new MFAMethodsPutHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
+
+        notificationsQueue.clear();
     }
 
     private MFAMethod getMethodWithPriority(
@@ -191,6 +192,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertRetrievedMethodHasSameBasicFields(defaultAuthApp, retrievedMethod);
             assertMfaCredentialUpdated(retrievedMethod, updatedCredential);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_AUTHENTICATOR_APP,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
 
         @Test
@@ -257,6 +266,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     updatedPhoneNumberWithCountryCode,
                                     retrievedDefault.getDestination()),
                     () -> assertNull(retrievedDefault.getCredentialValue()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_DEFAULT_MFA,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
 
         @Test
@@ -321,6 +338,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertEquals(SMS.name(), backupMfa.getMfaMethodType()),
                     () -> assertNull(backupMfa.getCredentialValue()),
                     () -> assertEquals(backupSms.getDestination(), backupMfa.getDestination()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_DEFAULT_MFA,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
 
         @Test
@@ -378,6 +403,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () ->
                             assertEquals(
                                     backupSms.getDestination(), backupMfa.get().getDestination()));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    CHANGED_DEFAULT_MFA,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
 
         @Test
@@ -402,6 +435,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertEquals(400, response.getStatusCode());
             assertThatJson(response.getBody()).node("code").isIntegralNumber().isEqualTo("1082");
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
     }
 
@@ -503,6 +538,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     backupSms, retrievedDefault, DEFAULT);
             assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                     defaultSms, retrievedBackup, BACKUP);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    SWITCHED_MFA_METHODS,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
 
         @Test
@@ -552,6 +595,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     backupAuthApp, retrievedDefault, DEFAULT);
             assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                     defaultSms, retrievedBackup, BACKUP);
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    SWITCHED_MFA_METHODS,
+                                    LocaleHelper.SupportedLanguage.EN)));
         }
     }
 
@@ -732,6 +783,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertRetrievedMethodHasSameBasicFields(
                     backupSms, getMethodWithPriority(retrievedMfaMethods, BACKUP));
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
     }
 
@@ -752,6 +805,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertEquals(401, response.getStatusCode());
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
 
         @Test
@@ -768,6 +823,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertEquals(404, response.getStatusCode());
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
     }
 }

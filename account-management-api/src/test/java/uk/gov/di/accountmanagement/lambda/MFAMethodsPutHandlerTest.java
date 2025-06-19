@@ -10,18 +10,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
@@ -38,13 +44,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MFAMethodsPutHandlerTest {
+    private final Json objectMapper = SerializationService.getInstance();
 
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
@@ -52,6 +62,7 @@ class MFAMethodsPutHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final Context context = mock(Context.class);
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
@@ -80,11 +91,12 @@ class MFAMethodsPutHandlerTest {
                         configurationService,
                         mfaMethodsService,
                         authenticationService,
-                        codeStorageService);
+                        codeStorageService,
+                        sqsClient);
     }
 
     @Test
-    void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabled() {
+    void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabled() throws Json.JsonException {
         var phoneNumber = "123456789";
         var updateRequest =
                 MfaMethodUpdateRequest.from(
@@ -102,7 +114,11 @@ class MFAMethodsPutHandlerTest {
                 MFAMethod.smsMfaMethod(
                         true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Result.success(List.of(updatedMfaMethod)));
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(updatedMfaMethod),
+                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
@@ -124,10 +140,19 @@ class MFAMethodsPutHandlerTest {
         var expectedResponseParsedToString =
                 JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
         assertEquals(expectedResponseParsedToString, result.getBody());
+
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        EMAIL,
+                                        CHANGED_DEFAULT_MFA,
+                                        LocaleHelper.SupportedLanguage.EN)));
     }
 
     @Test
-    void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabledAndUserMigrationSuccessful() {
+    void shouldReturn200WithUpdatedMethodWhenFeatureFlagEnabledAndUserMigrationSuccessful()
+            throws Json.JsonException {
         var nonMigratedEmail = "non-migrated-email@example.com";
         var nonMigratedUser =
                 new UserProfile()
@@ -152,7 +177,11 @@ class MFAMethodsPutHandlerTest {
                 MFAMethod.smsMfaMethod(
                         true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         when(mfaMethodsService.updateMfaMethod(nonMigratedEmail, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Result.success(List.of(updatedMfaMethod)));
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(updatedMfaMethod),
+                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
         when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedEmail))
                 .thenReturn(Optional.empty());
 
@@ -176,6 +205,85 @@ class MFAMethodsPutHandlerTest {
         var expectedResponseParsedToString =
                 JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
         assertEquals(expectedResponseParsedToString, result.getBody());
+
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        nonMigratedEmail,
+                                        CHANGED_DEFAULT_MFA,
+                                        LocaleHelper.SupportedLanguage.EN)));
+    }
+
+    private static Stream<Arguments> validEmailNotificationIdentifiers() {
+        return Stream.of(
+                Arguments.of(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP,
+                        NotificationType.CHANGED_AUTHENTICATOR_APP),
+                Arguments.of(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        NotificationType.CHANGED_DEFAULT_MFA),
+                Arguments.of(
+                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS,
+                        NotificationType.SWITCHED_MFA_METHODS));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validEmailNotificationIdentifiers")
+    void shouldSendAppropriateEmailNotificationUponSuccessWhenFeatureFlagEnabled(
+            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier,
+            NotificationType notificationType)
+            throws Json.JsonException {
+        var phoneNumber = "123456789";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var updatedMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(updatedMfaMethod), emailNotificationIdentifier)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+        var expectedResponse =
+                format(
+                        """
+                [{
+                  "mfaIdentifier": "%s",
+                  "priorityIdentifier": "DEFAULT",
+                  "methodVerified": true,
+                  "method": {
+                    "mfaMethodType": "SMS",
+                    "phoneNumber": "%s"
+                  }
+                }]
+                """,
+                        MFA_IDENTIFIER, phoneNumber);
+        var expectedResponseParsedToString =
+                JsonParser.parseString(expectedResponse).getAsJsonArray().toString();
+        assertEquals(expectedResponseParsedToString, result.getBody());
+
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        EMAIL,
+                                        notificationType,
+                                        LocaleHelper.SupportedLanguage.EN)));
     }
 
     private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
@@ -188,7 +296,8 @@ class MFAMethodsPutHandlerTest {
     @ParameterizedTest
     @MethodSource("migrationFailureReasonsToExpectedStatusCodes")
     void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(
-            MfaMigrationFailureReason migrationFailureReason, int expectedStatusCode) {
+            MfaMigrationFailureReason migrationFailureReason, int expectedStatusCode)
+            throws Json.JsonException {
         var nonMigratedEmail = "non-migrated-email@example.com";
         var nonMigratedUser =
                 new UserProfile()
@@ -213,7 +322,11 @@ class MFAMethodsPutHandlerTest {
                 MFAMethod.smsMfaMethod(
                         true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
         when(mfaMethodsService.updateMfaMethod(nonMigratedEmail, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Result.success(List.of(updatedMfaMethod)));
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(updatedMfaMethod),
+                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
         when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedEmail))
                 .thenReturn(Optional.of(migrationFailureReason));
 
@@ -239,6 +352,16 @@ class MFAMethodsPutHandlerTest {
             var expectedResponseParsedToString =
                     JsonParser.parseString(expectedResponseIfSuccess).getAsJsonArray().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
+
+            verify(sqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            nonMigratedEmail,
+                                            CHANGED_DEFAULT_MFA,
+                                            LocaleHelper.SupportedLanguage.EN)));
+        } else {
+            verify(sqsClient, never()).send(any());
         }
     }
 
@@ -304,6 +427,8 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasStatus(expectedStatus));
         maybeErrorResponse.ifPresent(
                 expectedError -> assertThat(result, hasJsonBody(expectedError)));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -315,7 +440,11 @@ class MFAMethodsPutHandlerTest {
                 new MFAMethod("invalid method type", credential, true, true, "updatedString");
 
         when(mfaMethodsService.updateMfaMethod(eq(EMAIL), eq(MFA_IDENTIFIER), any()))
-                .thenReturn(Result.success(List.of(mfaWithInvalidType)));
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(mfaWithInvalidType),
+                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
@@ -323,6 +452,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -335,6 +466,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -352,6 +485,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -369,6 +504,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -379,6 +516,8 @@ class MFAMethodsPutHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertEquals(400, result.getStatusCode());
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -392,6 +531,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -405,6 +546,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(404));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        verify(sqsClient, never()).send(any());
     }
 
     @Test
@@ -423,6 +566,8 @@ class MFAMethodsPutHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+
+        verify(sqsClient, never()).send(any());
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
