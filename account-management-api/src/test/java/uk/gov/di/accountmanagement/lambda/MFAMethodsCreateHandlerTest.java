@@ -258,12 +258,12 @@ class MFAMethodsCreateHandlerTest {
 
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(
-                            "MfaMethodAddCount",
                             "test",
                             "CreateMfaMethod",
                             "SUCCESS",
                             ACCOUNT_MANAGEMENT,
-                            MFAMethodType.AUTH_APP);
+                            MFAMethodType.AUTH_APP,
+                            PriorityIdentifier.BACKUP);
         }
     }
 

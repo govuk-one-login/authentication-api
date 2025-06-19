@@ -181,12 +181,12 @@ public class MFAMethodsCreateHandler
             LOG.info("Message successfully added to queue. Generating successful response");
 
             cloudwatchMetricsService.incrementMfaMethodCounter(
-                    "MfaMethodAddCount",
                     configurationService.getEnvironment(),
                     "CreateMfaMethod",
                     "SUCCESS",
                     ACCOUNT_MANAGEMENT,
-                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType());
+                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType(),
+                    PriorityIdentifier.BACKUP);
 
             return generateApiGatewayProxyResponse(
                     200, backupMfaMethodAsResponse.getSuccess(), true);
