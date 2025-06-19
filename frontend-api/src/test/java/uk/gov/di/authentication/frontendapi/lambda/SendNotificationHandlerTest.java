@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -124,6 +125,8 @@ class SendNotificationHandlerTest {
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
@@ -166,7 +169,8 @@ class SendNotificationHandlerTest {
                     codeStorageService,
                     dynamoEmailCheckResultService,
                     auditService,
-                    authSessionService);
+                    authSessionService,
+                    cloudwatchMetricsService);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

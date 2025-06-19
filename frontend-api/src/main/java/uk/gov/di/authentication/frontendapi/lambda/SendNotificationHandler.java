@@ -81,6 +81,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     public static final String AUDIT_EVENT_DEFAULT_MFA_VALUE =
             PriorityIdentifier.DEFAULT.toString().toLowerCase();
 
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AwsSqsClient emailSqsClient;
     private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
@@ -98,7 +99,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             CodeStorageService codeStorageService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
@@ -112,6 +114,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.codeStorageService = codeStorageService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public SendNotificationHandler() {
@@ -135,6 +138,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public SendNotificationHandler(
@@ -155,6 +159,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -342,7 +347,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         }
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
-                METRICS,
+                cloudwatchMetricsService,
                 request.getJourneyType(),
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
@@ -386,7 +391,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                METRICS.putEmbeddedValue(
+                cloudwatchMetricsService.putEmbeddedValue(
                         "SendingSms",
                         1,
                         Map.of(
