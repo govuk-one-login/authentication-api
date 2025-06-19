@@ -850,7 +850,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         EMAIL,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
@@ -909,7 +909,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
 
@@ -980,7 +980,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
+                        EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
 
