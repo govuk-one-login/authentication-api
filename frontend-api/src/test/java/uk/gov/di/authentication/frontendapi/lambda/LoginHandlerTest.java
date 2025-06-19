@@ -52,6 +52,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -172,7 +173,8 @@ class LoginHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     private final AuditContext auditContextWithoutUserInfo =
             auditContextWithAllUserInfo

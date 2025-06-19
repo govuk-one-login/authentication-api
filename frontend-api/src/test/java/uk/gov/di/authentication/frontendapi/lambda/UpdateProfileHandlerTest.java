@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -89,7 +90,8 @@ class UpdateProfileHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     private final AuditContext auditContextWithOnlyClientSession =
             new AuditContext(
@@ -101,7 +103,8 @@ class UpdateProfileHandlerTest {
                     "",
                     "",
                     "",
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

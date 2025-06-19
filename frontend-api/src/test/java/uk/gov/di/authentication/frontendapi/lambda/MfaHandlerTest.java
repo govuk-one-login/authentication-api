@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -140,7 +141,8 @@ class MfaHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     private final AuthSessionItem authSession =
             new AuthSessionItem()

@@ -34,6 +34,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -111,7 +112,8 @@ class ReverificationResultHandlerTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

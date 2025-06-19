@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -182,7 +183,8 @@ public class UpdatePasswordHandler
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            new ArrayList<>());
 
             auditService.submitAuditEvent(AUTH_UPDATE_PASSWORD, auditContext);
 

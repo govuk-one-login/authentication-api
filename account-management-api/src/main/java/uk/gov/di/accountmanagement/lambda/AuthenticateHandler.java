@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.*;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
@@ -87,7 +88,8 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                        new ArrayList<>());
 
         try {
             AuthenticateRequest loginRequest =

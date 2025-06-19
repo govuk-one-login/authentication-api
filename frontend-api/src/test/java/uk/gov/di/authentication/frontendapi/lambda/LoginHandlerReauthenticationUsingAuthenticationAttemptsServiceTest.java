@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -130,7 +131,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     private LoginHandler handler;
 
