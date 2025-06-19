@@ -70,7 +70,8 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
                         .readValue(message.getBody(), GlobalLogoutMessage.class);
         validate(request);
         LOG.info(
-                "Received request to global logout user with session {} and client session {}",
+                "Received request with event id {} to global logout user with session {} and client session {}",
+                request.eventId(),
                 request.sessionId(),
                 request.clientSessionId());
         globalLogoutService.logoutAllSessions(request.internalCommonSubjectId());
