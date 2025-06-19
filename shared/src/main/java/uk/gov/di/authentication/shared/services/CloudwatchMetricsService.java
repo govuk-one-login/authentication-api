@@ -6,9 +6,12 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.Map;
 
+import static java.lang.String.valueOf;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
@@ -24,6 +27,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHE
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -63,6 +67,31 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putEmbeddedValue(name, 1, dimensions);
+    }
+
+    public void incrementMfaMethodCounter(
+            String name,
+            String environment,
+            String operation,
+            String result,
+            JourneyType journeyType,
+            MFAMethodType mfaMethodType
+    ) {
+        incrementCounter(
+                name,
+                Map.of(
+                        "Environment",
+                        environment,
+                        "Operation",
+                        operation,
+                        "Result",
+                        result,
+                        "JourneyType",
+                        valueOf(journeyType),
+                        "MfaMethodType",
+                        valueOf(mfaMethodType)
+                )
+        );
     }
 
     public void incrementAuthenticationSuccess(
