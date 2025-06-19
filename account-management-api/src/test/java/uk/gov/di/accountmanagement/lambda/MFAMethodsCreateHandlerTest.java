@@ -126,6 +126,7 @@ class MFAMethodsCreateHandlerTest {
                     MFAMethod.smsMfaMethod(
                             true, true, TEST_PHONE_NUMBER, PriorityIdentifier.BACKUP, TEST_SMS_MFA_ID);
             when(mfaMethodsService.addBackupMfa(any(), any())).thenReturn(Result.success(backupMfa));
+            when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
 
             var event =
                     generateApiGatewayEvent(
