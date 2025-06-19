@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -17,7 +18,9 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -28,16 +31,22 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,6 +74,7 @@ class PhoneNumberCodeProcessorTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
@@ -271,7 +281,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
@@ -291,6 +302,8 @@ class PhoneNumberCodeProcessorTest {
 
     @Test
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(false);
+
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
@@ -299,7 +312,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verify(authenticationService)
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
@@ -325,7 +339,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verifyNoInteractions(authenticationService);
         verifyNoInteractions(auditService);
@@ -343,7 +358,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verify(sqsClient)
                 .send(
@@ -370,7 +386,8 @@ class PhoneNumberCodeProcessorTest {
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verifyNoInteractions(sqsClient);
     }
@@ -386,7 +403,8 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verifyNoInteractions(sqsClient);
     }
@@ -403,9 +421,37 @@ class PhoneNumberCodeProcessorTest {
         authSession.setIsSmokeTest(true);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
 
         verifyNoInteractions(sqsClient);
+    }
+
+    @Test
+    void shouldResetMigratedUsersMfaMethod() {
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
+        when(userProfile.getEmail()).thenReturn(EMAIL);
+
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
+                CodeRequestType.SMS_ACCOUNT_RECOVERY);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
+
+        ArgumentCaptor<MFAMethod> mfaMethodCaptor = ArgumentCaptor.forClass(MFAMethod.class);
+        verify(mfaMethodsService)
+                .deleteMigratedMFAsAndCreateNewDefault(eq(EMAIL), mfaMethodCaptor.capture());
+        var capturedMfaMethod = mfaMethodCaptor.getValue();
+        assertTrue(capturedMfaMethod.isMethodVerified());
+        assertTrue(capturedMfaMethod.isEnabled());
+        assertEquals(CommonTestVariables.UK_MOBILE_NUMBER, capturedMfaMethod.getDestination());
+        assertEquals(PriorityIdentifier.DEFAULT.toString(), capturedMfaMethod.getPriority());
+        assertInstanceOf(UUID.class, UUID.fromString(capturedMfaMethod.getMfaIdentifier()));
     }
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
@@ -436,7 +482,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -460,7 +507,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     public void setUpBlockedPhoneNumberCode(
@@ -483,7 +531,8 @@ class PhoneNumberCodeProcessorTest {
                         authenticationService,
                         auditService,
                         accountModifiersService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsService);
     }
 
     private static Stream<Arguments> codeRequestTypes() {

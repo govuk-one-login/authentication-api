@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -13,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -25,17 +27,22 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,6 +66,8 @@ class AuthAppCodeProcessorTest {
     AuditService mockAuditService;
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
+    MFAMethodsService mockMfaMethodsService;
+    UserProfile mockUserProfile;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -96,6 +105,8 @@ class AuthAppCodeProcessorTest {
         this.mockAuditService = mock(AuditService.class);
         this.mockUserContext = mock(UserContext.class);
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
+        this.mockMfaMethodsService = mock(MFAMethodsService.class);
+        this.mockUserProfile = mock(UserProfile.class);
         when(mockUserContext.getAuthSession()).thenReturn(authSession);
         when(mockDynamoService.getUserProfileByEmail(EMAIL))
                 .thenReturn(new UserProfile().withMfaMethodsMigrated(false));
@@ -177,7 +188,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
@@ -213,7 +225,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
@@ -301,7 +314,8 @@ class AuthAppCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
@@ -317,6 +331,7 @@ class AuthAppCodeProcessorTest {
 
     @Test
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
+        when(mockUserProfile.isMfaMethodsMigrated()).thenReturn(false);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -324,12 +339,46 @@ class AuthAppCodeProcessorTest {
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(
                         CommonTestVariables.EMAIL, AUTH_APP_SECRET);
+        verify(mockAuditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
+                        auditContext,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", true));
+    }
+
+    @Test
+    void shouldResetMigratedUsersMfaMethodsWhenMfaMigratedUserGoesThroughAccountRecovery() {
+        when(mockUserProfile.isMfaMethodsMigrated()).thenReturn(true);
+
+        setUpSuccessfulCodeRequest(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        "111111",
+                        JourneyType.ACCOUNT_RECOVERY,
+                        AUTH_APP_SECRET));
+
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
+
+        ArgumentCaptor<MFAMethod> mfaMethodCaptor = ArgumentCaptor.forClass(MFAMethod.class);
+        verify(mockMfaMethodsService)
+                .deleteMigratedMFAsAndCreateNewDefault(eq(EMAIL), mfaMethodCaptor.capture());
+        var capturedMfaMethod = mfaMethodCaptor.getValue();
+        assertTrue(capturedMfaMethod.isMethodVerified());
+        assertTrue(capturedMfaMethod.isEnabled());
+        assertEquals(AUTH_APP_SECRET, capturedMfaMethod.getCredentialValue());
+        assertEquals(PriorityIdentifier.DEFAULT.toString(), capturedMfaMethod.getPriority());
+        assertInstanceOf(UUID.class, UUID.fromString(capturedMfaMethod.getMfaIdentifier()));
+
+        verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
@@ -345,7 +394,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
@@ -363,7 +413,8 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, mockUserProfile);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService, never())
@@ -385,7 +436,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpBlockedUser(CodeRequest codeRequest, CodeRequestType codeRequestType) {
@@ -402,7 +454,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpRetryLimitExceededUser(CodeRequest codeRequest) {
@@ -420,7 +473,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpNoAuthCodeForUser(CodeRequest codeRequest) {
@@ -438,7 +492,8 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 
     private void setUpValidAuthCode(CodeRequest codeRequest) {
@@ -462,6 +517,7 @@ class AuthAppCodeProcessorTest {
                         MAX_RETRIES,
                         codeRequest,
                         mockAuditService,
-                        mockAccountModifiersService);
+                        mockAccountModifiersService,
+                        mockMfaMethodsService);
     }
 }

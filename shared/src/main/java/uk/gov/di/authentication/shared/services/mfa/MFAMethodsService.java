@@ -86,7 +86,7 @@ public class MFAMethodsService {
         if (userProfile == null || userCredentials == null) {
             return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
         }
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             return Result.success(getMfaMethodsForMigratedUser(userCredentials));
         } else {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials, readOnly)
@@ -100,7 +100,7 @@ public class MFAMethodsService {
 
     public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
             String mfaIdentifier, UserProfile userProfile) {
-        if (!userProfile.getMfaMethodsMigrated()) {
+        if (!userProfile.isMfaMethodsMigrated()) {
             return Result.failure(
                     MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER);
         }
@@ -125,6 +125,11 @@ public class MFAMethodsService {
 
         persistentService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
         return Result.success(mfaIdentifier);
+    }
+
+    public void deleteMigratedMFAsAndCreateNewDefault(String email, MFAMethod mfaMethod) {
+        persistentService.deleteMigratedMfaMethods(email);
+        persistentService.addMFAMethodSupportingMultiple(email, mfaMethod);
     }
 
     private Result<MfaRetrieveFailureReason, Optional<MFAMethod>> getMfaMethodForNonMigratedUser(
@@ -478,7 +483,7 @@ public class MFAMethodsService {
         UserCredentials userCredentials = maybeUserCredentials.get();
 
         // Bail if already migrated
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
         }
 

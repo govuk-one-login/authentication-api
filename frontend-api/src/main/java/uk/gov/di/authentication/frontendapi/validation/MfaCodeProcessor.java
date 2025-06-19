@@ -5,11 +5,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -26,6 +28,7 @@ public abstract class MfaCodeProcessor {
     private final UserContext userContext;
     protected final AuthenticationService dynamoService;
     protected final AuditService auditService;
+    protected final MFAMethodsService mfaMethodsService;
 
     MfaCodeProcessor(
             UserContext userContext,
@@ -33,7 +36,8 @@ public abstract class MfaCodeProcessor {
             int maxRetries,
             AuthenticationService dynamoService,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         this.emailAddress = userContext.getAuthSession().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
@@ -41,6 +45,7 @@ public abstract class MfaCodeProcessor {
         this.dynamoService = dynamoService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     boolean isCodeBlockedForSession(String codeBlockedKeyPrefix) {
@@ -110,5 +115,6 @@ public abstract class MfaCodeProcessor {
 
     public abstract Optional<ErrorResponse> validateCode();
 
-    public abstract void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId);
+    public abstract void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile);
 }

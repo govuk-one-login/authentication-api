@@ -42,7 +42,7 @@ public class MfaHelper {
             UserCredentials userCredentials,
             UserProfile userProfile) {
         var isMfaRequired = mfaRequired(credentialTrustLevel);
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             return getMfaDetailForMigratedUser(userCredentials, isMfaRequired);
         } else {
             return getMfaDetailForNonMigratedUser(

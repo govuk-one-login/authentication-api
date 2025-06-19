@@ -237,6 +237,31 @@ class DynamoServiceIntegrationTest {
             assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
         }
 
+        private static Stream<Arguments> existingMFAs() {
+            return Stream.of(
+                    Arguments.of(defaultPrioritySmsData, null),
+                    Arguments.of(defaultPriorityAuthAppData, null),
+                    Arguments.of(defaultPrioritySmsData, defaultPriorityAuthAppData),
+                    Arguments.of(defaultPriorityAuthAppData, defaultPrioritySmsData),
+                    Arguments.of(defaultPrioritySmsData, defaultPrioritySmsData));
+        }
+
+        @MethodSource("existingMFAs")
+        @ParameterizedTest
+        void shouldDeleteAllMigratedMfaMethods(MFAMethod mfaMethod, MFAMethod mfaMethod2) {
+            userStore.signUp(TEST_EMAIL, "password-1", new Subject("1111"));
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
+            if (mfaMethod2 != null) {
+                userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod2);
+            }
+            dynamoService.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+            dynamoService.deleteMigratedMfaMethods(TEST_EMAIL);
+
+            var result = userStore.getMfaMethod(TEST_EMAIL);
+            assertNull(result);
+        }
+
         @Test
         void anMfaMethodShouldNotReplaceAnExistingMethodOfADifferentTypeWithDifferentPriority() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
@@ -753,7 +778,7 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, true);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertTrue(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertTrue(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertFalse(userProfileAfterUpdate.isPhoneNumberVerified());
         assertNull(userProfileAfterUpdate.getPhoneNumber());
     }
@@ -769,7 +794,7 @@ class DynamoServiceIntegrationTest {
         dynamoService.setMfaMethodsMigrated(email, false);
 
         var userProfileAfterUpdate = userStore.getUserProfileFromEmail(email).get();
-        assertFalse(userProfileAfterUpdate.getMfaMethodsMigrated());
+        assertFalse(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
         assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
     }

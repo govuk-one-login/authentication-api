@@ -172,7 +172,7 @@ public class StartService {
         }
 
         var userProfile = maybeUserProfile.get();
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             var maybeUserCredentials = userContext.getUserCredentials();
             if (maybeUserCredentials.isPresent()) {
                 var userCredentials = maybeUserCredentials.get();

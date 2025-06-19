@@ -7,6 +7,8 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -15,6 +17,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
@@ -25,6 +28,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
@@ -45,14 +49,16 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 userContext,
                 codeStorageService,
                 maxRetries,
                 dynamoService,
                 auditService,
-                accountModifiersService);
+                accountModifiersService,
+                mfaMethodsService);
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.codeRequest = codeRequest;
@@ -110,7 +116,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(
+            String ipAddress, String persistentSessionId, UserProfile userProfile) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.setAuthAppAndAccountVerified(
@@ -124,8 +131,22 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         false);
                 break;
             case ACCOUNT_RECOVERY:
-                dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
-                        emailAddress, codeRequest.getProfileInformation());
+                if (userProfile.isMfaMethodsMigrated()) {
+                    String uuid = UUID.randomUUID().toString();
+                    MFAMethod authAppMfa =
+                            MFAMethod.authAppMfaMethod(
+                                    codeRequest.getProfileInformation(),
+                                    true,
+                                    true,
+                                    PriorityIdentifier.DEFAULT,
+                                    uuid);
+                    mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
+                            emailAddress, authAppMfa);
+                } else {
+                    dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                            emailAddress, codeRequest.getProfileInformation());
+                }
+
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         AUTH_APP,
@@ -167,7 +188,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.empty();
         }
 
-        if (userProfile.getMfaMethodsMigrated()) {
+        if (userProfile.isMfaMethodsMigrated()) {
             var maybeAuthAppMfaMethod =
                     userCredentials.getMfaMethods().stream()
                             .filter(
