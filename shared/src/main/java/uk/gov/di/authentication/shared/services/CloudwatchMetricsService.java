@@ -27,7 +27,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHE
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
-import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -75,8 +74,7 @@ public class CloudwatchMetricsService {
             String operation,
             String result,
             JourneyType journeyType,
-            MFAMethodType mfaMethodType
-    ) {
+            MFAMethodType mfaMethodType) {
         incrementCounter(
                 name,
                 Map.of(
@@ -89,9 +87,7 @@ public class CloudwatchMetricsService {
                         "JourneyType",
                         valueOf(journeyType),
                         "MfaMethodType",
-                        valueOf(mfaMethodType)
-                )
-        );
+                        valueOf(mfaMethodType)));
     }
 
     public void incrementAuthenticationSuccess(
