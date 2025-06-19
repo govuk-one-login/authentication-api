@@ -53,8 +53,10 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
@@ -89,6 +91,7 @@ class DocAppAuthorisationServiceTest {
                     kmsConnectionService,
                     jwksService);
     private PrivateKey privateKey;
+    private RSAKey publicRsaKey;
 
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
@@ -105,14 +108,15 @@ class DocAppAuthorisationServiceTest {
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var rsaKey =
+        publicRsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(ENCRYPTION_KID)
                         .build();
         when(jwksService.retrieveJwkFromURLWithKeyId(JWKS_URL.toURL(), ENCRYPTION_KID))
-                .thenReturn(rsaKey);
+                .thenReturn(publicRsaKey);
         when(configurationService.getDocAppEncryptionKeyID()).thenReturn(ENCRYPTION_KID);
+        when(configurationService.isUseAnyKeyFromDocAppJwks()).thenReturn(false);
     }
 
     @Test
@@ -279,6 +283,23 @@ class DocAppAuthorisationServiceTest {
 
         var signedJwt = decryptJWT(encryptedJWT);
         assertThat(signedJwt.getJWTClaimsSet().getAudience(), contains(newAudience));
+    }
+
+    @Test
+    void shouldNotUseHardcodedJwksKeyIdWhenFeatureFlagEnabled() throws Exception {
+        setupSigning();
+        when(configurationService.isUseAnyKeyFromDocAppJwks()).thenReturn(true);
+        when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+
+        var state = new State();
+        var pairwise = new Subject("pairwise-identifier");
+        var encryptedJWT =
+                authorisationService.constructRequestJWT(
+                        state, pairwise.getValue(), clientRegistry, "client-session-id");
+
+        assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(publicRsaKey.getKeyID()));
+        assertDoesNotThrow(() -> decryptJWT(encryptedJWT));
+        verify(jwksService, never()).retrieveJwkFromURLWithKeyId(JWKS_URL.toURL(), ENCRYPTION_KID);
     }
 
     private void setupSigning() throws JOSEException {
