@@ -144,7 +144,7 @@ public class CodeStorageService {
         if (deprecatedCodeRequestType != null) {
             long possibleOverrideTtl =
                     getTTL(email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
-            finalTtl = Math.max(finalTtl, possibleOverrideTtl); // TODO what if it's null?
+            finalTtl = Math.max(finalTtl, possibleOverrideTtl);
         }
 
         return finalTtl;

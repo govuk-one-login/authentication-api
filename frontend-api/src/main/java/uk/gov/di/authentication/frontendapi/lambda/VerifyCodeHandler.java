@@ -70,6 +70,7 @@ import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extract
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
@@ -159,6 +160,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            var deprecatedCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            notificationType.getMfaMethodType(), journeyType);
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
@@ -195,15 +200,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
-            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            var deprecatedCodeRequestType =
-                    CodeRequestType.getDeprecatedCodeRequestTypeString(
-                            notificationType.getMfaMethodType(), journeyType);
             if (deprecatedCodeRequestType != null
                     && isCodeBlockedForSession(
                             authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
+            }
+
+            if (isCodeBlockedForSession(
+                    authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1026);
+            }
+
+            if (deprecatedCodeRequestType != null
+                    && isCodeBlockedForSession(
+                            authSession,
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1026);
             }
 
             var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
