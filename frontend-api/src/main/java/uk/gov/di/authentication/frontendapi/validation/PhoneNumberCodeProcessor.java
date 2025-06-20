@@ -232,14 +232,17 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     private AuditService.MetadataPair getMfaPriorityForMigratedUser() {
-        if (userContext.getUserCredentials().isEmpty()) {
+        var maybeUserCredentials = userContext.getUserCredentials();
+
+        if (maybeUserCredentials.isEmpty()) {
             LOG.error(
                     "Database Corruption: User does not have UserCredentials in the UserContext.");
             return AuditService.MetadataPair.pair(
                     AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
-        var userCredentials = userContext.getUserCredentials().get();
+        var userCredentials = maybeUserCredentials.get();
+
         var mfaMethods = userCredentials.getMfaMethods();
 
         if (mfaMethods == null || mfaMethods.isEmpty()) {
