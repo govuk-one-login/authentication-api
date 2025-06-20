@@ -20,7 +20,7 @@ public class MfaMethodsMigrationHelper {
             Logger loggerForCallingHandler) {
         if (!userProfile.isMfaMethodsMigrated()) {
             Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
-                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile.getEmail());
+                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile);
 
             if (maybeMfaMigrationFailureReason.isPresent()) {
                 MfaMigrationFailureReason mfaMigrationFailureReason =
@@ -31,7 +31,7 @@ public class MfaMethodsMigrationHelper {
                         mfaMigrationFailureReason);
 
                 return switch (mfaMigrationFailureReason) {
-                    case NO_USER_FOUND_FOR_EMAIL -> Optional.of(
+                    case NO_CREDENTIALS_FOUND_FOR_USER -> Optional.of(
                             generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
                     case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
                             generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));

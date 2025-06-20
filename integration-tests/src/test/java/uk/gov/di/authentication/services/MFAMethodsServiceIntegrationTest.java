@@ -367,7 +367,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
@@ -416,7 +416,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
@@ -450,10 +450,12 @@ class MFAMethodsServiceIntegrationTest {
                     String email) {
                 // Arrange
                 userStoreExtension.addAuthAppMethod(email, true, true, AUTH_APP_CREDENTIAL);
+                UserProfile userProfileBefore =
+                        userStoreExtension.getUserProfileFromEmail(email).get();
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
@@ -487,10 +489,12 @@ class MFAMethodsServiceIntegrationTest {
                 var existingIdentifier = UUID.randomUUID().toString();
                 userStoreExtension.addAuthAppMethodWithIdentifier(
                         email, true, true, AUTH_APP_CREDENTIAL, existingIdentifier);
+                UserProfile userProfileBefore =
+                        userStoreExtension.getUserProfileFromEmail(email).get();
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(email);
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertTrue(mfaMigrationFailureReason.isEmpty());
@@ -516,18 +520,20 @@ class MFAMethodsServiceIntegrationTest {
             }
 
             @Test
-            void shouldErrorIfUserProfileNotFound() {
+            void shouldErrorIfUserCredentialsNotFound() {
                 // Arrange
                 userStoreExtension.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER_WITH_COUNTRY_CODE);
+                UserProfile userProfileBefore =
+                        userStoreExtension.getUserProfileFromEmail(EMAIL).get();
+                userStoreExtension.clearUserCredentialsTable();
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(
-                                "non-existent-email@example.com");
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertEquals(
-                        MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL,
+                        MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
                         mfaMigrationFailureReason.get());
             }
         }
@@ -806,10 +812,12 @@ class MFAMethodsServiceIntegrationTest {
                 userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPrioritySms);
                 userStoreExtension.addVerifiedPhoneNumber(
                         EMAIL, defaultPrioritySms.getDestination());
+                UserProfile userProfileBefore =
+                        userStoreExtension.getUserProfileFromEmail(EMAIL).get();
 
                 // Act
                 var mfaMigrationFailureReason =
-                        mfaMethodsService.migrateMfaCredentialsForUser(EMAIL);
+                        mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
                 assertEquals(

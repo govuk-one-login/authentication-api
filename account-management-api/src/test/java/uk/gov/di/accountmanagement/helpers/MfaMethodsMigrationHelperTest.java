@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.ALREADY_MIGRATED;
-import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL;
+import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -46,7 +46,8 @@ class MfaMethodsMigrationHelperTest {
     void shouldReturnAnEmptyAndLogWhenUserNotMigratedAndMigrationReturnsNoError() {
         var userProfile = new UserProfile().withMfaMethodsMigrated(false).withEmail(EMAIL);
 
-        when(mfaMethodsService.migrateMfaCredentialsForUser(EMAIL)).thenReturn(Optional.empty());
+        when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
+                .thenReturn(Optional.empty());
 
         var result =
                 MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired(
@@ -72,7 +73,7 @@ class MfaMethodsMigrationHelperTest {
 
     private static Stream<Arguments> fatalMigrationErrorsToHttpStatusAndError() {
         return Stream.of(
-                Arguments.of(NO_USER_FOUND_FOR_EMAIL, 404, ErrorResponse.ERROR_1056),
+                Arguments.of(NO_CREDENTIALS_FOUND_FOR_USER, 404, ErrorResponse.ERROR_1056),
                 Arguments.of(UNEXPECTED_ERROR_RETRIEVING_METHODS, 500, ErrorResponse.ERROR_1064));
     }
 
@@ -84,7 +85,7 @@ class MfaMethodsMigrationHelperTest {
             ErrorResponse expectedErrorResponse) {
         var userProfile = new UserProfile().withMfaMethodsMigrated(false).withEmail(EMAIL);
 
-        when(mfaMethodsService.migrateMfaCredentialsForUser(EMAIL))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
                 .thenReturn(Optional.of(migrationFailureReason));
 
         var maybeErrorResponse =
@@ -110,7 +111,7 @@ class MfaMethodsMigrationHelperTest {
     void shouldNotReturnFailureIfMigrationFailsDueToMethodsAlreadyMigrated() {
         var userProfile = new UserProfile().withEmail(EMAIL).withMfaMethodsMigrated(false);
 
-        when(mfaMethodsService.migrateMfaCredentialsForUser(EMAIL))
+        when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
                 .thenReturn(Optional.of(ALREADY_MIGRATED));
 
         var maybeErrorResponse =
