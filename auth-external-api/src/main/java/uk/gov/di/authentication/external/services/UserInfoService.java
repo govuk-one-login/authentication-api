@@ -8,7 +8,6 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -42,8 +41,6 @@ public class UserInfoService {
         LOG.info("Populating Authentication UserInfo");
         String internalSubjectId = accessTokenInfo.getSubjectID();
         var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
-        var userCredentials =
-                authenticationService.getUserCredentialsFromSubject(internalSubjectId);
 
         Subject internalPairwiseId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -52,8 +49,7 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
-        addClaimsFromToken(
-                accessTokenInfo, internalSubjectId, userProfile, userCredentials, userInfo);
+        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
         addClaimsFromSession(accessTokenInfo, authSession, userInfo);
         return userInfo;
     }
@@ -62,7 +58,6 @@ public class UserInfoService {
             AccessTokenStore accessTokenInfo,
             String internalSubjectId,
             UserProfile userProfile,
-            UserCredentials userCredentials,
             UserInfo userInfo) {
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -96,7 +91,7 @@ public class UserInfoService {
             userInfo.setClaim("salt", base64StringFromSalt);
         }
 
-        var phoneData = getPhoneDataIfSMSIsDefault(userProfile, userCredentials);
+        var phoneData = getPhoneDataIfSMSIsDefault(userProfile);
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
             userInfo.setPhoneNumber(phoneData.phoneNumber());
         }
@@ -107,9 +102,8 @@ public class UserInfoService {
 
     public record PhoneData(String phoneNumber, boolean phoneNumberVerified) {}
 
-    public PhoneData getPhoneDataIfSMSIsDefault(
-            UserProfile userProfile, UserCredentials userCredentials) {
-        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile, userCredentials);
+    public PhoneData getPhoneDataIfSMSIsDefault(UserProfile userProfile) {
+        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
         if (retrievedMfaMethods.isFailure()) {
             LOG.warn("Default MFA retrieval failed, error: {}", retrievedMfaMethods.getFailure());
             return new PhoneData(null, false);
