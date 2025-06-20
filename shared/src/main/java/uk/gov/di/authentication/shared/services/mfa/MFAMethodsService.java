@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
@@ -251,7 +252,11 @@ public class MFAMethodsService {
         }
     }
 
-    public Result<MfaUpdateFailureReason, List<MFAMethod>> updateMfaMethod(
+    public record MfaUpdateResponse(
+            List<MFAMethod> mfaMethods,
+            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier) {}
+
+    public Result<MfaUpdateFailureReason, MfaUpdateResponse> updateMfaMethod(
             String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
@@ -296,12 +301,11 @@ public class MFAMethodsService {
                 .findFirst();
     }
 
-    private Result<MfaUpdateFailureReason, List<MFAMethod>> handleBackupMethodUpdate(
+    private Result<MfaUpdateFailureReason, MfaUpdateResponse> handleBackupMethodUpdate(
             MFAMethod backupMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             List<MFAMethod> allMethods) {
-
         if (updatedMethod.method() != null) {
             // ERROR a backup method can not be edited.
             return Result.failure(MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
@@ -326,14 +330,19 @@ public class MFAMethodsService {
                                 defaultMethod.withPriority(BACKUP.name()),
                                 backupMethod.withPriority(DEFAULT.name())));
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(
+                databaseUpdateResult, MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS);
     }
 
-    private Result<MfaUpdateFailureReason, List<MFAMethod>>
+    private Result<MfaUpdateFailureReason, MfaUpdateResponse>
             mfaUpdateFailureReasonOrSortedMfaMethods(
-                    Result<String, List<MFAMethod>> databaseUpdateResult) {
+                    Result<String, List<MFAMethod>> databaseUpdateResult,
+                    MFAMethodEmailNotificationIdentifier emailNotificationIdentifier) {
         return databaseUpdateResult
-                .map(m -> m.stream().sorted().toList())
+                .map(
+                        m ->
+                                new MfaUpdateResponse(
+                                        m.stream().sorted().toList(), emailNotificationIdentifier))
                 .mapFailure(
                         errorString -> {
                             LOG.error(errorString);
@@ -341,7 +350,7 @@ public class MFAMethodsService {
                         });
     }
 
-    private Result<MfaUpdateFailureReason, List<MFAMethod>> handleDefaultMethodUpdate(
+    private Result<MfaUpdateFailureReason, MfaUpdateResponse> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -361,7 +370,7 @@ public class MFAMethodsService {
         }
     }
 
-    private Result<MfaUpdateFailureReason, List<MFAMethod>> updateSmsMethod(
+    private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateSmsMethod(
             MFAMethod defaultMethod,
             String email,
             String mfaIdentifier,
@@ -422,10 +431,12 @@ public class MFAMethodsService {
                         .toList();
 
         databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
-        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
+
+        return mfaUpdateFailureReasonOrSortedMfaMethods(
+                databaseUpdateResult, MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA);
     }
 
-    private Result<MfaUpdateFailureReason, List<MFAMethod>> updateAuthApp(
+    private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateAuthApp(
             MFAMethod defaultMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -467,7 +478,16 @@ public class MFAMethodsService {
                         .toList();
 
         databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
-        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult);
+
+        var emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA;
+
+        if (defaultMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
+            emailNotificationIdentifier =
+                    MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP;
+        }
+
+        return mfaUpdateFailureReasonOrSortedMfaMethods(
+                databaseUpdateResult, emailNotificationIdentifier);
     }
 
     public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(String email) {

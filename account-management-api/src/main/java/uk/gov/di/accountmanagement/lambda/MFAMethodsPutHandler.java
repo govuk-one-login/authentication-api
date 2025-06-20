@@ -8,14 +8,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -35,6 +39,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class MFAMethodsPutHandler
@@ -45,6 +51,7 @@ public class MFAMethodsPutHandler
     private final CodeStorageService codeStorageService;
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
+    private final AwsSqsClient sqsClient;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -58,17 +65,24 @@ public class MFAMethodsPutHandler
         this.authenticationService = new DynamoService(configurationService);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     public MFAMethodsPutHandler(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -81,8 +95,7 @@ public class MFAMethodsPutHandler
     }
 
     public APIGatewayProxyResponseEvent updateMFAMethodsHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
-
+            APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
         addSessionIdToLogs(input);
 
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
@@ -99,6 +112,11 @@ public class MFAMethodsPutHandler
         }
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
+
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
 
         if (putRequest
                 .request()
@@ -127,17 +145,19 @@ public class MFAMethodsPutHandler
             }
         }
 
-        var updateResult =
+        var maybeUpdateResult =
                 mfaMethodsService.updateMfaMethod(
                         putRequest.userProfile.getEmail(),
                         putRequest.mfaIdentifier,
                         putRequest.request);
 
-        if (updateResult.isFailure()) {
-            return handleUpdateMfaFailureReason(updateResult.getFailure());
+        if (maybeUpdateResult.isFailure()) {
+            return handleUpdateMfaFailureReason(maybeUpdateResult.getFailure());
         }
 
-        var successfulUpdateMethods = updateResult.getSuccess();
+        var updateResult = maybeUpdateResult.getSuccess();
+
+        var successfulUpdateMethods = updateResult.mfaMethods();
         var methodsAsResponse = convertMfaMethodsToMfaMethodResponse(successfulUpdateMethods);
 
         if (methodsAsResponse.isFailure()) {
@@ -145,6 +165,18 @@ public class MFAMethodsPutHandler
                     "Error converting mfa methods to response; update may still have occurred. Error: {}",
                     methodsAsResponse.getFailure());
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+        }
+
+        if (updateResult.emailNotificationIdentifier() != null) {
+            var emailNotificationType =
+                    mapEmailNotificationIdentifierToType(
+                            updateResult.emailNotificationIdentifier());
+
+            sendEmailNotification(
+                    emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
+        } else {
+            LOG.warn(
+                    "Update operation completed successfully. Email notification could not be sent due to missing or invalid notification ID in service response.");
         }
 
         try {
@@ -253,5 +285,44 @@ public class MFAMethodsPutHandler
         Map<String, String> headers = input.getHeaders();
         String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
         attachSessionIdToLogs(sessionId);
+    }
+
+    private NotificationType mapEmailNotificationIdentifierToType(
+            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier)
+            throws IllegalArgumentException {
+        if (emailNotificationIdentifier == null) {
+            throw new IllegalArgumentException("emailNotificationIdentifier cannot be null.");
+        }
+
+        return switch (emailNotificationIdentifier) {
+            case CHANGED_AUTHENTICATOR_APP -> NotificationType.CHANGED_AUTHENTICATOR_APP;
+            case CHANGED_DEFAULT_MFA -> NotificationType.CHANGED_DEFAULT_MFA;
+            case SWITCHED_MFA_METHODS -> NotificationType.SWITCHED_MFA_METHODS;
+            default -> throw new IllegalArgumentException(
+                    "Email notification identifier '"
+                            + emailNotificationIdentifier.getValue()
+                            + "' is not supported by the PUT endpoint.");
+        };
+    }
+
+    private void sendEmailNotification(
+            NotificationType notificationType,
+            String userEmail,
+            LocaleHelper.SupportedLanguage userLanguage)
+            throws Json.JsonException {
+        if (notificationType == null) {
+            throw new IllegalArgumentException("notificationType cannot be null.");
+        }
+
+        LOG.info(
+                "Backup method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
+                notificationType.name());
+
+        NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType, userLanguage);
+        sqsClient.send(serialisationService.writeValueAsString((notifyRequest)));
+
+        LOG.info(
+                "Message successfully added to queue (notification type: '{}'). Generating successful response.",
+                notificationType.name());
     }
 }

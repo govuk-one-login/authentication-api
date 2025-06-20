@@ -39,10 +39,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_REMOVED;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
+import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
+import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.EMAIL_HAS_BEEN_SENT_USING_NOTIFY;
@@ -346,6 +349,74 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_REMOVED))));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessChangedAuthenticatorAppMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, CHANGED_AUTHENTICATOR_APP, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), CHANGED_AUTHENTICATOR_APP);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY,
+                                        CHANGED_AUTHENTICATOR_APP))));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessChangedDefaultMFAMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, CHANGED_DEFAULT_MFA, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), CHANGED_DEFAULT_MFA);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, CHANGED_DEFAULT_MFA))));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessSwitchedMFAMethodsMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, SWITCHED_MFA_METHODS, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, Collections.emptyMap(), SWITCHED_MFA_METHODS);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, SWITCHED_MFA_METHODS))));
     }
 
     @Test

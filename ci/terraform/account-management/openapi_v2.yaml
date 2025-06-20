@@ -406,7 +406,8 @@ paths:
             schema:
               $ref: "#/components/schemas/MfaMethodUpdateRequest"
             examples:
-              update-sms:
+              change-default-mfa:
+                summary: a user with a default mfa method of auth app before update who is changing their default to SMS
                 value:
                   {
                     "mfaMethod":
@@ -420,7 +421,8 @@ paths:
                           },
                       },
                   }
-              update-auth-app:
+              change-auth-app:
+                summary: a user with a default mfa method of auth app before update who is changing to a new auth app
                 value:
                   {
                     "mfaMethod":
@@ -433,8 +435,9 @@ paths:
                           },
                       },
                   }
-              swap-backup-with-default:
-                value: { "mfaMethod": { "priorityIdentifier": "DEFAULT" } }
+              switch-backup-with-default:
+                summary: a user with two mfa methods who is switching the backup (whose mfa id is specified in the path parameters) to be the new default
+                value: {}
         required: true
       responses:
         "200":

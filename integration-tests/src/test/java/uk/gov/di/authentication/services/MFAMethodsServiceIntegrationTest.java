@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
@@ -879,7 +880,10 @@ class MFAMethodsServiceIntegrationTest {
                         List.of(expectedUpdatedDefaultMethod, backupPrioritySms);
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
-                                expectedRemainingMethods, result.getSuccess()));
+                                expectedRemainingMethods, result.getSuccess().mfaMethods()));
+                assertEquals(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP,
+                        result.getSuccess().emailNotificationIdentifier());
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
@@ -925,7 +929,10 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
-                                expectedMethods, result.getSuccess()));
+                                expectedMethods, result.getSuccess().mfaMethods()));
+                assertEquals(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        result.getSuccess().emailNotificationIdentifier());
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethods, methodsInDatabase));
@@ -1127,7 +1134,10 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
-                                expectedMethodsAfterUpdate, result.getSuccess()));
+                                expectedMethodsAfterUpdate, result.getSuccess().mfaMethods()));
+                assertEquals(
+                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS,
+                        result.getSuccess().emailNotificationIdentifier());
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
