@@ -229,7 +229,7 @@ class AuditServiceTest {
 
         var extensions = txmaMessage.getAsJsonObject().get("extensions");
         var restricted = txmaMessage.getAsJsonObject().get("restricted");
-        
+
         assertTrue(extensions.isJsonNull());
         assertTrue(restricted.isJsonNull());
     }
@@ -237,9 +237,7 @@ class AuditServiceTest {
     @Test
     void shouldHandleSingleMetadataPair() {
         auditService.submitAuditEvent(
-                AUTH_TEST_EVENT_ONE,
-                AUDIT_CONTEXT,
-                pair("singleKey", "singleValue"));
+                AUTH_TEST_EVENT_ONE, AUDIT_CONTEXT, pair("singleKey", "singleValue"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
@@ -257,10 +255,10 @@ class AuditServiceTest {
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
-        
+
         var extensions = txmaMessage.getAsJsonObject().get("extensions");
         var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
-        
+
         assertTrue(extensions.isJsonNull());
         assertThat(restricted, hasFieldWithValue("restrictedOnly", equalTo("restrictedOnlyValue")));
     }
