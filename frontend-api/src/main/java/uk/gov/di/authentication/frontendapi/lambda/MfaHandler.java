@@ -165,8 +165,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue())
                     };
 
-            if (!CodeRequestType.isValidCodeRequestType(
-                    NotificationType.MFA_SMS.getMfaMethodType(), journeyType)) {
+            CodeRequestType.SupportedCodeType supportedCodeType =
+                    CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                            NotificationType.MFA_SMS.getMfaMethodType());
+            if (!CodeRequestType.isValidCodeRequestType(supportedCodeType, journeyType)) {
                 LOG.warn(
                         "Invalid MFA Type '{}' for journey '{}'",
                         NotificationType.MFA_SMS.getMfaMethodType().getValue(),

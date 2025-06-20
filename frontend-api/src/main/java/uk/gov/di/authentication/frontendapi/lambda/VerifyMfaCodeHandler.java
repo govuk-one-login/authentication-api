@@ -205,7 +205,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private static boolean isInvalidCodeRequestType(
             VerifyMfaCodeRequest codeRequest, JourneyType journeyType) {
-        if (!CodeRequestType.isValidCodeRequestType(codeRequest.getMfaMethodType(), journeyType)) {
+        CodeRequestType.SupportedCodeType supportedCodeType =
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                        codeRequest.getMfaMethodType());
+        if (!CodeRequestType.isValidCodeRequestType(supportedCodeType, journeyType)) {
             LOG.warn(
                     "Invalid MFA Type '{}' for journey '{}'",
                     codeRequest.getMfaMethodType(),

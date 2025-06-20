@@ -624,7 +624,9 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
 
         if (!CodeRequestType.isValidCodeRequestType(
-                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                        codeRequest.getMfaMethodType()),
+                codeRequest.getJourneyType())) {
             return;
         }
 
@@ -662,7 +664,9 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
         if (!CodeRequestType.isValidCodeRequestType(
-                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                        codeRequest.getMfaMethodType()),
+                codeRequest.getJourneyType())) {
             return;
         }
         var result = makeCallWithCode(codeRequest);
@@ -811,7 +815,9 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
         if (!CodeRequestType.isValidCodeRequestType(
-                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                        codeRequest.getMfaMethodType()),
+                codeRequest.getJourneyType())) {
             return;
         }
         var result = makeCallWithCode(codeRequest);
@@ -843,7 +849,9 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
 
-        if (!CodeRequestType.isValidCodeRequestType(MFAMethodType.AUTH_APP, journeyType)) {
+        if (!CodeRequestType.isValidCodeRequestType(
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(MFAMethodType.AUTH_APP),
+                journeyType)) {
             return;
         }
         var result =
