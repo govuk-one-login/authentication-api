@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +50,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
@@ -323,12 +329,32 @@ class AuthAppCodeProcessorTest {
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
         verify(mockDynamoService)
                 .setAuthAppAndAccountVerified(CommonTestVariables.EMAIL, AUTH_APP_SECRET);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
-                        auditContext,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false));
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP),
+                        eq(auditContext),
+                        captor.capture());
+
+        AuditService.MetadataPair[] actual = captor.getValue();
+        List<AuditService.MetadataPair> expected =
+                new ArrayList<>(
+                        List.of(
+                                AuditService.MetadataPair.pair(
+                                        "mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, false),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        PriorityIdentifier.DEFAULT),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION)));
+
+        assertTrue(expected.containsAll(Arrays.asList(actual)));
+        assertTrue(Arrays.asList(actual).containsAll(expected));
     }
 
     @Test
@@ -348,12 +374,29 @@ class AuthAppCodeProcessorTest {
         verify(mockDynamoService)
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(
                         CommonTestVariables.EMAIL, AUTH_APP_SECRET);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
-                        auditContext,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", true));
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP),
+                        eq(auditContext),
+                        captor.capture());
+
+        AuditService.MetadataPair[] actual = captor.getValue();
+        AuditService.MetadataPair[] expected =
+                new AuditService.MetadataPair[] {
+                    AuditService.MetadataPair.pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                    AuditService.MetadataPair.pair(
+                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT),
+                    AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, true),
+                    AuditService.MetadataPair.pair(
+                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY)
+                };
+
+        assertTrue(Arrays.asList(expected).containsAll(Arrays.asList(actual)));
+        assertTrue(Arrays.asList(actual).containsAll(Arrays.asList(expected)));
     }
 
     @Test
@@ -381,12 +424,32 @@ class AuthAppCodeProcessorTest {
         assertInstanceOf(UUID.class, UUID.fromString(capturedMfaMethod.getMfaIdentifier()));
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
-                        auditContext,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", true));
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP),
+                        eq(auditContext),
+                        captor.capture());
+
+        AuditService.MetadataPair[] actual = captor.getValue();
+        List<AuditService.MetadataPair> expected =
+                new ArrayList<>(
+                        List.of(
+                                AuditService.MetadataPair.pair(
+                                        "mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, true),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        PriorityIdentifier.DEFAULT),
+                                AuditService.MetadataPair.pair(
+                                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY)));
+
+        assertTrue(expected.containsAll(Arrays.asList(actual)));
+        assertTrue(Arrays.asList(actual).containsAll(expected));
     }
 
     @Test
