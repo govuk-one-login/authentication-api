@@ -547,11 +547,23 @@ class VerifyMfaCodeHandlerTest {
 
     private static Stream<Arguments> blockedCodeForAuthAppOTPEnteredTooManyTimes() {
         return Stream.of(
-                Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
-                Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
-                Arguments.of(JourneyType.SIGN_IN, CodeRequestType.MFA_SIGN_IN),
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
-                Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
+                Arguments.of(
+                        JourneyType.ACCOUNT_RECOVERY,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType
+                                .MFA_ACCOUNT_RECOVERY),
+                Arguments.of(
+                        REGISTRATION,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_REGISTRATION),
+                Arguments.of(
+                        JourneyType.SIGN_IN,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_SIGN_IN),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_PW_RESET_MFA),
+                Arguments.of(
+                        REAUTHENTICATION,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType
+                                .MFA_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -677,10 +689,20 @@ class VerifyMfaCodeHandlerTest {
 
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
         return Stream.of(
-                Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
-                Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
-                Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
+                Arguments.of(
+                        JourneyType.ACCOUNT_RECOVERY,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType
+                                .MFA_ACCOUNT_RECOVERY),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_PW_RESET_MFA),
+                Arguments.of(
+                        REGISTRATION,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_REGISTRATION),
+                Arguments.of(
+                        REAUTHENTICATION,
+                        uk.gov.di.authentication.shared.entity.CodeRequestType
+                                .MFA_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -747,6 +769,33 @@ class VerifyMfaCodeHandlerTest {
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
                 pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+    }
+
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @Test
+    void
+            shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredAndBlockAlreadyExistsWithDeprecatedPrefix()
+                    throws Json.JsonException {
+        JourneyType journeyType = JourneyType.PASSWORD_RESET_MFA;
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(phoneNumberCodeProcessor));
+        when(phoneNumberCodeProcessor.validateCode())
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+        var codeBlockedPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                MFAMethodType.SMS, journeyType);
+        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedPrefix)).thenReturn(true);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
+        verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
     }
 
     @ParameterizedTest

@@ -195,6 +195,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            var deprecatedCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            notificationType.getMfaMethodType(), journeyType);
+            if (deprecatedCodeRequestType != null
+                    && isCodeBlockedForSession(
+                            authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+                ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
+                return generateApiGatewayProxyErrorResponse(400, errorResponse);
+            }
+
             var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
             List<MFAMethod> retrievedMfaMethods = new ArrayList<>();
             if (retrieveMfaMethods.isFailure()) {

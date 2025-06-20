@@ -277,6 +277,38 @@ class PhoneNumberCodeProcessorTest {
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @Test
+    void
+            shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodesWithDeprecatedPrefix() {
+        var codeRequestType = CodeRequestType.MFA_PW_RESET_MFA;
+        var journeyType = JourneyType.PASSWORD_RESET_MFA;
+        var mfaMethodType = MFAMethodType.SMS;
+
+        setUpBlockedPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        mfaMethodType,
+                        INVALID_CODE,
+                        journeyType,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
+                codeRequestType);
+
+        when(codeStorageService.isBlockedForEmail(
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                .thenReturn(false);
+
+        when(codeStorageService.isBlockedForEmail(
+                        CommonTestVariables.EMAIL,
+                        CODE_BLOCKED_KEY_PREFIX
+                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                        mfaMethodType, journeyType)))
+                .thenReturn(true);
+
+        assertThat(
+                phoneNumberCodeProcessor.validateCode(),
+                equalTo(Optional.of(ErrorResponse.ERROR_1034)));
+    }
+
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(

@@ -64,6 +64,20 @@ public enum CodeRequestType {
         return codeRequestTypeMap.get(key);
     }
 
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    public static String getDeprecatedCodeRequestTypeString(
+            MFAMethodType mfaMethodType, JourneyType journeyType) {
+        if (!isValidCodeRequestType(mfaMethodType, journeyType)) return null;
+        if (!mfaMethodType.equals(MFAMethodType.SMS)
+                && !mfaMethodType.equals(MFAMethodType.AUTH_APP)) return null;
+
+        if (journeyType.equals(JourneyType.PASSWORD_RESET_MFA)) {
+            return String.format("PW_RESET_MFA_%s", mfaMethodType);
+        } else {
+            return String.format("%s_%s", mfaMethodType, journeyType);
+        }
+    }
+
     public SupportedCodeType getSupportedCodeType() {
         return supportedCodeType;
     }

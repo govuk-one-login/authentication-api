@@ -496,6 +496,26 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(authenticationAttemptsService);
     }
 
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @Test
+    void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlockedUsingDeprecatedKey() {
+        JourneyType journeyType = JourneyType.SIGN_IN;
+
+        var codeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                MFAMethodType.SMS, journeyType);
+        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        verifyNoInteractions(accountModifiersService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
     @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {

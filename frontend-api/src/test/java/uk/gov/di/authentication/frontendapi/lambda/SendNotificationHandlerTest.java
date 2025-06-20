@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -1316,6 +1317,34 @@ class SendNotificationHandlerTest {
                                 auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
             }
 
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            @Test
+            void
+                    shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodesWithDeprecatedPrefix() {
+                when(codeStorageService.isBlockedForEmail(
+                                EMAIL,
+                                CODE_REQUEST_BLOCKED_KEY_PREFIX
+                                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                                VERIFY_PHONE_NUMBER.getMfaMethodType(),
+                                                JourneyType.REGISTRATION)))
+                        .thenReturn(true);
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
+                                EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
+                                JourneyType.REGISTRATION);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
+            }
+
             @Test
             void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
                 usingValidSession();
@@ -1385,6 +1414,29 @@ class SendNotificationHandlerTest {
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
+            }
+
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            @Test
+            void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodesWithDeprecatedPrefix() {
+                when(codeStorageService.isBlockedForEmail(
+                                EMAIL,
+                                CODE_BLOCKED_KEY_PREFIX
+                                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                                MFAMethodType.SMS, JourneyType.REGISTRATION)))
+                        .thenReturn(true);
+                usingValidSession();
+
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertEquals(400, result.getStatusCode());
+                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
             }
         }
     }
