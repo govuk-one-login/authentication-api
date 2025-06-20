@@ -152,67 +152,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":{\"essential\":true}}}";
 
     private static final IntegrationTestConfigurationService configuration =
-            new IntegrationTestConfigurationService(
-                    externalTokenSigner,
-                    storageTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public URI getDocAppJwksURI() {
-                    try {
-                        return new URIBuilder()
-                                .setHost("localhost")
-                                .setPort(jwksExtension.getHttpPort())
-                                .setPath("/.well-known/jwks.json")
-                                .setScheme("http")
-                                .build();
-                    } catch (URISyntaxException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                @Override
-                public String getDocAppEncryptionKeyID() {
-                    return ENCRYPTION_KEY_ID;
-                }
-
-                @Override
-                public String getDocAppAuthorisationClientId() {
-                    return DOC_APP_CLIENT_ID;
-                }
-
-                @Override
-                public URI getDocAppAuthorisationURI() {
-                    return AUTHORIZE_URI;
-                }
-
-                @Override
-                public URI getDocAppAuthorisationCallbackURI() {
-                    return CALLBACK_URI;
-                }
-
-                @Override
-                public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-                    return tokenSigningKey.getKeyAlias();
-                }
-
-                @Override
-                public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-                    return AUTH_PUBLIC_ENCRYPTION_KEY;
-                }
-
-                @Override
-                public boolean isPkceEnabled() {
-                    return true;
-                }
-            };
+            createConfigurationService(false);
 
     @Nested
     class AuthJourney {
@@ -1128,10 +1068,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             DOC_APP_AUTHORISATION_REQUESTED));
         }
 
-        @Test
-        void shouldGenerateCorrectResponseGivenAValidRequestWhenOnDocAppJourney()
-                throws JOSEException {
-            setupForDocAppJourney();
+        @ParameterizedTest(name = "With useAnyKeyFromDocAppJwks = {0}")
+        @ValueSource(booleans = {true, false})
+        void shouldGenerateCorrectResponseGivenAValidRequestWhenOnDocAppJourney(
+                boolean useAnyKeyFromDocAppJwks) throws JOSEException {
+            setupForDocAppJourney(useAnyKeyFromDocAppJwks);
             SignedJWT signedJWT = createSignedJWT("");
 
             Map<String, String> requestParams =
@@ -1171,6 +1112,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         private void setupForDocAppJourney() {
+            setupForDocAppJourney(false);
+        }
+
+        private void setupForDocAppJourney(boolean useAnyKeyFromDocAppJwks) {
             registerClient(
                     CLIENT_ID,
                     "test-client",
@@ -1178,7 +1123,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     ClientType.APP,
                     false,
                     false);
-            handler = new AuthorisationHandler(configuration);
+            handler = new AuthorisationHandler(createConfigurationService(useAnyKeyFromDocAppJwks));
             txmaAuditQueue.clear();
 
             var jwkKey =
@@ -2441,5 +2386,75 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         } catch (JOSEException | ParseException | java.text.ParseException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static IntegrationTestConfigurationService createConfigurationService(
+            boolean useAnyKeyFromDocAppJwks) {
+        return new IntegrationTestConfigurationService(
+                externalTokenSigner,
+                storageTokenSigner,
+                ipvPrivateKeyJwtSigner,
+                spotQueue,
+                docAppPrivateKeyJwtSigner,
+                configurationParameters) {
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+
+            @Override
+            public URI getDocAppJwksURI() {
+                try {
+                    return new URIBuilder()
+                            .setHost("localhost")
+                            .setPort(jwksExtension.getHttpPort())
+                            .setPath("/.well-known/jwks.json")
+                            .setScheme("http")
+                            .build();
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public String getDocAppEncryptionKeyID() {
+                return ENCRYPTION_KEY_ID;
+            }
+
+            @Override
+            public String getDocAppAuthorisationClientId() {
+                return DOC_APP_CLIENT_ID;
+            }
+
+            @Override
+            public URI getDocAppAuthorisationURI() {
+                return AUTHORIZE_URI;
+            }
+
+            @Override
+            public URI getDocAppAuthorisationCallbackURI() {
+                return CALLBACK_URI;
+            }
+
+            @Override
+            public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
+                return tokenSigningKey.getKeyAlias();
+            }
+
+            @Override
+            public String getOrchestrationToAuthenticationEncryptionPublicKey() {
+                return AUTH_PUBLIC_ENCRYPTION_KEY;
+            }
+
+            @Override
+            public boolean isPkceEnabled() {
+                return true;
+            }
+
+            @Override
+            public boolean isUseAnyKeyFromDocAppJwks() {
+                return useAnyKeyFromDocAppJwks;
+            }
+        };
     }
 }
