@@ -26,7 +26,7 @@ public abstract class MfaCodeProcessor {
     private final int maxRetries;
     public final String emailAddress;
     private final UserContext userContext;
-    protected final AuthenticationService dynamoService;
+    protected final AuthenticationService authenticationService;
     protected final AuditService auditService;
     protected final MFAMethodsService mfaMethodsService;
 
@@ -34,7 +34,7 @@ public abstract class MfaCodeProcessor {
             UserContext userContext,
             CodeStorageService codeStorageService,
             int maxRetries,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
             MFAMethodsService mfaMethodsService) {
@@ -42,7 +42,7 @@ public abstract class MfaCodeProcessor {
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
-        this.dynamoService = dynamoService;
+        this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
         this.mfaMethodsService = mfaMethodsService;

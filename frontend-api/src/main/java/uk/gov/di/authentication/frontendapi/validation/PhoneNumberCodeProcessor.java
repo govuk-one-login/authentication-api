@@ -49,7 +49,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             ConfigurationService configurationService,
             CodeRequest codeRequest,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             MFAMethodsService mfaMethodsService) {
@@ -57,7 +57,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 configurationService.getCodeMaxRetries(),
-                dynamoService,
+                authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
                 mfaMethodsService);
@@ -76,7 +76,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             ConfigurationService configurationService,
             CodeRequest codeRequest,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AwsSqsClient sqsClient,
@@ -85,7 +85,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 configurationService.getCodeMaxRetries(),
-                dynamoService,
+                authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
                 mfaMethodsService);
@@ -166,7 +166,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             }
 
             if (journeyType.equals(JourneyType.REGISTRATION)) {
-                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, phoneNumber, true, true);
             }
 
@@ -181,7 +181,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                             userProfile.getEmail(), smsMfa);
 
                 } else {
-                    dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                    authenticationService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
                             emailAddress, phoneNumber);
                 }
             }

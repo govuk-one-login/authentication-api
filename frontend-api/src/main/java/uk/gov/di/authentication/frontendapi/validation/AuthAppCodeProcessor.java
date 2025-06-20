@@ -45,7 +45,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
@@ -55,7 +55,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 maxRetries,
-                dynamoService,
+                authenticationService,
                 auditService,
                 accountModifiersService,
                 mfaMethodsService);
@@ -120,7 +120,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             String ipAddress, String persistentSessionId, UserProfile userProfile) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
-                dynamoService.setAuthAppAndAccountVerified(
+                authenticationService.setAuthAppAndAccountVerified(
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
@@ -143,7 +143,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                     mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
                             emailAddress, authAppMfa);
                 } else {
-                    dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                    authenticationService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
                             emailAddress, codeRequest.getProfileInformation());
                 }
 
@@ -180,8 +180,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     private Optional<String> getMfaCredentialValue() {
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
-        var userProfile = dynamoService.getUserProfileByEmail(emailAddress);
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(emailAddress);
+        var userProfile = authenticationService.getUserProfileByEmail(emailAddress);
 
         if (userCredentials == null) {
             LOG.info("User credentials not found");
