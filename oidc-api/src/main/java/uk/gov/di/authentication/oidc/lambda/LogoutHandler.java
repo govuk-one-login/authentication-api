@@ -76,6 +76,9 @@ public class LogoutHandler
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {
         LOG.info("Logout request received");
+        if (true) {
+            throw new RuntimeException("test exception!");
+        }
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
         LogoutRequest logoutRequest =
