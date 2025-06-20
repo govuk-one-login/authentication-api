@@ -493,6 +493,26 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(authenticationAttemptsService);
     }
 
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @Test
+    void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlockedUsingDeprecatedKey() {
+        JourneyType journeyType = JourneyType.SIGN_IN;
+
+        var codeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                MFAMethodType.SMS, journeyType);
+        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        verifyNoInteractions(accountModifiersService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
     @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
@@ -732,7 +752,7 @@ class VerifyCodeHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         }
 
-        if (codeRequestType != CodeRequestType.SMS_REAUTHENTICATION) {
+        if (codeRequestType != CodeRequestType.MFA_REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
                             EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
@@ -1005,10 +1025,10 @@ class VerifyCodeHandlerTest {
 
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
-                Arguments.of(CodeRequestType.PW_RESET_MFA_SMS, JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, REAUTHENTICATION),
-                Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
-                Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
+                Arguments.of(CodeRequestType.MFA_PW_RESET_MFA, JourneyType.PASSWORD_RESET_MFA),
+                Arguments.of(CodeRequestType.MFA_REAUTHENTICATION, REAUTHENTICATION),
+                Arguments.of(CodeRequestType.MFA_SIGN_IN, JourneyType.SIGN_IN),
+                Arguments.of(CodeRequestType.MFA_SIGN_IN, null));
     }
 
     private void withReauthTurnedOn() {

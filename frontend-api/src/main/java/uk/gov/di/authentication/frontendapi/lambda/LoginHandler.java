@@ -17,6 +17,7 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -60,12 +61,15 @@ import static uk.gov.di.authentication.frontendapi.services.UserMigrationService
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -342,6 +346,20 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .withAccountState(AuthSessionItem.AccountState.EXISTING)
                         .withInternalCommonSubjectId(internalCommonSubjectIdentifier));
 
+        if (userMfaDetail.isMfaRequired()) {
+            Optional<ErrorResponse> userHasRequestedTooManyOTPs =
+                    validateCodeRequestAttempts(
+                            userProfile.getEmail(),
+                            request.getJourneyType() != null
+                                    ? request.getJourneyType()
+                                    : JourneyType.SIGN_IN);
+
+            if (userHasRequestedTooManyOTPs.isPresent()) {
+                // TODO audit event?
+                return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
+            }
+        }
+
         String redactedPhoneNumber =
                 userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
                         ? redactPhoneNumber(userMfaDetail.phoneNumber())
@@ -381,6 +399,50 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private Optional<ErrorResponse> validateCodeRequestAttempts(
+            String email, JourneyType journeyType) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        CodeRequestType.SupportedCodeType.MFA, journeyType);
+        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(
+                        MFA_SMS.getMfaMethodType(), journeyType);
+
+        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    newCodeRequestBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1026);
+        }
+        if (codeStorageService.isBlockedForEmail(
+                email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    newCodeRequestBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1026);
+        }
+
+        if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    newCodeBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1027);
+        }
+        if (deprecatedCodeRequestType != null
+                && codeStorageService.isBlockedForEmail(
+                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    newCodeBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1027);
+        }
+        return Optional.empty();
     }
 
     private APIGatewayProxyResponseEvent handleInvalidCredentials(
