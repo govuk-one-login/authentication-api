@@ -313,6 +313,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         return ValidationHelper.isValidTestNumberForEnvironment(
                 phoneNumber,
                 configurationService.getEnvironment(),
-                authSession != null ? authSession.getIsSmokeTest() : false);
+                authSession != null && authSession.getIsSmokeTest());
     }
 }
