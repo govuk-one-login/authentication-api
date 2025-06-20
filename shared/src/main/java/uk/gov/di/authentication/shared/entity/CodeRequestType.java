@@ -38,8 +38,7 @@ public enum CodeRequestType {
     }
 
     public static boolean isValidCodeRequestType(
-            MFAMethodType mfaMethodType, JourneyType journeyType) {
-        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
+            SupportedCodeType supportedCodeType, JourneyType journeyType) {
         CodeRequestTypeKey key = new CodeRequestTypeKey(supportedCodeType, journeyType);
         return codeRequestTypeMap.containsKey(key);
     }
@@ -51,14 +50,18 @@ public enum CodeRequestType {
 
     public static CodeRequestType getCodeRequestType(
             MFAMethodType mfaMethodType, JourneyType journeyType) {
-        if (!isValidCodeRequestType(mfaMethodType, journeyType)) {
+        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
+        return getCodeRequestType(supportedCodeType, journeyType);
+    }
+
+    public static CodeRequestType getCodeRequestType(
+            SupportedCodeType supportedCodeType, JourneyType journeyType) {
+        if (!isValidCodeRequestType(supportedCodeType, journeyType)) {
             throw new CodeRequestTypeNotFoundException(
                     String.format(
-                            "CodeRequestType not found for MFA Type and Journey Type: [%s , %s]",
-                            mfaMethodType.getValue(), journeyType.getValue()));
+                            "CodeRequestType not found for SupportedCodeType and Journey Type: [%s , %s]",
+                            supportedCodeType.getValue(), journeyType.getValue()));
         }
-
-        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
 
         CodeRequestTypeKey key = new CodeRequestTypeKey(supportedCodeType, journeyType);
         return codeRequestTypeMap.get(key);
@@ -67,7 +70,8 @@ public enum CodeRequestType {
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
     public static String getDeprecatedCodeRequestTypeString(
             MFAMethodType mfaMethodType, JourneyType journeyType) {
-        if (!isValidCodeRequestType(mfaMethodType, journeyType)) return null;
+        SupportedCodeType supportedCodeType = SupportedCodeType.getFromMfaMethodType(mfaMethodType);
+        if (!isValidCodeRequestType(supportedCodeType, journeyType)) return null;
         if (!mfaMethodType.equals(MFAMethodType.SMS)
                 && !mfaMethodType.equals(MFAMethodType.AUTH_APP)) return null;
 
