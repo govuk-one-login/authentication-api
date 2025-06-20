@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,7 +125,8 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
-                                Optional.empty()));
+                                Optional.empty(),
+                                new ArrayList<>()));
     }
 
     @Test
@@ -164,7 +166,8 @@ class UserInfoHandlerTest {
                                 "",
                                 "0123456789",
                                 "",
-                                Optional.empty()));
+                                Optional.empty(),
+                                new ArrayList<>()));
     }
 
     @Test

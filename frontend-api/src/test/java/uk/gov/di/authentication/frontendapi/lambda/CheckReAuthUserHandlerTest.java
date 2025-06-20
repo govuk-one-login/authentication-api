@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,7 +101,8 @@ class CheckReAuthUserHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     private final AuditContext testAuditContextWithAuditEncoded =
             testAuditContextWithoutAuditEncoded.withTxmaAuditEncoded(

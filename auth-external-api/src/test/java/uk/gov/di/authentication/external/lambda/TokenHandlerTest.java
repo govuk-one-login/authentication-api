@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.*;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -246,6 +247,7 @@ class TokenHandlerTest {
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
                                 AuditService.UNKNOWN,
-                                Optional.empty()));
+                                Optional.empty(),
+                                new ArrayList<>()));
     }
 }

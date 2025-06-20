@@ -26,10 +26,7 @@ import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -85,7 +82,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     private final String[] TEST_EMAILS = {
         "user.1@account.gov.uk",

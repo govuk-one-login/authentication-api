@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -89,7 +90,8 @@ class MfaResetAuthorizeHandlerTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
     private static final String ORCHESTRATION_STATE = "ORCHESTRATION_STATE";
     private static final APIGatewayProxyRequestEvent TEST_INVOKE_EVENT =
             ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody(

@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -122,7 +123,8 @@ class UpdatePasswordHandlerTest {
                                 "123.123.123.123",
                                 userProfile.getPhoneNumber(),
                                 PERSISTENT_ID,
-                                Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                                Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                                new ArrayList<>()));
     }
 
     @Test

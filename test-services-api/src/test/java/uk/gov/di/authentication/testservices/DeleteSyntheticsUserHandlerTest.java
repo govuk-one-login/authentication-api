@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent;
 import uk.gov.di.authentication.testservices.lambda.DeleteSyntheticsUserHandler;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,7 +52,8 @@ class DeleteSyntheticsUserHandlerTest {
                     "123.123.123.123",
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    Optional.empty());
+                    Optional.empty(),
+                    new ArrayList<>());
 
     @BeforeEach
     public void setUp() {

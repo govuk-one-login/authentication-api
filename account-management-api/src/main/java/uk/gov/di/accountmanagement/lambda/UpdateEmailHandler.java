@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -171,7 +172,8 @@ public class UpdateEmailHandler
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            new ArrayList<>());
 
             if (configurationService.isEmailCheckEnabled()
                     && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {

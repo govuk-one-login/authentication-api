@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
@@ -121,7 +122,8 @@ public class AccountDeletionService {
                             ipAddress,
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
-                            txmaAuditEncoded);
+                            txmaAuditEncoded,
+                            new ArrayList<>());
             auditService.submitAuditEvent(
                     AUTH_DELETE_ACCOUNT, auditContext, pair("account_deletion_reason", reason));
         } catch (Exception e) {
