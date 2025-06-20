@@ -693,28 +693,65 @@ resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
   enable_key_rotation      = true
+  policy                   = data.aws_iam_policy_document.pending_email_check_queue_encryption_key_access_policy.json
+}
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "DefaultAccessPolicy",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
-        Action    = ["kms:*"],
-        Resource  = "*"
-      },
-      {
-        Sid       = "AllowPendingEmailCheckAccessToKmsAuditEncryptionKey-${var.environment}",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${var.auth_check_account_id}:root" },
-        Action    = ["kms:Decrypt"],
-        Resource  = "*"
-      }
+data "aws_iam_policy_document" "pending_email_check_queue_encryption_key_access_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
     ]
-  })
+    resources = ["*"]
 
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "AllowPendingEmailCheckAccessToKmsAuditEncryptionKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_check_account_id}:root"]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    content {
+      sid    = "Allow Auth access to dynamo table encryption key"
+      effect = "Allow"
+
+      actions = [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+      ]
+      principals {
+        type        = "AWS"
+        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+      }
+      resources = ["*"]
+    }
+  }
+  #checkov:skip=CKV_AWS_109:Root requires all kms:* actions access
+  #checkov:skip=CKV_AWS_111:Root requires all kms:* actions access
+  #checkov:skip=CKV_AWS_356:Policy cannot self-reference the kms key, so resources wildcard is required
+}
+
+resource "aws_kms_alias" "pending_email_check_queue_encryption_key_alias" {
+  name          = "alias/${var.environment}-pending-email-check-queue-encryption-key"
+  target_key_id = aws_kms_key.pending_email_check_queue_encryption_key.key_id
 }
 
 resource "aws_kms_key" "authentication_attempt_encryption_key" {

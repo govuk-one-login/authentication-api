@@ -9,6 +9,7 @@ Metadata:
       ignore_checks:
         - W1028
         - W8003
+        - E1011
 
 Description: >
   Auth API template for backend
@@ -147,10 +148,14 @@ Mappings:
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7a47b7cb-f6f2-40bb-b159-869ccc41837b
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5a160ba9-10ee-4e48-bcec-de21275f9201
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      useStronglyConsistentReads: true
     authdev2:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -162,10 +167,14 @@ Mappings:
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d8cdded0-8805-430a-9ae9-139a776ecd02
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9b906941-9de4-400e-84ac-65af1eccc831
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      useStronglyConsistentReads: true
     dev:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -178,6 +187,8 @@ Mappings:
       dataStoreAccountId: 653994557586
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3e9da4da-711f-49c2-a8ec-d4fddf8a6ff9
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       cloudwatchLogRetentionInDays: 1
@@ -190,7 +201,9 @@ Mappings:
       orchApiVpcEndpointId: ""
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       UseAlarmActions: "No"
+      useStronglyConsistentReads: true
     build:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -205,6 +218,8 @@ Mappings:
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/8bc6ccd4-6803-4642-ab90-76ba3b871dd5
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       cloudwatchLogRetentionInDays: 7
@@ -216,7 +231,9 @@ Mappings:
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: true
     staging:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -231,6 +248,8 @@ Mappings:
       docAppDomain: https://api.review-b.staging.account.gov.uk
       emailCheckResultsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ca8b1d2d-cad1-4019-a0d3-7801ecfe05f2
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       cloudwatchLogRetentionInDays: 7
@@ -243,7 +262,9 @@ Mappings:
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: true
     integration:
       cloudwatchLogRetentionInDays: 30
       customDocAppClaimEnabled: true
@@ -256,6 +277,7 @@ Mappings:
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: false
     production:
       cloudwatchLogRetentionInDays: 30
       customDocAppClaimEnabled: true
@@ -269,11 +291,16 @@ Mappings:
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
       UseAlarmActions: "Yes"
+      useStronglyConsistentReads: false
   LambdaConfiguration:
+    account-recovery:
+      RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     auth-token:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
     ticf-cri:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+    mfa-reset-authorize:
+      RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -586,7 +613,9 @@ Resources:
   DynamoAccountModifiersReadWritePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing write permissions to the Dynamo Account Modifiers table"
+      Description: !Sub
+        - "IAM policy for managing write permissions to the ${Env}-account-modifiers table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -638,10 +667,12 @@ Resources:
                       !Ref Environment,
                     ]
 
-  DynamoAccountModifiersReadPolicy:
+  DynamoAccountModifiersReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-account-modifiers table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -689,7 +720,9 @@ Resources:
   DynamoAuthenticationAttemptReadWriteDeletePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-authentication-attempt table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -757,7 +790,9 @@ Resources:
   DynamoAuthenticationAttemptReadPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the authentication attempts table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-authentication-attempt table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -818,7 +853,9 @@ Resources:
   DynamoAuthCodeStoreAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read and write permissions to the Dynamo Auth Code table"
+      Description: !Sub
+        - "IAM policy for managing read and write permissions to the ${Env}-auth-code-store table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/auth-ext/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -867,7 +904,9 @@ Resources:
   DynamoAccessTokenStoreAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read and write permissions to the Dynamo Access Token Store table"
+      Description: !Sub
+        - "IAM policy for managing read and write permissions to the ${Env}-access-token-store table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/auth-ext/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -935,7 +974,9 @@ Resources:
   DynamoClientRegistryReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the Dynamo Client Registration table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-client-registry table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -991,9 +1032,11 @@ Resources:
   DynamoEmailCheckResultReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the Dynamo User tables"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-email-check-result table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/auth-ext/
+        - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1053,6 +1096,109 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     emailCheckResultsTableEncryptionKey,
+                  ]
+
+  DynamoIdReverificationStateReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-id-reverification-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-id-reverification-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    idReverificationStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    idReverificationStateTableEncryptionKey,
+                  ]
+
+  DynamoIdReverificationStateWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing write permissions to the ${Env}-id-reverification-state table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/oidc-shared/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWrite
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-id-reverification-state
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowEncryption
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    idReverificationStateTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    idReverificationStateTableEncryptionKey,
                   ]
 
   DynamoUserReadAccessPolicy:
@@ -1283,7 +1429,9 @@ Resources:
   DynamoAuthSessionStoreReadWriteDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read, write and delete permissions to the auth session table"
+      Description: !Sub
+        - "IAM policy for managing read, write and delete permissions to the ${Env}-auth-session table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/auth-ext/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -1351,7 +1499,9 @@ Resources:
   DynamoAuthSessionStoreReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read and write permissions to the auth session table"
+      Description: !Sub
+        - "IAM policy for managing read and write permissions to the ${Env}-auth-session table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/auth-ext/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -1415,10 +1565,12 @@ Resources:
                     authSessionTableEncryptionKey,
                   ]
 
-  DynamoAuthSessionStoreReadPolicy:
+  DynamoAuthSessionStoreReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the auth session table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-auth-session table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -1480,7 +1632,9 @@ Resources:
   DynamoCommonPasswordsReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing read permissions to the Dynamo Common Passwords table"
+      Description: !Sub
+        - "IAM policy for managing read permissions to the ${Env}-common-passwords table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
         - /${Env}/oidc-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -1523,6 +1677,134 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     commonPasswordsTableEncryptionKey,
+                  ]
+
+  ExperianPhoneCheckQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for send access to the experian phone check queue"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToExperianPhoneCheckQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !Sub
+              - arn:aws:sqs:eu-west-2:${DataStoreAccountId}:${Env}-experian-phone-check-queue
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowLambdasToEncryptWithCustomKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    experianPhoneCheckQueueEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    experianPhoneCheckQueueEncryptionKey,
+                  ]
+
+  IPVReverificationRequestSigningKeyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS connection for a lambda which allows signing of the JARs sent from Auth to IPV when re-authenticating for MFA reset"
+      Path: !Sub
+        - /${Env}/mfa-reset-jar/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !Sub
+              - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key}}"
+              - env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  MfaResetTokenKmsSigningPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing KMS connection for a lambda which allows signing of the storage token claim sent from Auth to IPV when re-authenticating for MFA reset"
+      Path: !Sub
+        - /${Env}/mfa-reset-storage-token/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !Sub
+              - "{{resolve:secretsmanager:/deploy/${env}/mfa_reset_token_signing_key_ecc}}"
+              - env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  PendingEmailCheckQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for write access to the pending email queue"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToPendingEmailCheckQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !Sub
+              - arn:aws:sqs:eu-west-2:${DataStoreAccountId}:${Env}-pending-email-check-queue
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowAccessToKeyForEncryptingPayloads
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    pendingEmailCheckQueueEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    pendingEmailCheckQueueEncryptionKey,
                   ]
 
   RedisParametersAccessPolicy:

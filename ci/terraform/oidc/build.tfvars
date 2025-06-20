@@ -3,6 +3,8 @@ shared_state_bucket = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendbuild"
 
+# Auth new strategic account
+auth_new_account_id = "058264536367"
 
 # App-specific
 ipv_backend_uri = "https://ipvstub.signin.build.account.gov.uk"

@@ -1,34 +1,18 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  AccountInterventionsFunction:
+  SendNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-account-interventions-lambda
+        - ${Env}-send-notification-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      Handler: uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler::handleRequest
+      Handler: uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest
       Environment:
         Variables:
-          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !Sub
-            - "{{resolve:ssm:/deploy/${env}/account_intervention_service_abort_on_error}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT: !Sub
-            - "{{resolve:ssm:/deploy/${env}/account_intervention_service_call_timeout}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/account_intervention_service_action_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/account_intervention_service_call_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - "{{resolve:secretsmanager:/deploy/${env}/account_intervention_service_uri}}"
+          DEFAULT_OTP_CODE_EXPIRY: !Sub
+            - "{{resolve:ssm:/deploy/${env}/otp_code_ttl_duration}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           DYNAMO_ARN_PREFIX: !Sub
@@ -39,10 +23,11 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          INVOKE_TICF_CRI_LAMBDA: !Sub
-            - "{{resolve:ssm:/deploy/${env}/call_ticf_cri}}"
+          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !Sub
+            - "{{resolve:ssm:/deploy/${env}/email_acct_creation_otp_code_ttl_duration}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -50,20 +35,60 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
+          LOCKOUT_DURATION: !Sub
+            - "{{resolve:ssm:/deploy/${env}/lockout_duration}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          LOCKOUT_COUNT_TTL: !Sub
+            - "{{resolve:ssm:/deploy/${env}/lockout_count_ttl}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          PENDING_EMAIL_CHECK_QUEUE_URL: !Sub
+            - https://sqs.eu-west-2.amazonaws.com/${DataStoreAccountId}/${Env}-pending-email-check-queue
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
-          TICF_CRI_LAMBDA_IDENTIFIER: !GetAtt TicfCriFunctionAliasactive.AliasArn
+          SUPPORT_EMAIL_CHECK_ENABLED: true
+          SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
+            - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          TEST_CLIENTS_ENABLED: !Sub
+            - "{{resolve:ssm:/deploy/${env}/test_clients_enabled}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          USE_STRONGLY_CONSISTENT_READS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                useStronglyConsistentReads,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                useStronglyConsistentReads,
+              ]
       LoggingConfig:
-        LogGroup: !Ref AccountInterventionsFunctionLogGroup
+        LogGroup: !Ref SendNotificationFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
-        - !Ref DynamoAuthSessionStoreReadAccessPolicy
-        - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoEmailCheckResultReadAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref PendingEmailCheckQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref TicfCriFunctionInvocationPolicy
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -72,25 +97,25 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  AccountInterventionsFunctionPermission:
+  SendNotificationFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt AccountInterventionsFunction.Arn
+      FunctionName: !GetAtt SendNotificationFunction.Arn
       Principal: apigateway.amazonaws.com
 
-  AccountInterventionsFunctionAliasPermission:
+  SendNotificationFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref AccountInterventionsFunction.Alias
+      FunctionName: !Ref SendNotificationFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  AccountInterventionsFunctionLogGroup:
+  SendNotificationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-account-interventions-lambda
+        - /aws/lambda/${Env}-send-notification-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -101,29 +126,29 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-AccountInterventionsFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-SendNotificationFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/account-interventions.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/send-notification.yaml
 
-  AccountInterventionsFunctionErrorMetricFilter:
+  SendNotificationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-account-interventions-errors
+        - ${Env}-send-notification-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
-      LogGroupName: !Ref AccountInterventionsFunctionLogGroup
+      LogGroupName: !Ref SendNotificationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-account-interventions-error-count
+            - ${Env}-send-notification-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
-  AccountInterventionsFunctionErrorCloudwatchAlarm:
+  SendNotificationFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -131,7 +156,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-interventions-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-send-notification-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -143,17 +168,17 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "account-interventions",
+              "send-notification",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-interventions-alarm
+        - ${Env}-send-notification-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-account-interventions-error-count
+        - ${Env}-send-notification-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -166,7 +191,7 @@ Resources:
           DefaultValue: 5,
         ]
 
-  AccountInterventionsFunctionErrorRateCloudwatchAlarm:
+  SendNotificationFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -174,7 +199,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-interventions-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-send-notification-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -186,12 +211,12 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "account-interventions",
+              "send-notification",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-account-interventions-error-rate-alarm
+        - ${Env}-send-notification-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -210,7 +235,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-interventions-lambda
+                    - ${Env}-send-notification-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -229,7 +254,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-interventions-lambda
+                    - ${Env}-send-notification-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -247,19 +272,19 @@ Resources:
           DefaultValue: 10,
         ]
 
-  AccountInterventionsFunctionSubscriptionFilter:
+  SendNotificationFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref AccountInterventionsFunctionLogGroup
+      LogGroupName: !Ref SendNotificationFunctionLogGroup
 
-  AccountInterventionsFunctionScalableTarget:
+  SendNotificationFunctionScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Condition: NotSubEnvironment
     # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: AccountInterventionsFunctionAliasactive
+    DependsOn: SendNotificationFunctionAliasactive
     Properties:
       MinCapacity:
         !FindInMap [
@@ -279,24 +304,24 @@ Resources:
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt AccountInterventionsFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt SendNotificationFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
 
-  AccountInterventionsFunctionAutoScalingPolicy:
+  SendNotificationFunctionAutoScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Condition: NotSubEnvironment
-    DependsOn: AccountInterventionsFunctionScalableTarget
+    DependsOn: SendNotificationFunctionScalableTarget
     Properties:
       PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-account-interventions-lambda"
+        - "LambdaProvisionedConcurrency:${Env}-send-notification-lambda"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt AccountInterventionsFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt SendNotificationFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda

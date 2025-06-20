@@ -3,6 +3,9 @@ shared_state_bucket = "di-auth-staging-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendstaging"
 
+# Auth new strategic account
+auth_new_account_id = "851725205974"
+
 # App-specific
 internal_sector_uri  = "https://identity.staging.account.gov.uk"
 test_clients_enabled = true
