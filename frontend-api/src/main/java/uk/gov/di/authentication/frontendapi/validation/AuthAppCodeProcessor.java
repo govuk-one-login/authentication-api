@@ -7,7 +7,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -31,6 +30,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -128,18 +130,16 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        false);
+                        false,
+                        AuditService.MetadataPair.pair("mfa-method", DEFAULT),
+                        AuditService.MetadataPair.pair("journey-type", REGISTRATION));
                 break;
             case ACCOUNT_RECOVERY:
                 if (userProfile.isMfaMethodsMigrated()) {
                     String uuid = UUID.randomUUID().toString();
                     MFAMethod authAppMfa =
                             MFAMethod.authAppMfaMethod(
-                                    codeRequest.getProfileInformation(),
-                                    true,
-                                    true,
-                                    PriorityIdentifier.DEFAULT,
-                                    uuid);
+                                    codeRequest.getProfileInformation(), true, true, DEFAULT, uuid);
                     mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
                             emailAddress, authAppMfa);
                 } else {
@@ -153,7 +153,9 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        true);
+                        true,
+                        AuditService.MetadataPair.pair("mfa-method", DEFAULT),
+                        AuditService.MetadataPair.pair("journey-type", ACCOUNT_RECOVERY));
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
