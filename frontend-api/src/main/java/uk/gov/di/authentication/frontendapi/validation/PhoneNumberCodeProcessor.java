@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -49,7 +50,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             ConfigurationService configurationService,
             CodeRequest codeRequest,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             MFAMethodsService mfaMethodsService) {
@@ -57,7 +58,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 configurationService.getCodeMaxRetries(),
-                dynamoService,
+                authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
                 mfaMethodsService);
@@ -76,7 +77,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             ConfigurationService configurationService,
             CodeRequest codeRequest,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AwsSqsClient sqsClient,
@@ -85,7 +86,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 configurationService.getCodeMaxRetries(),
-                dynamoService,
+                authenticationService,
                 auditService,
                 dynamoAccountModifiersService,
                 mfaMethodsService);
@@ -152,53 +153,134 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     public void processSuccessfulCodeRequest(
             String ipAddress, String persistentSessionId, UserProfile userProfile) {
         JourneyType journeyType = codeRequest.getJourneyType();
-        if (journeyType == JourneyType.REGISTRATION
-                || journeyType == JourneyType.ACCOUNT_RECOVERY) {
-            String phoneNumber =
-                    PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());
-
-            if (isValidTestNumberForEnvironment(phoneNumber)) {
-                LOG.info(
-                        "Phone number not submitted for checking as smoke test client and test number");
-            } else {
-                LOG.info("Sending number to phone check sqs queue");
-                submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
-            }
-
-            if (journeyType.equals(JourneyType.REGISTRATION)) {
-                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                        emailAddress, phoneNumber, true, true);
-            }
-
-            if (journeyType.equals(JourneyType.ACCOUNT_RECOVERY)) {
-                if (userProfile.isMfaMethodsMigrated()) {
-                    String uuid = UUID.randomUUID().toString();
-                    var smsMfa =
-                            MFAMethod.smsMfaMethod(
-                                    true, true, phoneNumber, PriorityIdentifier.DEFAULT, uuid);
-
-                    mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
-                            userProfile.getEmail(), smsMfa);
-
-                } else {
-                    dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                            emailAddress, phoneNumber);
-                }
-            }
-
-            submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
-                    MFAMethodType.SMS,
-                    phoneNumber,
-                    ipAddress,
-                    persistentSessionId,
-                    journeyType == JourneyType.ACCOUNT_RECOVERY);
+        if (journeyType != JourneyType.REGISTRATION
+                && journeyType != JourneyType.ACCOUNT_RECOVERY) {
+            return;
         }
+
+        String phoneNumber =
+                PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());
+
+        requestPhoneNumberCheck(journeyType, phoneNumber);
+        persistPhoneNumber(journeyType, phoneNumber, userProfile);
+
+        AuditService.MetadataPair mfaTypePair = getMfaTypePair(journeyType);
+
+        submitAuditEvent(
+                FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
+                MFAMethodType.SMS,
+                phoneNumber,
+                ipAddress,
+                persistentSessionId,
+                journeyType == JourneyType.ACCOUNT_RECOVERY,
+                mfaTypePair,
+                AuditService.MetadataPair.pair("journey-type", journeyType));
+    }
+
+    private void requestPhoneNumberCheck(JourneyType journeyType, String phoneNumber) {
+        if (isValidTestNumberForEnvironment(phoneNumber)) {
+            LOG.info(
+                    "Phone number not submitted for checking as smoke test client and test number");
+        } else {
+            LOG.info("Sending number to phone check sqs queue");
+            submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
+        }
+    }
+
+    private void persistPhoneNumber(
+            JourneyType journeyType, String phoneNumber, UserProfile userProfile) {
+        if (journeyType == JourneyType.REGISTRATION) {
+            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
+                    emailAddress, phoneNumber, true, true);
+        } else {
+            if (userProfile.isMfaMethodsMigrated()) {
+                String uuid = UUID.randomUUID().toString();
+                var smsMfa =
+                        MFAMethod.smsMfaMethod(
+                                true, true, phoneNumber, PriorityIdentifier.DEFAULT, uuid);
+
+                mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
+                        userProfile.getEmail(), smsMfa);
+
+            } else {
+                authenticationService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                        emailAddress, phoneNumber);
+            }
+        }
+    }
+
+    private AuditService.MetadataPair getMfaTypePair(JourneyType journeyType) {
+        if (journeyType != JourneyType.ACCOUNT_RECOVERY) {
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        Optional<UserProfile> userProfileOpt = userContext.getUserProfile();
+        if (userProfileOpt.isEmpty()) {
+            LOG.error("Database Corruption: User does not have UserProfile in the UserContext.");
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        UserProfile userProfile = userProfileOpt.get();
+        if (!userProfile.isMfaMethodsMigrated()) {
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        return getMfaPriorityForMigratedUser();
+    }
+
+    private AuditService.MetadataPair getMfaPriorityForMigratedUser() {
+        var maybeUserCredentials = userContext.getUserCredentials();
+
+        if (maybeUserCredentials.isEmpty()) {
+            LOG.error(
+                    "Database Corruption: User does not have UserCredentials in the UserContext.");
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        var userCredentials = maybeUserCredentials.get();
+
+        var mfaMethods = userCredentials.getMfaMethods();
+
+        if (mfaMethods == null || mfaMethods.isEmpty()) {
+            LOG.error(
+                    "Data Corruption: Migrated user does not have MFA Methods in the UserCredentials.");
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        String phoneNumberOtpSentTo = codeRequest.getProfileInformation();
+        var mfa =
+                mfaMethods.stream()
+                        .filter(
+                                m ->
+                                        m.getMfaMethodType()
+                                                .equalsIgnoreCase(MFAMethodType.SMS.name()))
+                        .filter(m -> m.getDestination().equals(phoneNumberOtpSentTo))
+                        .findFirst();
+
+        if (mfa.isEmpty()) {
+            LOG.error("Data Corruption: User does not have SMS MFA Method in the UserContext.");
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
+        }
+
+        return AuditService.MetadataPair.pair(
+                AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfa.get().getPriority());
     }
 
     private void submitRequestToExperianPhoneCheckSQSQueue(
             JourneyType journeyType, String phoneNumber) {
-        UserProfile userProfile = userContext.getUserProfile().get();
+        Optional<UserProfile> userProfileOpt = userContext.getUserProfile();
+        if (userProfileOpt.isEmpty()) {
+            LOG.error("Database Corruption: User does not have UserProfile in the UserContext.");
+            return;
+        }
+
+        UserProfile userProfile = userProfileOpt.get();
         boolean phoneNumberVerified = userProfile.isPhoneNumberVerified();
         boolean updatedPhoneNumber = !phoneNumber.equals(userProfile.getPhoneNumber());
 
@@ -227,9 +309,10 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     private boolean isValidTestNumberForEnvironment(String phoneNumber) {
+        AuthSessionItem authSession = userContext.getAuthSession();
         return ValidationHelper.isValidTestNumberForEnvironment(
                 phoneNumber,
                 configurationService.getEnvironment(),
-                userContext.getAuthSession().getIsSmokeTest());
+                authSession != null && authSession.getIsSmokeTest());
     }
 }
