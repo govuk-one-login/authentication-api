@@ -219,4 +219,49 @@ class AuditServiceTest {
         var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
         assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
     }
+
+    @Test
+    void shouldHandleEmptyMetadataPairs() {
+        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, AUDIT_CONTEXT);
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        var restricted = txmaMessage.getAsJsonObject().get("restricted");
+        
+        assertTrue(extensions.isJsonNull());
+        assertTrue(restricted.isJsonNull());
+    }
+
+    @Test
+    void shouldHandleSingleMetadataPair() {
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE,
+                AUDIT_CONTEXT,
+                pair("singleKey", "singleValue"));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
+
+        assertThat(extensions, hasFieldWithValue("singleKey", equalTo("singleValue")));
+    }
+
+    @Test
+    void shouldHandleOnlyRestrictedMetadataPairs() {
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE,
+                AUDIT_CONTEXT,
+                pair("restrictedOnly", "restrictedOnlyValue", true));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+        
+        assertTrue(extensions.isJsonNull());
+        assertThat(restricted, hasFieldWithValue("restrictedOnly", equalTo("restrictedOnlyValue")));
+    }
 }
