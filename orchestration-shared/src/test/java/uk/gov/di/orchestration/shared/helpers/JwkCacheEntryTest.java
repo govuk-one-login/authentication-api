@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.helpers;
 
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jose.jwk.KeyUse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -138,6 +139,22 @@ class JwkCacheEntryTest {
         }
     }
 
+    @Test
+    void shouldGetEncryptionKeyByKeyTypeIfKeyAlgIsNotPresent() {
+        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
+            when(TEST_KEY_1.getAlgorithm()).thenReturn(null);
+            when(TEST_KEY_1.getKeyType()).thenReturn(KeyType.RSA);
+            when(TEST_KEY_2.getAlgorithm()).thenReturn(null);
+            when(TEST_KEY_2.getKeyType()).thenReturn(KeyType.RSA);
+            mockJwksUtils
+                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
+                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
+
+            var cacheEntry = JwkCacheEntry.forEncryptionKeys(testJwksUrl, Integer.MAX_VALUE);
+            assertEquals(TEST_KEY_1, cacheEntry.getKey());
+        }
+    }
+
     private JwkCacheEntry createCacheWithNoExpiration() {
         return createCacheWithExpiration(KeyUse.ENCRYPTION, Integer.MAX_VALUE);
     }
@@ -147,6 +164,7 @@ class JwkCacheEntryTest {
     }
 
     private JwkCacheEntry createCacheWithExpiration(KeyUse keyUse, int expiration) {
-        return JwkCacheEntry.forKeyUse(testJwksUrl, expiration, keyUse, JWEAlgorithm.RSA_OAEP_256);
+        return JwkCacheEntry.forKeyUse(
+                testJwksUrl, expiration, keyUse, JWEAlgorithm.RSA_OAEP_256, KeyType.RSA);
     }
 }
