@@ -505,6 +505,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix)) {
             return;
         }
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
+        if (codeStorageService.isBlockedForEmail(
+                emailAddress, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            return;
+        }
+
         boolean reducedLockout =
                 List.of(CodeRequestType.MFA_REGISTRATION, CodeRequestType.MFA_ACCOUNT_RECOVERY)
                         .contains(CodeRequestType.getCodeRequestType(mfaMethodType, journeyType));

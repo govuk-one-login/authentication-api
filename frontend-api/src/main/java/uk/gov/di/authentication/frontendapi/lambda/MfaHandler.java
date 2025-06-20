@@ -326,7 +326,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return Optional.of(ErrorResponse.ERROR_1025);
         }
 
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(
+                        MFA_SMS.getMfaMethodType(), journeyType);
+
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    newCodeRequestBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1026);
+        }
+        if (codeStorageService.isBlockedForEmail(
+                email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
@@ -334,6 +346,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         }
 
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    newCodeBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1027);
+        }
+        if (deprecatedCodeRequestType != null
+                && codeStorageService.isBlockedForEmail(
+                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
