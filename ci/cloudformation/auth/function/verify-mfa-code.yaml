@@ -44,14 +44,30 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_COUNT_TTL: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_count_ttl}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          LOCKOUT_DURATION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          LOCKOUT_COUNT_TTL: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                lockoutCountTtl,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                lockoutCountTtl,
+              ]
+          LOCKOUT_DURATION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                lockoutDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                lockoutDuration,
+              ]
           PHONE_CHECKER_WITH_RETRY: !Sub
             - "{{resolve:ssm:/deploy/${env}/phone_checker_with_retry}}"
             - env:
@@ -61,10 +77,18 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
-          REDUCED_LOCKOUT_DURATION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/reduced_lockout_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          REDUCED_LOCKOUT_DURATION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                reducedLockoutDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                reducedLockoutDuration,
+              ]
           SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
             - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
             - env:

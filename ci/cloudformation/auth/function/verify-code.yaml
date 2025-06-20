@@ -38,23 +38,47 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_COUNT_TTL: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_count_ttl}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          LOCKOUT_DURATION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/lockout_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          LOCKOUT_COUNT_TTL: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                lockoutCountTtl,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                lockoutCountTtl,
+              ]
+          LOCKOUT_DURATION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                lockoutDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                lockoutDuration,
+              ]
           REAUTH_ENTER_SMS_CODE_COUNT_TTL: !Sub
             - "{{resolve:ssm:/deploy/${env}/reauth_enter_sms_code_count_ttl}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
-          REDUCED_LOCKOUT_DURATION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/reduced_lockout_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          REDUCED_LOCKOUT_DURATION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                reducedLockoutDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                reducedLockoutDuration,
+              ]
           SUPPORT_ACCOUNT_CREATION_COUNT_TTL: !Sub
             - "{{resolve:ssm:/deploy/${env}/support_account_creation_count_ttl}}"
             - env:
