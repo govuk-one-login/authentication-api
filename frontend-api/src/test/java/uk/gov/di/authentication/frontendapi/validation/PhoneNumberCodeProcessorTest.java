@@ -56,6 +56,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
@@ -329,9 +332,12 @@ class PhoneNumberCodeProcessorTest {
                 Set.of(
                         AuditService.MetadataPair.pair("mfa-type", MFAMethodType.SMS.getValue()),
                         AuditService.MetadataPair.pair(
-                                "mfa-method", PriorityIdentifier.DEFAULT.name()),
-                        AuditService.MetadataPair.pair("account-recovery", false),
-                        AuditService.MetadataPair.pair("journey-type", REGISTRATION));
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, false),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION));
 
         assertEquals(expected, actual);
     }
@@ -370,9 +376,12 @@ class PhoneNumberCodeProcessorTest {
                 Set.of(
                         AuditService.MetadataPair.pair("mfa-type", MFAMethodType.SMS.name()),
                         AuditService.MetadataPair.pair(
-                                "mfa-method", PriorityIdentifier.DEFAULT.name()),
-                        AuditService.MetadataPair.pair("account-recovery", true),
-                        AuditService.MetadataPair.pair("journey-type", ACCOUNT_RECOVERY));
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, true),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
 
         assertEquals(expected, actual);
     }

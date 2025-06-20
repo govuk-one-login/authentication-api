@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -210,18 +211,21 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     private AuditService.MetadataPair getMfaTypePair(JourneyType journeyType) {
         if (journeyType != JourneyType.ACCOUNT_RECOVERY) {
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
         Optional<UserProfile> userProfileOpt = userContext.getUserProfile();
         if (userProfileOpt.isEmpty()) {
             LOG.error("Database Corruption: User does not have UserProfile in the UserContext.");
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
         UserProfile userProfile = userProfileOpt.get();
         if (!userProfile.isMfaMethodsMigrated()) {
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
         return getMfaPriorityForMigratedUser();
@@ -231,7 +235,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         if (userContext.getUserCredentials().isEmpty()) {
             LOG.error(
                     "Database Corruption: User does not have UserCredentials in the UserContext.");
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
         var userCredentials = userContext.getUserCredentials().get();
@@ -240,7 +245,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         if (mfaMethods == null || mfaMethods.isEmpty()) {
             LOG.error(
                     "Data Corruption: Migrated user does not have MFA Methods in the UserCredentials.");
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
         String phoneNumberOtpSentTo = codeRequest.getProfileInformation();
@@ -255,10 +261,12 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (mfa.isEmpty()) {
             LOG.error("Data Corruption: User does not have SMS MFA Method in the UserContext.");
-            return AuditService.MetadataPair.pair("mfa-method", PriorityIdentifier.DEFAULT.name());
+            return AuditService.MetadataPair.pair(
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name());
         }
 
-        return AuditService.MetadataPair.pair("mfa-method", mfa.get().getPriority());
+        return AuditService.MetadataPair.pair(
+                AUDIT_EVENT_EXTENSIONS_MFA_METHOD, mfa.get().getPriority());
     }
 
     private void submitRequestToExperianPhoneCheckSQSQueue(
