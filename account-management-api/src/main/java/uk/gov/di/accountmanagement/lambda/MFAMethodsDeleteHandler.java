@@ -7,12 +7,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
@@ -21,15 +27,20 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class MFAMethodsDeleteHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    private final Json objectMapper = SerializationService.getInstance();
+
     private static final Logger LOG = LogManager.getLogger(MFAMethodsDeleteHandler.class);
     private final ConfigurationService configurationService;
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
+    private final AwsSqsClient sqsClient;
 
     public MFAMethodsDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -39,15 +50,22 @@ public class MFAMethodsDeleteHandler
         this.configurationService = configurationService;
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     public MFAMethodsDeleteHandler(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -60,7 +78,7 @@ public class MFAMethodsDeleteHandler
     }
 
     public APIGatewayProxyResponseEvent deleteMFAMethodHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+            APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
 
         addSessionIdToLogs(input);
 
@@ -120,6 +138,20 @@ public class MFAMethodsDeleteHandler
         }
 
         LOG.info("Successfully deleted MFA method {}", mfaIdentifier);
+
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+
+        LOG.info("Backup method deleted successfully. Adding confirmation message to SQS queue.");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        userProfile.getEmail(),
+                        NotificationType.BACKUP_METHOD_REMOVED,
+                        userLanguage);
+        sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+        LOG.info("Message successfully added to queue. Generating successful response.");
 
         return generateEmptySuccessApiGatewayResponse();
     }

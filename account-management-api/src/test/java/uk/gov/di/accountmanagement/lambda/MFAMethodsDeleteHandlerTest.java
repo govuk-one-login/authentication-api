@@ -8,13 +8,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaDeleteFailureReason;
 
@@ -26,6 +32,8 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -41,13 +49,17 @@ class MFAMethodsDeleteHandlerTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_EMAIL = "test@test.com";
     private static final UserProfile userProfile =
-            new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT);
+            new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(TEST_EMAIL);
     private static final String TEST_INTERNAL_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
+    private final Json objectMapper = SerializationService.getInstance();
+
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
 
     private MFAMethodsDeleteHandler handler;
 
@@ -55,13 +67,14 @@ class MFAMethodsDeleteHandlerTest {
     void setUp() {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
-                new MFAMethodsDeleteHandler(configurationService, mfaMethodsService, dynamoService);
+                new MFAMethodsDeleteHandler(
+                        configurationService, mfaMethodsService, dynamoService, sqsClient);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
     }
 
     @Test
-    void shouldReturn204WhenFeatureFlagEnabled() {
+    void shouldReturn204WhenFeatureFlagEnabled() throws Json.JsonException {
         when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
                 .thenReturn(Result.success(MFA_IDENTIFIER_TO_DELETE));
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
@@ -71,6 +84,14 @@ class MFAMethodsDeleteHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertEquals(204, result.getStatusCode());
+
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL,
+                                        NotificationType.BACKUP_METHOD_REMOVED,
+                                        LocaleHelper.SupportedLanguage.EN)));
     }
 
     private static Stream<Arguments> failureReasonsToResponseCodes() {
@@ -105,6 +126,8 @@ class MFAMethodsDeleteHandlerTest {
         var result = handler.handleRequest(event, context);
         assertEquals(expectedStatusCode, result.getStatusCode());
         assertThat(result, hasJsonBody(expectedErrorResponse));
+
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -122,6 +145,8 @@ class MFAMethodsDeleteHandlerTest {
         var result = handler.handleRequest(eventWithoutPublicSubjectId, context);
 
         assertThat(result, hasStatus(400));
+
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -139,6 +164,8 @@ class MFAMethodsDeleteHandlerTest {
         var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
 
         assertThat(result, hasStatus(400));
+
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -149,6 +176,8 @@ class MFAMethodsDeleteHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertEquals(400, result.getStatusCode());
+
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -161,6 +190,8 @@ class MFAMethodsDeleteHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -173,6 +204,8 @@ class MFAMethodsDeleteHandlerTest {
 
         assertThat(result, hasStatus(404));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        verifyNoInteractions(sqsClient);
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
