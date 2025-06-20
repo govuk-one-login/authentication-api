@@ -266,10 +266,8 @@ class AuditServiceTest {
 
         // When
         auditService.submitAuditEvent(
-                AUTH_TEST_EVENT_ONE,
-                context,
-                pair("vararg-key", "vararg-value", false),
-                pair("vararg-restricted-key", "vararg-restricted-value", true));
+                AUTH_TEST_EVENT_ONE, context,
+                pair("vararg-key", "vararg-value", false), pair("vararg-restricted-key", "vararg-restricted-value", true));
 
         // Then
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
@@ -280,7 +278,7 @@ class AuditServiceTest {
         assertThat(extensions, hasFieldWithValue("vararg-key", equalTo("vararg-value")));
 
         var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
-        assertThat(
+assertThat(
                 restricted,
                 hasFieldWithValue("context-restricted-key", equalTo("context-restricted-value")));
         assertThat(

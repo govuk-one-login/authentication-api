@@ -71,7 +71,8 @@ public abstract class MfaCodeProcessor {
             String phoneNumber,
             String ipAddress,
             String persistentSessionId,
-            boolean accountRecovery) {
+            boolean accountRecovery,
+            AuditService.MetadataPair... metadataPairs) {
 
         var auditContext =
                 auditContextFromUserContext(
@@ -82,11 +83,12 @@ public abstract class MfaCodeProcessor {
                         phoneNumber,
                         persistentSessionId);
 
-        auditService.submitAuditEvent(
-                auditableEvent,
-                auditContext,
-                pair("mfa-type", mfaMethodType.getValue()),
-                pair("account-recovery", accountRecovery));
+        var allPairs = new AuditService.MetadataPair[2 + metadataPairs.length];
+        allPairs[0] = pair("mfa-type", mfaMethodType.getValue());
+        allPairs[1] = pair("account-recovery", accountRecovery);
+        System.arraycopy(metadataPairs, 0, allPairs, 2, metadataPairs.length);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, allPairs);
     }
 
     void clearAccountRecoveryBlockIfPresent(
