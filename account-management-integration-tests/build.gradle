@@ -21,7 +21,7 @@ dependencies {
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.19.0'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.19.1'
     testImplementation 'net.javacrumbs.json-unit:json-unit-assertj:4.1.1'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
