@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -450,7 +451,8 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
-                        pair("journey-type", "REGISTRATION"));
+                        pair("journey-type", "REGISTRATION"),
+                        pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -544,7 +546,8 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
-                        pair("journey-type", "ACCOUNT_RECOVERY"));
+                        pair("journey-type", "ACCOUNT_RECOVERY"),
+                        pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -779,7 +782,72 @@ class VerifyCodeHandlerTest {
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
                             pair("loginFailureCount", MAX_RETRIES + 1),
                             pair("MFACodeEntered", "6543221"),
-                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                            pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("codeRequestTypes")
+    void
+            shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInUsingBackupMfaMethodExceedMaxRetryCount(
+                    CodeRequestType codeRequestType, JourneyType journeyType) {
+        withReauthTurnedOn();
+
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+        when(codeStorageService.getOtpCode(
+                        EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD, BACKUP_SMS_METHOD)));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
+                .thenReturn(MAX_RETRIES + 1);
+
+        APIGatewayProxyResponseEvent result;
+        if (journeyType == null) {
+            result =
+                    makeCallWithCode(
+                            INVALID_CODE, MFA_SMS.toString(), BACKUP_SMS_METHOD.getMfaIdentifier());
+        } else {
+            result =
+                    makeCallWithCode(
+                            INVALID_CODE,
+                            MFA_SMS.toString(),
+                            journeyType,
+                            BACKUP_SMS_METHOD.getMfaIdentifier());
+        }
+
+        assertThat(result, hasStatus(400));
+        if (journeyType != REAUTHENTICATION) {
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        } else {
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+        }
+
+        if (codeRequestType != CodeRequestType.MFA_REAUTHENTICATION) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
+        }
+
+        verifyNoInteractions(accountModifiersService);
+
+        if (journeyType != REAUTHENTICATION) {
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
+                            AUDIT_CONTEXT,
+                            pair("notification-type", MFA_SMS.name()),
+                            pair("account-recovery", false),
+                            pair(
+                                    "journey-type",
+                                    journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                            pair("mfa-type", MFAMethodType.SMS.getValue()),
+                            pair("loginFailureCount", MAX_RETRIES + 1),
+                            pair("MFACodeEntered", "6543221"),
+                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                            pair("mfa-method", PriorityIdentifier.BACKUP.name().toLowerCase()));
         }
     }
 
@@ -810,7 +878,8 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
-                        pair("journey-type", "PASSWORD_RESET"));
+                        pair("journey-type", "PASSWORD_RESET"),
+                        pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
     }
 
     @Test
@@ -1070,6 +1139,18 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
                         code, notificationType, journeyType.getValue());
+        return makeCallWithCode(body, Optional.of(authSession));
+    }
+
+    private APIGatewayProxyResponseEvent makeCallWithCode(
+            String code, String notificationType, String mfaMethodId) {
+        if (mfaMethodId == null) {
+            throw new IllegalArgumentException("mfaMethodId must not be null");
+        }
+        String body =
+                format(
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"mfaMethodId\":\"%s\" }",
+                        code, notificationType, mfaMethodId);
         return makeCallWithCode(body, Optional.of(authSession));
     }
 

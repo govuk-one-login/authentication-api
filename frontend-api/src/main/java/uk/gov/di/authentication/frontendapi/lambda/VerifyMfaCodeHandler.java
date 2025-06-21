@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -76,6 +77,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final MFAMethodsService mfaMethodsService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -86,7 +88,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -98,6 +101,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -119,6 +123,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -137,6 +142,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -187,6 +193,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 journeyType, userProfile, auditContext, maybeRpPairwiseId, client))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
+        /*
+           TODO: AUT-4381: Need to get the priority identifier for the given MFA method in use.
+            At this point we know the MFA method type and the MFA code itself (both
+            from the codeRequest object), but not the MFA identifier in use.
+            If we had the MFA identifier, we could perform a similar lookup to that done
+            in VerifyCodeHandler where we retrieve all methods using the
+            mfaMethodsService and the email address on the authSession object.
+            Modify VerifyMfaCodeRequest to include mfaMethodId? Or is there a simpler way?
+            We would then fall back to PriorityIdentifier.DEFAULT in a similar manner.
+        */
+        var mfaMethodPriority = PriorityIdentifier.DEFAULT.name();
+
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
@@ -196,7 +214,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     subjectID,
                     maybeRpPairwiseId,
                     client,
-                    userProfile);
+                    userProfile,
+                    mfaMethodPriority);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -280,9 +299,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String subjectId,
             Optional<String> maybeRpPairwiseId,
             ClientRegistry client,
-            UserProfile userProfile) {
+            UserProfile userProfile,
+            String mfaMethodPriority) {
 
         var authSession = userContext.getAuthSession();
+        // TODO: AUT-4381: Could we make use of the changes in PR #6689? Passing in the priority to
+        // the audit context here?
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -337,9 +359,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_MFA_CODE);
             }
-            auditFailure(codeRequest, errorResponse, authSession, auditContext);
+            auditFailure(codeRequest, errorResponse, authSession, auditContext, mfaMethodPriority);
         } else {
-            auditSuccess(codeRequest, authSession, auditContext);
+            auditSuccess(codeRequest, authSession, auditContext, mfaMethodPriority);
             processSuccessfulCodeSession(
                     userContext.getAuthSession(),
                     input,
@@ -372,10 +394,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private void auditSuccess(
             VerifyMfaCodeRequest codeRequest,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            String mfaMethodPriority) {
         var metadataPairs =
                 metadataPairsForEvent(
-                        AUTH_CODE_VERIFIED, authSession.getEmailAddress(), codeRequest);
+                        AUTH_CODE_VERIFIED,
+                        authSession.getEmailAddress(),
+                        codeRequest,
+                        mfaMethodPriority);
         auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
     }
 
@@ -383,10 +409,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            String mfaMethodPriority) {
         var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
         var metadataPairs =
-                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
+                metadataPairsForEvent(
+                        auditableEvent,
+                        authSession.getEmailAddress(),
+                        codeRequest,
+                        mfaMethodPriority);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
@@ -535,7 +566,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
-            FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
+            FrontendAuditableEvent auditableEvent,
+            String email,
+            VerifyMfaCodeRequest codeRequest,
+            String mfaMethodPriority) {
         var methodType = codeRequest.getMfaMethodType();
         var basicMetadataPairs =
                 List.of(
@@ -547,7 +581,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var additionalPairs =
                 switch (auditableEvent) {
                     case AUTH_CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                            pair("mfa-method", mfaMethodPriority.toLowerCase()));
                     case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
                                 codeStorageService.getIncorrectMfaCodeAttemptsCount(email);

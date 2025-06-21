@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -46,6 +47,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.Instant;
@@ -148,6 +150,7 @@ class VerifyMfaCodeHandlerTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -194,7 +197,8 @@ class VerifyMfaCodeHandlerTest {
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
                         authenticationAttemptsService,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
     }
 
     @AfterEach
@@ -608,7 +612,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
     }
 
     @ParameterizedTest
@@ -647,7 +652,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
     }
 
     @ParameterizedTest
@@ -743,7 +749,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
     }
 
     @ParameterizedTest
@@ -772,7 +779,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -801,6 +809,13 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
     }
+
+    /*
+       TODO: AUT-4381: Add additional test to check that the "mfa-method"
+        AUTH_CODE_MAX_RETRIES_REACHED metadata pair is set to "BACKUP"
+        when a backup MFA method is used (once the changes to retrieve
+        the priority for the MFA method in use is implemented)?
+    */
 
     @ParameterizedTest
     @EnumSource(
