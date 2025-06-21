@@ -12,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -21,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -244,6 +244,20 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             authSessionService.updateSession(authSession);
 
+            var maybeRequestedMfaMethod =
+                    getMfaMethodOrDefaultMfaMethod(
+                            retrievedMfaMethods, codeRequest.mfaMethodId(), null);
+
+            var mfaMethodPriority =
+                    maybeRequestedMfaMethod
+                            .map(MFAMethod::getPriority)
+                            .orElse(PriorityIdentifier.DEFAULT.name());
+            /*
+               TODO: AUT-4381: Could we make use of the changes in PR #6689?
+                Attaching the priority above to the audit context here
+                instead of passing it in as an additional arg below?
+            */
+
             if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
                         codeRequest,
@@ -252,7 +266,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         subjectId,
                         errorResponse.get(),
                         authSession,
-                        auditContext);
+                        auditContext,
+                        mfaMethodPriority);
 
                 if (userHasExceededAllowedAttemptsForReauthenticationJourney(
                         journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
@@ -276,7 +291,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     journeyType,
                     auditContext,
                     maybeRpPairwiseId,
-                    maybeRequestedSmsMfaMethod);
+                    maybeRequestedSmsMfaMethod,
+                    mfaMethodPriority);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -321,7 +337,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            String mfaMethodPriority) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
@@ -336,7 +353,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         } else {
             processBlockedCodeSession(
-                    errorResponse, authSession, codeRequest, journeyType, auditContext);
+                    errorResponse,
+                    authSession,
+                    codeRequest,
+                    journeyType,
+                    auditContext,
+                    mfaMethodPriority);
         }
     }
 
@@ -424,7 +446,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            String mfaMethodPriority) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -471,10 +494,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         codeStorageService.deleteOtpCode(identifier, notificationType);
 
+        var auditableEvent = FrontendAuditableEvent.AUTH_CODE_VERIFIED;
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
+                metadataPairs(
+                        auditableEvent,
+                        notificationType,
+                        journeyType,
+                        codeRequest,
+                        mfaMethodPriority,
+                        loginFailureCount,
+                        false);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
@@ -508,9 +538,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private AuditService.MetadataPair[] metadataPairs(
+            FrontendAuditableEvent auditableEvent,
             NotificationType notificationType,
             JourneyType journeyType,
             VerifyCodeRequest codeRequest,
+            String mfaMethodPriority,
             Integer loginFailureCount,
             boolean isBlockedRequest) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
@@ -525,6 +557,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (notificationType == MFA_SMS && isBlockedRequest) {
             metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
         }
+        if (auditableEvent == FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED) {
+            metadataPairs.add(pair("mfa-method", mfaMethodPriority.toLowerCase()));
+        }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
     }
 
@@ -533,11 +568,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionItem authSession,
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            String mfaMethodPriority) {
         var notificationType = codeRequest.notificationType();
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        AuditableEvent auditableEvent;
+        FrontendAuditableEvent auditableEvent;
         switch (errorResponse) {
             case ERROR_1027:
             case ERROR_1039:
@@ -560,7 +596,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
+                metadataPairs(
+                        auditableEvent,
+                        notificationType,
+                        journeyType,
+                        codeRequest,
+                        mfaMethodPriority,
+                        loginFailureCount,
+                        true);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 
