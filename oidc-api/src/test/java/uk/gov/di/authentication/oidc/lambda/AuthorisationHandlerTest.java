@@ -95,11 +95,11 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -107,6 +107,7 @@ import java.util.stream.Stream;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -724,7 +725,7 @@ class AuthorisationHandlerTest {
             verify(orchClientSessionService).storeClientSession(orchClientSession);
 
             verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "LOW_LEVEL");
+                    Map.of("credential_trust_level", "LOW_LEVEL"));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -1129,7 +1130,7 @@ class AuthorisationHandlerTest {
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
 
             makeHandlerRequest(event);
-            verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("rpSid", rpSid));
         }
 
         @Test
@@ -1139,8 +1140,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
         }
 
         @Test
@@ -1150,8 +1150,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
         }
 
         @Test
@@ -1161,8 +1160,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, true, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("identityRequested", true));
         }
 
         @Test
@@ -1176,9 +1174,23 @@ class AuthorisationHandlerTest {
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
 
             makeHandlerRequest(event);
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("maximumSessionAge", 123));
+        }
+
+        @Test
+        void shouldSendAuditRequestParsedWithChannel() {
+            var client = generateClientRegistry();
+            client.setMaxAgeEnabled(true);
+            when(configService.supportMaxAgeEnabled()).thenReturn(true);
+            when(clientService.getClient(anyString())).thenReturn(Optional.of(client));
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("channel", Channel.GENERIC_APP.toString()));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            makeHandlerRequest(event);
 
             verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL", 123);
+                    Map.of("channel", Channel.GENERIC_APP.toString()));
         }
 
         @Test
@@ -1225,8 +1237,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
@@ -1248,8 +1259,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
@@ -1269,8 +1279,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
 
@@ -1339,8 +1348,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("reauthRequested", true));
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1366,8 +1374,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1390,8 +1397,8 @@ class AuthorisationHandlerTest {
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
+
             assertThat(uri.getQuery(), not(containsString("reauthenticate")));
             assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
@@ -1436,8 +1443,8 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("reauthRequested", true));
+
             verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
@@ -1490,8 +1497,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, true, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent(Map.of("reauthRequested", true));
 
             verify(auditService)
                     .submitAuditEvent(
@@ -1561,8 +1567,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -1602,8 +1607,7 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            verifyAuthorisationRequestParsedAuditEvent(
-                    AuditService.UNKNOWN, false, false, "MEDIUM_LEVEL");
+            verifyAuthorisationRequestParsedAuditEvent();
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
@@ -2864,43 +2868,35 @@ class AuthorisationHandlerTest {
                 .build();
     }
 
-    private void verifyAuthorisationRequestParsedAuditEvent(
-            String rpSid,
-            boolean identityRequested,
-            boolean reauthRequested,
-            String credentialTrustLevel) {
-        verifyAuthorisationRequestParsedAuditEvent(
-                rpSid, identityRequested, reauthRequested, credentialTrustLevel, null);
+    private void verifyAuthorisationRequestParsedAuditEvent() {
+        verifyAuthorisationRequestParsedAuditEvent(Map.of());
     }
 
     private void verifyAuthorisationRequestParsedAuditEvent(
-            String rpSid,
-            boolean identityRequested,
-            boolean reauthRequested,
-            String credentialTrustLevel,
-            Integer maxAge) {
-        if (Objects.isNull(maxAge)) {
-            verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("rpSid", rpSid),
-                            pair("identityRequested", identityRequested),
-                            pair("reauthRequested", reauthRequested),
-                            pair("credential_trust_level", credentialTrustLevel));
-        } else {
-            verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                            CLIENT_ID.getValue(),
-                            BASE_AUDIT_USER,
-                            pair("rpSid", rpSid),
-                            pair("identityRequested", identityRequested),
-                            pair("reauthRequested", reauthRequested),
-                            pair("credential_trust_level", credentialTrustLevel),
-                            pair("maximumSessionAge", maxAge));
-        }
+            Map<String, Object> extraOrSubstituteMetadata) {
+        Map<String, Object> metadataPairs = new HashMap<>();
+        metadataPairs.put("rpSid", AuditService.UNKNOWN);
+        metadataPairs.put("identityRequested", false);
+        metadataPairs.put("reauthRequested", false);
+        metadataPairs.put("credential_trust_level", "MEDIUM_LEVEL");
+        metadataPairs.putAll(extraOrSubstituteMetadata);
+        AuditService.MetadataPair[] expectedMetadataPairs =
+                metadataPairs.entrySet().stream()
+                        .map(entry -> pair(entry.getKey(), entry.getValue()))
+                        .toArray(AuditService.MetadataPair[]::new);
+        ArgumentCaptor<AuditService.MetadataPair[]> metadataPairCaptor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED),
+                        eq(CLIENT_ID.getValue()),
+                        eq(BASE_AUDIT_USER),
+                        metadataPairCaptor.capture());
+
+        assertThat(
+                Arrays.asList(metadataPairCaptor.getValue()),
+                containsInAnyOrder(expectedMetadataPairs));
     }
 
     private static ECKey generateECSigningKey() {
