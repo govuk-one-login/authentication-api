@@ -17,7 +17,7 @@ lambda_min_concurrency = 1
 openapi_spec_filename = "openapi_v2.yaml"
 
 # Feature flags
-mfa_method_management_api_enabled = false
+mfa_method_management_api_enabled = true
 ais_call_in_authenticate_enabled  = true
 
 #Vpc endpoint IDs
