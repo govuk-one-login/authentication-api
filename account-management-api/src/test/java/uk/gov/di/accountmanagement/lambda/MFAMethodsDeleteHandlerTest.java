@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -12,12 +13,16 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -36,6 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -60,6 +66,13 @@ class MFAMethodsDeleteHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private static final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
+    private static final MFAMethod AUTH_APP_MFA_METHOD =
+            new MFAMethod()
+                    .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                    .withMethodVerified(true)
+                    .withEnabled(true);
 
     private MFAMethodsDeleteHandler handler;
 
@@ -68,145 +81,183 @@ class MFAMethodsDeleteHandlerTest {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsDeleteHandler(
-                        configurationService, mfaMethodsService, dynamoService, sqsClient);
+                        configurationService,
+                        mfaMethodsService,
+                        dynamoService,
+                        cloudwatchMetricsService,
+                        sqsClient);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
     }
 
-    @Test
-    void shouldReturn204WhenFeatureFlagEnabled() throws Json.JsonException {
-        when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                .thenReturn(Result.success(MFA_IDENTIFIER_TO_DELETE));
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+    @Nested
+    class SuccessfulRequest {
+        @Test
+        void shouldReturn204WhenFeatureFlagEnabled() throws Json.JsonException {
+            when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
+                    .thenReturn(Result.success(AUTH_APP_MFA_METHOD));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
 
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
-        var result = handler.handleRequest(event, context);
-        assertEquals(204, result.getStatusCode());
+            var result = handler.handleRequest(event, context);
+            assertEquals(204, result.getStatusCode());
 
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_EMAIL,
-                                        NotificationType.BACKUP_METHOD_REMOVED,
-                                        LocaleHelper.SupportedLanguage.EN)));
+            verify(sqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            TEST_EMAIL,
+                                            NotificationType.BACKUP_METHOD_REMOVED,
+                                            LocaleHelper.SupportedLanguage.EN)));
+        }
+
+        @Test
+        void shouldIncrementTheCorrectMfaMethodCounter() {
+            when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
+                    .thenReturn(Result.success(AUTH_APP_MFA_METHOD));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(configurationService.getEnvironment()).thenReturn("test");
+
+            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+
+            handler.handleRequest(event, context);
+
+            verify(cloudwatchMetricsService)
+                    .incrementMfaMethodCounter(
+                            "test",
+                            "DeleteMfaMethod",
+                            "SUCCESS",
+                            ACCOUNT_MANAGEMENT,
+                            "AUTH_APP",
+                            PriorityIdentifier.BACKUP);
+
+        }
     }
 
-    private static Stream<Arguments> failureReasonsToResponseCodes() {
-        return Stream.of(
-                Arguments.of(
-                        MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD,
-                        409,
-                        ErrorResponse.ERROR_1066),
-                Arguments.of(
-                        MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER,
-                        400,
-                        ErrorResponse.ERROR_1067),
-                Arguments.of(
-                        MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST,
-                        404,
-                        ErrorResponse.ERROR_1065));
-    }
+    @Nested
+    class FailedRequest {
 
-    @ParameterizedTest
-    @MethodSource("failureReasonsToResponseCodes")
-    void shouldReturnAppropriateResponseWhenMfaMethodsServiceIndicatesMethodCouldNotBeDeleted(
-            MfaDeleteFailureReason failureReason,
-            int expectedStatusCode,
-            ErrorResponse expectedErrorResponse) {
-        when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                .thenReturn(Result.failure(failureReason));
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+        private static Stream<Arguments> failureReasonsToResponseCodes() {
+            return Stream.of(
+                    Arguments.of(
+                            MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD,
+                            409,
+                            ErrorResponse.ERROR_1066),
+                    Arguments.of(
+                            MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER,
+                            400,
+                            ErrorResponse.ERROR_1067),
+                    Arguments.of(
+                            MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST,
+                            404,
+                            ErrorResponse.ERROR_1065));
+        }
 
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        @ParameterizedTest
+        @MethodSource("failureReasonsToResponseCodes")
+        void shouldReturnAppropriateResponseWhenMfaMethodsServiceIndicatesMethodCouldNotBeDeleted(
+                MfaDeleteFailureReason failureReason,
+                int expectedStatusCode,
+                ErrorResponse expectedErrorResponse) {
+            when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
+                    .thenReturn(Result.failure(failureReason));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
 
-        var result = handler.handleRequest(event, context);
-        assertEquals(expectedStatusCode, result.getStatusCode());
-        assertThat(result, hasJsonBody(expectedErrorResponse));
+            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(event, context);
+            assertEquals(expectedStatusCode, result.getStatusCode());
+            assertThat(result, hasJsonBody(expectedErrorResponse));
 
-    @Test
-    void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
-        var eventWithoutPublicSubjectId =
-                new APIGatewayProxyRequestEvent()
-                        .withPathParameters(
-                                (Map.of(
-                                        "publicSubjectId",
-                                        "",
-                                        "mfaIdentifier",
-                                        MFA_IDENTIFIER_TO_DELETE)))
-                        .withHeaders(VALID_HEADERS);
+            verifyNoInteractions(sqsClient);
+        }
 
-        var result = handler.handleRequest(eventWithoutPublicSubjectId, context);
 
-        assertThat(result, hasStatus(400));
+        @Test
+        void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
+            var eventWithoutPublicSubjectId =
+                    new APIGatewayProxyRequestEvent()
+                            .withPathParameters(
+                                    (Map.of(
+                                            "publicSubjectId",
+                                            "",
+                                            "mfaIdentifier",
+                                            MFA_IDENTIFIER_TO_DELETE)))
+                            .withHeaders(VALID_HEADERS);
 
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(eventWithoutPublicSubjectId, context);
 
-    @Test
-    void shouldReturn400IfMfaIdentifierNotIncludedInPath() {
-        var eventWithoutMfaIdentifier =
-                new APIGatewayProxyRequestEvent()
-                        .withPathParameters(
-                                (Map.of(
-                                        "publicSubjectId",
-                                        TEST_PUBLIC_SUBJECT,
-                                        "mfaIdentifier",
-                                        "")))
-                        .withHeaders(VALID_HEADERS);
+            assertThat(result, hasStatus(400));
 
-        var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
+            verifyNoInteractions(sqsClient);
+        }
 
-        assertThat(result, hasStatus(400));
+        @Test
+        void shouldReturn400IfMfaIdentifierNotIncludedInPath() {
+            var eventWithoutMfaIdentifier =
+                    new APIGatewayProxyRequestEvent()
+                            .withPathParameters(
+                                    (Map.of(
+                                            "publicSubjectId",
+                                            TEST_PUBLIC_SUBJECT,
+                                            "mfaIdentifier",
+                                            "")))
+                            .withHeaders(VALID_HEADERS);
 
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(eventWithoutMfaIdentifier, context);
 
-    @Test
-    void shouldReturn400WhenFeatureFlagDisabled() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
+            assertThat(result, hasStatus(400));
 
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+            verifyNoInteractions(sqsClient);
+        }
 
-        var result = handler.handleRequest(event, context);
-        assertEquals(400, result.getStatusCode());
+        @Test
+        void shouldReturn400WhenFeatureFlagDisabled() {
+            when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
 
-        verifyNoInteractions(sqsClient);
-    }
+            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
 
-    @Test
-    void shouldReturn401WhenPrincipalIsInvalid() {
-        var event = generateApiGatewayEvent("invalid-principal");
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
+            var result = handler.handleRequest(event, context);
+            assertEquals(400, result.getStatusCode());
 
-        var result = handler.handleRequest(event, context);
+            verifyNoInteractions(sqsClient);
+        }
 
-        assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+        @Test
+        void shouldReturn401WhenPrincipalIsInvalid() {
+            var event = generateApiGatewayEvent("invalid-principal");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
 
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.empty());
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
 
-        var result = handler.handleRequest(event, context);
+            verifyNoInteractions(sqsClient);
+        }
 
-        assertThat(result, hasStatus(404));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        @Test
+        void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
+            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.empty());
 
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(404));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+            verifyNoInteractions(sqsClient);
+        }
+}
+
+
+
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =

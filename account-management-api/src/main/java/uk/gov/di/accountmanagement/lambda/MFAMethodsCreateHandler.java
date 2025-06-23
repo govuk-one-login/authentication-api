@@ -185,7 +185,7 @@ public class MFAMethodsCreateHandler
                     "CreateMfaMethod",
                     "SUCCESS",
                     ACCOUNT_MANAGEMENT,
-                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType(),
+                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
                     PriorityIdentifier.BACKUP);
 
             return generateApiGatewayProxyResponse(

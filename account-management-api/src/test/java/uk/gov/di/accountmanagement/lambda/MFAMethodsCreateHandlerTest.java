@@ -254,7 +254,7 @@ class MFAMethodsCreateHandlerTest {
                             "CreateMfaMethod",
                             "SUCCESS",
                             ACCOUNT_MANAGEMENT,
-                            MFAMethodType.AUTH_APP,
+                            "AUTH_APP",
                             PriorityIdentifier.BACKUP);
         }
     }

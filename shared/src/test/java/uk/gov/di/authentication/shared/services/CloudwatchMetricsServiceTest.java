@@ -10,7 +10,6 @@ import org.mockito.Mockito;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Collections;
@@ -117,7 +116,7 @@ class CloudwatchMetricsServiceTest {
                         "SomeOperation",
                         "SomeResult",
                         ACCOUNT_MANAGEMENT,
-                        MFAMethodType.AUTH_APP,
+                        "AUTH_APP",
                         PriorityIdentifier.BACKUP);
 
                 var expectedDimensions =

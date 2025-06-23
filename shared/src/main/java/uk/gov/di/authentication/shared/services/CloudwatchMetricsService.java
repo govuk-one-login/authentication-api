@@ -74,7 +74,7 @@ public class CloudwatchMetricsService {
             String operation,
             String result,
             JourneyType journeyType,
-            MFAMethodType mfaMethodType,
+            String mfaMethodType,
             PriorityIdentifier priorityIdentifier) {
         incrementCounter(
                 "MfaMethodOperationCount",
