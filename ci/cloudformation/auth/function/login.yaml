@@ -68,10 +68,18 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TERMS_CONDITIONS_VERSION: !Sub
-            - "{{resolve:ssm:/deploy/${env}/terms_conditions_version}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          TERMS_CONDITIONS_VERSION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                termsConditionsVersion,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                termsConditionsVersion,
+              ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseSubEnvironment

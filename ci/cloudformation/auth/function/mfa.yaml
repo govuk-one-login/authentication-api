@@ -11,10 +11,18 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest
       Environment:
         Variables:
-          DEFAULT_OTP_CODE_EXPIRY: !Sub
-            - "{{resolve:ssm:/deploy/${env}/otp_code_ttl_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DEFAULT_OTP_CODE_EXPIRY: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                otpCodeTtlDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                otpCodeTtlDuration,
+              ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -23,10 +31,18 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !Sub
-            - "{{resolve:ssm:/deploy/${env}/email_acct_creation_otp_code_ttl_duration}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                emailAcctCreationOtpCodeTtlDuration,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                emailAcctCreationOtpCodeTtlDuration,
+              ]
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
