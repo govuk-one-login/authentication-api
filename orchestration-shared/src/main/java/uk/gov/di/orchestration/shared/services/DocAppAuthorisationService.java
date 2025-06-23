@@ -11,6 +11,7 @@ import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -36,7 +37,6 @@ import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
-import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -220,14 +220,16 @@ public class DocAppAuthorisationService {
         try {
             LOG.info("Encrypting SignedJWT");
             var publicEncryptionKey = getPublicEncryptionKey();
+            var rsaKey = new RSAKey.Builder((RSAKey) publicEncryptionKey).build().toRSAPublicKey();
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
                                             JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
                                     .contentType("JWT")
+                                    .keyID(publicEncryptionKey.getKeyID())
                                     .build(),
                             new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
+            jweObject.encrypt(new RSAEncrypter(rsaKey));
             LOG.info("SignedJWT has been successfully encrypted");
             return EncryptedJWT.parse(jweObject.serialize());
         } catch (JOSEException e) {
@@ -239,20 +241,23 @@ public class DocAppAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicEncryptionKey() {
+    private JWK getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            var encryptionJWK =
-                    jwksService.retrieveJwkFromURLWithKeyId(
-                            configurationService.getDocAppJwksURI().toURL(),
-                            configurationService.getDocAppEncryptionKeyID());
-            return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
+            JWK encryptionJWK;
+            // TODO: ATO-1755 - Remove feature flag once this has been turned on in all environments
+            if (configurationService.isUseAnyKeyFromDocAppJwks()) {
+                encryptionJWK = jwksService.getDocAppJwk();
+            } else {
+                encryptionJWK =
+                        jwksService.retrieveJwkFromURLWithKeyId(
+                                configurationService.getDocAppJwksURI().toURL(),
+                                configurationService.getDocAppEncryptionKeyID());
+            }
+            return encryptionJWK;
         } catch (KeySourceException e) {
             LOG.error("Could not find key with provided key ID", e);
             throw new RuntimeException(e);
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new DocAppAuthorisationServiceException(e);
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKs URL", e);
             throw new DocAppAuthorisationServiceException(e);

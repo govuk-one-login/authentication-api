@@ -132,6 +132,8 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+  UseAnyKeyFromDocAppJwks:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3159,6 +3161,11 @@ Resources:
             - UseStronglyConsistentReads
             - true
             - false
+          USE_ANY_KEY_FROM_DOC_APP_JWKS: !If
+            - UseAnyKeyFromDocAppJwks
+            - true
+            - false
+          DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy

@@ -174,6 +174,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("DOC_APP_JWKS_URL");
     }
 
+    public boolean isUseAnyKeyFromDocAppJwks() {
+        return getFlagOrFalse("USE_ANY_KEY_FROM_DOC_APP_JWKS");
+    }
+
+    public int getDocAppJwkCacheExpirationInSeconds() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+    }
+
     public String getDocAppTokenSigningKeyAlias() {
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
