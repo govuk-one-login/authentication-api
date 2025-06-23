@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -96,7 +97,8 @@ class PhoneNumberCodeProcessorTest {
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    new ArrayList<>());
 
     @BeforeEach
     void setup() {

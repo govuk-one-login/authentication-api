@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -89,7 +90,8 @@ class AuthAppCodeProcessorTest {
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    new ArrayList<>());
 
     @BeforeEach
     void setUp() {

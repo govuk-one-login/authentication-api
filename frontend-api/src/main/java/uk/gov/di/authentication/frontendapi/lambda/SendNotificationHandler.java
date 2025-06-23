@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -56,6 +57,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1015;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -73,10 +75,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
-    private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
     private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
+    public static final String AUDIT_EVENT_MFA_METHOD_FIELD = "mfa-method";
+    public static final String AUDIT_EVENT_DEFAULT_MFA_VALUE =
+            PriorityIdentifier.DEFAULT.toString().toLowerCase();
 
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AwsSqsClient emailSqsClient;
     private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
@@ -94,12 +99,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             CodeStorageService codeStorageService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
                 clientService,
                 authenticationService,
+                true,
                 authSessionService);
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -107,6 +114,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.codeStorageService = codeStorageService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public SendNotificationHandler() {
@@ -130,6 +138,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public SendNotificationHandler(
@@ -150,6 +159,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -175,19 +185,21 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        try {
-            if (!userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            }
-            if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
-                LOG.info("Placing message on queue for {}", request.getNotificationType());
-                var notifyRequest =
-                        new NotifyRequest(
-                                request.getEmail(),
-                                request.getNotificationType(),
-                                userContext.getUserLanguage(),
-                                userContext.getAuthSession().getSessionId(),
-                                userContext.getClientSessionId());
+        if (!userContext.getAuthSession().validateSession(request.getEmail())) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
+            LOG.info("Placing message on queue for {}", request.getNotificationType());
+            var notifyRequest =
+                    new NotifyRequest(
+                            request.getEmail(),
+                            request.getNotificationType(),
+                            userContext.getUserLanguage(),
+                            userContext.getAuthSession().getSessionId(),
+                            userContext.getClientSessionId());
+
+            try {
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
@@ -195,24 +207,28 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             notifyRequest.getNotificationType(),
                             notifyRequest.getUniqueNotificationReference());
                 }
+            } catch (Exception e) {
                 return generateEmptySuccessApiGatewayResponse();
             }
+            return generateEmptySuccessApiGatewayResponse();
+        }
 
-            Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
-                    isCodeRequestAttemptValid(
-                            request.getEmail(),
-                            userContext.getAuthSession(),
-                            request.getNotificationType(),
-                            request.getJourneyType());
+        Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
+                isCodeRequestAttemptValid(
+                        request.getEmail(),
+                        userContext.getAuthSession(),
+                        request.getNotificationType(),
+                        request.getJourneyType());
 
-            if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
-                auditService.submitAuditEvent(
-                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        auditContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, userHasExceededMaximumAllowedCodeRequests.get());
-            }
+        if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
+            auditService.submitAuditEvent(
+                    getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
+                    auditContext);
+            return generateApiGatewayProxyErrorResponse(
+                    400, userHasExceededMaximumAllowedCodeRequests.get());
+        }
 
+        try {
             incrementCountOfNotificationsSent(request, userContext.getAuthSession());
 
             Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
@@ -241,27 +257,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             input,
                             auditContext);
                 case VERIFY_PHONE_NUMBER:
-                    if (request.getPhoneNumber() == null) {
-                        return generateApiGatewayProxyResponse(400, ERROR_1011);
-                    }
-                    boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
-                    var errorResponse =
-                            ValidationHelper.validatePhoneNumber(
-                                    request.getPhoneNumber(),
-                                    configurationService.getEnvironment(),
-                                    isSmokeTest);
-                    if (errorResponse.isPresent()) {
-                        return generateApiGatewayProxyResponse(400, errorResponse.get());
-                    }
-                    return handleNotificationRequest(
-                            PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
-                                    request.getPhoneNumber()),
-                            request.getNotificationType(),
-                            userContext,
-                            request.isRequestNewCode(),
-                            request,
-                            input,
-                            auditContext);
+                    return handlePhoneNumberVerification(input, request, userContext, auditContext);
                 default:
                     return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
@@ -271,8 +267,47 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1015);
         }
+    }
+
+    private APIGatewayProxyResponseEvent handlePhoneNumberVerification(
+            APIGatewayProxyRequestEvent input,
+            SendNotificationRequest request,
+            UserContext userContext,
+            AuditContext auditContext)
+            throws JsonException, ClientNotFoundException {
+        if (request.getPhoneNumber() == null) {
+            return generateApiGatewayProxyResponse(400, ERROR_1011);
+        }
+
+        boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
+
+        var errorResponse =
+                ValidationHelper.validatePhoneNumber(
+                        request.getPhoneNumber(),
+                        configurationService.getEnvironment(),
+                        isSmokeTest);
+
+        if (errorResponse.isPresent()) {
+            return generateApiGatewayProxyResponse(400, errorResponse.get());
+        }
+
+        auditContext.withMetadataItem(
+                new AuditService.MetadataPair(
+                        AUDIT_EVENT_MFA_METHOD_FIELD, AUDIT_EVENT_DEFAULT_MFA_VALUE, false));
+
+        auditContext.withMetadataItem(
+                new AuditService.MetadataPair("journey-type", request.getJourneyType(), false));
+
+        return handleNotificationRequest(
+                PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),
+                request.getNotificationType(),
+                userContext,
+                request.isRequestNewCode(),
+                request,
+                input,
+                auditContext);
     }
 
     private void incrementCountOfNotificationsSent(
@@ -312,7 +347,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         }
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
-                METRICS,
+                cloudwatchMetricsService,
                 request.getJourneyType(),
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
@@ -356,7 +391,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                METRICS.putEmbeddedValue(
+                cloudwatchMetricsService.putEmbeddedValue(
                         "SendingSms",
                         1,
                         Map.of(
@@ -385,6 +420,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
                 auditContext);
+
         return generateEmptySuccessApiGatewayResponse();
     }
 

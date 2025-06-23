@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -98,7 +99,8 @@ class AuthenticationAuthCodeHandlerTest {
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    Optional.of(ENCODED_DEVICE_DETAILS),
+                    new ArrayList<>());
 
     @BeforeEach
     void setUp() throws Json.JsonException {
