@@ -158,7 +158,8 @@ public class MFAMethodsService {
             return Result.success(
                     Optional.of(
                             method.withMfaIdentifier(mfaIdentifier).withPriority(DEFAULT.name())));
-        } else if (userProfile.isPhoneNumberVerified()) {
+        } else if (Objects.nonNull(userProfile.getPhoneNumber())
+                && userProfile.isPhoneNumberVerified()) {
             String mfaIdentifier;
             if (Objects.nonNull(userProfile.getMfaIdentifier())) {
                 mfaIdentifier = userProfile.getMfaIdentifier();
@@ -490,16 +491,15 @@ public class MFAMethodsService {
                 databaseUpdateResult, emailNotificationIdentifier);
     }
 
-    public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(String email) {
-        // Bail if user doesn't exist
-        Optional<UserProfile> maybeUserProfile = persistentService.getUserProfileFromEmail(email);
+    public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(
+            UserProfile userProfile) {
+        // Bail if user credentials don't exist
         Optional<UserCredentials> maybeUserCredentials =
-                Optional.ofNullable(persistentService.getUserCredentialsFromEmail(email));
-        if (maybeUserProfile.isEmpty() || maybeUserCredentials.isEmpty()) {
-            return Optional.of(MfaMigrationFailureReason.NO_USER_FOUND_FOR_EMAIL);
+                Optional.ofNullable(
+                        persistentService.getUserCredentialsFromEmail(userProfile.getEmail()));
+        if (maybeUserCredentials.isEmpty()) {
+            return Optional.of(MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER);
         }
-
-        UserProfile userProfile = maybeUserProfile.get();
         UserCredentials userCredentials = maybeUserCredentials.get();
 
         // Bail if already migrated
@@ -518,24 +518,21 @@ public class MFAMethodsService {
 
         // Bail if no MFA methods to migrate
         if (maybeNonMigratedMfaMethod.isEmpty()) {
-            persistentService.setMfaMethodsMigrated(email, true);
+            persistentService.setMfaMethodsMigrated(userProfile.getEmail(), true);
             return Optional.empty();
         }
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
-        String mfaIdentifier;
-        if (Objects.isNull(nonMigratedMfaMethod.getMfaIdentifier())) {
-            mfaIdentifier = UUID.randomUUID().toString();
-        } else {
-            mfaIdentifier = nonMigratedMfaMethod.getMfaIdentifier();
-        }
-
         return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
             case SMS -> migrateSmsToNewFormat(
-                    email, nonMigratedMfaMethod.getDestination(), mfaIdentifier);
+                    userProfile.getEmail(),
+                    nonMigratedMfaMethod.getDestination(),
+                    nonMigratedMfaMethod.getMfaIdentifier());
             case AUTH_APP -> migrateAuthAppToNewFormat(
-                    email, nonMigratedMfaMethod.getCredentialValue(), mfaIdentifier);
+                    userProfile.getEmail(),
+                    nonMigratedMfaMethod.getCredentialValue(),
+                    nonMigratedMfaMethod.getMfaIdentifier());
             default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         };
     }

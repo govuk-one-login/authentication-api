@@ -277,6 +277,14 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 email, mfaMethodType, methodVerified, enabled, credentialValue);
     }
 
+    public void clearUserCredentialsTable() {
+        clearDynamoTable(dynamoDB, USER_CREDENTIALS_TABLE, EMAIL_FIELD);
+    }
+
+    public void clearUserProfileTable() {
+        clearDynamoTable(dynamoDB, USER_PROFILE_TABLE, EMAIL_FIELD);
+    }
+
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
@@ -287,8 +295,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
-        clearDynamoTable(dynamoDB, USER_CREDENTIALS_TABLE, EMAIL_FIELD);
-        clearDynamoTable(dynamoDB, USER_PROFILE_TABLE, EMAIL_FIELD);
+        clearUserCredentialsTable();
+        clearUserProfileTable();
     }
 
     @Override
