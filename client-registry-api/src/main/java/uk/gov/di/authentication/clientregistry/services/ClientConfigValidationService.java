@@ -60,6 +60,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid ID Token Signing Algorithm");
     public static final ErrorObject INVALID_CHANNEL =
             new ErrorObject("invalid_client_metadata", "Invalid Channel");
+    public static final ErrorObject INVALID_LANDING_PAGE_URL =
+            new ErrorObject("invalid_client_metadata", "Invalid Landing Page URI");
 
     private static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
             Stream.of(ES256.getName(), RS256.getName()).collect(Collectors.toSet());
@@ -136,6 +138,11 @@ public class ClientConfigValidationService {
                 .map(this::isValidChannel)
                 .orElse(true)) {
             return Optional.of(INVALID_CHANNEL);
+        }
+        if (!Optional.ofNullable(registrationRequest.getLandingPageUrl())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_LANDING_PAGE_URL);
         }
         return Optional.empty();
     }

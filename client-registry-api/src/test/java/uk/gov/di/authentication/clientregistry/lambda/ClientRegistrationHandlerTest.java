@@ -98,7 +98,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\", \"channel\": \"web\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\", \"channel\": \"web\", \"landing_page_url\": \"https://landing-page.com\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -134,7 +134,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        "https://landing-page.com");
     }
 
     @Test
@@ -176,7 +177,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null);
     }
 
     @Test
@@ -218,7 +220,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null);
     }
 
     @Test

@@ -35,7 +35,8 @@ public interface ClientService {
             List<String> clientLoCs,
             String channel,
             boolean maxAgeEnabled,
-            boolean pkceEnforced);
+            boolean pkceEnforced,
+            String landingPageUrl);
 
     Optional<ClientRegistry> getClient(String clientId);
 
