@@ -8,3 +8,6 @@ orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESyWJU5s5F
 
 # VPC
 orch_api_vpc_endpoint_id = "vpce-0028f62dad635589a"
+
+# Performance Tuning
+snapstart_enabled = true
