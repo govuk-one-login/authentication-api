@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.oidc.entity.GlobalLogoutMessage;
+import uk.gov.di.orchestration.shared.entity.GlobalLogoutMessage;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.GlobalLogoutService;

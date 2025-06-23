@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.oidc.validators;
 
-import uk.gov.di.authentication.oidc.entity.GlobalLogoutMessage;
 import uk.gov.di.authentication.oidc.exceptions.GlobalLogoutValidationException;
+import uk.gov.di.orchestration.shared.entity.GlobalLogoutMessage;
 
 import java.util.ArrayList;
 import java.util.List;

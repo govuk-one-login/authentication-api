@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.entity;
+package uk.gov.di.orchestration.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import uk.gov.di.orchestration.shared.validation.Required;
