@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.entity.GlobalLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 
 import java.util.List;
@@ -40,7 +41,8 @@ public class GlobalLogoutServiceTest {
     void shouldNotLogoutAnySessionsIfNoneFound() {
         withNoSessions();
 
-        globalLogoutService.logoutAllSessions(INTERNAL_COMMON_SUBJECT_ID);
+        globalLogoutService.logoutAllSessions(
+                globalLogoutMessage(INTERNAL_COMMON_SUBJECT_ID, SESSION_ID_1, CLIENT_SESSION_ID_1));
 
         verify(orchSessionService, never()).deleteSession(any());
         verify(orchClientSessionService, never()).deleteStoredClientSession(any());
@@ -51,7 +53,8 @@ public class GlobalLogoutServiceTest {
         withSessions(
                 sessionWithClientSessions(SESSION_ID_1, CLIENT_SESSION_ID_1, CLIENT_SESSION_ID_2));
 
-        globalLogoutService.logoutAllSessions(INTERNAL_COMMON_SUBJECT_ID);
+        globalLogoutService.logoutAllSessions(
+                globalLogoutMessage(INTERNAL_COMMON_SUBJECT_ID, SESSION_ID_1, CLIENT_SESSION_ID_1));
 
         verify(orchSessionService).deleteSession(SESSION_ID_1);
         verify(orchClientSessionService).deleteStoredClientSession(CLIENT_SESSION_ID_1);
@@ -64,7 +67,8 @@ public class GlobalLogoutServiceTest {
                 sessionWithClientSessions(SESSION_ID_1, CLIENT_SESSION_ID_1),
                 sessionWithClientSessions(SESSION_ID_2, CLIENT_SESSION_ID_2));
 
-        globalLogoutService.logoutAllSessions(INTERNAL_COMMON_SUBJECT_ID);
+        globalLogoutService.logoutAllSessions(
+                globalLogoutMessage(INTERNAL_COMMON_SUBJECT_ID, SESSION_ID_1, CLIENT_SESSION_ID_1));
 
         verify(orchSessionService).deleteSession(SESSION_ID_1);
         verify(orchClientSessionService).deleteStoredClientSession(CLIENT_SESSION_ID_1);
@@ -87,5 +91,17 @@ public class GlobalLogoutServiceTest {
         var orchSessionItem = new OrchSessionItem(sessionId);
         List.of(clientSessionIds).forEach(orchSessionItem::addClientSession);
         return orchSessionItem;
+    }
+
+    private static GlobalLogoutMessage globalLogoutMessage(
+            String icsid, String sessionId, String clientSessionId) {
+        return new GlobalLogoutMessage(
+                "test-client-id",
+                "test-event-id",
+                sessionId,
+                clientSessionId,
+                icsid,
+                "test-psid",
+                "0.0.0.0");
     }
 }

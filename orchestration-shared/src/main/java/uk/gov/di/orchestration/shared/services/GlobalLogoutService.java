@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.GlobalLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 
@@ -36,9 +37,10 @@ public class GlobalLogoutService {
         this.backChannelLogoutService = backChannelLogoutService;
     }
 
-    public void logoutAllSessions(String internalCommonSubjectId) {
+    public void logoutAllSessions(GlobalLogoutMessage message) {
         var allSessions =
-                orchSessionService.getSessionsFromInternalCommonSubjectId(internalCommonSubjectId);
+                orchSessionService.getSessionsFromInternalCommonSubjectId(
+                        message.internalCommonSubjectId());
         if (allSessions.isEmpty()) {
             LOG.info("No sessions found for internal common subject ID");
             return;

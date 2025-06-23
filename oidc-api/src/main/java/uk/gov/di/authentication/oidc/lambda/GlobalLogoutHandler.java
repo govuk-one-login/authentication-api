@@ -74,6 +74,6 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
                 request.eventId(),
                 request.sessionId(),
                 request.clientSessionId());
-        globalLogoutService.logoutAllSessions(request.internalCommonSubjectId());
+        globalLogoutService.logoutAllSessions(request);
     }
 }
