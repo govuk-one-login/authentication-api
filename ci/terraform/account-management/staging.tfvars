@@ -34,4 +34,5 @@ lambda_max_concurrency = 3
 mfa_method_management_api_enabled = true
 ais_call_in_authenticate_enabled  = true
 
+#Vpc endpoint IDs
 home_vpc_endpoint_id = "vpce-0c9ce65be09f99db7"
