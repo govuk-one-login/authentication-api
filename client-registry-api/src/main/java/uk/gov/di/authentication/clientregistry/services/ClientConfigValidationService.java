@@ -211,6 +211,11 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
         }
+        if (!Optional.ofNullable(updateRequest.getLandingPageUrl())
+                .map(t -> areUrisValid(singletonList(t)))
+                .orElse(true)) {
+            return Optional.of(INVALID_LANDING_PAGE_URL);
+        }
         return Optional.empty();
     }
 

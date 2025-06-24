@@ -90,6 +90,8 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         updateRequest.setClientLoCs(expectedAcceptedLevelsOfConfidence);
         var expectedBackchannelLogoutUri = "https://api.example.com/backchannel/logout";
         updateRequest.setBackChannelLogoutUri(expectedBackchannelLogoutUri);
+        var expectedLandingPageUrl = "https://example.com/landing-page";
+        updateRequest.setLandingPageUrl(expectedLandingPageUrl);
 
         var response =
                 makeRequest(
@@ -118,6 +120,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getSectorIdentifierUri(), equalTo(expectedSectorIdentifierUri));
         assertThat(clientResponse.getClientType(), equalTo(expectedClientType));
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(expectedBackchannelLogoutUri));
+        assertThat(clientResponse.getLandingPageUrl(), equalTo(expectedLandingPageUrl));
 
         var persistedClient = clientStore.getClient(CLIENT_ID).orElseThrow();
         assertThat(persistedClient.getClientName(), equalTo(expectedClientName));
@@ -138,7 +141,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(persistedClient.getClientLoCs(), equalTo(expectedAcceptedLevelsOfConfidence));
         assertThat(
                 persistedClient.getBackChannelLogoutUri(), equalTo(expectedBackchannelLogoutUri));
-
+        assertThat(persistedClient.getLandingPageUrl(), equalTo(expectedLandingPageUrl));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
     }
 

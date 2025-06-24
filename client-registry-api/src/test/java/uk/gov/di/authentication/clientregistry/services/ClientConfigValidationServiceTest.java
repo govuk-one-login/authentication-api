@@ -530,7 +530,8 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
                                 idTokenSigningAlgorithm,
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                "http://landing-page.com"));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -570,7 +571,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -590,7 +592,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -610,7 +613,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY_SOURCE)));
     }
 
@@ -630,7 +634,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -650,7 +655,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_JWKS_URI)));
     }
 
@@ -670,7 +676,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -690,7 +697,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 "rubbish-client-type",
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
@@ -710,7 +718,8 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of("Unsupported_LoC")));
+                                List.of("Unsupported_LoC"),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
     }
 
@@ -732,8 +741,30 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 invalidIdTokenSigningAlgorithm,
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                null));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidLandingPageUrlInUpdateRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientUpdateConfig(
+                        generateClientUpdateRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                PublicKeySource.JWKS.getValue(),
+                                null,
+                                null,
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                false,
+                                null,
+                                ES256.getName(),
+                                ClientType.WEB.getValue(),
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                "invalid-landing-page-url"));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_LANDING_PAGE_URL)));
     }
 
     static Stream<Arguments> invalidAlgorithmSource() {
@@ -794,7 +825,8 @@ class ClientConfigValidationServiceTest {
             String sectorURI,
             String clientType,
             String idTokenSigningAlgorithm,
-            List<String> clientLoCs) {
+            List<String> clientLoCs,
+            String landingPageUrl) {
         UpdateClientConfigRequest configRequest = new UpdateClientConfigRequest();
         configRequest.setScopes(scopes);
         configRequest.setRedirectUris(redirectUri);
@@ -809,6 +841,7 @@ class ClientConfigValidationServiceTest {
         configRequest.setIdTokenSigningAlgorithm(idTokenSigningAlgorithm);
         configRequest.setClientLoCs(clientLoCs);
         configRequest.setIdentityVerificationSupported(IDENTITY_VERIFICATION_SUPPORTED);
+        configRequest.setLandingPageUrl(landingPageUrl);
         return configRequest;
     }
 }
