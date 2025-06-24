@@ -106,8 +106,6 @@ class CloudwatchMetricsServiceTest {
         }
     }
 
-
-
     @Nested
     class IncrementMfaMethodCounter {
         @Test
@@ -137,8 +135,7 @@ class CloudwatchMetricsServiceTest {
                             "PriorityIdentifier",
                             "BACKUP");
 
-            verify(spyService)
-                    .putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
+            verify(spyService).putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
         }
     }
 

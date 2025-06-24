@@ -182,7 +182,11 @@ class MFAMethodsCreateHandlerTest {
         void shouldReturn200AndCreateAuthAppMfa() throws Json.JsonException {
             var authAppBackup =
                     MFAMethod.authAppMfaMethod(
-                            TEST_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, TEST_AUTH_APP_ID);
+                            TEST_CREDENTIAL,
+                            true,
+                            true,
+                            PriorityIdentifier.BACKUP,
+                            TEST_AUTH_APP_ID);
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.success(authAppBackup));
 
@@ -281,10 +285,13 @@ class MFAMethodsCreateHandlerTest {
         @ParameterizedTest
         @MethodSource("migrationFailureReasonsToExpectedResponses")
         void shouldReturnRelevantStatusCodeWhenMigrationFailed(
-                MfaMigrationFailureReason reason, ErrorResponse expectedError, int expectedStatusCode) {
+                MfaMigrationFailureReason reason,
+                ErrorResponse expectedError,
+                int expectedStatusCode) {
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
-            when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.of(reason));
+            when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
+                    .thenReturn(Optional.of(reason));
 
             var event =
                     generateApiGatewayEvent(
@@ -388,14 +395,15 @@ class MFAMethodsCreateHandlerTest {
                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                             TEST_INTERNAL_SUBJECT);
             when(codeStorageService.isValidOtpCode(
-                    TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                     .thenReturn(true);
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(
                             Result.failure(
-                                    MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
+                                    MfaCreateFailureReason
+                                            .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
             var result = handler.handleRequest(event, context);
 
@@ -411,7 +419,7 @@ class MFAMethodsCreateHandlerTest {
                             new RequestSmsMfaDetail("not a real phone number", TEST_OTP),
                             TEST_INTERNAL_SUBJECT);
             when(codeStorageService.isValidOtpCode(
-                    TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                     .thenReturn(true);
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
@@ -432,14 +440,15 @@ class MFAMethodsCreateHandlerTest {
                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                             TEST_INTERNAL_SUBJECT);
             when(codeStorageService.isValidOtpCode(
-                    TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                     .thenReturn(false);
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(
                             Result.failure(
-                                    MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
+                                    MfaCreateFailureReason
+                                            .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
             var result = handler.handleRequest(event, context);
 
@@ -487,7 +496,8 @@ class MFAMethodsCreateHandlerTest {
         @Test
         void shouldReturn500WhenReturnedMfaMethodDoesNotConvertToMfaResponse() {
             var mfaMethodWithInvalidMfaType =
-                    new MFAMethod("invalid mfa type", TEST_CREDENTIAL, true, true, "updated-timestamp");
+                    new MFAMethod(
+                            "invalid mfa type", TEST_CREDENTIAL, true, true, "updated-timestamp");
             var event =
                     generateApiGatewayEvent(
                             PriorityIdentifier.BACKUP,
@@ -518,7 +528,6 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(401));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
         }
-
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(

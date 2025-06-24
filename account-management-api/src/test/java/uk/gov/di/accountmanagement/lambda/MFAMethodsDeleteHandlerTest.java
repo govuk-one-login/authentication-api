@@ -76,10 +76,7 @@ class MFAMethodsDeleteHandlerTest {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsDeleteHandler(
-                        configurationService,
-                        mfaMethodsService,
-                        dynamoService,
-                        sqsClient);
+                        configurationService, mfaMethodsService, dynamoService, sqsClient);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
     }
