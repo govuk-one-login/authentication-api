@@ -155,9 +155,12 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      emailAcctCreationOtpCodeTtlDuration: 600
       lockoutCountTtl: 600
       lockoutDuration: 600
+      otpCodeTtlDuration: 600
       reducedLockoutDuration: 300
+      termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
     authdev2:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
@@ -177,9 +180,12 @@ Mappings:
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      emailAcctCreationOtpCodeTtlDuration: 600
       lockoutCountTtl: 600
       lockoutDuration: 600
+      otpCodeTtlDuration: 600
       reducedLockoutDuration: 300
+      termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
     dev:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -209,9 +215,12 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       UseAlarmActions: "No"
+      emailAcctCreationOtpCodeTtlDuration: 3600
       lockoutCountTtl: 60
       lockoutDuration: 60
+      otpCodeTtlDuration: 60
       reducedLockoutDuration: 30
+      termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
     build:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
@@ -242,9 +251,12 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
+      emailAcctCreationOtpCodeTtlDuration: 60
       lockoutCountTtl: 60
       lockoutDuration: 60
+      otpCodeTtlDuration: 60
       reducedLockoutDuration: 30
+      termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
     staging:
       accessTokenStoreSigningKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -276,9 +288,12 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
+      emailAcctCreationOtpCodeTtlDuration: 3600
       lockoutCountTtl: 900
       lockoutDuration: 7200
+      otpCodeTtlDuration: 900
       reducedLockoutDuration: 900
+      termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
     integration:
       cloudwatchLogRetentionInDays: 30

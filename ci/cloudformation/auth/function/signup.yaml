@@ -1,28 +1,16 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  ResetPasswordRequestFunction:
+  SignUpFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-reset-password-request-lambda
+        - ${Env}-signup-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      Handler: uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest
+      Handler: uk.gov.di.authentication.frontendapi.lambda.SignUpHandler::handleRequest
       Environment:
         Variables:
-          DEFAULT_OTP_CODE_EXPIRY: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                otpCodeTtlDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                otpCodeTtlDuration,
-              ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -31,14 +19,6 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
-          FRONTEND_BASE_URL: !If
-            - IsNotProduction
-            - !If
-              - UseSubEnvironment
-              - !Sub "https://signin.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://signin.${Environment}.account.gov.uk/"
-            - "https://signin.account.gov.uk/"
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -46,32 +26,19 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_DURATION: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutDuration,
-              ]
-          LOCKOUT_COUNT_TTL: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutCountTtl,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutCountTtl,
-              ]
           REDIS_KEY: "session"
-          RESET_PASSWORD_ROUTE: "reset-password?code="
+          TERMS_CONDITIONS_VERSION: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                termsConditionsVersion,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                termsConditionsVersion,
+              ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseSubEnvironment
@@ -86,13 +53,14 @@ Resources:
                 useStronglyConsistentReads,
               ]
       LoggingConfig:
-        LogGroup: !Ref ResetPasswordRequestFunctionLogGroup
+        LogGroup: !Ref SignUpFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuditEventsSnsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref DynamoCommonPasswordsReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
@@ -104,25 +72,25 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  ResetPasswordRequestFunctionPermission:
+  SignUpFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt ResetPasswordRequestFunction.Arn
+      FunctionName: !GetAtt SignUpFunction.Arn
       Principal: apigateway.amazonaws.com
 
-  ResetPasswordRequestFunctionAliasPermission:
+  SignUpFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref ResetPasswordRequestFunction.Alias
+      FunctionName: !Ref SignUpFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  ResetPasswordRequestFunctionLogGroup:
+  SignUpFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-reset-password-request-lambda
+        - /aws/lambda/${Env}-signup-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -133,29 +101,29 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-ResetPasswordRequestFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-SignUpFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/reset-password-request.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/signup.yaml
 
-  ResetPasswordRequestFunctionErrorMetricFilter:
+  SignUpFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-reset-password-request-errors
+        - ${Env}-signup-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
-      LogGroupName: !Ref ResetPasswordRequestFunctionLogGroup
+      LogGroupName: !Ref SignUpFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-reset-password-request-error-count
+            - ${Env}-signup-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
-  ResetPasswordRequestFunctionErrorCloudwatchAlarm:
+  SignUpFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -163,7 +131,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-reset-password-request-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-signup-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -175,17 +143,17 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "reset-password-request",
+              "signup",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-reset-password-request-alarm
+        - ${Env}-signup-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-reset-password-request-error-count
+        - ${Env}-signup-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -198,7 +166,7 @@ Resources:
           DefaultValue: 5,
         ]
 
-  ResetPasswordRequestFunctionErrorRateCloudwatchAlarm:
+  SignUpFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -206,7 +174,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-reset-password-request-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-signup-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -218,12 +186,12 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "reset-password-request",
+              "signup",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-reset-password-request-error-rate-alarm
+        - ${Env}-signup-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -242,7 +210,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-reset-password-request-lambda
+                    - ${Env}-signup-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -261,7 +229,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-reset-password-request-lambda
+                    - ${Env}-signup-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -279,19 +247,19 @@ Resources:
           DefaultValue: 10,
         ]
 
-  ResetPasswordRequestFunctionSubscriptionFilter:
+  SignUpFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref ResetPasswordRequestFunctionLogGroup
+      LogGroupName: !Ref SignUpFunctionLogGroup
 
-  ResetPasswordRequestFunctionScalableTarget:
+  SignUpFunctionScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Condition: NotSubEnvironment
     # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: ResetPasswordRequestFunctionAliasactive
+    DependsOn: SignUpFunctionAliasactive
     Properties:
       MinCapacity:
         !FindInMap [
@@ -311,24 +279,24 @@ Resources:
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt ResetPasswordRequestFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt SignUpFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
 
-  ResetPasswordRequestFunctionAutoScalingPolicy:
+  SignUpFunctionAutoScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Condition: NotSubEnvironment
-    DependsOn: ResetPasswordRequestFunctionScalableTarget
+    DependsOn: SignUpFunctionScalableTarget
     Properties:
       PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-reset-password-request-lambda"
+        - "LambdaProvisionedConcurrency:${Env}-signup-lambda"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt ResetPasswordRequestFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt SignUpFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda

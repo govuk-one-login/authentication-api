@@ -1,28 +1,16 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  ResetPasswordRequestFunction:
+  CheckEmailFraudBlockFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-reset-password-request-lambda
+        - ${Env}-check-email-fraud-block-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      Handler: uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest
+      Handler: uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandler::handleRequest
       Environment:
         Variables:
-          DEFAULT_OTP_CODE_EXPIRY: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                otpCodeTtlDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                otpCodeTtlDuration,
-              ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -31,14 +19,6 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
-          FRONTEND_BASE_URL: !If
-            - IsNotProduction
-            - !If
-              - UseSubEnvironment
-              - !Sub "https://signin.${SubEnvironment}.dev.account.gov.uk/"
-              - !Sub "https://signin.${Environment}.account.gov.uk/"
-            - "https://signin.account.gov.uk/"
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
             - !If
@@ -71,7 +51,7 @@ Resources:
                 lockoutCountTtl,
               ]
           REDIS_KEY: "session"
-          RESET_PASSWORD_ROUTE: "reset-password?code="
+          SUPPORT_EMAIL_CHECK_ENABLED: true
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseSubEnvironment
@@ -86,15 +66,15 @@ Resources:
                 useStronglyConsistentReads,
               ]
       LoggingConfig:
-        LogGroup: !Ref ResetPasswordRequestFunctionLogGroup
+        LogGroup: !Ref CheckEmailFraudBlockFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuditEventsSnsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
-        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoEmailCheckResultReadAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
       VpcConfig:
         SecurityGroupIds:
@@ -104,25 +84,25 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
-  ResetPasswordRequestFunctionPermission:
+  CheckEmailFraudBlockFunctionPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt ResetPasswordRequestFunction.Arn
+      FunctionName: !GetAtt CheckEmailFraudBlockFunction.Arn
       Principal: apigateway.amazonaws.com
 
-  ResetPasswordRequestFunctionAliasPermission:
+  CheckEmailFraudBlockFunctionAliasPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !Ref ResetPasswordRequestFunction.Alias
+      FunctionName: !Ref CheckEmailFraudBlockFunction.Alias
       Principal: apigateway.amazonaws.com
 
-  ResetPasswordRequestFunctionLogGroup:
+  CheckEmailFraudBlockFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - /aws/lambda/${Env}-reset-password-request-lambda
+        - /aws/lambda/${Env}-check-email-fraud-block-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays:
@@ -133,29 +113,29 @@ Resources:
         ]
       Tags:
         - Key: Name
-          Value: !Sub "${AWS::StackName}-ResetPasswordRequestFunctionLogGroup"
+          Value: !Sub "${AWS::StackName}-CheckEmailFraudBlockFunctionLogGroup"
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/reset-password-request.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/check-email-fraud-block.yaml
 
-  ResetPasswordRequestFunctionErrorMetricFilter:
+  CheckEmailFraudBlockFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-reset-password-request-errors
+        - ${Env}-check-email-fraud-block-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
-      LogGroupName: !Ref ResetPasswordRequestFunctionLogGroup
+      LogGroupName: !Ref CheckEmailFraudBlockFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-reset-password-request-error-count
+            - ${Env}-check-email-fraud-block-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
-  ResetPasswordRequestFunctionErrorCloudwatchAlarm:
+  CheckEmailFraudBlockFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -163,7 +143,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-reset-password-request-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-check-email-fraud-block-lambda function. ${RunbookLink}"
         - AlarmThreshold:
             !FindInMap [
               EnvironmentConfiguration,
@@ -175,17 +155,17 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "reset-password-request",
+              "check-email-fraud-block",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-reset-password-request-alarm
+        - ${Env}-check-email-fraud-block-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-reset-password-request-error-count
+        - ${Env}-check-email-fraud-block-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -198,7 +178,7 @@ Resources:
           DefaultValue: 5,
         ]
 
-  ResetPasswordRequestFunctionErrorRateCloudwatchAlarm:
+  CheckEmailFraudBlockFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions: !If
@@ -206,7 +186,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-reset-password-request-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-check-email-fraud-block-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold:
             !FindInMap [
@@ -218,12 +198,12 @@ Resources:
           RunbookLink:
             !FindInMap [
               LambdaConfiguration,
-              "reset-password-request",
+              "check-email-fraud-block",
               RunbookLink,
               DefaultValue: "",
             ]
       AlarmName: !Sub
-        - ${Env}-reset-password-request-error-rate-alarm
+        - ${Env}-check-email-fraud-block-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -242,7 +222,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-reset-password-request-lambda
+                    - ${Env}-check-email-fraud-block-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -261,7 +241,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-reset-password-request-lambda
+                    - ${Env}-check-email-fraud-block-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -279,19 +259,19 @@ Resources:
           DefaultValue: 10,
         ]
 
-  ResetPasswordRequestFunctionSubscriptionFilter:
+  CheckEmailFraudBlockFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Ref ResetPasswordRequestFunctionLogGroup
+      LogGroupName: !Ref CheckEmailFraudBlockFunctionLogGroup
 
-  ResetPasswordRequestFunctionScalableTarget:
+  CheckEmailFraudBlockFunctionScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Condition: NotSubEnvironment
     # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: ResetPasswordRequestFunctionAliasactive
+    DependsOn: CheckEmailFraudBlockFunctionAliasactive
     Properties:
       MinCapacity:
         !FindInMap [
@@ -311,24 +291,24 @@ Resources:
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt ResetPasswordRequestFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt CheckEmailFraudBlockFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
 
-  ResetPasswordRequestFunctionAutoScalingPolicy:
+  CheckEmailFraudBlockFunctionAutoScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Condition: NotSubEnvironment
-    DependsOn: ResetPasswordRequestFunctionScalableTarget
+    DependsOn: CheckEmailFraudBlockFunctionScalableTarget
     Properties:
       PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-reset-password-request-lambda"
+        - "LambdaProvisionedConcurrency:${Env}-check-email-fraud-block-lambda"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyType: TargetTrackingScaling
       ResourceId: !Join
         - ":"
         - - "function"
-          - !Select [6, !Split [":", !GetAtt ResetPasswordRequestFunction.Arn]]
+          - !Select [6, !Split [":", !GetAtt CheckEmailFraudBlockFunction.Arn]]
           - "active"
       ScalableDimension: lambda:function:ProvisionedConcurrency
       ServiceNamespace: lambda
