@@ -13,7 +13,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
@@ -32,28 +31,11 @@ public class ClientSubjectHelper {
         if (PUBLIC.toString().equalsIgnoreCase(authSession.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
-            var sectorIdFromClientRegistry =
-                    getSectorIdentifierForClient(client, authSession, internalSectorURI);
-            var sectorIdFromAuthSession = authSession.getRpSectorIdentifierHost();
-
-            LOG.info(
-                    "Is rpSectorIdentifierHost from client registry equal to auth session? {}",
-                    Objects.equals(sectorIdFromClientRegistry, sectorIdFromAuthSession));
-
-            var salt = authenticationService.getOrGenerateSalt(userProfile);
-            var subjectIdFromClientRegistry =
-                    new Subject(
-                            calculatePairwiseIdentifier(
-                                    userProfile.getSubjectID(), sectorIdFromClientRegistry, salt));
-            var subjectIdFromAuthSession =
-                    new Subject(
-                            calculatePairwiseIdentifier(
-                                    userProfile.getSubjectID(), sectorIdFromAuthSession, salt));
-            LOG.info(
-                    "Is calculated subjectId from client registry equal to auth session? {}",
-                    Objects.equals(subjectIdFromClientRegistry, subjectIdFromAuthSession));
-
-            return subjectIdFromClientRegistry;
+            return new Subject(
+                    calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(),
+                            authSession.getRpSectorIdentifierHost(),
+                            authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
 
