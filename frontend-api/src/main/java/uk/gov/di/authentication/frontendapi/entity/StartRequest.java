@@ -24,4 +24,5 @@ public record StartRequest(
         @Expose @SerializedName("is_one_login_service") boolean isOneLoginService,
         @Expose @SerializedName("subject_type") String subjectType,
         @Expose @SerializedName("is_identity_verification_required")
-                boolean isIdentityVerificationRequired) {}
+                boolean isIdentityVerificationRequired,
+        @Expose @SerializedName("rp_sector_identifier_host") String rpSectorIdentifierHost) {}

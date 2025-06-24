@@ -81,6 +81,7 @@ class StartHandlerTest {
     public static final String TEST_CLIENT_NAME = "test_client_name";
     private static final String TEST_RP_PAIRWISE_ID = "test_rp_pairwise_id";
     private static final String TEST_PREVIOUS_SIGN_IN_JOURNEY_ID = "test_journey_id";
+    private static final String TEST_RP_SUBJECT_ID_HOST = "example.com";
     private static final int MAX_ALLOWED_RETRIES = 6;
     private static final String SESSION_ID = "session-id";
     public static final State STATE = new State();
@@ -523,6 +524,7 @@ class StartHandlerTest {
                         false,
                         false,
                         TEST_SUBJECT_TYPE,
-                        false));
+                        false,
+                        TEST_RP_SUBJECT_ID_HOST));
     }
 }

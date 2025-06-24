@@ -162,6 +162,7 @@ public class StartHandler
             authSession.setIsSmokeTest(startRequest.isSmokeTest());
             authSession.setIsOneLoginService(startRequest.isOneLoginService());
             authSession.setSubjectType(startRequest.subjectType());
+            authSession.setRpSectorIdentifierHost(startRequest.rpSectorIdentifierHost());
 
             isUserAuthenticatedWithValidProfile =
                     startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);
