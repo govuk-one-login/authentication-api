@@ -80,6 +80,10 @@
     "ParameterValue": "vpc"
   },
   {
+    "ParameterKey": "SlackNotificationType",
+    "ParameterValue": "Failures"
+  },
+  {
     "ParameterKey": "LambdaCanaryDeployment",
     "ParameterValue": "Canary10Percent5Minutes"
   }
