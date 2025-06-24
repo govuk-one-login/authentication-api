@@ -7,21 +7,30 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -33,11 +42,14 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -49,6 +61,7 @@ public class MFAMethodsCreateHandler
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
+    private final AuditService auditService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -66,6 +79,7 @@ public class MFAMethodsCreateHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
@@ -73,12 +87,14 @@ public class MFAMethodsCreateHandler
             MFAMethodsService mfaMethodsService,
             DynamoService dynamoService,
             CodeStorageService codeStorageService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.auditService = auditService;
     }
 
     @Override
@@ -122,9 +138,43 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
         }
 
+        MfaMethodCreateRequest mfaMethodCreateRequest = null;
+
+        try {
+            mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
+        } catch (Json.JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+
+        String phoneNumber;
+        // if the request is SMS then get the destination and validate as phone number
+        if (mfaMethodCreateRequest.mfaMethod().method().mfaMethodType() == MFAMethodType.SMS) {
+            phoneNumber =
+        }
+
+
+
+        emitAuditEvent(
+                authorizerParams, userProfile, subject, input, mfaMethodCreateRequest.mfaMethod());
+
         var maybeMigrationErrorResponse =
                 migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
+
         if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
+
+
+
+
+
+
+
+
+        LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
+
+        if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
+        }
+
 
         LocaleHelper.SupportedLanguage userLanguage =
                 matchSupportedLanguage(
@@ -132,15 +182,6 @@ public class MFAMethodsCreateHandler
                                 input.getHeaders(), configurationService));
 
         try {
-            MfaMethodCreateRequest mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
-
-            LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
-
-            if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier()
-                    == PriorityIdentifier.DEFAULT) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
-            }
-
             if (mfaMethodCreateRequest.mfaMethod().method()
                     instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                 boolean isValidOtpCode =
@@ -184,6 +225,47 @@ public class MFAMethodsCreateHandler
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private void emitAuditEvent(
+            Map<String, Object> authorizerParams,
+            UserProfile userProfile,
+            String subject,
+            APIGatewayProxyRequestEvent input,
+            MfaMethodCreateRequest.MfaMethod mfaMethod) {
+
+        var headers = input.getHeaders();
+
+        String sessionId = getHeaderValueOrElse(headers, SESSION_ID_HEADER, "unknown");
+        String clientSessionId =
+                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders());
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+        String persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
+
+        var auditContext =
+                AuditContext.emptyAuditContext()
+                        .withClientId((String) authorizerParams.get("clientId"))
+                        .withEmail(userProfile.getEmail())
+                        .withSessionId(sessionId)
+                        .withClientSessionId(clientSessionId)
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId)
+                        .withSubjectId(subject)
+                        .withPhoneNumber(userProfile.getPhoneNumber());
+
+        if (mfaMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            auditContext.withMetadataItem(
+                    pair(
+                            "phone_number_country_code",
+                            PhoneNumberHelper.getCountry(requestSmsMfaDetail.phoneNumber())));
+        }
+
+        auditContext.withMetadataItem(pair("mfa-type", mfaMethod.method().mfaMethodType()));
+        auditContext.withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT));
+        auditContext.withMetadataItem(pair("migration-succeeded", true));
+
+        auditService.submitAuditEvent(
+                AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, auditContext);
     }
 
     private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(

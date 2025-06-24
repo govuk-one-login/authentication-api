@@ -11,23 +11,33 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuditService.MetadataPair;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -53,7 +63,12 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -80,6 +95,7 @@ class MFAMethodsCreateHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AuditService auditService = mock(AuditService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(TEST_EMAIL);
@@ -100,7 +116,8 @@ class MFAMethodsCreateHandlerTest {
                         mfaMethodsService,
                         dynamoService,
                         codeStorageService,
-                        sqsClient);
+                        sqsClient,
+                        auditService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -177,6 +194,72 @@ class MFAMethodsCreateHandlerTest {
                                         NotificationType.BACKUP_METHOD_ADDED,
                                         LocaleHelper.SupportedLanguage.EN)));
 
+        // Verify audit event is emitted with all required fields
+        ArgumentCaptor<AuditContext> auditContextCaptor =
+                ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
+                        auditContextCaptor.capture());
+
+        AuditContext capturedContext = auditContextCaptor.getValue();
+        assertEquals(TEST_CLIENT_ID, capturedContext.clientId());
+        assertEquals(TEST_EMAIL, capturedContext.email());
+        assertEquals(TEST_PUBLIC_SUBJECT, capturedContext.subjectId());
+        assertEquals(userProfile.getPhoneNumber(), capturedContext.phoneNumber());
+        assertEquals("123.123.123.123", capturedContext.ipAddress());
+
+        // Verify client session ID and persistent session ID from headers
+        assertEquals(SESSION_ID, capturedContext.clientSessionId());
+        assertEquals(PERSISTENT_ID, capturedContext.persistentSessionId());
+
+        // Verify the User section of the audit event would be correctly populated
+        TxmaAuditUser expectedUser =
+                TxmaAuditUser.user()
+                        .withUserId(TEST_PUBLIC_SUBJECT)
+                        .withEmail(TEST_EMAIL)
+                        .withPhone(userProfile.getPhoneNumber())
+                        .withIpAddress("123.123.123.123")
+                        .withSessionId(null) // Session ID is not set in this context
+                        .withPersistentSessionId(PERSISTENT_ID)
+                        .withGovukSigninJourneyId(SESSION_ID);
+
+        // Verify the audit context matches the expected user data
+        assertEquals(expectedUser.getPhone(), capturedContext.phoneNumber());
+        assertEquals("123.123.123.123", capturedContext.ipAddress());
+        assertEquals(PERSISTENT_ID, capturedContext.persistentSessionId());
+        assertEquals(SESSION_ID, capturedContext.clientSessionId());
+        assertEquals(TEST_PUBLIC_SUBJECT, capturedContext.subjectId());
+        assertEquals(TEST_EMAIL, capturedContext.email());
+
+        //        assertThat(capturedContext.metadata(),
+        // hasItem(MetadataPair.pair("phone_number_country_code", "+44")));
+
+        // Verify the restricted section of the audit event
+        // The txmaAuditEncoded value from headers should be included in the restricted section
+        assertEquals(Optional.of(TXMA_ENCODED_HEADER_VALUE), capturedContext.txmaAuditEncoded());
+
+        // Verify the extensions section of the audit event contains mfa-method field
+        ArgumentCaptor<MetadataPair[]> metadataPairsCaptor =
+                ArgumentCaptor.forClass(MetadataPair[].class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
+                        eq(capturedContext),
+                        metadataPairsCaptor.capture());
+
+        // Verify that the mfa-method field is included in the extensions section with value "SMS"
+        boolean hasMfaMethodField = false;
+        for (MetadataPair pair : metadataPairsCaptor.getValue()) {
+            if (pair.key().equals("mfa-method") && pair.value().equals("SMS")) {
+                hasMfaMethodField = true;
+                break;
+            }
+        }
+        assertTrue(
+                hasMfaMethodField,
+                "Audit event should contain mfa-method field with value 'SMS' in extensions section");
+
         assertThat(result, hasStatus(200));
         var expectedResponse =
                 format(
@@ -211,6 +294,15 @@ class MFAMethodsCreateHandlerTest {
                         new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
                         TEST_INTERNAL_SUBJECT);
 
+        var headers =
+                Map.ofEntries(
+                        Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                        Map.entry(ClientSessionIdHelper.SESSION_ID_HEADER_NAME, SESSION_ID),
+                        Map.entry(AuditHelper.TXMA_ENCODED_HEADER_NAME, TXMA_ENCODED_HEADER_VALUE),
+                        Map.entry(SESSION_ID_HEADER, SESSION_ID));
+
+        event.setHeaders(headers);
+
         var result = handler.handleRequest(event, context);
 
         ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
@@ -221,6 +313,54 @@ class MFAMethodsCreateHandlerTest {
 
         assertEquals(new RequestAuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
         assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+
+        // Verify audit event is emitted with metadata pairs
+        ArgumentCaptor<AuditContext> auditContextCaptor =
+                ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
+                        auditContextCaptor.capture());
+
+        AuditContext capturedContext = auditContextCaptor.getValue();
+
+        // Create expected user object
+        TxmaAuditUser expectedUser =
+                TxmaAuditUser.user()
+                        .withUserId(TEST_PUBLIC_SUBJECT)
+                        .withEmail(TEST_EMAIL)
+                        .withPhone(userProfile.getPhoneNumber())
+                        .withIpAddress("123.123.123.123")
+                        .withSessionId(null)
+                        .withPersistentSessionId(PERSISTENT_ID)
+                        .withGovukSigninJourneyId(SESSION_ID);
+
+        System.out.println(capturedContext);
+
+        // Verify the audit context matches the expected user data
+        assertEquals(TEST_CLIENT_ID, capturedContext.clientId());
+
+        // extensions
+        assertThat(
+                capturedContext.metadata(),
+                hasItem(MetadataPair.pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT)));
+        //        assertThat(capturedContext.metadata(), hasItem(MetadataPair.pair("had-partial",
+        // JourneyType.ACCOUNT_MANAGEMENT)));
+        assertThat(
+                capturedContext.metadata(),
+                hasItem(MetadataPair.pair("mfa-type", MFAMethodType.AUTH_APP)));
+        assertThat(
+                capturedContext.metadata(),
+                hasItem(MetadataPair.pair("migration-succeeded", true)));
+
+        // user
+        assertEquals(TEST_EMAIL, capturedContext.email());
+        assertEquals(SESSION_ID, capturedContext.clientSessionId()); // govuk_signin_journey_id
+        assertEquals("123.123.123.123", capturedContext.ipAddress());
+        assertEquals(PERSISTENT_ID, capturedContext.persistentSessionId());
+        assertEquals(expectedUser.getPhone(), capturedContext.phoneNumber());
+        assertEquals(SESSION_ID, capturedContext.sessionId());
+        assertEquals(TEST_PUBLIC_SUBJECT, capturedContext.subjectId());
 
         assertThat(result, hasStatus(200));
         var expectedResponse =
