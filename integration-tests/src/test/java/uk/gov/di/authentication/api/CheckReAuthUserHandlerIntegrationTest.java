@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -56,6 +55,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
+    private static final String SESSION_ID = "test-session-id";
     private Map<String, String> requestHeaders;
 
     @RegisterExtension
@@ -91,12 +91,10 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @BeforeEach
     void setup() throws Json.JsonException {
-
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, TEST_EMAIL);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID.getValue());
-        requestHeaders = createHeaders(sessionId);
+        authSessionExtension.addSession(SESSION_ID);
+        authSessionExtension.addEmailToSession(SESSION_ID, TEST_EMAIL);
+        authSessionExtension.addClientIdToSession(SESSION_ID, CLIENT_ID.getValue());
+        requestHeaders = createHeaders(SESSION_ID);
         handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
@@ -105,6 +103,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://" + INTERNAL_SECTOR_HOST);
+        authSessionExtension.addRpSectorIdentifierHostToSession(SESSION_ID, INTERNAL_SECTOR_HOST);
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -125,6 +124,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn404WhenUserNotFound() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -145,6 +146,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn404WhenUserNotMatched() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -165,6 +168,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
         var maxRetriesAllowed = 6;
         int count = maxRetriesAllowed - 1;
         while (count-- > 0) {
@@ -205,6 +210,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimesAcrossRpPairwiseIdAndSubjectId() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -253,6 +260,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserHasExceededMaxPasswordRetries() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
 
         var ttl = Instant.now().getEpochSecond() + 60L;
         IntStream.range(0, 6)
@@ -285,6 +294,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserHasExceededMaxEmailRetriesAcrossSubjectIdAndPairwiseId() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
+        authSessionExtension.addRpSectorIdentifierHostToSession(
+                SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

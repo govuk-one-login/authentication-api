@@ -42,6 +42,8 @@ class ClientSubjectHelperTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String CLIENT_ID_1 = "test-client-id-1";
     private static final String CLIENT_ID_2 = "test-client-id-2";
+    private static final String CLIENT_SECTOR_HOST_1 = "test.com";
+    private static final String CLIENT_SECTOR_HOST_2 = "not.test.com";
 
     private AuthSessionItem AUTH_SESSION_FOR_CLIENT_1;
     private AuthSessionItem AUTH_SESSION_FOR_CLIENT_2;
@@ -59,23 +61,33 @@ class ClientSubjectHelperTest {
                         .withSessionId("test-auth-session-1")
                         .withClientId(CLIENT_ID_1)
                         .withIsOneLoginService(false)
-                        .withSubjectType(PAIRWISE.toString());
+                        .withSubjectType(PAIRWISE.toString())
+                        .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST_1);
         AUTH_SESSION_FOR_CLIENT_2 =
                 new AuthSessionItem()
                         .withSessionId("test-auth-session-2")
                         .withClientId(CLIENT_ID_2)
                         .withIsOneLoginService(false)
-                        .withSubjectType(PAIRWISE.toString());
+                        .withSubjectType(PAIRWISE.toString())
+                        .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST_2);
     }
 
     @Test
     void shouldReturnDifferentSubjectIDForMultipleClientsWithDifferentSectors() {
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
         ClientRegistry clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://not-test.com", false);
+                        keyPair,
+                        CLIENT_ID_2,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_2,
+                        false);
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
@@ -99,10 +111,18 @@ class ClientSubjectHelperTest {
     void shouldReturnSameSubjectIDForMultipleClientsWithSameSector() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
         var clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_2,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
@@ -126,10 +146,18 @@ class ClientSubjectHelperTest {
     void shouldReturnSameSubjectIDForMultipleClientsWithPublicSubjectType() {
         ClientRegistry clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
         ClientRegistry clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_2, PUBLIC.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_2,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
@@ -154,7 +182,11 @@ class ClientSubjectHelperTest {
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwise() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         var subject =
                 ClientSubjectHelper.getSubject(
@@ -171,10 +203,18 @@ class ClientSubjectHelperTest {
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwiseAndIsAOneLoginService() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PAIRWISE.toString(), "https://test.com", true);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        true);
         var clientRegistry2 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_2, PAIRWISE.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_2,
+                        PAIRWISE.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         var subject1 =
                 ClientSubjectHelper.getSubject(
@@ -199,7 +239,11 @@ class ClientSubjectHelperTest {
     void shouldNotReturnPairwiseSubjectIdWhenClientTypeIsPublic() {
         var clientRegistry1 =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         var subject =
                 ClientSubjectHelper.getSubject(
@@ -217,7 +261,11 @@ class ClientSubjectHelperTest {
     void shouldGetHostAsSectorIdentifierWhenDefinedByClient() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
@@ -248,7 +296,11 @@ class ClientSubjectHelperTest {
     void shouldUseHostOfInternalSectorUriWhenOneLoginServiceAndClientHasRegisteredSector() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", true);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        true);
 
         var sectorId =
                 ClientSubjectHelper.getSectorIdentifierForClient(
@@ -358,7 +410,11 @@ class ClientSubjectHelperTest {
     void shouldBeValidClientWithSectorId() {
         var clientRegistry =
                 generateClientRegistryPairwise(
-                        keyPair, CLIENT_ID_1, PUBLIC.toString(), "https://test.com", false);
+                        keyPair,
+                        CLIENT_ID_1,
+                        PUBLIC.toString(),
+                        "https://" + CLIENT_SECTOR_HOST_1,
+                        false);
 
         assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
     }
@@ -370,7 +426,7 @@ class ClientSubjectHelperTest {
                         keyPair,
                         CLIENT_ID_1,
                         PUBLIC.toString(),
-                        "https://test.com",
+                        "https://" + CLIENT_SECTOR_HOST_1,
                         List.of("https://www.test.com", "https://www.test2.com"),
                         false);
 

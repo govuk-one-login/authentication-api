@@ -90,13 +90,15 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String CLIENT_ID = "test-client-id";
+    private static final String SECTOR_HOST = "sector-identifier";
+    private static final String SECTOR_URI = "http://" + SECTOR_HOST;
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withRpSectorIdentifierHost(SECTOR_HOST);
     private static final Subject SUBJECT = new Subject();
-    private static final String SECTOR_URI = "http://sector-identifier";
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));

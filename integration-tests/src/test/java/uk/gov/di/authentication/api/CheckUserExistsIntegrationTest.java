@@ -47,6 +47,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
 
     @BeforeEach
     void setup() {
@@ -85,7 +86,12 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         registerClient(
-                "joe.bloggs+1@digital.cabinet-office.gov.uk", CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+                "joe.bloggs+1@digital.cabinet-office.gov.uk",
+                CLIENT_ID,
+                CLIENT_NAME,
+                REDIRECT_URI,
+                "https://" + SECTOR_IDENTIFIER_HOST);
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         var request = new CheckUserExistsRequest(emailAddress);
         var response =
@@ -131,7 +137,12 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.blockMfaCodesForEmail(emailAddress, codeBlockedKeyPrefix);
 
         registerClient(
-                "joe.bloggs+1@digital.cabinet-office.gov.uk", CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+                "joe.bloggs+1@digital.cabinet-office.gov.uk",
+                CLIENT_ID,
+                CLIENT_NAME,
+                REDIRECT_URI,
+                "https://" + SECTOR_IDENTIFIER_HOST);
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         var request = new CheckUserExistsRequest(emailAddress);
         var response =
@@ -162,7 +173,13 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String sessionId = IdGenerator.generate();
         authSessionStore.addSession(sessionId);
         var clientSessionId = IdGenerator.generate();
-        registerClient(emailAddress, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+        registerClient(
+                emailAddress,
+                CLIENT_ID,
+                CLIENT_NAME,
+                REDIRECT_URI,
+                "https://" + SECTOR_IDENTIFIER_HOST);
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
         var response =

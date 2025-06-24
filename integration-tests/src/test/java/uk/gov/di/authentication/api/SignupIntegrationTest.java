@@ -41,6 +41,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private static final String SESSION_ID = "session-id";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @BeforeEach
@@ -142,12 +143,13 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
+                "https://" + SECTOR_IDENTIFIER_HOST,
                 "public");
     }
 
     private void withAuthSession() {
         authSessionExtension.addSession(SESSION_ID);
         authSessionExtension.addClientIdToSession(SESSION_ID, CLIENT_ID);
+        authSessionExtension.addRpSectorIdentifierHostToSession(SESSION_ID, SECTOR_IDENTIFIER_HOST);
     }
 }

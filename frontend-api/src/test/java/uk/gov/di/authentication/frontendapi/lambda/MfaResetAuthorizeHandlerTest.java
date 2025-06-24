@@ -103,7 +103,8 @@ class MfaResetAuthorizeHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withRpSectorIdentifierHost("gov.uk");
     private static MfaResetAuthorizeHandler handler;
     private static UserProfile userProfile = new UserProfile();
 
@@ -116,7 +117,7 @@ class MfaResetAuthorizeHandlerTest {
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("htttps://gov.uk");
+        when(clientRegistry.getSectorIdentifierUri()).thenReturn("https://gov.uk");
 
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))

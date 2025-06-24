@@ -70,7 +70,8 @@ class CheckReAuthUserHandlerTest {
     private static final String DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE =
             "not.signedin.email@digital.cabinet-office.gov.uk";
     private static final String TEST_SUBJECT_ID = "subject-id";
-    private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
+    private static final String SECTOR_IDENTIFIER_HOST = "example.com";
+    private static final String INTERNAL_SECTOR_URI = "http://" + SECTOR_IDENTIFIER_HOST;
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
     private static final UserProfile USER_PROFILE =
             new UserProfile()
@@ -89,7 +90,8 @@ class CheckReAuthUserHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL_USED_TO_SIGN_IN)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(

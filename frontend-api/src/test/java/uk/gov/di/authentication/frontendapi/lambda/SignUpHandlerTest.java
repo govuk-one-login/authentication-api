@@ -80,6 +80,7 @@ class SignUpHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -87,7 +88,8 @@ class SignUpHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                    .withClientId(CLIENT_ID.getValue());
+                    .withClientId(CLIENT_ID.getValue())
+                    .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST);
 
     private SignUpHandler handler;
 
@@ -327,7 +329,7 @@ class SignUpHandlerTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
                 .withSubjectType("pairwise");
     }
 
