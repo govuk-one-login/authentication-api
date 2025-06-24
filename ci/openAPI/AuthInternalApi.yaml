@@ -4,6 +4,15 @@ info:
   title: "Authentication Internal API"
   version: "1.0.0"
 paths:
+  /.well-known/reverification-jwk.json:
+    get:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetJarJwkFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
   /account-interventions:
     post:
       x-amazon-apigateway-integration:

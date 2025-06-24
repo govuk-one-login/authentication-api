@@ -336,6 +336,8 @@ Mappings:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-authorize:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
+    mfa-reset-jar-jwk:
+      RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     reverification-result:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     ticf-cri:
