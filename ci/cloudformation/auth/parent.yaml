@@ -159,6 +159,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
@@ -184,6 +185,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
@@ -219,6 +221,7 @@ Mappings:
       lockoutCountTtl: 60
       lockoutDuration: 60
       otpCodeTtlDuration: 60
+      reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
@@ -255,6 +258,7 @@ Mappings:
       lockoutCountTtl: 60
       lockoutDuration: 60
       otpCodeTtlDuration: 60
+      reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
       termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
@@ -292,6 +296,7 @@ Mappings:
       lockoutCountTtl: 900
       lockoutDuration: 7200
       otpCodeTtlDuration: 900
+      reauthEnterEmailCountTtl: 300
       reducedLockoutDuration: 900
       termsConditionsVersion: 1.13
       useStronglyConsistentReads: true
