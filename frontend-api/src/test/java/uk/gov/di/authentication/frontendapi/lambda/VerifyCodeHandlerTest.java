@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -683,17 +684,37 @@ class VerifyCodeHandlerTest {
                                                         .equals(MEDIUM_LEVEL)));
     }
 
-    @Test
-    void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
+    private static Stream<Arguments> mfaMethodTestData() {
+        return Stream.of(
+                Arguments.of(false, DEFAULT_SMS_METHOD, null, "default"),
+                Arguments.of(
+                        true, BACKUP_SMS_METHOD, BACKUP_SMS_METHOD.getMfaIdentifier(), "backup"),
+                Arguments.of(
+                        true,
+                        DEFAULT_SMS_METHOD,
+                        DEFAULT_SMS_METHOD.getMfaIdentifier(),
+                        "default"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodTestData")
+    void shouldReturnMfaCodeNotValidWhenCodeIsInvalidWithMfaMethodMetadataPair(
+            boolean isMigrated,
+            MFAMethod mfaMethod,
+            String mfaMethodId,
+            String expectedMfaMethodValue) {
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(isMigrated);
+        when(codeStorageService.getOtpCode(EMAIL.concat(mfaMethod.getDestination()), MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
+        APIGatewayProxyResponseEvent result =
+                mfaMethodId != null
+                        ? makeCallWithCode(
+                                INVALID_CODE, MFA_SMS.toString(), JourneyType.SIGN_IN, mfaMethodId)
+                        : makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
@@ -708,6 +729,7 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "6543221"),
+                        pair("mfa-method", expectedMfaMethodValue),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
