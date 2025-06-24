@@ -12,7 +12,6 @@ Metadata:
             - none
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
-        - W1001 # cfn-lint is not detecting that a referenced resource has the same condition as the referencing resource
 
 Parameters:
   Environment:
@@ -3735,7 +3734,12 @@ Resources:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - Ref: UpdateClientConfigFunctionErrorAnomalyAlarm
+          # I have used the full Fn::If function otherwise SAM validate is unhappy
+          # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deploymentpreference.html#:~:text=DeploymentPreference%20with%20Fn%3A%3AIf%20intrinsic%20function
+          Fn::If:
+            - IsNotProduction
+            - - !Ref UpdateClientConfigFunctionErrorAnomalyAlarm
+            - - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3905,7 +3909,12 @@ Resources:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
       DeploymentPreference:
         Alarms:
-          - Ref: ClientRegistrationFunctionErrorAnomalyAlarm
+          # I have used the full Fn::If function otherwise SAM validate is unhappy
+          # https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deploymentpreference.html#:~:text=DeploymentPreference%20with%20Fn%3A%3AIf%20intrinsic%20function
+          Fn::If:
+            - IsNotProduction
+            - - !Ref ClientRegistrationFunctionErrorAnomalyAlarm
+            - - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
