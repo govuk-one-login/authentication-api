@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
@@ -124,8 +123,13 @@ class MFAMethodsCreateHandlerTest {
         void shouldReturn200AndCreateMfaSmsMfaMethod() throws Json.JsonException {
             var backupMfa =
                     MFAMethod.smsMfaMethod(
-                            true, true, TEST_PHONE_NUMBER, PriorityIdentifier.BACKUP, TEST_SMS_MFA_ID);
-            when(mfaMethodsService.addBackupMfa(any(), any())).thenReturn(Result.success(backupMfa));
+                            true,
+                            true,
+                            TEST_PHONE_NUMBER,
+                            PriorityIdentifier.BACKUP,
+                            TEST_SMS_MFA_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(backupMfa));
             when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
 
             var event =

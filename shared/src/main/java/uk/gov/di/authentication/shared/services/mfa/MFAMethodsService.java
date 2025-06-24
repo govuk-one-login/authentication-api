@@ -20,11 +20,13 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
@@ -47,9 +49,10 @@ public class MFAMethodsService {
         this.configurationService = configurationService;
     }
 
-    public MFAMethodsService(ConfigurationService configurationService,
-                             AuthenticationService persistentService,
-                             CloudwatchMetricsService cloudwatchMetricsService) {
+    public MFAMethodsService(
+            ConfigurationService configurationService,
+            AuthenticationService persistentService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.persistentService = persistentService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
@@ -354,8 +357,10 @@ public class MFAMethodsService {
                                 defaultMethod.withPriority(BACKUP.name()),
                                 backupMethod.withPriority(DEFAULT.name())));
 
-        var updatedResult = mfaUpdateFailureReasonOrSortedMfaMethods(
-                databaseUpdateResult, MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS);
+        var updatedResult =
+                mfaUpdateFailureReasonOrSortedMfaMethods(
+                        databaseUpdateResult,
+                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS);
 
         if (updatedResult.isSuccess()) {
             cloudwatchMetricsService.incrementMfaMethodCounter(
@@ -368,7 +373,6 @@ public class MFAMethodsService {
         }
 
         return updatedResult;
-
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse>
@@ -400,11 +404,17 @@ public class MFAMethodsService {
 
         Result<MfaUpdateFailureReason, MfaUpdateResponse> updateResult;
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            updateResult = updateSmsMethod(
-                    defaultMethod, email, mfaIdentifier, allMethodsForUser, updatedSmsDetail);
+            updateResult =
+                    updateSmsMethod(
+                            defaultMethod,
+                            email,
+                            mfaIdentifier,
+                            allMethodsForUser,
+                            updatedSmsDetail);
         } else {
-            updateResult = updateAuthApp(
-                    defaultMethod, updatedMethod, email, mfaIdentifier, allMethodsForUser);
+            updateResult =
+                    updateAuthApp(
+                            defaultMethod, updatedMethod, email, mfaIdentifier, allMethodsForUser);
         }
 
         if (updateResult.isSuccess()) {
@@ -418,7 +428,6 @@ public class MFAMethodsService {
         }
 
         return updateResult;
-
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateSmsMethod(

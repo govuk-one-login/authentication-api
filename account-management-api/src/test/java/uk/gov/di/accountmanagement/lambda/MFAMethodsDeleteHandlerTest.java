@@ -13,7 +13,6 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -41,7 +40,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -153,7 +151,6 @@ class MFAMethodsDeleteHandlerTest {
             verifyNoInteractions(sqsClient);
         }
 
-
         @Test
         void shouldReturn400IfPublicSubjectIdNotIncludedInPath() {
             var eventWithoutPublicSubjectId =
@@ -231,10 +228,7 @@ class MFAMethodsDeleteHandlerTest {
 
             verifyNoInteractions(sqsClient);
         }
-}
-
-
-
+    }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
