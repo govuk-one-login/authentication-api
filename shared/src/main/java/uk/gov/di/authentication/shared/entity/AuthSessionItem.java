@@ -42,6 +42,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_SMOKE_TEST = "IsSmokeTest";
     public static final String ATTRIBUTE_IS_ONE_LOGIN_SERVICE = "IsOneLoginService";
     public static final String ATTRIBUTE_SUBJECT_TYPE = "SubjectType";
+    public static final String ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST = "RpSectorIdentifierHost";
 
     public enum AccountState {
         NEW,
@@ -83,6 +84,7 @@ public class AuthSessionItem {
     private boolean isSmokeTest;
     private boolean isOneLoginService;
     private String subjectType;
+    private String rpSectorIdentifierHost;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -449,6 +451,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withSubjectType(String subjectType) {
         this.subjectType = subjectType;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RP_SECTOR_IDENTIFIER_HOST)
+    public String getRpSectorIdentifierHost() {
+        return rpSectorIdentifierHost;
+    }
+
+    public void setRpSectorIdentifierHost(String rpSectorIdentifierHost) {
+        this.rpSectorIdentifierHost = rpSectorIdentifierHost;
+    }
+
+    public AuthSessionItem withRpSectorIdentifierHost(String rpSectorIdentifierHost) {
+        this.rpSectorIdentifierHost = rpSectorIdentifierHost;
         return this;
     }
 
