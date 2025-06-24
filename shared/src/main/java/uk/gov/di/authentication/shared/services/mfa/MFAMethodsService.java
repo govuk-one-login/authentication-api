@@ -17,17 +17,17 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
@@ -38,9 +38,21 @@ public class MFAMethodsService {
     private static final Logger LOG = LogManager.getLogger(MFAMethodsService.class);
 
     private final AuthenticationService persistentService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ConfigurationService configurationService;
 
     public MFAMethodsService(ConfigurationService configurationService) {
         this.persistentService = new DynamoService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.configurationService = configurationService;
+    }
+
+    public MFAMethodsService(ConfigurationService configurationService,
+                             AuthenticationService persistentService,
+                             CloudwatchMetricsService cloudwatchMetricsService) {
+        this.persistentService = persistentService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.configurationService = configurationService;
     }
 
     public Result<ErrorResponse, Boolean> isPhoneAlreadyInUseAsAVerifiedMfa(
@@ -99,7 +111,7 @@ public class MFAMethodsService {
         return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
     }
 
-    public Result<MfaDeleteFailureReason, MFAMethod> deleteMfaMethod(
+    public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
             String mfaIdentifier, UserProfile userProfile) {
         if (!userProfile.isMfaMethodsMigrated()) {
             return Result.failure(
@@ -127,7 +139,16 @@ public class MFAMethodsService {
         }
 
         persistentService.deleteMfaMethodByIdentifier(userProfile.getEmail(), mfaIdentifier);
-        return Result.success(methodToDelete);
+
+        cloudwatchMetricsService.incrementMfaMethodCounter(
+                configurationService.getEnvironment(),
+                "DeleteMfaMethod",
+                "SUCCESS",
+                ACCOUNT_MANAGEMENT,
+                methodToDelete.getMfaMethodType(),
+                BACKUP);
+
+        return Result.success(mfaIdentifier);
     }
 
     public void deleteMigratedMFAsAndCreateNewDefault(String email, MFAMethod mfaMethod) {
@@ -333,8 +354,21 @@ public class MFAMethodsService {
                                 defaultMethod.withPriority(BACKUP.name()),
                                 backupMethod.withPriority(DEFAULT.name())));
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(
+        var updatedResult = mfaUpdateFailureReasonOrSortedMfaMethods(
                 databaseUpdateResult, MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS);
+
+        if (updatedResult.isSuccess()) {
+            cloudwatchMetricsService.incrementMfaMethodCounter(
+                    configurationService.getEnvironment(),
+                    "SwapBackupWithDefaultMfaMethod",
+                    "SUCCESS",
+                    ACCOUNT_MANAGEMENT,
+                    backupMethod.getMfaMethodType(),
+                    BACKUP);
+        }
+
+        return updatedResult;
+
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse>
@@ -364,13 +398,27 @@ public class MFAMethodsService {
             return Result.failure(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
         }
 
+        Result<MfaUpdateFailureReason, MfaUpdateResponse> updateResult;
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
-            return updateSmsMethod(
+            updateResult = updateSmsMethod(
                     defaultMethod, email, mfaIdentifier, allMethodsForUser, updatedSmsDetail);
         } else {
-            return updateAuthApp(
+            updateResult = updateAuthApp(
                     defaultMethod, updatedMethod, email, mfaIdentifier, allMethodsForUser);
         }
+
+        if (updateResult.isSuccess()) {
+            cloudwatchMetricsService.incrementMfaMethodCounter(
+                    configurationService.getEnvironment(),
+                    "UpdateMfaMethod",
+                    "SUCCESS",
+                    ACCOUNT_MANAGEMENT,
+                    updatedMethod.method().mfaMethodType().toString(),
+                    DEFAULT);
+        }
+
+        return updateResult;
+
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateSmsMethod(

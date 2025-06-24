@@ -95,7 +95,7 @@ class MFAMethodsDeleteHandlerTest {
         @Test
         void shouldReturn204WhenFeatureFlagEnabled() throws Json.JsonException {
             when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                    .thenReturn(Result.success(AUTH_APP_MFA_METHOD));
+                    .thenReturn(Result.success(MFA_IDENTIFIER_TO_DELETE));
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
 
@@ -111,29 +111,6 @@ class MFAMethodsDeleteHandlerTest {
                                             TEST_EMAIL,
                                             NotificationType.BACKUP_METHOD_REMOVED,
                                             LocaleHelper.SupportedLanguage.EN)));
-        }
-
-        @Test
-        void shouldIncrementTheCorrectMfaMethodCounter() {
-            when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                    .thenReturn(Result.success(AUTH_APP_MFA_METHOD));
-            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                    .thenReturn(Optional.of(userProfile));
-            when(configurationService.getEnvironment()).thenReturn("test");
-
-            var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
-
-            handler.handleRequest(event, context);
-
-            verify(cloudwatchMetricsService)
-                    .incrementMfaMethodCounter(
-                            "test",
-                            "DeleteMfaMethod",
-                            "SUCCESS",
-                            ACCOUNT_MANAGEMENT,
-                            "AUTH_APP",
-                            PriorityIdentifier.BACKUP);
-
         }
     }
 

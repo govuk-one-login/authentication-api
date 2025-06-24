@@ -144,8 +144,6 @@ public class MFAMethodsDeleteHandler
             };
         }
 
-        var mfaMethodDeleted = deleteResult.getSuccess().getMfaMethodType();
-
         LOG.info("Successfully deleted MFA method {}", mfaIdentifier);
 
         LocaleHelper.SupportedLanguage userLanguage =
@@ -161,14 +159,6 @@ public class MFAMethodsDeleteHandler
                         userLanguage);
         sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
         LOG.info("Message successfully added to queue. Generating successful response.");
-
-        cloudwatchMetricsService.incrementMfaMethodCounter(
-                configurationService.getEnvironment(),
-                "DeleteMfaMethod",
-                "SUCCESS",
-                ACCOUNT_MANAGEMENT,
-                mfaMethodDeleted,
-                PriorityIdentifier.BACKUP);
 
         return generateEmptySuccessApiGatewayResponse();
     }
