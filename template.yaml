@@ -12,6 +12,7 @@ Metadata:
             - none
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
+        - W1001 # cfn-lint is not detecting that a referenced resource has the same condition as the referencing resource
 
 Parameters:
   Environment:
@@ -865,6 +866,9 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      DeploymentPreference:
+        Alarms:
+          - Ref: FetchJwksErrorAnomalyAlarm
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
       SnapStart:
@@ -970,6 +974,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: OpenIdConfigurationErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1131,6 +1138,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: TrustmarkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1428,6 +1438,9 @@ Resources:
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: DocAppCallbackErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1670,6 +1683,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: TokenFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -1888,6 +1904,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: LogoutFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2100,6 +2119,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.GlobalLogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref GlobalLogoutFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: GlobalLogoutFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2318,6 +2340,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: AuthenticationCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2702,6 +2727,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: JwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2864,6 +2892,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IpvJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvJwksFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: IpvJwksFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -2992,6 +3023,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: AuthorisationFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3300,6 +3334,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: UserInfoFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3502,6 +3539,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: AuthCodeFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -3693,6 +3733,9 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: UpdateClientConfigFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3860,6 +3903,9 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: ClientRegistrationFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -4028,6 +4074,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: IpvCallbackFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -4383,6 +4432,9 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: SpotResponseFunctionErrorAnomalyAlarm
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -4614,6 +4666,9 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: StorageTokenJwkFunctionErrorAnomalyAlarm
       ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
@@ -6021,13 +6076,6 @@ Resources:
 
   #endregion
 
-  #region Canary Alarms
-  "Fn::Transform":
-    Name: "AWS::Include"
-    Parameters:
-      Location: ./orchestration-canary-alarms.template.yaml
-  #endregion
-
   #region OrchAuthCode DynamoDB Table
 
   OrchAuthCodeTableEncryptionKey:
@@ -6146,6 +6194,712 @@ Resources:
               AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
             Action: kms:*
             Resource: "*"
+
+  #endregion
+
+  #region Canary Alarms
+  #region FetchJwks Anomaly Alarms
+  FetchJwksErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-FetchJwksFunction
+
+  FetchJwksErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-FetchJwks-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-FetchJwksFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region OpenIdConfiguration Anomaly Alarms
+
+  OpenIdConfigurationErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-OpenIdConfigurationFunction
+
+  OpenIdConfigurationErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-OpenIdConfiguration-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region Trustmark Anomaly Alarms
+
+  TrustmarkFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-TrustmarkFunction
+
+  TrustmarkFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-trustmark-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-TrustmarkFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region Doc App Callback Anomaly Alarms
+  DocAppCallbackErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-DocAppCallbackFunction
+
+  DocAppCallbackErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-DocAppCallback-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-DocAppCallbackFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region Token Function Anomaly Alarms
+  TokenFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-TokenFunction
+
+  TokenFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-TokenFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-TokenFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region Logout Function Anomaly Alarms
+  LogoutFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-LogoutFunction
+
+  LogoutFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-LogoutFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-LogoutFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region Authentication Callback Anomaly Alarms
+  AuthenticationCallbackFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-AuthenticationCallbackFunction
+
+  AuthenticationCallbackFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region Jwks Function Anomaly Alarms
+  JwksFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-JwksFunction
+
+  JwksFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-JwksFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-JwksFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region Authorisation Function Anomaly Alarms
+  AuthorisationFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-AuthorisationFunction
+
+  AuthorisationFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-AuthorisationFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthorisationFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region UserInfo Function Anomaly Alarms
+  UserInfoFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-UserInfoFunction
+
+  UserInfoFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-UserInfoFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UserInfoFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region AuthCode Function Anomaly Alarms
+  AuthCodeFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-AuthCodeFunction
+
+  AuthCodeFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-AuthCodeFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthCodeFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region UpdateClientConfig Function Anomaly Alarms
+  UpdateClientConfigFunctionAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Condition: IsNotProduction
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-UpdateClientConfigFunction
+
+  UpdateClientConfigFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      AlarmName: !Sub ${Environment}-UpdateClientConfigFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UpdateClientConfigFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UpdateClientConfigFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region ClientRegistration Function Anomaly Alarms
+  ClientRegistrationFunctionAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Condition: IsNotProduction
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-ClientRegistrationFunction
+
+  ClientRegistrationFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      AlarmName: !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-ClientRegistrationFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region IpvCallback Function Anomaly Alarms
+  IpvCallbackFunctionAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-IpvCallbackFunction
+
+  IpvCallbackFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-IpvCallbackFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvCallbackFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region SpotResponseFunction Function Anomaly Alarms
+  SpotResponseFunctionAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Condition: IpvExists
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-SpotResponseFunction
+
+  SpotResponseFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-SpotResponseFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SpotResponseFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region StorageTokenJwk Function Anomaly Alarms
+  StorageTokenJwkFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-StorageTokenJwkFunction
+
+  StorageTokenJwkFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region IpvJwks Function Anomaly Alarms
+  IpvJwksFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-IpvJwksFunction
+
+  IpvJwksFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-IpvJwksFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvJwksFunction
+            Period: 60
+            Stat: Average
+  #endregion
+
+  #region GlobalLogout Function Anomaly Alarms
+  GlobalLogoutFunctionErrorAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-GlobalLogoutFunction
+
+  GlobalLogoutFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-GlobalLogoutFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} GlobalLogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: false
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-GlobalLogoutFunction
+            Period: 60
+            Stat: Average
+  #endregion
 
   #endregion
 
