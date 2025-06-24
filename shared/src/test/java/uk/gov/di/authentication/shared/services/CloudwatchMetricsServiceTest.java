@@ -44,108 +44,110 @@ class CloudwatchMetricsServiceTest {
             assertThat(dimensions.getDimensionKeys().size(), is(1));
             assertThat(dimensions.getDimensionValue("Environment"), is(randomEnvironment));
         }
+    }
 
-        @Nested
-        class EmitMetric {
-            @Test
-            void shouldEmitMetricWithNamespace() {
-                var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
-                var metricsLogger = Mockito.mock(MetricsLogger.class);
+    @Nested
+    class EmitMetric {
+        @Test
+        void shouldEmitMetricWithNamespace() {
+            var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
+            var metricsLogger = Mockito.mock(MetricsLogger.class);
 
-                service.emitMetric("Metric", 1, Collections.emptyMap(), metricsLogger);
+            service.emitMetric("Metric", 1, Collections.emptyMap(), metricsLogger);
 
-                verify(metricsLogger).setNamespace("Authentication");
-            }
-
-            @Test
-            void shouldEmitMetricWithDimensions() {
-                var dimensionSet = ArgumentCaptor.forClass(DimensionSet.class);
-                var metricsLogger = Mockito.mock(MetricsLogger.class);
-
-                var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
-
-                service.emitMetric("Metric", 1, Map.of("Key1", "Value1"), metricsLogger);
-
-                verify(metricsLogger).putDimensions(dimensionSet.capture());
-
-                assertThat(dimensionSet.getValue().getDimensionValue("Key1"), is("Value1"));
-                assertThat(dimensionSet.getValue().getDimensionKeys().size(), is(1));
-            }
-
-            @Test
-            void shouldEmitMetricCatchValidationExceptions() {
-                var metricsLogger = new MetricsLogger();
-                var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
-
-                service.emitMetric(
-                        new String(new char[2000]).replace('\0', 'A'),
-                        1,
-                        Map.of("Key1", "Value1"),
-                        metricsLogger);
-                service.emitMetric("Metric", 1, Map.of("Key1", ""), metricsLogger);
-                service.emitMetric("Metric", 1, Map.of("", "Value1"), metricsLogger);
-
-                List<LogEvent> events = logging.events();
-                assertThat(
-                        events,
-                        hasItem(
-                                withMessageContaining(
-                                        "Error emitting metric: Metric name exceeds maximum length of 1024")));
-                assertThat(
-                        events,
-                        hasItem(
-                                withMessageContaining(
-                                        "Error emitting metric: Dimension value cannot be empty")));
-                assertThat(
-                        events,
-                        hasItem(
-                                withMessageContaining(
-                                        "Error emitting metric: Dimension name cannot be empty")));
-                assertEquals(3, events.size());
-            }
+            verify(metricsLogger).setNamespace("Authentication");
         }
 
-        @Nested
-        class IncrementMfaMethodCounter {
-            @Test
-            void shouldIncrementMfaMethodCounterWithCorrectDimensions() {
-                var spyService = Mockito.spy(CloudwatchMetricsService.class);
+        @Test
+        void shouldEmitMetricWithDimensions() {
+            var dimensionSet = ArgumentCaptor.forClass(DimensionSet.class);
+            var metricsLogger = Mockito.mock(MetricsLogger.class);
 
-                spyService.incrementMfaMethodCounter(
-                        "test",
-                        "SomeOperation",
-                        "SomeResult",
-                        ACCOUNT_MANAGEMENT,
-                        "AUTH_APP",
-                        PriorityIdentifier.BACKUP);
+            var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
 
-                var expectedDimensions =
-                        Map.of(
-                                "Environment",
-                                "test",
-                                "Operation",
-                                "SomeOperation",
-                                "Result",
-                                "SomeResult",
-                                "JourneyType",
-                                "ACCOUNT_MANAGEMENT",
-                                "MfaMethodType",
-                                "AUTH_APP",
-                                "PriorityIdentifier",
-                                "BACKUP");
+            service.emitMetric("Metric", 1, Map.of("Key1", "Value1"), metricsLogger);
 
-                verify(spyService)
-                        .putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
+            verify(metricsLogger).putDimensions(dimensionSet.capture());
+
+            assertThat(dimensionSet.getValue().getDimensionValue("Key1"), is("Value1"));
+            assertThat(dimensionSet.getValue().getDimensionKeys().size(), is(1));
+        }
+
+        @Test
+        void shouldEmitMetricCatchValidationExceptions() {
+            var metricsLogger = new MetricsLogger();
+            var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
+
+            service.emitMetric(
+                    new String(new char[2000]).replace('\0', 'A'),
+                    1,
+                    Map.of("Key1", "Value1"),
+                    metricsLogger);
+            service.emitMetric("Metric", 1, Map.of("Key1", ""), metricsLogger);
+            service.emitMetric("Metric", 1, Map.of("", "Value1"), metricsLogger);
+
+            List<LogEvent> events = logging.events();
+            assertThat(
+                    events,
+                    hasItem(
+                            withMessageContaining(
+                                    "Error emitting metric: Metric name exceeds maximum length of 1024")));
+            assertThat(
+                    events,
+                    hasItem(
+                            withMessageContaining(
+                                    "Error emitting metric: Dimension value cannot be empty")));
+            assertThat(
+                    events,
+                    hasItem(
+                            withMessageContaining(
+                                    "Error emitting metric: Dimension name cannot be empty")));
+            assertEquals(3, events.size());
+        }
+    }
+
+
+
+    @Nested
+    class IncrementMfaMethodCounter {
+        @Test
+        void shouldIncrementMfaMethodCounterWithCorrectDimensions() {
+            var spyService = Mockito.spy(CloudwatchMetricsService.class);
+
+            spyService.incrementMfaMethodCounter(
+                    "test",
+                    "SomeOperation",
+                    "SomeResult",
+                    ACCOUNT_MANAGEMENT,
+                    "AUTH_APP",
+                    PriorityIdentifier.BACKUP);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment",
+                            "test",
+                            "Operation",
+                            "SomeOperation",
+                            "Result",
+                            "SomeResult",
+                            "JourneyType",
+                            "ACCOUNT_MANAGEMENT",
+                            "MfaMethodType",
+                            "AUTH_APP",
+                            "PriorityIdentifier",
+                            "BACKUP");
+
+            verify(spyService)
+                    .putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
+        }
+    }
+
+    private static ConfigurationService configurationWithEnvironment(String test) {
+        return new ConfigurationService() {
+            @Override
+            public String getEnvironment() {
+                return test;
             }
-        }
-
-        private static ConfigurationService configurationWithEnvironment(String test) {
-            return new ConfigurationService() {
-                @Override
-                public String getEnvironment() {
-                    return test;
-                }
-            };
-        }
+        };
     }
 }

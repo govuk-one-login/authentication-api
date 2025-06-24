@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -42,7 +41,6 @@ public class MFAMethodsDeleteHandler
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public MFAMethodsDeleteHandler() {
         this(ConfigurationService.getInstance());
@@ -52,7 +50,6 @@ public class MFAMethodsDeleteHandler
         this.configurationService = configurationService;
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -64,12 +61,10 @@ public class MFAMethodsDeleteHandler
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
             DynamoService dynamoService,
-            CloudwatchMetricsService cloudwatchMetricsService,
             AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.sqsClient = sqsClient;
     }
 

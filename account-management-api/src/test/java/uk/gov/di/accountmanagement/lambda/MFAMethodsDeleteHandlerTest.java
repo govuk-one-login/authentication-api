@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -64,8 +63,6 @@ class MFAMethodsDeleteHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private static final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
@@ -82,7 +79,6 @@ class MFAMethodsDeleteHandlerTest {
                         configurationService,
                         mfaMethodsService,
                         dynamoService,
-                        cloudwatchMetricsService,
                         sqsClient);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
