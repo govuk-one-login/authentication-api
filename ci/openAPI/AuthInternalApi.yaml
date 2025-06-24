@@ -40,6 +40,15 @@ paths:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CheckReAuthUserFunction.Arn}:active/invocations
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+  /id-reverification-state:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IDReverificationStateFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
   /login:
     post:
       x-amazon-apigateway-integration:
