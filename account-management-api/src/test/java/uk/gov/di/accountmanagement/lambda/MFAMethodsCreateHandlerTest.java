@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -99,6 +100,7 @@ class MFAMethodsCreateHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile()
@@ -111,6 +113,18 @@ class MFAMethodsCreateHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
 
     private final AuditService auditService = mock(AuditService.class);
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    SESSION_ID,
+                    TEST_NON_CLIENT_SESSION_ID,
+                    TEST_INTERNAL_SUBJECT,
+                    TEST_EMAIL,
+                    TEST_IP_ADDRESS,
+                    TEST_PHONE_NUMBER,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    new ArrayList<>());
 
     private MFAMethodsCreateHandler handler;
 
