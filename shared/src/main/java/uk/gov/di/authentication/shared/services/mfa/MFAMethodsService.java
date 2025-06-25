@@ -596,6 +596,16 @@ public class MFAMethodsService {
         };
     }
 
+    public Boolean isAuthAppDefaultMfaMethod(String email) {
+        var userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        var authMfaMethodWithDefaultPriority = userCredentials.getMfaMethods().stream()
+                .filter(mfaMethod -> MFAMethodType.AUTH_APP.getValue().equals(mfaMethod.getMfaMethodType())
+                        && PriorityIdentifier.DEFAULT.toString().equals(mfaMethod.getPriority()))
+                .findFirst()
+                .orElse(null);
+        return Objects.nonNull(authMfaMethodWithDefaultPriority);
+    }
+
     private Optional<MfaMigrationFailureReason> migrateAuthAppToNewFormat(
             String email, String credential, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(

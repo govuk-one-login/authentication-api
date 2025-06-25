@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -76,6 +77,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final MFAMethodsService mfaMethodsService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -86,7 +88,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -98,6 +101,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -108,6 +112,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -115,7 +120,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        new MFAMethodsService(configurationService));
+                        this.mfaMethodsService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
@@ -126,6 +131,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -133,7 +139,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        new MFAMethodsService(configurationService));
+                        this.mfaMethodsService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
@@ -525,6 +531,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
         var methodType = codeRequest.getMfaMethodType();
+        var authMfaPriority = mfaMethodsService.isAuthAppDefaultMfaMethod(email) ? PriorityIdentifier.DEFAULT : PriorityIdentifier.BACKUP;
         var basicMetadataPairs =
                 List.of(
                         pair("mfa-type", methodType.getValue()),
@@ -535,7 +542,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var additionalPairs =
                 switch (auditableEvent) {
                     case AUTH_CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                            pair("mfa-method", authMfaPriority));
                     case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
                                 codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
