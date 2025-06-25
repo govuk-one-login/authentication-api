@@ -195,6 +195,38 @@ class AuditServiceTest {
         assertThatTheRestrictedSectionDoesNotContainADeviceInformationObject();
     }
 
+    @Test
+    void populatesExtensionsFromAuditContext() {
+        var context = AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "DEFAULT", false));
+
+        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, context);
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        System.out.println("audit event: " + txmaMessage);
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        assertThat(extensions.getAsJsonObject(), hasField("mfa-method"));
+    }
+
+    @Test
+    void populatesExtensionsFromAuditContextAndVarargs() {
+        var context = AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "DEFAULT", false));
+
+        auditService.submitAuditEvent(
+                AUTH_TEST_EVENT_ONE, context, pair("additional-extension", "value", false));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        System.out.println("audit event: " + txmaMessage);
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions");
+        assertThat(extensions.getAsJsonObject(), hasField("mfa-method"));
+        assertThat(extensions.getAsJsonObject(), hasField("additional-extension"));
+    }
+
     private void assertThatTheRestrictedSectionDoesNotExist() {
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
         var restricted = txmaMessage.getAsJsonObject().get("restricted");

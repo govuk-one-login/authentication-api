@@ -180,7 +180,11 @@ public record AuditContext(
     }
 
     public AuditContext withMetadataItem(AuditService.MetadataPair meta) {
-        metadata.add(meta);
+        if (meta == null) {
+            return this;
+        }
+        List<AuditService.MetadataPair> newMetadata = new ArrayList<>(metadata);
+        newMetadata.add(meta);
         return new AuditContext(
                 clientId,
                 clientSessionId,
@@ -191,7 +195,7 @@ public record AuditContext(
                 phoneNumber,
                 persistentSessionId,
                 txmaAuditEncoded,
-                metadata);
+                newMetadata);
     }
 
     public Optional<AuditService.MetadataPair> getMetadataItemByKey(String key) {
