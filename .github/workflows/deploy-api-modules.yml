@@ -19,6 +19,8 @@ on:
     paths-ignore:
       - "ci/cloudformation/auth/**"
       - "ci/openAPI/**"
+      - "scripts/dev-samconfig.toml"
+      - "sam-deploy-authdevs.sh"
 
 concurrency:
   group: "build-and-deploy-api-modules"

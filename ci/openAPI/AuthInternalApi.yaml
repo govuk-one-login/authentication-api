@@ -4,6 +4,24 @@ info:
   title: "Authentication Internal API"
   version: "1.0.0"
 paths:
+  /.well-known/mfa-reset-jwk.json:
+    get:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetStorageTokenJwkFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /.well-known/reverification-jwk.json:
+    get:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaResetJarJwkFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
   /account-interventions:
     post:
       x-amazon-apigateway-integration:
@@ -29,6 +47,24 @@ paths:
         httpMethod: "POST"
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CheckEmailFraudBlockFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /check-reauth-user:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CheckReAuthUserFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /id-reverification-state:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${IDReverificationStateFunction.Arn}:active/invocations
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
   /login:
@@ -119,6 +155,15 @@ paths:
         httpMethod: "POST"
         uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StartFunction.Arn}:active/invocations
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-profile:
+    post:
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateProfileFunction.Arn}:active/invocations
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
   /user-exists:

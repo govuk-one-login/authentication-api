@@ -358,6 +358,25 @@ data "aws_iam_policy_document" "cross_account_doc_app_auth_signing_key_policy" {
       identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
     }
   }
+
+  dynamic "statement" {
+    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    content {
+      sid    = "AllowAuthAccessToKmsDocAppSigningKey-${var.environment}"
+      effect = "Allow"
+
+      actions = [
+        "kms:Sign",
+        "kms:GetPublicKey"
+      ]
+      resources = ["*"]
+
+      principals {
+        type        = "AWS"
+        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
+      }
+    }
+  }
 }
 
 resource "aws_kms_alias" "doc_app_auth_signing_key_alias" {
