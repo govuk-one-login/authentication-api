@@ -30,6 +30,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -131,8 +133,9 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         ipAddress,
                         persistentSessionId,
                         false,
-                        AuditService.MetadataPair.pair("mfa-method", DEFAULT),
-                        AuditService.MetadataPair.pair("journey-type", REGISTRATION));
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION));
                 break;
             case ACCOUNT_RECOVERY:
                 if (userProfile.isMfaMethodsMigrated()) {
@@ -154,8 +157,9 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         ipAddress,
                         persistentSessionId,
                         true,
-                        AuditService.MetadataPair.pair("mfa-method", DEFAULT),
-                        AuditService.MetadataPair.pair("journey-type", ACCOUNT_RECOVERY));
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
