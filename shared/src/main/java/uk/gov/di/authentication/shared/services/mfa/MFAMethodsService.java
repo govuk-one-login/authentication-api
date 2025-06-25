@@ -95,7 +95,7 @@ public class MFAMethodsService {
         return getMfaMethods(email, false);
     }
 
-    private Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
             String email, boolean readOnly) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);

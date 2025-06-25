@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
@@ -105,7 +106,7 @@ public class UserInfoServiceTest {
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
         when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserCredentials());
-        when(mfaMethodsService.getMfaMethods(any()))
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.success(
                                 List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
@@ -193,7 +194,7 @@ public class UserInfoServiceTest {
     void shouldReturnMigratedPhoneNumberWhenPhoneIsMigrated() {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any()))
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.success(
                                 List.of(
@@ -213,7 +214,7 @@ public class UserInfoServiceTest {
     void shouldReturnNullForMigratedPhoneNumberWhenSMSIsNotDefaultMFAMethod() {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any()))
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.success(
                                 List.of(
@@ -233,7 +234,7 @@ public class UserInfoServiceTest {
     void shouldReturnNullForPhoneNumberWhenMFARetrievalFails() {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any()))
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.failure(
                                 MfaRetrieveFailureReason
@@ -252,7 +253,8 @@ public class UserInfoServiceTest {
     void shouldReturnNullForPhoneNumberWhenNoMFAMethodsFound() {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any())).thenReturn(Result.success(List.of()));
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
+                .thenReturn(Result.success(List.of()));
 
         UserInfo actual =
                 userInfoService.populateUserInfo(
