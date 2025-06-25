@@ -6,9 +6,12 @@ import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 
 import java.util.Map;
 
+import static java.lang.String.valueOf;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
@@ -63,6 +66,30 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putEmbeddedValue(name, 1, dimensions);
+    }
+
+    public void incrementMfaMethodCounter(
+            String environment,
+            String operation,
+            String result,
+            JourneyType journeyType,
+            String mfaMethodType,
+            PriorityIdentifier priorityIdentifier) {
+        incrementCounter(
+                "MfaMethodOperationCount",
+                Map.of(
+                        "Environment",
+                        environment,
+                        "Operation",
+                        operation,
+                        "Result",
+                        result,
+                        "JourneyType",
+                        valueOf(journeyType),
+                        "MfaMethodType",
+                        valueOf(mfaMethodType),
+                        "PriorityIdentifier",
+                        valueOf(priorityIdentifier)));
     }
 
     public void incrementAuthenticationSuccess(

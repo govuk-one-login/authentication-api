@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -49,6 +51,7 @@ public class MFAMethodsCreateHandler
     private final MFAMethodsService mfaMethodsService;
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -66,6 +69,7 @@ public class MFAMethodsCreateHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
@@ -73,12 +77,14 @@ public class MFAMethodsCreateHandler
             MFAMethodsService mfaMethodsService,
             DynamoService dynamoService,
             CodeStorageService codeStorageService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @Override
@@ -177,6 +183,14 @@ public class MFAMethodsCreateHandler
                             userLanguage);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Message successfully added to queue. Generating successful response");
+
+            cloudwatchMetricsService.incrementMfaMethodCounter(
+                    configurationService.getEnvironment(),
+                    "CreateMfaMethod",
+                    "SUCCESS",
+                    ACCOUNT_MANAGEMENT,
+                    mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
+                    PriorityIdentifier.BACKUP);
 
             return generateApiGatewayProxyResponse(
                     200, backupMfaMethodAsResponse.getSuccess(), true);

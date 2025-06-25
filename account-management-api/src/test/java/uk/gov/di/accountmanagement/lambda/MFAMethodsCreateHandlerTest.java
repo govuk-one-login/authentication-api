@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -54,6 +56,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -80,6 +83,8 @@ class MFAMethodsCreateHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private static final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(TEST_EMAIL);
@@ -100,7 +105,8 @@ class MFAMethodsCreateHandlerTest {
                         mfaMethodsService,
                         dynamoService,
                         codeStorageService,
-                        sqsClient);
+                        sqsClient,
+                        cloudwatchMetricsService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -110,363 +116,418 @@ class MFAMethodsCreateHandlerTest {
         when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
     }
 
-    private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
-        return Stream.of(
-                Arguments.of(
-                        MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
-                        ErrorResponse.ERROR_1056,
-                        404),
-                Arguments.of(
-                        MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
-                        ErrorResponse.ERROR_1064,
-                        500));
+    @Nested
+    class SuccessfulRequest {
+
+        @Test
+        void shouldReturn200AndCreateMfaSmsMfaMethod() throws Json.JsonException {
+            var backupMfa =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            TEST_PHONE_NUMBER,
+                            PriorityIdentifier.BACKUP,
+                            TEST_SMS_MFA_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(backupMfa));
+            when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+
+            var result = handler.handleRequest(event, context);
+
+            ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                    ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
+
+            verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
+            var capturedRequest = mfaMethodCaptor.getValue();
+
+            assertEquals(
+                    new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP), capturedRequest.method());
+            assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+
+            verify(sqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            TEST_EMAIL,
+                                            NotificationType.BACKUP_METHOD_ADDED,
+                                            LocaleHelper.SupportedLanguage.EN)));
+
+            assertThat(result, hasStatus(200));
+            var expectedResponse =
+                    format(
+                            """
+                    {
+                      "mfaIdentifier": "%s",
+                      "priorityIdentifier": "BACKUP",
+                      "methodVerified": true,
+                      "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "%s"
+                      }
+                    }
+                    """,
+                            TEST_SMS_MFA_ID, TEST_PHONE_NUMBER);
+            var expectedResponseParsedToString =
+                    JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+            assertEquals(expectedResponseParsedToString, result.getBody());
+        }
+
+        @Test
+        void shouldReturn200AndCreateAuthAppMfa() throws Json.JsonException {
+            var authAppBackup =
+                    MFAMethod.authAppMfaMethod(
+                            TEST_CREDENTIAL,
+                            true,
+                            true,
+                            PriorityIdentifier.BACKUP,
+                            TEST_AUTH_APP_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(authAppBackup));
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
+
+            var result = handler.handleRequest(event, context);
+
+            ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
+                    ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
+
+            verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
+            var capturedRequest = mfaMethodCaptor.getValue();
+
+            assertEquals(new RequestAuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
+            assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+
+            assertThat(result, hasStatus(200));
+            var expectedResponse =
+                    format(
+                            """
+                    {
+                      "mfaIdentifier": "%s",
+                      "priorityIdentifier": "BACKUP",
+                      "methodVerified": true,
+                      "method": {
+                        "mfaMethodType": "AUTH_APP",
+                        "credential": "%s"
+                      }
+                    }
+                    """,
+                            TEST_AUTH_APP_ID, TEST_CREDENTIAL);
+            var expectedResponseParsedToString =
+                    JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
+            assertEquals(expectedResponseParsedToString, result.getBody());
+
+            verify(sqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            TEST_EMAIL,
+                                            NotificationType.BACKUP_METHOD_ADDED,
+                                            LocaleHelper.SupportedLanguage.EN)));
+        }
+
+        @Test
+        void shouldIncrementTheCorrectMfaMethodCounter() {
+            var authAppBackup =
+                    MFAMethod.authAppMfaMethod(
+                            TEST_CREDENTIAL,
+                            true,
+                            true,
+                            PriorityIdentifier.BACKUP,
+                            TEST_AUTH_APP_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(authAppBackup));
+            when(configurationService.getEnvironment()).thenReturn("test");
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
+
+            handler.handleRequest(event, context);
+
+            verify(cloudwatchMetricsService)
+                    .incrementMfaMethodCounter(
+                            "test",
+                            "CreateMfaMethod",
+                            "SUCCESS",
+                            ACCOUNT_MANAGEMENT,
+                            "AUTH_APP",
+                            PriorityIdentifier.BACKUP);
+        }
     }
 
-    @ParameterizedTest
-    @MethodSource("migrationFailureReasonsToExpectedResponses")
-    void shouldReturnRelevantStatusCodeWhenMigrationFailed(
-            MfaMigrationFailureReason reason, ErrorResponse expectedError, int expectedStatusCode) {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.of(reason));
+    @Nested
+    class FailedRequest {
 
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
+        private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
+            return Stream.of(
+                    Arguments.of(
+                            MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
+                            ErrorResponse.ERROR_1056,
+                            404),
+                    Arguments.of(
+                            MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
+                            ErrorResponse.ERROR_1064,
+                            500));
+        }
 
-        var result = handler.handleRequest(event, context);
+        @ParameterizedTest
+        @MethodSource("migrationFailureReasonsToExpectedResponses")
+        void shouldReturnRelevantStatusCodeWhenMigrationFailed(
+                MfaMigrationFailureReason reason,
+                ErrorResponse expectedError,
+                int expectedStatusCode) {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
+                    .thenReturn(Optional.of(reason));
 
-        assertThat(result, hasStatus(expectedStatusCode));
-        assertTrue(result.getBody().contains(String.valueOf(expectedError.getCode())));
-        assertTrue(result.getBody().contains(expectedError.getMessage()));
-        verifyNoInteractions(sqsClient);
-    }
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
 
-    @Test
-    void shouldReturn200AndCreateMfaSmsMfaMethod() throws Json.JsonException {
-        var backupMfa =
-                MFAMethod.smsMfaMethod(
-                        true, true, TEST_PHONE_NUMBER, PriorityIdentifier.BACKUP, TEST_SMS_MFA_ID);
-        when(mfaMethodsService.addBackupMfa(any(), any())).thenReturn(Result.success(backupMfa));
+            var result = handler.handleRequest(event, context);
 
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
+            assertThat(result, hasStatus(expectedStatusCode));
+            assertTrue(result.getBody().contains(String.valueOf(expectedError.getCode())));
+            assertTrue(result.getBody().contains(expectedError.getMessage()));
+            verifyNoInteractions(sqsClient);
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn400IfRequestIsMadeInEnvWhereApiNotEnabled() {
+            when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
 
-        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
 
-        verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
-        var capturedRequest = mfaMethodCaptor.getValue();
+            var result = handler.handleRequest(event, context);
 
-        assertEquals(
-                new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP), capturedRequest.method());
-        assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+            assertThat(result, hasStatus(400));
+            verifyNoInteractions(sqsClient);
+        }
 
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_EMAIL,
-                                        NotificationType.BACKUP_METHOD_ADDED,
-                                        LocaleHelper.SupportedLanguage.EN)));
+        @Test
+        void shouldReturn400WhenPathParameterIsEmpty() {
+            var event = new APIGatewayProxyRequestEvent();
+            event.setPathParameters(Map.of());
 
-        assertThat(result, hasStatus(200));
-        var expectedResponse =
-                format(
-                        """
-                {
-                  "mfaIdentifier": "%s",
-                  "priorityIdentifier": "BACKUP",
-                  "methodVerified": true,
-                  "method": {
-                    "mfaMethodType": "SMS",
-                    "phoneNumber": "%s"
-                  }
-                }
-                """,
-                        TEST_SMS_MFA_ID, TEST_PHONE_NUMBER);
-        var expectedResponseParsedToString =
-                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
-        assertEquals(expectedResponseParsedToString, result.getBody());
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn200AndCreateAuthAppMfa() throws Json.JsonException {
-        var authAppBackup =
-                MFAMethod.authAppMfaMethod(
-                        TEST_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, TEST_AUTH_APP_ID);
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.success(authAppBackup));
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Subject missing from request prevents request being handled.")));
+            verifyNoInteractions(sqsClient);
+        }
 
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_INTERNAL_SUBJECT);
+        @Test
+        void shouldReturn404WhenUserProfileNotFoundForPublicSubject() {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.empty());
 
-        var result = handler.handleRequest(event, context);
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
 
-        ArgumentCaptor<MfaMethodCreateRequest.MfaMethod> mfaMethodCaptor =
-                ArgumentCaptor.forClass(MfaMethodCreateRequest.MfaMethod.class);
+            var result = handler.handleRequest(event, context);
 
-        verify(mfaMethodsService).addBackupMfa(eq(TEST_EMAIL), mfaMethodCaptor.capture());
-        var capturedRequest = mfaMethodCaptor.getValue();
+            assertThat(result, hasStatus(404));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+            verifyNoInteractions(sqsClient);
+        }
 
-        assertEquals(new RequestAuthAppMfaDetail(TEST_CREDENTIAL), capturedRequest.method());
-        assertEquals(PriorityIdentifier.BACKUP, capturedRequest.priorityIdentifier());
+        @Test
+        void shouldReturn400WhenJsonIsInvalid() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            event.setBody("Invalid JSON");
 
-        assertThat(result, hasStatus(200));
-        var expectedResponse =
-                format(
-                        """
-                {
-                  "mfaIdentifier": "%s",
-                  "priorityIdentifier": "BACKUP",
-                  "methodVerified": true,
-                  "method": {
-                    "mfaMethodType": "AUTH_APP",
-                    "credential": "%s"
-                  }
-                }
-                """,
-                        TEST_AUTH_APP_ID, TEST_CREDENTIAL);
-        var expectedResponseParsedToString =
-                JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
-        assertEquals(expectedResponseParsedToString, result.getBody());
+            var result = handler.handleRequest(event, context);
 
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_EMAIL,
-                                        NotificationType.BACKUP_METHOD_ADDED,
-                                        LocaleHelper.SupportedLanguage.EN)));
-    }
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        }
 
-    @Test
-    void shouldReturn400IfRequestIsMadeInEnvWhereApiNotEnabled() {
-        when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(false);
+        @Test
+        void shouldReturn400WhenRequestToCreateNewDefault() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.DEFAULT,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
 
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_INTERNAL_SUBJECT);
+            var result = handler.handleRequest(event, context);
 
-        var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1080));
+        }
 
-        assertThat(result, hasStatus(400));
-        verifyNoInteractions(sqsClient);
-    }
+        @Test
+        void shouldReturn400WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            when(codeStorageService.isValidOtpCode(
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                    .thenReturn(true);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(
+                            Result.failure(
+                                    MfaCreateFailureReason
+                                            .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
-    @Test
-    void shouldReturn400WhenPathParameterIsEmpty() {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setPathParameters(Map.of());
+            var result = handler.handleRequest(event, context);
 
-        var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
+        }
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "Subject missing from request prevents request being handled.")));
-        verifyNoInteractions(sqsClient);
-    }
+        @Test
+        void shouldReturn400WhenMfaMethodServiceReturnsInvalidPhoneNumberError() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail("not a real phone number", TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            when(codeStorageService.isValidOtpCode(
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                    .thenReturn(true);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER));
 
-    @Test
-    void shouldReturn404WhenUserProfileNotFoundForPublicSubject() {
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.empty());
+            var result = handler.handleRequest(event, context);
 
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_INTERNAL_SUBJECT);
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn400WhenOTPIsInvalid() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            when(codeStorageService.isValidOtpCode(
+                            TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                    .thenReturn(false);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(
+                            Result.failure(
+                                    MfaCreateFailureReason
+                                            .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
-        assertThat(result, hasStatus(404));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
-        verifyNoInteractions(sqsClient);
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenJsonIsInvalid() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
-        event.setBody("Invalid JSON");
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+            verifyNoInteractions(sqsClient);
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn400WhenMfaMethodServiceReturnsSmsMfaAlreadyExistsError() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenRequestToCreateNewDefault() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.DEFAULT,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn400WhenMfaMethodServiceReturnsAuthAppAlreadyExistsError() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS));
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1080));
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenMfaMethodServiceReturnsBackupAndDefaultExistError() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
-        when(codeStorageService.isValidOtpCode(
-                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(
-                        Result.failure(
-                                MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn500WhenReturnedMfaMethodDoesNotConvertToMfaResponse() {
+            var mfaMethodWithInvalidMfaType =
+                    new MFAMethod(
+                            "invalid mfa type", TEST_CREDENTIAL, true, true, "updated-timestamp");
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            TEST_INTERNAL_SUBJECT);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(mfaMethodWithInvalidMfaType));
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenMfaMethodServiceReturnsInvalidPhoneNumberError() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail("not a real phone number", TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
-        when(codeStorageService.isValidOtpCode(
-                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER));
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
+            verifyNoInteractions(sqsClient);
+        }
 
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn401WhenPrincipalIsInvalid() {
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
+                            "invalid");
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
-    }
+            var result = handler.handleRequest(event, context);
 
-    @Test
-    void shouldReturn400WhenOTPIsInvalid() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
-        when(codeStorageService.isValidOtpCode(
-                        TEST_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
-                .thenReturn(false);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(
-                        Result.failure(
-                                MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
-        verifyNoInteractions(sqsClient);
-    }
-
-    @Test
-    void shouldReturn400WhenMfaMethodServiceReturnsSmsMfaAlreadyExistsError() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
-                        TEST_INTERNAL_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
-    }
-
-    @Test
-    void shouldReturn400WhenMfaMethodServiceReturnsAuthAppAlreadyExistsError() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_INTERNAL_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS));
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
-    }
-
-    @Test
-    void shouldReturn500WhenReturnedMfaMethodDoesNotConvertToMfaResponse() {
-        var mfaMethodWithInvalidMfaType =
-                new MFAMethod("invalid mfa type", TEST_CREDENTIAL, true, true, "updated-timestamp");
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        TEST_INTERNAL_SUBJECT);
-        when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
-                .thenReturn(Optional.of(userProfile));
-        when(mfaMethodsService.addBackupMfa(any(), any()))
-                .thenReturn(Result.success(mfaMethodWithInvalidMfaType));
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
-        verifyNoInteractions(sqsClient);
-    }
-
-    @Test
-    void shouldReturn401WhenPrincipalIsInvalid() {
-        var event =
-                generateApiGatewayEvent(
-                        PriorityIdentifier.BACKUP,
-                        new RequestAuthAppMfaDetail(TEST_CREDENTIAL),
-                        "invalid");
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(result, hasStatus(401));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+        }
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
