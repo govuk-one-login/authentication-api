@@ -103,7 +103,7 @@ public class UserInfoService {
     public record PhoneData(String phoneNumber, boolean phoneNumberVerified) {}
 
     public PhoneData getPhoneDataIfSMSIsDefault(UserProfile userProfile) {
-        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail(), true);
         if (retrievedMfaMethods.isFailure()) {
             LOG.warn("Default MFA retrieval failed, error: {}", retrievedMfaMethods.getFailure());
             return new PhoneData(null, false);
