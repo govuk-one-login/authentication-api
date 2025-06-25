@@ -70,7 +70,7 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    public static final String CODE_BLOCKED_KEY_PREFIX =
+    public static final String PASSWORD_BLOCKED_KEY_PREFIX =
             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     public static final String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
@@ -239,7 +239,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
         }
 
-        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(
+                userProfile.getEmail(), PASSWORD_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
@@ -497,7 +498,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         LOG.info("User has now exceeded max password retries, setting block");
 
         codeStorageService.saveBlockedForEmail(
-                email, CODE_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
+                email, PASSWORD_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
 
         codeStorageService.deleteIncorrectPasswordCount(email);
 
