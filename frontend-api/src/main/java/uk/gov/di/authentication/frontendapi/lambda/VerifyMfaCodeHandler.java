@@ -198,7 +198,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     client,
                     userProfile);
         } catch (Exception e) {
-            LOG.error("Unexpected exception thrown");
+            LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
