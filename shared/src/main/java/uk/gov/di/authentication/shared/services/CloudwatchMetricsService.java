@@ -92,7 +92,37 @@ public class CloudwatchMetricsService {
                         valueOf(priorityIdentifier)));
     }
 
-    public void incrementAuthenticationSuccess(
+    public void incrementAuthenticationSuccessWithoutMfa(
+            AuthSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            String requestedLevelOfConfidence,
+            boolean isTestJourney) {
+        incrementAuthenticationSuccess(
+                accountState,
+                clientId,
+                clientName,
+                requestedLevelOfConfidence,
+                isTestJourney,
+                false);
+    }
+
+    public void incrementAuthenticationSuccessWithMfa(
+            AuthSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            String requestedLevelOfConfidence,
+            boolean isTestJourney) {
+        incrementAuthenticationSuccess(
+                accountState,
+                clientId,
+                clientName,
+                requestedLevelOfConfidence,
+                isTestJourney,
+                true);
+    }
+
+    private void incrementAuthenticationSuccess(
             AuthSessionItem.AccountState accountState,
             String clientId,
             String clientName,
@@ -127,6 +157,7 @@ public class CloudwatchMetricsService {
                             CLIENT_NAME.getValue(),
                             clientName));
         }
+
         if (AuthSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),

@@ -242,13 +242,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.REGISTRATION),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.NEW,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false);
     }
 
     @ParameterizedTest
@@ -315,13 +310,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.PASSWORD_RESET_MFA),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
     }
 
     @ParameterizedTest
@@ -357,13 +347,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.REGISTRATION),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.NEW,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false);
     }
 
     @ParameterizedTest
@@ -398,13 +383,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
         verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
@@ -446,13 +426,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
         verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
@@ -488,13 +463,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", journeyType),
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
     }
 
     @ParameterizedTest

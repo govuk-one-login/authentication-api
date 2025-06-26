@@ -577,13 +577,8 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -648,13 +643,8 @@ class VerifyCodeHandlerTest {
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID,
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        true);
+                .incrementAuthenticationSuccessWithMfa(
+                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
     }
 
     @Test
