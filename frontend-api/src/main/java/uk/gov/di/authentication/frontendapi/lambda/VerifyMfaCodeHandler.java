@@ -409,13 +409,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         var clientId = authSession.getClientId();
 
-        cloudwatchMetricsService.incrementAuthenticationSuccess(
+        cloudwatchMetricsService.incrementAuthenticationSuccessWithMfa(
                 authSession.getIsNewAccount(),
                 clientId,
                 authSession.getClientName(),
                 levelOfConfidence.getValue(),
-                clientService.isTestJourney(clientId, authSession.getEmailAddress()),
-                true);
+                clientService.isTestJourney(clientId, authSession.getEmailAddress()));
 
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }

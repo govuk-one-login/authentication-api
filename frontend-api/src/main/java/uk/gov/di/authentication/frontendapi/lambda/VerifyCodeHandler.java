@@ -489,13 +489,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .withVerifiedMfaMethodType(MFAMethodType.SMS)
                             .withAchievedCredentialStrength(MEDIUM_LEVEL));
             clearAccountRecoveryBlockIfPresent(authSession, auditContext);
-            cloudwatchMetricsService.incrementAuthenticationSuccess(
+            cloudwatchMetricsService.incrementAuthenticationSuccessWithMfa(
                     authSession.getIsNewAccount(),
                     clientId,
                     authSession.getClientName(),
                     levelOfConfidence.getValue(),
-                    clientService.isTestJourney(clientId, authSession.getEmailAddress()),
-                    true);
+                    clientService.isTestJourney(clientId, authSession.getEmailAddress()));
         }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
