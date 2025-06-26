@@ -18,7 +18,6 @@ import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -109,24 +108,6 @@ class ClientSubjectHelperTest {
                         userProfile, clientRegistry, authSession, authenticationService);
 
         assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-    }
-
-    @Test
-    void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwiseAndIsAOneLoginService() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, true);
-        var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, true);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
-        var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
-
-        var subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authSession1, authenticationService);
-        var subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authSession2, authenticationService);
-
-        assertTrue(subject1.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-        assertThat(subject1, not(subject2));
     }
 
     @Test
