@@ -8,35 +8,47 @@ import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.StateStorageException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 public class StateStorageService extends BaseDynamoService<StateItem> {
     private static final Logger LOG = LogManager.getLogger(StateStorageService.class);
-
-    private final ConfigurationService configurationService;
+    private final NowHelper.NowClock nowClock;
 
     private final long timeToLive;
 
     public StateStorageService(ConfigurationService configurationService) {
+        this(configurationService, Clock.systemUTC());
+    }
+
+    public StateStorageService(ConfigurationService configurationService, Clock clock) {
         super(StateItem.class, "State-Storage", configurationService, true);
         this.timeToLive = configurationService.getSessionExpiry();
-        this.configurationService = configurationService;
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public StateStorageService(
             DynamoDbClient dynamoDbClient,
             DynamoDbTable<StateItem> dynamoDbTable,
             ConfigurationService configurationService) {
+        this(dynamoDbClient, dynamoDbTable, configurationService, Clock.systemUTC());
+    }
+
+    public StateStorageService(
+            DynamoDbClient dynamoDbClient,
+            DynamoDbTable<StateItem> dynamoDbTable,
+            ConfigurationService configurationService,
+            Clock clock) {
         super(dynamoDbTable, dynamoDbClient, configurationService);
         this.timeToLive = configurationService.getSessionExpiry();
-        this.configurationService = configurationService;
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public void storeState(StateItem stateItem) {
         var item =
                 stateItem.withTimeToLive(
-                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                        nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                 .toInstant()
                                 .getEpochSecond());
         try {
@@ -61,7 +73,7 @@ public class StateStorageService extends BaseDynamoService<StateItem> {
 
         Optional<StateItem> validStateItem =
                 stateItem.filter(
-                        s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());
+                        s -> s.getTimeToLive() > nowClock.now().toInstant().getEpochSecond());
         if (validStateItem.isEmpty()) {
             LOG.info("State item with expired TTL found. Session ID: {}", prefixedSessionId);
         }
