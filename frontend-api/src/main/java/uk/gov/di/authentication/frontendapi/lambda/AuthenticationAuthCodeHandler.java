@@ -132,8 +132,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                                         userProfile.get(),
                                         client,
                                         userContext.getAuthSession(),
-                                        authenticationService,
-                                        configurationService.getInternalSectorUri())
+                                        authenticationService)
                                 .getValue();
                 var metadataBuilder = ReauthMetadataBuilder.builder(rpPairwiseId);
 

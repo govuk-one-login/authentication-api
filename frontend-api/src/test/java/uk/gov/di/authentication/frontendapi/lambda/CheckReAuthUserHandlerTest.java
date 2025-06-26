@@ -145,11 +145,7 @@ class CheckReAuthUserHandlerTest {
 
         expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                                USER_PROFILE,
-                                clientRegistry,
-                                authSession,
-                                authenticationService,
-                                INTERNAL_SECTOR_URI)
+                                USER_PROFILE, clientRegistry, authSession, authenticationService)
                         .getValue();
 
         handler =

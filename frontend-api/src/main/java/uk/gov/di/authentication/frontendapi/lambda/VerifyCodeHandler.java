@@ -617,11 +617,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         try {
             var rpPairwiseId =
                     ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authSession,
-                            authenticationService,
-                            configurationService.getInternalSectorUri());
+                            userProfile, client, authSession, authenticationService);
             return Optional.of(rpPairwiseId.getValue());
         } catch (RuntimeException e) {
             LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");

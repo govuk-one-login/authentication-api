@@ -147,11 +147,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
             String rpPairwiseId =
                     ClientSubjectHelper.getSubject(
-                                    userProfile,
-                                    clientRegistry,
-                                    authSession,
-                                    authenticationService,
-                                    configurationService.getInternalSectorUri())
+                                    userProfile, clientRegistry, authSession, authenticationService)
                             .toString();
 
             authSessionService.updateSession(

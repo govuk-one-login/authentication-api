@@ -966,8 +966,7 @@ class VerifyMfaCodeHandlerTest {
                                             eq(userProfile),
                                             any(ClientRegistry.class),
                                             any(AuthSessionItem.class),
-                                            any(AuthenticationService.class),
-                                            any(String.class)))
+                                            any(AuthenticationService.class)))
                     .thenReturn(subject);
 
             var codeRequest =

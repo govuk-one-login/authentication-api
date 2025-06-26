@@ -26,8 +26,7 @@ public class ClientSubjectHelper {
             UserProfile userProfile,
             ClientRegistry client,
             AuthSessionItem authSession,
-            AuthenticationService authenticationService,
-            String internalSectorURI) {
+            AuthenticationService authenticationService) {
         if (PUBLIC.toString().equalsIgnoreCase(authSession.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {

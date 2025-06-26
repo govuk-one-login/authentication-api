@@ -163,8 +163,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 userProfile,
                                 client,
                                 userContext.getAuthSession(),
-                                authenticationService,
-                                configurationService.getInternalSectorUri())
+                                authenticationService)
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {

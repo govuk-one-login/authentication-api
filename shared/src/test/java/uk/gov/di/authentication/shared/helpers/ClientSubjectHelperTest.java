@@ -56,18 +56,10 @@ class ClientSubjectHelperTest {
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry1, authSession1, authenticationService);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry2, authSession2, authenticationService);
 
         assertNotEquals(subject1, subject2);
     }
@@ -81,18 +73,10 @@ class ClientSubjectHelperTest {
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry1, authSession1, authenticationService);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry2, authSession2, authenticationService);
 
         assertEquals(subject1, subject2);
     }
@@ -106,18 +90,10 @@ class ClientSubjectHelperTest {
 
         Subject subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry1, authSession1, authenticationService);
         Subject subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry2, authSession2, authenticationService);
 
         assertThat(subject1, equalTo(PUBLIC_SUBJECT));
         assertThat(subject2, equalTo(PUBLIC_SUBJECT));
@@ -130,11 +106,7 @@ class ClientSubjectHelperTest {
 
         var subject =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry,
-                        authSession,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry, authSession, authenticationService);
 
         assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
@@ -148,18 +120,10 @@ class ClientSubjectHelperTest {
 
         var subject1 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry1, authSession1, authenticationService);
         var subject2 =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry2, authSession2, authenticationService);
 
         assertTrue(subject1.getValue().startsWith("urn:fdc:gov.uk:2022:"));
         assertThat(subject1, not(subject2));
@@ -172,11 +136,7 @@ class ClientSubjectHelperTest {
 
         var subject =
                 ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry,
-                        authSession,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry, authSession, authenticationService);
 
         assertFalse(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
         assertThat(subject.getValue(), equalTo(PUBLIC_SUBJECT.getValue()));

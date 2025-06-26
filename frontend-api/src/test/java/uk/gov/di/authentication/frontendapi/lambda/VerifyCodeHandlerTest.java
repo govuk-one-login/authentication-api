@@ -933,8 +933,7 @@ class VerifyCodeHandlerTest {
                                             eq(userProfile),
                                             any(ClientRegistry.class),
                                             any(AuthSessionItem.class),
-                                            any(AuthenticationService.class),
-                                            anyString()))
+                                            any(AuthenticationService.class)))
                     .thenReturn(subject);
 
             var result = makeCallWithCode(CODE, MFA_SMS.name(), REAUTHENTICATION);

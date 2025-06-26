@@ -165,8 +165,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         userProfile.get(),
                                         userContext.getClient().get(),
                                         userContext.getAuthSession(),
-                                        authenticationService,
-                                        configurationService.getInternalSectorUri())
+                                        authenticationService)
                                 .getValue();
 
                 LOG.info("Setting internal common subject identifier in user session");

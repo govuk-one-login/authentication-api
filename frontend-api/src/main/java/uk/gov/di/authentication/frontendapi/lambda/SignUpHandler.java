@@ -142,9 +142,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                                             user.getUserProfile(),
                                                             client,
                                                             authSessionItem,
-                                                            authenticationService,
-                                                            configurationService
-                                                                    .getInternalSectorUri())
+                                                            authenticationService)
                                                     .getValue())
                             .orElse(AuditService.UNKNOWN);
 
