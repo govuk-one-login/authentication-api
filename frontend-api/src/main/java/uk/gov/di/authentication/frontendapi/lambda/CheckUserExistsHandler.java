@@ -163,7 +163,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
-                                        userContext.getClient().get(),
                                         userContext.getAuthSession(),
                                         authenticationService)
                                 .getValue();

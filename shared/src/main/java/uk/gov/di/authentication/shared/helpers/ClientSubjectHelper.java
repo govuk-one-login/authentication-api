@@ -24,7 +24,6 @@ public class ClientSubjectHelper {
 
     public static Subject getSubject(
             UserProfile userProfile,
-            ClientRegistry client,
             AuthSessionItem authSession,
             AuthenticationService authenticationService) {
         if (PUBLIC.toString().equalsIgnoreCase(authSession.getSubjectType())) {

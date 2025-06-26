@@ -964,7 +964,6 @@ class VerifyMfaCodeHandlerTest {
                             () ->
                                     ClientSubjectHelper.getSubject(
                                             eq(userProfile),
-                                            any(ClientRegistry.class),
                                             any(AuthSessionItem.class),
                                             any(AuthenticationService.class)))
                     .thenReturn(subject);

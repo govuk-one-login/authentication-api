@@ -48,51 +48,39 @@ class ClientSubjectHelperTest {
 
     @Test
     void shouldReturnDifferentSubjectIDForMultipleClientsWithDifferentSectors() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), "not.test.com", false);
         var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), "not.test.com", false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authSession1, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authSession2, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertNotEquals(subject1, subject2);
     }
 
     @Test
     void shouldReturnSameSubjectIDForMultipleClientsWithSameSector() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authSession1, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authSession2, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertEquals(subject1, subject2);
     }
 
     @Test
     void shouldReturnSameSubjectIDForMultipleClientsWithPublicSubjectType() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PUBLIC.toString(), "not.test.com", false);
         var authSession2 = createSession(CLIENT_ID_2, PUBLIC.toString(), "not.test.com", false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authSession1, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry2, authSession2, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertThat(subject1, equalTo(PUBLIC_SUBJECT));
         assertThat(subject2, equalTo(PUBLIC_SUBJECT));
@@ -100,24 +88,20 @@ class ClientSubjectHelperTest {
 
     @Test
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwise() {
-        var clientRegistry = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
 
         var subject =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry, authSession, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService);
 
         assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
     @Test
     void shouldNotReturnPairwiseSubjectIdWhenClientTypeIsPublic() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
         var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
 
         var subject =
-                ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry, authSession, authenticationService);
+                ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService);
 
         assertFalse(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
         assertThat(subject.getValue(), equalTo(PUBLIC_SUBJECT.getValue()));
