@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -756,7 +757,8 @@ class VerifyCodeHandlerTest {
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
                             pair("loginFailureCount", MAX_RETRIES + 1),
                             pair("MFACodeEntered", "6543221"),
-                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                            pair("mfa-method", PriorityIdentifier.DEFAULT));
         }
     }
 

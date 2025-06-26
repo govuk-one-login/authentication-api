@@ -3,6 +3,9 @@ package uk.gov.di.authentication.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -39,6 +42,7 @@ public class MFAMethodsServiceTest {
             mock(CloudwatchMetricsService.class);
 
     private static final String TEST_PHONE_NUMBER = "01234567890";
+    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
 
     @BeforeEach
     void setUp() {
@@ -98,6 +102,7 @@ public class MFAMethodsServiceTest {
 
         @Test
         void shouldIncrementMfaMethodCounterForDeleteMfaMethodCase() {
+            // Given
             var service =
                     new MFAMethodsService(
                             configurationService, persistentService, cloudwatchMetricsService);
@@ -112,8 +117,10 @@ public class MFAMethodsServiceTest {
             when(persistentService.getUserCredentialsFromEmail(any()))
                     .thenReturn(mockUserCredentials);
 
+            // When
             service.deleteMfaMethod(identifier, userProfile);
 
+            // Then
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(
                             "test",
@@ -130,6 +137,7 @@ public class MFAMethodsServiceTest {
 
         @Test
         void shouldIncrementMfaMethodCounterForUpdateMfaMethodCase() {
+            // Given
             var service =
                     new MFAMethodsService(
                             configurationService, persistentService, cloudwatchMetricsService);
@@ -147,8 +155,10 @@ public class MFAMethodsServiceTest {
             when(persistentService.updateMfaMethods(any(), any()))
                     .thenReturn(Result.success(mockMfaMethods));
 
+            // When
             service.updateMfaMethod("some-email@email.com", identifier, request);
 
+            // Then
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(
                             "test",
@@ -161,6 +171,7 @@ public class MFAMethodsServiceTest {
 
         @Test
         void shouldIncrementMfaMethodCounterForSwapBackupWithDefaultMfaMethodCase() {
+            // Given
             var service =
                     new MFAMethodsService(
                             configurationService, persistentService, cloudwatchMetricsService);
@@ -183,8 +194,10 @@ public class MFAMethodsServiceTest {
             when(persistentService.updateAllMfaMethodsForUser(any(), any()))
                     .thenReturn(Result.success(mockMfaMethods));
 
+            // When
             service.updateMfaMethod("some-email@email.com", backupIdentifier, request);
 
+            // Then
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(
                             "test",
@@ -193,6 +206,46 @@ public class MFAMethodsServiceTest {
                             ACCOUNT_MANAGEMENT,
                             "AUTH_APP",
                             BACKUP);
+        }
+    }
+
+    @Nested
+    class IsAuthAppDefaultMfaMethod {
+        @ParameterizedTest
+        @CsvSource({
+                "DEFAULT, BACKUP, false",
+                "BACKUP, DEFAULT, true"
+        })
+        void shouldCorrectlyIdentifyIfAuthAppIsDefaultMfaMethod(
+                PriorityIdentifier smsMfaPriority,
+                PriorityIdentifier authMfaPriority,
+                Boolean expectedResult
+        ) {
+            // Given
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            var mockMfaMethods = new ArrayList<MFAMethod>();
+            var smsIdentifier = UUID.randomUUID().toString();
+            var authMfaIdentifier = UUID.randomUUID().toString();
+            var smsMfaMethod =
+                    MFAMethod.smsMfaMethod(
+                            true, true, TEST_PHONE_NUMBER, smsMfaPriority, smsIdentifier);
+            var authMfaMethod =
+                    MFAMethod.authAppMfaMethod(
+                            "some-credential", true, true, authMfaPriority, authMfaIdentifier);
+            mockMfaMethods.add(smsMfaMethod);
+            mockMfaMethods.add(authMfaMethod);
+            mockUserCredentials.setMfaMethods(mockMfaMethods);
+            mockUserCredentials.setEmail(TEST_EMAIL_ADDRESS);
+            when(persistentService.getUserCredentialsFromEmail(any())).thenReturn(mockUserCredentials);
+
+            // When
+            var result = service.isAuthAppDefaultMfaMethod(TEST_EMAIL_ADDRESS);
+
+            // Then
+            assertEquals(expectedResult, result);
         }
     }
 }

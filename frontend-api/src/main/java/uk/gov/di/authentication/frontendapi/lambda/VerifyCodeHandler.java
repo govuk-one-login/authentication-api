@@ -52,7 +52,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Collections.emptyList;
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
@@ -472,7 +471,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.deleteOtpCode(identifier, notificationType);
 
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false, emptyList());
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false, null);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
     }
@@ -513,7 +512,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             Integer loginFailureCount,
             boolean isBlockedRequest,
-            List<AuditService.MetadataPair> additionalMetadataPairs
+           AuditService.MetadataPair additionalMetadataPair
     ) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("notification-type", notificationType.name()));
@@ -527,8 +526,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (notificationType == MFA_SMS && isBlockedRequest) {
             metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
         }
-        if (!additionalMetadataPairs.isEmpty()) {
-            metadataPairs.addAll(additionalMetadataPairs);
+        if (additionalMetadataPair != null) {
+            metadataPairs.add(additionalMetadataPair);
         }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
     }
@@ -544,7 +543,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         AuditableEvent auditableEvent;
-        List<AuditService.MetadataPair> additionalMetadataPairs = new ArrayList<>();
+        AuditService.MetadataPair additionalMetadataPair = null;
         switch (errorResponse) {
             case ERROR_1027:
             case ERROR_1039:
@@ -555,6 +554,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 }
                 resetIncorrectMfaCodeAttemptsCount(authSession);
                 auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
+                additionalMetadataPair = pair("mfa-method", priorityIdentifier);
                 break;
             case ERROR_1033:
                 resetIncorrectMfaCodeAttemptsCount(authSession);
@@ -564,13 +564,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
                 break;
         }
-        if ( auditableEvent ==  FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED) {
-            additionalMetadataPairs.add(pair("mfa-type", priorityIdentifier));
-        }
         var loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true, additionalMetadataPairs);
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true, additionalMetadataPair);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 

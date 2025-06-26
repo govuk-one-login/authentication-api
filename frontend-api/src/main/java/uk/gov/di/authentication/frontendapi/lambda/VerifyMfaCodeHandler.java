@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -531,7 +532,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
         var methodType = codeRequest.getMfaMethodType();
-        var authMfaPriority = mfaMethodsService.isAuthAppDefaultMfaMethod(email) ? PriorityIdentifier.DEFAULT : PriorityIdentifier.BACKUP;
         var basicMetadataPairs =
                 List.of(
                         pair("mfa-type", methodType.getValue()),
@@ -541,9 +541,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         pair("journey-type", codeRequest.getJourneyType()));
         var additionalPairs =
                 switch (auditableEvent) {
-                    case AUTH_CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                            pair("mfa-method", authMfaPriority));
+                    case AUTH_CODE_MAX_RETRIES_REACHED -> {
+                        var metadataPairList = new ArrayList<AuditService.MetadataPair>();
+                        var mfaMethodPriority = getMfaMethodPriorityForJourneyType(email, codeRequest.getJourneyType());
+
+                        metadataPairList.add(pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                        mfaMethodPriority.ifPresent(priorityIdentifier -> metadataPairList.add(pair("mfa-method", priorityIdentifier)));
+
+                        yield metadataPairList;
+                    }
                     case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
                                 codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
@@ -557,6 +563,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
                 .toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private Optional<PriorityIdentifier> getMfaMethodPriorityForJourneyType(
+            String email,
+            JourneyType journeyType) {
+        if (journeyType == JourneyType.REGISTRATION) {
+             return Optional.of(PriorityIdentifier.DEFAULT);
+        } else if (journeyType == JourneyType.SIGN_IN) {
+            return Optional.of(mfaMethodsService.isAuthAppDefaultMfaMethod(email) ? PriorityIdentifier.DEFAULT : PriorityIdentifier.BACKUP);
+        } else {
+            return Optional.empty();
+        }
     }
 
     private Optional<String> getRpPairwiseId(
