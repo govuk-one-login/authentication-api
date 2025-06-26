@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -68,10 +67,7 @@ public class UserInfoHandler
     public UserInfoHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.userInfoService =
-                new UserInfoService(
-                        new DynamoService(configurationService),
-                        new MFAMethodsService(configurationService),
-                        configurationService);
+                new UserInfoService(new DynamoService(configurationService), configurationService);
         this.accessTokenService =
                 new AccessTokenService(
                         configurationService, new CloudwatchMetricsService(configurationService));

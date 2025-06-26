@@ -3,26 +3,19 @@ package uk.gov.di.authentication.external.services;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
-import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -30,11 +23,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
@@ -43,7 +31,6 @@ public class UserInfoServiceTest {
     private UserInfoService userInfoService;
     private ConfigurationService configurationService;
     private AuthenticationService authenticationService;
-    private MFAMethodsService mfaMethodsService;
     public static final ByteBuffer TEST_SALT = ByteBuffer.allocate(10);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_RP_SECTOR_HOST = "test-rp-sector-uri";
@@ -73,17 +60,31 @@ public class UserInfoServiceTest {
     private static final boolean TEST_UPLIFT_REQUIRED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
+    private static final UserProfile TEST_USER_PROFILE =
+            new UserProfile()
+                    .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
+                    .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
+                    .withSubjectID(TEST_SUBJECT.getValue())
+                    .withEmail(TEST_EMAIL)
+                    .withEmailVerified(TEST_EMAIL_VERIFIED)
+                    .withPhoneNumber(TEST_PHONE)
+                    .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
+                    .withSalt(TEST_SALT);
+    private static final AuthSessionItem authSession =
+            new AuthSessionItem()
+                    .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
+                    .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
+                    .withUpliftRequired(TEST_UPLIFT_REQUIRED);
 
     @BeforeEach
     public void setUp() {
         authenticationService = mock(DynamoService.class);
-        mfaMethodsService = mock(MFAMethodsService.class);
         configurationService = mock(ConfigurationService.class);
-        userInfoService =
-                new UserInfoService(authenticationService, mfaMethodsService, configurationService);
+        userInfoService = new UserInfoService(authenticationService, configurationService);
 
-        when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
-                .thenReturn(SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(TEST_USER_PROFILE);
+        when(authenticationService.getOrGenerateSalt(TEST_USER_PROFILE)).thenCallRealMethod();
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
     }
 
@@ -102,17 +103,7 @@ public class UserInfoServiceTest {
             MFAMethodType expectedVerifiedMfaMethod,
             Boolean expectedUpliftRequired,
             CredentialTrustLevel expectedAchievedCredentialStrength) {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
-        when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserCredentials());
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(
-                        Result.success(
-                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
-
-        UserInfo actual =
-                userInfoService.populateUserInfo(mockAccessTokenStore, generateAuthSessionItem());
+        UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
@@ -188,118 +179,6 @@ public class UserInfoServiceTest {
                         TEST_VERIFIED_MFA_METHOD_TYPE,
                         TEST_UPLIFT_REQUIRED,
                         TEST_ACHIEVED_CREDENTIAL_STRENGTH));
-    }
-
-    @Test
-    void shouldReturnMigratedPhoneNumberWhenPhoneIsMigrated() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(
-                        Result.success(
-                                List.of(
-                                        generateAuthAppMFAMethod(PriorityIdentifier.BACKUP),
-                                        generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
-
-        UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
-
-        assertEquals(TEST_PHONE, actual.getPhoneNumber());
-        assertTrue(actual.getPhoneNumberVerified());
-    }
-
-    @Test
-    void shouldReturnNullForMigratedPhoneNumberWhenSMSIsNotDefaultMFAMethod() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(
-                        Result.success(
-                                List.of(
-                                        generateAuthAppMFAMethod(PriorityIdentifier.DEFAULT),
-                                        generatePhoneNumberMFAMethod(PriorityIdentifier.BACKUP))));
-
-        UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
-
-        assertNull(actual.getPhoneNumber());
-        assertFalse(actual.getPhoneNumberVerified());
-    }
-
-    @Test
-    void shouldReturnNullForPhoneNumberWhenMFARetrievalFails() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(
-                        Result.failure(
-                                MfaRetrieveFailureReason
-                                        .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP));
-
-        UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
-
-        assertNull(actual.getPhoneNumber());
-        assertFalse(actual.getPhoneNumberVerified());
-    }
-
-    @Test
-    void shouldReturnNullForPhoneNumberWhenNoMFAMethodsFound() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
-        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
-                .thenReturn(Result.success(List.of()));
-
-        UserInfo actual =
-                userInfoService.populateUserInfo(
-                        getMockAccessTokenStore(List.of("phone_number", "phone_number_verified")),
-                        generateAuthSessionItem());
-
-        assertNull(actual.getPhoneNumber());
-        assertFalse(actual.getPhoneNumberVerified());
-    }
-
-    private static UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
-                .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
-                .withSubjectID(TEST_SUBJECT.getValue())
-                .withEmail(TEST_EMAIL)
-                .withEmailVerified(TEST_EMAIL_VERIFIED)
-                .withPhoneNumber(TEST_PHONE)
-                .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
-                .withSalt(TEST_SALT);
-    }
-
-    private static UserCredentials generateUserCredentials() {
-        return new UserCredentials().withSubjectID(TEST_SUBJECT.getValue()).withEmail(TEST_EMAIL);
-    }
-
-    private static AuthSessionItem generateAuthSessionItem() {
-        return new AuthSessionItem()
-                .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
-                .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
-                .withUpliftRequired(TEST_UPLIFT_REQUIRED);
-    }
-
-    private static MFAMethod generatePhoneNumberMFAMethod(PriorityIdentifier priorityIdentifier) {
-        return MFAMethod.smsMfaMethod(
-                true, true, TEST_PHONE, priorityIdentifier, "phone-number-mfa-identifier");
-    }
-
-    private static MFAMethod generateAuthAppMFAMethod(PriorityIdentifier priorityIdentifier) {
-        return MFAMethod.authAppMfaMethod(
-                "auth-app-credential-value",
-                true,
-                true,
-                priorityIdentifier,
-                "auth-app-mfa-identifier");
     }
 
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
