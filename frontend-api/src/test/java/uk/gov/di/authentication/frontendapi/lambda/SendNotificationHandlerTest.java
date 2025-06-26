@@ -854,6 +854,41 @@ class SendNotificationHandlerTest {
         }
 
         @Test
+        void shouldVerifyAllRequiredDataIsPassedToAuditService() {
+            usingValidSession();
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"phoneNumber\": \"%s\", \"notificationType\": \"%s\",  \"journeyType\": \"%s\" }",
+                            EMAIL, UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, REGISTRATION);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            handler.handleRequest(event, context);
+
+            ArgumentCaptor<AuditContext> auditContextCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService)
+                    .submitAuditEvent(eq(AUTH_PHONE_CODE_SENT), auditContextCaptor.capture());
+
+            AuditContext capturedContext = auditContextCaptor.getValue();
+            assertTrue(capturedContext.getMetadataItemByKey("mfa-method").isPresent());
+            assertTrue(capturedContext.getMetadataItemByKey("journey-type").isPresent());
+            assertEquals(
+                    "default", capturedContext.getMetadataItemByKey("mfa-method").get().value());
+            assertEquals(
+                    REGISTRATION,
+                    capturedContext.getMetadataItemByKey("journey-type").get().value());
+            assertEquals(UK_MOBILE_NUMBER, capturedContext.phoneNumber());
+            assertEquals(CLIENT_ID, capturedContext.clientId());
+            assertEquals(CLIENT_SESSION_ID, capturedContext.clientSessionId());
+            assertEquals(SESSION_ID, capturedContext.sessionId());
+            assertEquals(INTERNAL_COMMON_SUBJECT_ID, capturedContext.subjectId());
+            assertEquals(EMAIL, capturedContext.email());
+            assertEquals(IP_ADDRESS, capturedContext.ipAddress());
+            assertEquals(DI_PERSISTENT_SESSION_ID, capturedContext.persistentSessionId());
+            assertEquals(Optional.of(ENCODED_DEVICE_DETAILS), capturedContext.txmaAuditEncoded());
+        }
+
+        @Test
         void shouldSendOtpWhenUserAddsNewPhoneNumberForMfa() throws Json.JsonException {
             usingValidSession();
             String newPhoneNumber = "+447911123456";
