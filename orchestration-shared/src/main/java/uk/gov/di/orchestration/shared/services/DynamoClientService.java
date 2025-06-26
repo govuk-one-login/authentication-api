@@ -81,7 +81,8 @@ public class DynamoClientService implements ClientService {
             List<String> clientLoCs,
             String channel,
             boolean maxAgeEnabled,
-            boolean pkceEnforced) {
+            boolean pkceEnforced,
+            Integer rateLimit) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -106,7 +107,8 @@ public class DynamoClientService implements ClientService {
                         .withActive(true)
                         .withChannel(channel)
                         .withMaxAgeEnabled(maxAgeEnabled)
-                        .withPKCEEnforced(pkceEnforced);
+                        .withPKCEEnforced(pkceEnforced)
+                        .withRateLimit(rateLimit);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
         }

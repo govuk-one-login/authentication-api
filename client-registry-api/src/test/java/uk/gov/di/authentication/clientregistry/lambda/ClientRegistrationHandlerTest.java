@@ -134,7 +134,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null);
     }
 
     @Test
@@ -176,7 +177,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null);
     }
 
     @Test
@@ -218,7 +220,8 @@ class ClientRegistrationHandlerTest {
                         emptyList(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        null);
     }
 
     @Test
