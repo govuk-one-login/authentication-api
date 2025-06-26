@@ -293,12 +293,17 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyResponse(400, errorResponse.get());
         }
 
-        auditContext.withMetadataItem(
-                new AuditService.MetadataPair(
-                        AUDIT_EVENT_MFA_METHOD_FIELD, AUDIT_EVENT_DEFAULT_MFA_VALUE, false));
+        auditContext =
+                auditContext.withMetadataItem(
+                        new AuditService.MetadataPair(
+                                AUDIT_EVENT_MFA_METHOD_FIELD,
+                                AUDIT_EVENT_DEFAULT_MFA_VALUE,
+                                false));
 
-        auditContext.withMetadataItem(
-                new AuditService.MetadataPair("journey-type", request.getJourneyType(), false));
+        auditContext =
+                auditContext.withMetadataItem(
+                        new AuditService.MetadataPair(
+                                "journey-type", request.getJourneyType(), false));
 
         return handleNotificationRequest(
                 PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),

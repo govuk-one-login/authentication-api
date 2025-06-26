@@ -95,6 +95,7 @@ public class AuditService {
         AuditService.MetadataPair[] meta = auditContext.metadata().toArray(new MetadataPair[0]);
 
         addExtensionSectionToAuditEvent(user, txmaAuditEvent, meta);
+        addRestrictedSectionToAuditEvent(auditContext.txmaAuditEncoded(), txmaAuditEvent, meta);
 
         addRestrictedSectionToAuditEvent(
                 auditContext.txmaAuditEncoded(), txmaAuditEvent, metadataPairs);

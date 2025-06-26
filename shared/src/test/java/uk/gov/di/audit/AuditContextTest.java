@@ -10,6 +10,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 class AuditContextTest {
 
@@ -43,6 +44,37 @@ class AuditContextTest {
         assertEquals(1, updatedContext.metadata().size());
         // The lists should be different objects
         assertNotSame(auditContext.metadata(), updatedContext.metadata());
+    }
+
+    @Test
+    void shouldAddMetadataItemsCorrectly() {
+        // Given
+        AuditContext auditContext =
+                new AuditContext(
+                        "client-id",
+                        "client-session-id",
+                        "session-id",
+                        "subject-id",
+                        "email",
+                        "ip-address",
+                        "phone-number",
+                        "persistent-session-id",
+                        Optional.empty(),
+                        new ArrayList<>());
+
+        // When
+        auditContext = auditContext.withMetadataItem(pair("key1", "value1", false));
+        auditContext = auditContext.withMetadataItem(pair("key2", "value2", false));
+
+        // Then
+        assertEquals(2, auditContext.metadata().size());
+        Optional<AuditService.MetadataPair> key1Pair = auditContext.getMetadataItemByKey("key1");
+        Optional<AuditService.MetadataPair> key2Pair = auditContext.getMetadataItemByKey("key2");
+
+        assertTrue(key1Pair.isPresent());
+        assertTrue(key2Pair.isPresent());
+        assertEquals("value1", key1Pair.get().value());
+        assertEquals("value2", key2Pair.get().value());
     }
 
     @Test
