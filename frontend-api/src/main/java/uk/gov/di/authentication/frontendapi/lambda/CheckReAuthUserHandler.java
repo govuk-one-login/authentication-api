@@ -156,14 +156,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String rpPairwiseId,
             AuditContext auditContext,
             AuditService.MetadataPair pairwiseIdMetadataPair) {
-        var client = userContext.getClient().orElseThrow();
-
         var calculatedPairwiseId =
                 ClientSubjectHelper.getSubject(
-                                userProfile,
-                                client,
-                                userContext.getAuthSession(),
-                                authenticationService)
+                                userProfile, userContext.getAuthSession(), authenticationService)
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {

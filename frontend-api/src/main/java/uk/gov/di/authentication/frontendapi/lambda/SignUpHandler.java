@@ -140,7 +140,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                     client ->
                                             ClientSubjectHelper.getSubject(
                                                             user.getUserProfile(),
-                                                            client,
                                                             authSessionItem,
                                                             authenticationService)
                                                     .getValue())

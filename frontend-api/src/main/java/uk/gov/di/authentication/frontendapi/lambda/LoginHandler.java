@@ -271,9 +271,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
-        var client = userContext.getClient().orElseThrow();
         return ClientSubjectHelper.getSubject(
-                        userProfile, client, userContext.getAuthSession(), authenticationService)
+                        userProfile, userContext.getAuthSession(), authenticationService)
                 .getValue();
     }
 

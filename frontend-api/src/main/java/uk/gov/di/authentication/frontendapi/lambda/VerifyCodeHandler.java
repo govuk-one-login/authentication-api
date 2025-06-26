@@ -15,7 +15,6 @@ import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -167,17 +166,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
-            var client =
-                    userContext
-                            .getClient()
-                            .orElseThrow(
-                                    () ->
-                                            new ClientNotFoundException(
-                                                    "Could not find client in user context"));
+
+            userContext
+                    .getClient()
+                    .orElseThrow(
+                            () ->
+                                    new ClientNotFoundException(
+                                            "Could not find client in user context"));
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
-            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client, authSession);
+            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
 
             String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
@@ -612,12 +611,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return journeyType;
     }
 
-    private Optional<String> getRpPairwiseId(
-            UserProfile userProfile, ClientRegistry client, AuthSessionItem authSession) {
+    private Optional<String> getRpPairwiseId(UserProfile userProfile, AuthSessionItem authSession) {
         try {
             var rpPairwiseId =
-                    ClientSubjectHelper.getSubject(
-                            userProfile, client, authSession, authenticationService);
+                    ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService);
             return Optional.of(rpPairwiseId.getValue());
         } catch (RuntimeException e) {
             LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");

@@ -144,8 +144,7 @@ class CheckReAuthUserHandlerTest {
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
         expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                                USER_PROFILE, clientRegistry, authSession, authenticationService)
+                ClientSubjectHelper.getSubject(USER_PROFILE, authSession, authenticationService)
                         .getValue();
 
         handler =
