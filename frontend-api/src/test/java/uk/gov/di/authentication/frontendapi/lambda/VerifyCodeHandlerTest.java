@@ -128,7 +128,8 @@ class VerifyCodeHandlerTest {
                     .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withClientId(CLIENT_ID)
-                    .withClientName(CLIENT_NAME);
+                    .withClientName(CLIENT_NAME)
+                    .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);

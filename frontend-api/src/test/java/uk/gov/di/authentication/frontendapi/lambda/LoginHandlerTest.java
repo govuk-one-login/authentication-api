@@ -100,6 +100,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     public static final int MAX_ALLOWED_PASSWORD_RETRIES = 6;
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
@@ -1165,7 +1166,8 @@ class LoginHandlerTest {
                                         .withAchievedCredentialStrength(achievedCredentialStrength)
                                         .withRequestedCredentialStrength(
                                                 requestedCredentialStrength)
-                                        .withClientName(CLIENT_NAME)));
+                                        .withClientName(CLIENT_NAME)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
     }
 
     private void usingValidAuthSessionInSmokeTest() {
@@ -1178,7 +1180,8 @@ class LoginHandlerTest {
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                         .withClientId(CLIENT_ID.getValue())
                                         .withRequestedCredentialStrength(MEDIUM_LEVEL)
-                                        .withIsSmokeTest(true)));
+                                        .withIsSmokeTest(true)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
     }
 
     private void usingValidAuthSession() {
@@ -1230,7 +1233,7 @@ class LoginHandlerTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
                 .withSubjectType("public");
     }
 
@@ -1241,7 +1244,8 @@ class LoginHandlerTest {
                                 new ClientRegistry()
                                         .withSmokeTest(true)
                                         .withClientID(CLIENT_ID.getValue())
-                                        .withSectorIdentifierUri("https://test.com")));
+                                        .withSectorIdentifierUri(
+                                                "https://" + SECTOR_IDENTIFIER_HOST)));
     }
 
     private void verifyInternalCommonSubjectIdentifierSaved() {

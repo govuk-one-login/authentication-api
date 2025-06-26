@@ -30,6 +30,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
 
     @BeforeEach
     public void setUp() {
@@ -50,7 +51,9 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+        registerClient(
+                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         var response =
                 makeRequest(

@@ -80,6 +80,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
     private static final String testRsaKeyId = "test-key-rsa";
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private static RSAKey rsaKey;
 
     private static WireMockServer wireMockServer;
@@ -203,6 +204,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
         authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionStore.addClientIdToSession(sessionId, CLIENT_ID.getValue());
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
     }
 
     private static void registerClient() {
@@ -216,7 +218,7 @@ class MfaResetAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrati
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
+                "https://" + SECTOR_IDENTIFIER_HOST,
                 "public");
     }
 

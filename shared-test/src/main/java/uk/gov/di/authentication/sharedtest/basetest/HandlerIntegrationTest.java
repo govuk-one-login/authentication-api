@@ -264,7 +264,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
     }
 
     public static void registerClient(
-            String emailAddress, ClientID clientId, String clientName, URI redirectUri) {
+            String emailAddress,
+            ClientID clientId,
+            String clientName,
+            URI redirectUri,
+            String sectorIdentifierUri) {
         clientStore.registerClient(
                 clientId.getValue(),
                 clientName,
@@ -277,7 +281,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 valueOf(ServiceType.MANDATORY),
-                "https://test.com",
+                sectorIdentifierUri,
                 "public");
     }
 

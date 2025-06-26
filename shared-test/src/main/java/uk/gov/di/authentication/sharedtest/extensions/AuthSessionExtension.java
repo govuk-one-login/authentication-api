@@ -114,6 +114,14 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         updateSession(getSession(sessionId).orElseThrow().withClientName(clientName));
     }
 
+    public void addRpSectorIdentifierHostToSession(
+            String sessionId, String rpSectorIdentifierHost) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withRpSectorIdentifierHost(rpSectorIdentifierHost));
+    }
+
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId, String sessionId) {
         return authSessionService.getUpdatedPreviousSessionOrCreateNew(

@@ -63,6 +63,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
     private static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     protected final Json objectMapper =
             new SerializationService(
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
@@ -83,7 +84,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
+                "https://" + SECTOR_IDENTIFIER_HOST,
                 "public");
     }
 
@@ -107,6 +108,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
         authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -163,6 +165,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
         authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
         authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -264,6 +267,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
@@ -291,6 +295,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
         var headers = validHeadersWithSessionId(sessionId);
 
         var response =
@@ -311,6 +316,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
         var headers = validHeadersWithSessionId(sessionId);
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
@@ -345,6 +351,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         authSessionExtension.addSession(sessionId);
         authSessionExtension.addEmailToSession(sessionId, email);
         authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
         var headers = validHeadersWithSessionId(sessionId);
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);

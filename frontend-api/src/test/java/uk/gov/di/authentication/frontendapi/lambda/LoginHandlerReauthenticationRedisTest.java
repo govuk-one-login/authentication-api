@@ -73,6 +73,7 @@ class LoginHandlerReauthenticationRedisTest {
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     public static final int MAX_ALLOWED_PASSWORD_RETRIES = 6;
+    private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -244,7 +245,8 @@ class LoginHandlerReauthenticationRedisTest {
                                         .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                         .withClientId(CLIENT_ID.getValue())
                                         .withClientName(CLIENT_NAME)
-                                        .withIsSmokeTest(false)));
+                                        .withIsSmokeTest(false)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
@@ -280,7 +282,7 @@ class LoginHandlerReauthenticationRedisTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
                 .withSubjectType("public");
     }
 
