@@ -939,7 +939,7 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethods, result.getSuccess().mfaMethods()));
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        MFAMethodEmailNotificationIdentifier.CHANGED_SMS,
                         result.getSuccess().emailNotificationIdentifier());
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
@@ -1004,6 +1004,9 @@ class MFAMethodsServiceIntegrationTest {
                 }
 
                 assertTrue(result.isSuccess());
+                assertEquals(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        result.getSuccess().emailNotificationIdentifier());
             }
 
             @Test
@@ -1026,6 +1029,9 @@ class MFAMethodsServiceIntegrationTest {
                 }
 
                 assertTrue(result.isSuccess());
+                assertEquals(
+                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        result.getSuccess().emailNotificationIdentifier());
             }
 
             @Test
