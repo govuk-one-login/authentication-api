@@ -30,6 +30,8 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -46,6 +48,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.Instant;
@@ -87,6 +90,8 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVER
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -148,6 +153,7 @@ class VerifyMfaCodeHandlerTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
+    private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -183,6 +189,8 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -194,7 +202,8 @@ class VerifyMfaCodeHandlerTest {
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
                         authenticationAttemptsService,
-                        authSessionService);
+                        authSessionService,
+                        mfaMethodsService);
     }
 
     @AfterEach
@@ -244,7 +253,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.NEW,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        JourneyType.REGISTRATION,
+                        MFAMethodType.AUTH_APP,
+                        PriorityIdentifier.DEFAULT);
     }
 
     @ParameterizedTest
@@ -312,7 +328,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        MFAMethodType.AUTH_APP,
+                        PriorityIdentifier.DEFAULT);
     }
 
     @ParameterizedTest
@@ -323,6 +346,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
         var result =
                 makeCallWithCode(
@@ -330,7 +355,7 @@ class VerifyMfaCodeHandlerTest {
                                 MFAMethodType.SMS,
                                 CODE,
                                 REGISTRATION,
-                                CommonTestVariables.UK_MOBILE_NUMBER));
+                                DEFAULT_SMS_METHOD.getDestination()));
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -349,7 +374,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.NEW,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        JourneyType.REGISTRATION,
+                        MFAMethodType.SMS,
+                        PriorityIdentifier.DEFAULT);
     }
 
     @ParameterizedTest
@@ -385,7 +417,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        MFAMethodType.AUTH_APP,
+                        PriorityIdentifier.DEFAULT);
         verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
@@ -402,6 +441,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
         var result =
                 makeCallWithCode(
@@ -409,7 +450,7 @@ class VerifyMfaCodeHandlerTest {
                                 MFAMethodType.SMS,
                                 CODE,
                                 JourneyType.ACCOUNT_RECOVERY,
-                                CommonTestVariables.UK_MOBILE_NUMBER));
+                                DEFAULT_SMS_METHOD.getDestination()));
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -428,7 +469,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        MFAMethodType.SMS,
+                        PriorityIdentifier.DEFAULT);
         verify(authSessionService, times(3))
                 .updateSession(
                         argThat(
@@ -465,7 +513,14 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
-                        AuthSessionItem.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        journeyType,
+                        MFAMethodType.AUTH_APP,
+                        PriorityIdentifier.DEFAULT);
     }
 
     @ParameterizedTest

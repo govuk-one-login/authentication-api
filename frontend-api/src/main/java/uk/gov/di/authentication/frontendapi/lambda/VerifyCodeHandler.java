@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -479,6 +480,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
+        String emailAddress = authSession.getEmailAddress();
+        String otpCodeIdentifier = emailAddress;
+        MFAMethod smsMfaMethod = null;
+        if (notificationType.isForPhoneNumber()) {
+            smsMfaMethod = maybeRequestedSmsMfaMethod.orElseThrow();
+            String formattedPhoneNumber =
+                    PhoneNumberHelper.formatPhoneNumber(smsMfaMethod.getDestination());
+            otpCodeIdentifier = emailAddress.concat(formattedPhoneNumber);
+        }
+
         if (notificationType.equals(MFA_SMS)) {
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
@@ -494,7 +505,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientId,
                     authSession.getClientName(),
                     levelOfConfidence.getValue(),
-                    clientService.isTestJourney(clientId, authSession.getEmailAddress()));
+                    clientService.isTestJourney(clientId, authSession.getEmailAddress()),
+                    journeyType,
+                    smsMfaMethod != null
+                            ? MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType())
+                            : null,
+                    smsMfaMethod != null
+                            ? PriorityIdentifier.valueOf(smsMfaMethod.getPriority())
+                            : null);
         }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
@@ -506,15 +524,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
 
-        String emailAddress = authSession.getEmailAddress();
-        String identifier = emailAddress;
-        if (notificationType.isForPhoneNumber()) {
-            var requestedSmsMfaMethod = maybeRequestedSmsMfaMethod.orElseThrow();
-            String formattedPhoneNumber =
-                    PhoneNumberHelper.formatPhoneNumber(requestedSmsMfaMethod.getDestination());
-            identifier = emailAddress.concat(formattedPhoneNumber);
-        }
-        codeStorageService.deleteOtpCode(identifier, notificationType);
+        codeStorageService.deleteOtpCode(otpCodeIdentifier, notificationType);
 
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);

@@ -22,7 +22,9 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -66,6 +68,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 
 public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -76,6 +79,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final MFAMethodsService mfaMethodsService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -86,7 +90,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            MFAMethodsService mfaMethodsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -98,6 +103,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.mfaMethodsService = mfaMethodsService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -119,6 +125,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -137,6 +144,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -394,6 +402,29 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             JourneyType journeyType,
             AuthSessionItem authSession) {
+
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
+        MFAMethodType mfaMethodType = null;
+        PriorityIdentifier priorityIdentifier = null;
+        if (retrieveMfaMethods.isFailure()) {
+            LOG.error(
+                    "Failed to retrieve MFA methods for user because {}",
+                    retrieveMfaMethods.getFailure());
+        } else {
+            List<MFAMethod> retrievedMfaMethods = retrieveMfaMethods.getSuccess();
+            if (codeRequest.getMfaMethodType().equals(MFAMethodType.AUTH_APP)) {
+                mfaMethodType = MFAMethodType.AUTH_APP;
+                priorityIdentifier =
+                        getMfaMethodOrDefaultMfaMethod(
+                                        retrievedMfaMethods, null, MFAMethodType.AUTH_APP)
+                                .map(method -> PriorityIdentifier.valueOf(method.getPriority()))
+                                .orElse(null);
+            } else if (codeRequest.getMfaMethodType().equals(MFAMethodType.SMS)) {
+                mfaMethodType = MFAMethodType.SMS;
+                priorityIdentifier = PriorityIdentifier.DEFAULT;
+            }
+        }
+
         var levelOfConfidence =
                 Optional.ofNullable(authSession.getRequestedLevelOfConfidence()).orElse(NONE);
 
@@ -414,7 +445,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 authSession.getClientName(),
                 levelOfConfidence.getValue(),
-                clientService.isTestJourney(clientId, authSession.getEmailAddress()));
+                clientService.isTestJourney(clientId, authSession.getEmailAddress()),
+                journeyType,
+                mfaMethodType,
+                priorityIdentifier);
 
         return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }
