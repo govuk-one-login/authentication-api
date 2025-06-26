@@ -492,8 +492,14 @@ public class MFAMethodsService {
 
         databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
 
+        var emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA;
+
+        if (defaultMethod.getMfaMethodType().equals(SMS.getValue())) {
+            emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_SMS;
+        }
+
         return mfaUpdateFailureReasonOrSortedMfaMethods(
-                databaseUpdateResult, MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA);
+                databaseUpdateResult, emailNotificationIdentifier);
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateAuthApp(

@@ -296,6 +296,7 @@ public class MFAMethodsPutHandler
 
         return switch (emailNotificationIdentifier) {
             case CHANGED_AUTHENTICATOR_APP -> NotificationType.CHANGED_AUTHENTICATOR_APP;
+            case CHANGED_SMS -> NotificationType.PHONE_NUMBER_UPDATED;
             case CHANGED_DEFAULT_MFA -> NotificationType.CHANGED_DEFAULT_MFA;
             case SWITCHED_MFA_METHODS -> NotificationType.SWITCHED_MFA_METHODS;
             default -> throw new IllegalArgumentException(
@@ -315,7 +316,7 @@ public class MFAMethodsPutHandler
         }
 
         LOG.info(
-                "Backup method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
+                "Method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
                 notificationType.name());
 
         NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType, userLanguage);
