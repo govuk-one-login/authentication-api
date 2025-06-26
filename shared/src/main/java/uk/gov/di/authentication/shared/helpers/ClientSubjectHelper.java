@@ -49,24 +49,6 @@ public class ClientSubjectHelper {
                         authenticationService.getOrGenerateSalt(userProfile)));
     }
 
-    public static String getSectorIdentifierForClient(
-            ClientRegistry client, AuthSessionItem authSession, String internalSectorUri) {
-        if (authSession.getIsOneLoginService()) {
-            return returnHost(internalSectorUri);
-        }
-        if (!hasValidClientConfig(client)) {
-            String message =
-                    String.format(
-                            "ClientConfig for client %s has invalid sector id.",
-                            authSession.getClientId());
-            LOG.error(message);
-            throw new RuntimeException(message);
-        }
-        return client.getSectorIdentifierUri() != null
-                ? returnHost(client.getSectorIdentifierUri())
-                : returnHost(client.getRedirectUrls().stream().findFirst().orElseThrow());
-    }
-
     static boolean hasValidClientConfig(ClientRegistry client) {
         if (client.getRedirectUrls().size() > 1 && client.getSectorIdentifierUri() == null) {
             return client.getRedirectUrls().stream()
