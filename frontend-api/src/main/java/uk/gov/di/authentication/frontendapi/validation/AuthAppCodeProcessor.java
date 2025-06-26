@@ -7,7 +7,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -31,6 +30,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -45,7 +49,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             int maxRetries,
             CodeRequest codeRequest,
             AuditService auditService,
@@ -55,7 +59,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 userContext,
                 codeStorageService,
                 maxRetries,
-                dynamoService,
+                authenticationService,
                 auditService,
                 accountModifiersService,
                 mfaMethodsService);
@@ -120,7 +124,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             String ipAddress, String persistentSessionId, UserProfile userProfile) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
-                dynamoService.setAuthAppAndAccountVerified(
+                authenticationService.setAuthAppAndAccountVerified(
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
@@ -128,22 +132,21 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        false);
+                        false,
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION));
                 break;
             case ACCOUNT_RECOVERY:
                 if (userProfile.isMfaMethodsMigrated()) {
                     String uuid = UUID.randomUUID().toString();
                     MFAMethod authAppMfa =
                             MFAMethod.authAppMfaMethod(
-                                    codeRequest.getProfileInformation(),
-                                    true,
-                                    true,
-                                    PriorityIdentifier.DEFAULT,
-                                    uuid);
+                                    codeRequest.getProfileInformation(), true, true, DEFAULT, uuid);
                     mfaMethodsService.deleteMigratedMFAsAndCreateNewDefault(
                             emailAddress, authAppMfa);
                 } else {
-                    dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                    authenticationService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
                             emailAddress, codeRequest.getProfileInformation());
                 }
 
@@ -153,7 +156,10 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
-                        true);
+                        true,
+                        AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
@@ -180,8 +186,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     private Optional<String> getMfaCredentialValue() {
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
-        var userProfile = dynamoService.getUserProfileByEmail(emailAddress);
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(emailAddress);
+        var userProfile = authenticationService.getUserProfileByEmail(emailAddress);
 
         if (userCredentials == null) {
             LOG.info("User credentials not found");

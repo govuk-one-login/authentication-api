@@ -26,7 +26,7 @@ public abstract class MfaCodeProcessor {
     private final int maxRetries;
     public final String emailAddress;
     private final UserContext userContext;
-    protected final AuthenticationService dynamoService;
+    protected final AuthenticationService authenticationService;
     protected final AuditService auditService;
     protected final MFAMethodsService mfaMethodsService;
 
@@ -34,7 +34,7 @@ public abstract class MfaCodeProcessor {
             UserContext userContext,
             CodeStorageService codeStorageService,
             int maxRetries,
-            AuthenticationService dynamoService,
+            AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
             MFAMethodsService mfaMethodsService) {
@@ -42,7 +42,7 @@ public abstract class MfaCodeProcessor {
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
-        this.dynamoService = dynamoService;
+        this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
         this.mfaMethodsService = mfaMethodsService;
@@ -71,7 +71,8 @@ public abstract class MfaCodeProcessor {
             String phoneNumber,
             String ipAddress,
             String persistentSessionId,
-            boolean accountRecovery) {
+            boolean accountRecovery,
+            AuditService.MetadataPair... metadataPairs) {
 
         var auditContext =
                 auditContextFromUserContext(
@@ -82,11 +83,12 @@ public abstract class MfaCodeProcessor {
                         phoneNumber,
                         persistentSessionId);
 
-        auditService.submitAuditEvent(
-                auditableEvent,
-                auditContext,
-                pair("mfa-type", mfaMethodType.getValue()),
-                pair("account-recovery", accountRecovery));
+        var allPairs = new AuditService.MetadataPair[2 + metadataPairs.length];
+        allPairs[0] = pair("mfa-type", mfaMethodType.getValue());
+        allPairs[1] = pair("account-recovery", accountRecovery);
+        System.arraycopy(metadataPairs, 0, allPairs, 2, metadataPairs.length);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, allPairs);
     }
 
     void clearAccountRecoveryBlockIfPresent(

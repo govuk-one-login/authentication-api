@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -35,7 +36,9 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -53,10 +56,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class PhoneNumberCodeProcessorTest {
@@ -104,6 +111,24 @@ class PhoneNumberCodeProcessorTest {
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(3);
         when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
+
+        var userCredentials =
+                new UserCredentials()
+                        .withMfaMethods(
+                                List.of(
+                                        MFAMethod.smsMfaMethod(
+                                                true,
+                                                true,
+                                                "+447700900000",
+                                                PriorityIdentifier.DEFAULT,
+                                                "sms-id"),
+                                        MFAMethod.authAppMfaMethod(
+                                                "auth-app-secret",
+                                                true,
+                                                true,
+                                                PriorityIdentifier.BACKUP,
+                                                "auth-app-id")));
+        when(userContext.getUserCredentials()).thenReturn(Optional.of(userCredentials));
     }
 
     @ParameterizedTest
@@ -148,7 +173,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         INVALID_CODE,
-                        JourneyType.REGISTRATION,
+                        REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
@@ -199,7 +224,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         INVALID_CODE,
-                        JourneyType.REGISTRATION,
+                        REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
@@ -274,12 +299,12 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @Test
-    void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
+    void shouldPersistChangesAndEmitAuditEventWhenRegistering() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
-                        JourneyType.REGISTRATION,
+                        REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
@@ -294,12 +319,27 @@ class PhoneNumberCodeProcessorTest {
                         true);
         verify(authenticationService, never())
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
-                        AUDIT_CONTEXT,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER),
+                        eq(AUDIT_CONTEXT),
+                        captor.capture());
+        Set<AuditService.MetadataPair> actual = Set.of(captor.getValue());
+        Set<AuditService.MetadataPair> expected =
+                Set.of(
+                        AuditService.MetadataPair.pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, false),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, REGISTRATION));
+
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -323,12 +363,27 @@ class PhoneNumberCodeProcessorTest {
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(
                         anyString(), anyString(), anyBoolean(), anyBoolean());
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
-                        AUDIT_CONTEXT,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", true));
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER),
+                        eq(AUDIT_CONTEXT),
+                        captor.capture());
+        Set<AuditService.MetadataPair> actual = Set.of(captor.getValue());
+        Set<AuditService.MetadataPair> expected =
+                Set.of(
+                        AuditService.MetadataPair.pair("mfa-type", MFAMethodType.SMS.name()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name()),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, true),
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
+
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -401,7 +456,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
-                        JourneyType.REGISTRATION,
+                        REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
@@ -549,7 +604,7 @@ class PhoneNumberCodeProcessorTest {
                         NotificationType.MFA_SMS),
                 Arguments.of(
                         CodeRequestType.SMS_REGISTRATION,
-                        JourneyType.REGISTRATION,
+                        REGISTRATION,
                         NotificationType.VERIFY_PHONE_NUMBER));
     }
 }
