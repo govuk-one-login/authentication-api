@@ -8,6 +8,7 @@ import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.Map;
 
@@ -18,6 +19,9 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_PRIORITY_IDENTIFIER;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
@@ -104,7 +108,10 @@ public class CloudwatchMetricsService {
                 clientName,
                 requestedLevelOfConfidence,
                 isTestJourney,
-                false);
+                false,
+                null,
+                null,
+                null);
     }
 
     public void incrementAuthenticationSuccessWithMfa(
@@ -112,14 +119,20 @@ public class CloudwatchMetricsService {
             String clientId,
             String clientName,
             String requestedLevelOfConfidence,
-            boolean isTestJourney) {
+            boolean isTestJourney,
+            JourneyType journeyType,
+            MFAMethodType mfaMethodType,
+            PriorityIdentifier mfaMethodPriorityIdentifier) {
         incrementAuthenticationSuccess(
                 accountState,
                 clientId,
                 clientName,
                 requestedLevelOfConfidence,
                 isTestJourney,
-                true);
+                true,
+                journeyType,
+                mfaMethodType,
+                mfaMethodPriorityIdentifier);
     }
 
     private void incrementAuthenticationSuccess(
@@ -128,24 +141,41 @@ public class CloudwatchMetricsService {
             String clientName,
             String requestedLevelOfConfidence,
             boolean isTestJourney,
-            boolean mfaRequired) {
-        incrementCounter(
-                AUTHENTICATION_SUCCESS.getValue(),
-                Map.of(
-                        ACCOUNT.getValue(),
-                        accountState.name(),
-                        ENVIRONMENT.getValue(),
-                        configurationService.getEnvironment(),
-                        CLIENT.getValue(),
-                        clientId,
-                        IS_TEST.getValue(),
-                        Boolean.toString(isTestJourney),
-                        REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
-                        requestedLevelOfConfidence,
-                        MFA_REQUIRED.getValue(),
-                        Boolean.toString(mfaRequired),
-                        CLIENT_NAME.getValue(),
-                        clientName));
+            boolean mfaRequired,
+            JourneyType journeyType,
+            MFAMethodType mfaMethodType,
+            PriorityIdentifier mfaMethodPriorityIdentifier) {
+        Map<String, String> dimensions =
+                new java.util.HashMap<>(
+                        Map.of(
+                                ACCOUNT.getValue(),
+                                accountState.name(),
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                clientId,
+                                IS_TEST.getValue(),
+                                Boolean.toString(isTestJourney),
+                                REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
+                                requestedLevelOfConfidence,
+                                MFA_REQUIRED.getValue(),
+                                Boolean.toString(mfaRequired),
+                                CLIENT_NAME.getValue(),
+                                clientName));
+        if (journeyType != null) {
+            dimensions.put(JOURNEY_TYPE.getValue(), journeyType.toString());
+        }
+        if (mfaMethodType != null) {
+            dimensions.put(MFA_METHOD_TYPE.getValue(), mfaMethodType.toString());
+        }
+        if (mfaMethodPriorityIdentifier != null) {
+            dimensions.put(
+                    MFA_METHOD_PRIORITY_IDENTIFIER.getValue(),
+                    mfaMethodPriorityIdentifier.toString());
+        }
+
+        incrementCounter(AUTHENTICATION_SUCCESS.getValue(), dimensions);
+
         if (AuthSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
