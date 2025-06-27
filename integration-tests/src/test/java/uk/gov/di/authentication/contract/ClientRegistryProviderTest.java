@@ -42,6 +42,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final String CHANNEL = Channel.WEB.getValue();
     private static final boolean MAX_AGE_ENABLED = false;
     private static final boolean PKCE_ENFORCED = false;
+    private static final String LANDING_PAGE_URL = "http://landing-page.com";
 
     private DynamoClientService clientService;
 
@@ -95,6 +96,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 CLIENT_LOCS,
                 CHANNEL,
                 MAX_AGE_ENABLED,
-                PKCE_ENFORCED);
+                PKCE_ENFORCED,
+                LANDING_PAGE_URL);
     }
 }

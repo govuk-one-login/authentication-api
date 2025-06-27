@@ -91,6 +91,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private Boolean pkceEnforced;
 
+    @SerializedName("landing_page_url")
+    @Expose
+    private String landingPageUrl;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -175,6 +179,10 @@ public class UpdateClientConfigRequest {
 
     public Boolean getPKCEEnforced() {
         return pkceEnforced;
+    }
+
+    public String getLandingPageUrl() {
+        return landingPageUrl;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -280,6 +288,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setPKCEEnforced(boolean pkceEnforced) {
         this.pkceEnforced = pkceEnforced;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setLandingPageUrl(String landingPageUrl) {
+        this.landingPageUrl = landingPageUrl;
         return this;
     }
 }

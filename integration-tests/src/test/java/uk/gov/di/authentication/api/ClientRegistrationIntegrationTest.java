@@ -91,7 +91,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         JWSAlgorithm.ES256.getName(),
                         Channel.WEB.getValue(),
                         false,
-                        false);
+                        false,
+                        "http://landing-page.com");
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 

@@ -125,7 +125,8 @@ public class UpdateClientConfigHandler
                             clientRegistry.getIdTokenSigningAlgorithm(),
                             clientRegistry.getChannel(),
                             clientRegistry.getMaxAgeEnabled(),
-                            clientRegistry.getPKCEEnforced());
+                            clientRegistry.getPKCEEnforced(),
+                            clientRegistry.getLandingPageUrl());
             LOG.info("Client updated");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException | NullPointerException e) {
