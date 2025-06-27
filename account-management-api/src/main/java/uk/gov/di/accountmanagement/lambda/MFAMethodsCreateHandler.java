@@ -16,12 +16,22 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
-import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.*;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -43,7 +53,8 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1079;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1080;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -111,44 +122,78 @@ public class MFAMethodsCreateHandler
                 () -> mfaMethodsHandler(input, context));
     }
 
-    private APIGatewayProxyResponseEvent mfaMethodsHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
-
+    private Result<APIGatewayProxyResponseEvent, UserProfile>
+            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
         if (!configurationService.isMfaMethodManagementApiEnabled()) {
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063));
         }
 
         var subject = input.getPathParameters().get("publicSubjectId");
 
         if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, ERROR_1001));
         }
 
         Optional<UserProfile> maybeUserProfile =
                 dynamoService.getOptionalUserProfileFromPublicSubject(subject);
         if (maybeUserProfile.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
         }
+
         UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079));
+        }
+
+        return Result.success(userProfile);
+    }
+
+    private APIGatewayProxyResponseEvent mfaMethodsHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
+
+        var maybePassedGuardConditions = getUserProfileWhenGuardConditionsPassed(input);
+
+        if (maybePassedGuardConditions.isFailure()) {
+            return maybePassedGuardConditions.getFailure();
+        }
+
+        LOG.info("Request passed guard conditions");
+
+        var userProfile = maybePassedGuardConditions.getSuccess();
 
         var maybeMigrationErrorResponse =
                 migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
 
-        if (maybeMigrationErrorResponse.isPresent()) return maybeMigrationErrorResponse.get();
+        if (maybeMigrationErrorResponse.isPresent()) {
+            return maybeMigrationErrorResponse.get();
+        }
 
         MfaMethodCreateRequest mfaMethodCreateRequest = null;
+
         try {
             mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
         } catch (Json.JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            LOG.error("Invalid request to create an MFA method: ", e);
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         }
 
         if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1080);
+            LOG.error(ERROR_1080.name());
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1080);
         }
 
         if (mfaMethodCreateRequest.mfaMethod().method()
@@ -159,17 +204,17 @@ public class MFAMethodsCreateHandler
                             requestSmsMfaDetail.otp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
+                LOG.info("Invalid OTP presented.");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
         }
 
-        LOG.info("Update MFA POST called with: {}", mfaMethodCreateRequest);
         Result<MfaCreateFailureReason, MFAMethod> addBackupMfaResult =
                 mfaMethodsService.addBackupMfa(
                         userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
         Result<ErrorResponse, AuditContext> auditContextResult =
-                buildAuditcontext(input, userProfile);
+                buildAuditContext(input, userProfile);
 
         if (auditContextResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
@@ -196,7 +241,7 @@ public class MFAMethodsCreateHandler
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
 
-        LOG.info("Backup method added successfully.  Adding confirmation message to SQS queue");
+        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
@@ -206,6 +251,7 @@ public class MFAMethodsCreateHandler
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Message successfully added to queue. Generating successful response");
         } catch (Json.JsonException e) {
+            LOG.error("Failed to add message to queue: ", e);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
         }
 
@@ -221,6 +267,7 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyResponse(
                     200, backupMfaMethodAsResponse.getSuccess(), true);
         } catch (Json.JsonException e) {
+            LOG.error("Failed to build successful resposne: ", e);
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
         }
     }
@@ -239,19 +286,9 @@ public class MFAMethodsCreateHandler
         };
     }
 
-    private Result<ErrorResponse, AuditContext> buildAuditcontext(
+    private Result<ErrorResponse, AuditContext> buildAuditContext(
             APIGatewayProxyRequestEvent input, UserProfile userProfile) {
         try {
-            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-
-            if (PrincipalValidationHelper.principalIsInvalid(
-                    userProfile,
-                    configurationService.getInternalSectorUri(),
-                    dynamoService,
-                    authorizerParams)) {
-                return Result.failure(ERROR_1079);
-            }
-
             String currentDefaultMfaType = "NONE";
 
             UserCredentials userCredentials =
