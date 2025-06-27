@@ -75,6 +75,7 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
@@ -180,12 +181,14 @@ public class AuthorisationHandler
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        jwksService);
+                        jwksService,
+                        stateStorageService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
@@ -209,9 +212,14 @@ public class AuthorisationHandler
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
-                        configurationService, redis, kmsConnectionService, jwksService);
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        jwksService,
+                        stateStorageService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);

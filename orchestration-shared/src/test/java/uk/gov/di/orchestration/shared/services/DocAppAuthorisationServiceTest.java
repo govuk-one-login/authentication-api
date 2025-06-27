@@ -84,12 +84,14 @@ class DocAppAuthorisationServiceTest {
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
                     configurationService,
                     redisConnectionService,
                     kmsConnectionService,
-                    jwksService);
+                    jwksService,
+                    stateStorageService);
     private PrivateKey privateKey;
     private RSAKey publicRsaKey;
 
@@ -204,15 +206,15 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void shouldSaveStateToRedis() throws Json.JsonException {
+    void shouldSaveStateToRedisAndDynamo() throws Json.JsonException {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
 
+        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
         verify(redisConnectionService)
                 .saveWithExpiry(
-                        STATE_STORAGE_PREFIX + sessionId,
-                        objectMapper.writeValueAsString(STATE),
-                        SESSION_EXPIRY);
+                        prefixedSessionId, objectMapper.writeValueAsString(STATE), SESSION_EXPIRY);
+        verify(stateStorageService).storeState(prefixedSessionId, STATE.getValue());
     }
 
     @ParameterizedTest
