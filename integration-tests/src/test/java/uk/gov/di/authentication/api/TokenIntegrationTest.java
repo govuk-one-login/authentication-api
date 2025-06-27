@@ -88,6 +88,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.AUTH_OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -185,7 +186,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
 
         var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
         assertTrue(orchClientSession.isPresent());
@@ -228,7 +230,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
 
         var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
         assertTrue(orchClientSession.isPresent());
@@ -274,7 +277,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
 
         var orchClientSession = orchClientSessionExtension.getClientSession(CLIENT_SESSION_ID);
         assertTrue(orchClientSession.isPresent());
@@ -318,7 +322,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getClaim(VOT.getValue()),
                 equalTo("Cl.Cm"));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
     }
 
     @Test
@@ -386,7 +391,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
         assertNull(idTokenClaims.getClaim("auth_time"));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
     }
 
     @Test
@@ -426,7 +432,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 not(equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL))));
         assertNull(idTokenClaims.getClaim("auth_time"));
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
     }
 
     @Test
@@ -474,7 +481,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
     }
 
     @Test
@@ -504,7 +512,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        AuditAssertionsHelper.assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_OIDC_TOKEN_GENERATED));
     }
 
     @Test

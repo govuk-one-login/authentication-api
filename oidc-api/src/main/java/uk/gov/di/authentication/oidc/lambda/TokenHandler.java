@@ -21,6 +21,8 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -34,6 +36,7 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodExcep
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -50,6 +53,7 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +66,7 @@ import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCh
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
+import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.AUTH_OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -88,6 +93,7 @@ public class TokenHandler
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
+    private final AuditService auditService;
 
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
@@ -100,7 +106,8 @@ public class TokenHandler
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            AuditService auditService) {
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
@@ -110,6 +117,7 @@ public class TokenHandler
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.auditService = auditService;
     }
 
     public TokenHandler(ConfigurationService configurationService) {
@@ -131,6 +139,7 @@ public class TokenHandler
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -152,6 +161,7 @@ public class TokenHandler
                         new DynamoClientService(configurationService),
                         new ClientSignatureValidationService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public TokenHandler() {
@@ -289,6 +299,25 @@ public class TokenHandler
         cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
+
+        UserProfile userProfile =
+                dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
+        String internalPairwiseId =
+                userProfile.getSalt() == null
+                        ? AuditService.UNKNOWN
+                        : ClientSubjectHelper.calculatePairwiseIdentifier(
+                                userProfile.getSubjectID(),
+                                URI.create(configurationService.getInternalSectorURI()),
+                                SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
+
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(internalPairwiseId)
+                        .withGovukSigninJourneyId(clientSessionId);
+
+        auditService.submitAuditEvent(
+                AUTH_OIDC_TOKEN_GENERATED, clientRegistry.getClientID(), user);
+
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 
