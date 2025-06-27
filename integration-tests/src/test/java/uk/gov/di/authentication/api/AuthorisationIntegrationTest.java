@@ -53,6 +53,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -142,6 +143,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchClientSessionExtension orchClientSessionExtention =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
 
