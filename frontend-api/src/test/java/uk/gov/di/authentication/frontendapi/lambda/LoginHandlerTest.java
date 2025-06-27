@@ -247,12 +247,11 @@ class LoginHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithoutMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID.getValue(),
                         CLIENT_NAME,
                         "P0",
-                        false,
                         false);
 
         verifyInternalCommonSubjectIdentifierSaved();
@@ -292,12 +291,11 @@ class LoginHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithoutMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID.getValue(),
                         CLIENT_NAME,
                         "P0",
-                        false,
                         false);
 
         verify(authSessionService)
@@ -344,12 +342,11 @@ class LoginHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithoutMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID.getValue(),
                         CLIENT_NAME,
                         "P0",
-                        false,
                         false);
 
         verify(authSessionService)
@@ -395,12 +392,11 @@ class LoginHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithoutMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID.getValue(),
                         CLIENT_NAME,
                         "P0",
-                        false,
                         false);
 
         verify(authSessionService)
