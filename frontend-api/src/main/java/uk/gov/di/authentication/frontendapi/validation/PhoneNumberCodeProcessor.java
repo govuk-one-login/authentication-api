@@ -116,6 +116,16 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1034);
         }
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(
+                        notificationType.getMfaMethodType(), journeyType);
+        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info("Code blocked for session");
+            return Optional.of(ErrorResponse.ERROR_1034);
+        }
+
         boolean isTestClient;
         try {
             isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);

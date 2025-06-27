@@ -655,6 +655,34 @@ class MfaHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @Test
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodesUsingDeprecatedPrefix() {
+        var journeyType = JourneyType.SIGN_IN;
+        usingValidSession();
+        var codeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(MFAMethodType.SMS, journeyType);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(codeStorageService.isBlockedForEmail(
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
+                .thenReturn(true);
+
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1026));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
+                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(
@@ -679,6 +707,27 @@ class MfaHandlerTest {
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @ParameterizedTest
+    @MethodSource("smsJourneyTypes")
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodesUsingDeprecatedPrefix(
+            JourneyType journeyType) {
+        usingValidSession();
+        var codeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(MFAMethodType.SMS, journeyType);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                .thenReturn(true);
+
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
     }
 
     @Test

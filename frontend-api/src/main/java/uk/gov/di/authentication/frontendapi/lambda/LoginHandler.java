@@ -17,12 +17,14 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -66,11 +68,13 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    public static final String CODE_BLOCKED_KEY_PREFIX =
+    public static final String PASSWORD_BLOCKED_KEY_PREFIX =
             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     public static final String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
@@ -239,7 +243,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
         }
 
-        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(
+                userProfile.getEmail(), PASSWORD_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
@@ -365,6 +370,22 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
+        var defaultMfaMethod =
+                MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
+
+        if (userMfaDetail.isMfaRequired() && defaultMfaMethod.isPresent()) {
+            Optional<ErrorResponse> codeBlocks =
+                    checkMfaCodeBlocks(
+                            userProfile.getEmail(),
+                            MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType()),
+                            request.getJourneyType() != null
+                                    ? request.getJourneyType()
+                                    : JourneyType.SIGN_IN);
+
+            if (codeBlocks.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
+            }
+        }
 
         boolean termsAndConditionsAccepted =
                 isTermsAndConditionsAccepted(authSessionItem, userProfile);
@@ -381,6 +402,49 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private Optional<ErrorResponse> checkMfaCodeBlocks(
+            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        CodeRequestType.SupportedCodeType.MFA, journeyType);
+        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
+
+        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    newCodeRequestBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1026);
+        }
+        if (codeStorageService.isBlockedForEmail(
+                email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    newCodeRequestBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1026);
+        }
+
+        if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    newCodeBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1027);
+        }
+        if (deprecatedCodeRequestType != null
+                && codeStorageService.isBlockedForEmail(
+                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    newCodeBlockPrefix);
+            return Optional.of(ErrorResponse.ERROR_1027);
+        }
+        return Optional.empty();
     }
 
     private APIGatewayProxyResponseEvent handleInvalidCredentials(
@@ -497,7 +561,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         LOG.info("User has now exceeded max password retries, setting block");
 
         codeStorageService.saveBlockedForEmail(
-                email, CODE_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
+                email, PASSWORD_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
 
         codeStorageService.deleteIncorrectPasswordCount(email);
 

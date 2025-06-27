@@ -70,6 +70,7 @@ import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extract
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
@@ -195,6 +196,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            var deprecatedCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            notificationType.getMfaMethodType(), journeyType);
+            if (deprecatedCodeRequestType != null
+                    && isCodeBlockedForSession(
+                            authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+                ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
+                return generateApiGatewayProxyErrorResponse(400, errorResponse);
+            }
+
             var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
             List<MFAMethod> retrievedMfaMethods = new ArrayList<>();
             if (retrieveMfaMethods.isFailure()) {
@@ -261,12 +273,46 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
+            if (codeRequestType.equals(CodeRequestType.MFA_PW_RESET_MFA)) {
                 SessionHelper.updateSessionWithSubject(
                         userContext,
                         authSessionService,
                         authenticationService,
                         configurationService);
+            }
+
+            if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
+                var mfaCodeRequestType =
+                        CodeRequestType.getCodeRequestType(
+                                CodeRequestType.SupportedCodeType.MFA,
+                                JourneyType.PASSWORD_RESET_MFA);
+                // TODO remove temporary ZDD measure to reference existing deprecated keys when
+                //  expired
+                var deprecatedMfaCodeRequestType =
+                        CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA);
+
+                if (isCodeBlockedForSession(
+                        authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1026);
+                }
+                if (deprecatedMfaCodeRequestType != null
+                        && isCodeBlockedForSession(
+                                authSession,
+                                CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1026);
+                }
+
+                if (isCodeBlockedForSession(
+                        authSession, CODE_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1027);
+                }
+                if (deprecatedMfaCodeRequestType != null
+                        && isCodeBlockedForSession(
+                                authSession,
+                                CODE_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1027);
+                }
             }
 
             processSuccessfulCodeRequest(

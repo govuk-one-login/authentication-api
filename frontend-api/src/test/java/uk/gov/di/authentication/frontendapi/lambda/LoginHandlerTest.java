@@ -24,6 +24,7 @@ import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapt
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -91,6 +92,8 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSIO
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -1139,6 +1142,106 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
         verifyAuthSessionIsSaved();
+    }
+
+    private static Stream<Arguments> validMfaMethods() {
+        return Stream.of(Arguments.of(AUTH_APP), Arguments.of(SMS));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validMfaMethods")
+    void shouldCheckForMFACodeBlocks(MFAMethodType mfaMethodType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(codeStorageService)
+                .isBlockedForEmail(
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
+        verify(codeStorageService)
+                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
+        verify(codeStorageService)
+                .isBlockedForEmail(
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+        verify(codeStorageService)
+                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validMfaMethods")
+    void shouldNotCheckForMFACodeBlocksIfUserDoesNotHaveAnMFA(MFAMethodType mfaMethodType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(codeStorageService, never())
+                .isBlockedForEmail(
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
+        verify(codeStorageService, never())
+                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
+        verify(codeStorageService, never())
+                .isBlockedForEmail(
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+        verify(codeStorageService, never())
+                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+    }
+
+    private static Stream<Arguments> validMfaMethodsWithExpectedBlock() {
+        return Stream.of(
+                Arguments.of(
+                        AUTH_APP,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
+                        ErrorResponse.ERROR_1027),
+                Arguments.of(
+                        AUTH_APP,
+                        CODE_BLOCKED_KEY_PREFIX + AUTH_APP + "_SIGN_IN",
+                        ErrorResponse.ERROR_1027),
+                Arguments.of(
+                        SMS,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
+                        ErrorResponse.ERROR_1027),
+                Arguments.of(
+                        SMS, CODE_BLOCKED_KEY_PREFIX + SMS + "_SIGN_IN", ErrorResponse.ERROR_1027),
+                Arguments.of(
+                        SMS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
+                        ErrorResponse.ERROR_1026),
+                Arguments.of(
+                        SMS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + SMS + "_SIGN_IN",
+                        ErrorResponse.ERROR_1026));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validMfaMethodsWithExpectedBlock")
+    void shouldReturn400ErrorWhenUserHasAnMFACodeBlock(
+            MFAMethodType mfaMethodType, String blockKeyPrefix, ErrorResponse expectedError) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        when(codeStorageService.isBlockedForEmail(EMAIL, blockKeyPrefix)).thenReturn(true);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(expectedError));
     }
 
     private void usingValidAuthSessionWithAchievedCredentialStrength(
