@@ -169,19 +169,25 @@ public class AuthorisationHandler
 
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService);
+                new OrchestrationAuthorizationService(
+                        configurationService,
+                        kmsConnectionService,
+                        noSessionOrchestrationService,
+                        stateStorageService);
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
         this.requestObjectAuthorizeValidator =
                 new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        var jwksService = new JwksService(configurationService, kmsConnectionService);
-        var stateStorageService = new StateStorageService(configurationService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
@@ -190,8 +196,6 @@ public class AuthorisationHandler
                         jwksService,
                         stateStorageService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
