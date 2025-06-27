@@ -765,7 +765,7 @@ resource "aws_dynamodb_resource_policy" "authentication_attempt_table" {
 resource "aws_dynamodb_resource_policy" "auth_session_table" {
   count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.auth_session_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document[0].json
 }
 
 resource "aws_dynamodb_resource_policy" "id_reverification_state" {
@@ -783,7 +783,7 @@ locals {
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
-  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrictable actions
+  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
   count = local.allow_cross_account_access ? 1 : 0
   statement {
     actions = [
@@ -803,4 +803,29 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
     }
     resources = ["*"]
   }
+}
+
+data "aws_iam_policy_document" "auth_cross_account_table_delete_item_policy_document" {
+  #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
+  #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
+  count = local.allow_cross_account_access ? 1 : 0
+  statement {
+    actions = [
+      "dynamodb:DeleteItem"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "auth_cross_account_table_resource_combined_policy_document" {
+  count = local.allow_cross_account_access ? 1 : 0
+  source_policy_documents = [
+    data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json,
+    data.aws_iam_policy_document.auth_cross_account_table_delete_item_policy_document[0].json
+  ]
 }

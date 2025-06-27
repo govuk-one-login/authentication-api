@@ -86,6 +86,42 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       aws_kms_key.account_modifiers_table_encryption_key.arn
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKmsSigningKeys"
+    effect = "Allow"
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    resources = [
+      aws_kms_key.id_token_signing_key.arn
+    ]
+  }
+
+  statement {
+    sid    = "AllowAPITests"
+    effect = "Allow"
+    actions = [
+      "apigateway:GET",
+      "lambda:InvokeFunction",
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:DeleteObject"
+    ]
+    resources = [
+      "arn:aws:apigateway:eu-west-2::/restapis",
+      "arn:aws:apigateway:eu-west-2::/restapis/*",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-api_gateway_authorizer",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-authenticate-lambda",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-mfa-methods-create-lambda",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-mfa-methods-retrieve-lambda",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-mfa-methods-update-lambda",
+      "arn:aws:lambda:eu-west-2:${data.aws_caller_identity.current.account_id}:function:${var.environment}-send-otp-notification-lambda",
+      "arn:aws:s3:::${var.environment}-am-api-acceptance-tests-otp",
+      "arn:aws:s3:::${var.environment}-am-api-acceptance-tests-otp/*"
+    ]
+  }
 }
 
 # Create  policy to the role
