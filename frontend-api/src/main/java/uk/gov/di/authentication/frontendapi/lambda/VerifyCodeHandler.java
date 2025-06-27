@@ -252,7 +252,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         subjectId,
                         errorResponse.get(),
                         authSession,
-                        auditContext);
+                        auditContext,
+                        maybeRequestedSmsMfaMethod,
+                        userProfile);
 
                 if (userHasExceededAllowedAttemptsForReauthenticationJourney(
                         journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
@@ -276,7 +278,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     journeyType,
                     auditContext,
                     maybeRpPairwiseId,
-                    maybeRequestedSmsMfaMethod);
+                    maybeRequestedSmsMfaMethod,
+                    userProfile);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -321,7 +324,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            UserProfile userProfile) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
@@ -336,7 +341,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         } else {
             processBlockedCodeSession(
-                    errorResponse, authSession, codeRequest, journeyType, auditContext);
+                    errorResponse,
+                    authSession,
+                    codeRequest,
+                    journeyType,
+                    auditContext,
+                    maybeRequestedSmsMfaMethod,
+                    userProfile);
         }
     }
 
@@ -424,7 +435,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId,
-            Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            UserProfile userProfile) {
         var authSession = userContext.getAuthSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -472,7 +484,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.deleteOtpCode(identifier, notificationType);
 
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
+                metadataPairs(
+                        notificationType,
+                        journeyType,
+                        codeRequest,
+                        loginFailureCount,
+                        false,
+                        maybeRequestedSmsMfaMethod,
+                        userProfile,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
     }
@@ -512,7 +532,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             VerifyCodeRequest codeRequest,
             Integer loginFailureCount,
-            boolean isBlockedRequest) {
+            boolean isBlockedRequest,
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            UserProfile userProfile,
+            AuditableEvent auditableEvent) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("notification-type", notificationType.name()));
         metadataPairs.add(pair("account-recovery", journeyType == JourneyType.ACCOUNT_RECOVERY));
@@ -521,6 +544,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             metadataPairs.add(pair("mfa-type", MFAMethodType.SMS.getValue()));
             metadataPairs.add(pair("loginFailureCount", loginFailureCount));
             metadataPairs.add(pair("MFACodeEntered", codeRequest.code()));
+            if (auditableEvent == FrontendAuditableEvent.AUTH_INVALID_CODE_SENT) {
+                if (!userProfile.isMfaMethodsMigrated()) {
+                    metadataPairs.add(pair("mfa-method", "default"));
+                } else {
+                    maybeRequestedSmsMfaMethod.ifPresent(
+                            mfaMethod ->
+                                    metadataPairs.add(
+                                            pair(
+                                                    "mfa-method",
+                                                    mfaMethod.getPriority().toLowerCase())));
+                }
+            }
         }
         if (notificationType == MFA_SMS && isBlockedRequest) {
             metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
@@ -533,7 +568,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionItem authSession,
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            Optional<MFAMethod> maybeRequestedSmsMfaMethod,
+            UserProfile userProfile) {
         var notificationType = codeRequest.notificationType();
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
@@ -560,7 +597,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
         var metadataPairArray =
-                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
+                metadataPairs(
+                        notificationType,
+                        journeyType,
+                        codeRequest,
+                        loginFailureCount,
+                        true,
+                        maybeRequestedSmsMfaMethod,
+                        userProfile,
+                        auditableEvent);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 

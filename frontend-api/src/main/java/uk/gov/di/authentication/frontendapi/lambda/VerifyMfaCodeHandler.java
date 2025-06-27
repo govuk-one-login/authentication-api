@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -45,6 +46,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -334,7 +336,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_MFA_CODE);
             }
-            auditFailure(codeRequest, errorResponse, authSession, auditContext);
+            auditFailure(codeRequest, errorResponse, authSession, auditContext, userProfile);
         } else {
             auditSuccess(codeRequest, authSession, auditContext);
             processSuccessfulCodeSession(
@@ -371,8 +373,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthSessionItem authSession,
             AuditContext auditContext) {
         var metadataPairs =
-                metadataPairsForEvent(
-                        AUTH_CODE_VERIFIED, authSession.getEmailAddress(), codeRequest);
+                metadataPairsForAuthCodeVerified(authSession.getEmailAddress(), codeRequest);
         auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
     }
 
@@ -380,10 +381,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            UserProfile userProfile) {
         var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
         var metadataPairs =
-                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
+                metadataPairsForEvent(
+                        auditableEvent, authSession.getEmailAddress(), codeRequest, userProfile);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
@@ -522,8 +525,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
+    private AuditService.MetadataPair[] metadataPairsForAuthCodeVerified(
+            String email, VerifyMfaCodeRequest codeRequest) {
+        return this.metadataPairsForEvent(
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED, email, codeRequest, null);
+    }
+
     private AuditService.MetadataPair[] metadataPairsForEvent(
-            FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
+            FrontendAuditableEvent auditableEvent,
+            String email,
+            VerifyMfaCodeRequest codeRequest,
+            UserProfile userProfile) {
         var methodType = codeRequest.getMfaMethodType();
         var basicMetadataPairs =
                 List.of(
@@ -539,9 +551,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
                                 codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-                        yield List.of(
-                                pair("loginFailureCount", failureCount),
-                                pair("MFACodeEntered", codeRequest.getCode()));
+
+                        ArrayList<AuditService.MetadataPair> pairs =
+                                new ArrayList<>(
+                                        List.of(
+                                                pair("loginFailureCount", failureCount),
+                                                pair("MFACodeEntered", codeRequest.getCode())));
+
+                        addPriorityPair(email, codeRequest, pairs, userProfile);
+                        yield pairs;
                     }
                     case AUTH_CODE_VERIFIED -> List.of(
                             pair("MFACodeEntered", codeRequest.getCode()));
@@ -549,6 +567,44 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
                 .toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private void addPriorityPair(
+            String email,
+            VerifyMfaCodeRequest codeRequest,
+            ArrayList<AuditService.MetadataPair> pairs,
+            UserProfile userProfile) {
+        if (userProfile.isMfaMethodsMigrated()
+                && (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
+                        || codeRequest.getMfaMethodType() == MFAMethodType.SMS)) {
+            List<MFAMethod> mfaMethods =
+                    authenticationService.getUserCredentialsFromEmail(email).getMfaMethods();
+
+            String priorityIdentifier = getMfaMethodPriority(mfaMethods, codeRequest);
+            pairs.add(pair("mfa-method", priorityIdentifier));
+        } else {
+            pairs.add(pair("mfa-method", "default"));
+        }
+    }
+
+    private String getMfaMethodPriority(
+            List<MFAMethod> mfaMethods, VerifyMfaCodeRequest codeRequest) {
+        return mfaMethods.stream()
+                .filter(method -> matchesMfaMethodType(method, codeRequest))
+                .filter(method -> matchesDestinationIfSms(method, codeRequest))
+                .findFirst()
+                .map(MFAMethod::getPriority)
+                .map(String::toLowerCase)
+                .orElse(AuditService.UNKNOWN);
+    }
+
+    private boolean matchesMfaMethodType(MFAMethod method, VerifyMfaCodeRequest codeRequest) {
+        return method.getMfaMethodType().equals(codeRequest.getMfaMethodType().getValue());
+    }
+
+    private boolean matchesDestinationIfSms(MFAMethod method, VerifyMfaCodeRequest codeRequest) {
+        return codeRequest.getMfaMethodType() != MFAMethodType.SMS
+                || method.getDestination().equals(codeRequest.getProfileInformation());
     }
 
     private Optional<String> getRpPairwiseId(
