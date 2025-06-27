@@ -7,6 +7,7 @@ import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 import static org.awaitility.Awaitility.await;
@@ -75,7 +76,7 @@ public class AuditAssertionsHelper {
         }
     }
 
-    public static void assertTxmaAuditEventsReceived(
+    public static List<String> assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
         var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
@@ -116,6 +117,8 @@ public class AuditAssertionsHelper {
                     var event = asJson(sentEvent);
                     assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
                 });
+
+        return sentEvents;
     }
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(
