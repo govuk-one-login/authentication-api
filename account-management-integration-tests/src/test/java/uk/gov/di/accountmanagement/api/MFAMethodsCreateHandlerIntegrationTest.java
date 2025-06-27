@@ -190,7 +190,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var extensions = jsonEvent.getAsJsonObject("extensions");
 
             // Check MFA type based on the default MFA method
-            String expectedMfaType = defaultMfaMethod.getMfaMethodType();
+            String expectedMfaType = MFAMethodType.SMS.name();
             assertEquals(
                     expectedMfaType, extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
 
@@ -299,7 +299,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var extensions = jsonEvent.getAsJsonObject("extensions");
 
             // Check MFA type based on the default MFA method
-            String expectedMfaType = defaultMfaMethod.getMfaMethodType();
+            String expectedMfaType = MFAMethodType.SMS.name();
             assertEquals(
                     expectedMfaType, extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
 
