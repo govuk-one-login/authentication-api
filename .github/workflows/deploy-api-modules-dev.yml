@@ -55,7 +55,7 @@ jobs:
       shell: ${{ steps.fetch-pr-metadata.outputs.shell }}
     steps:
       - name: Fetch PR Metadata
-        uses: govuk-one-login/authentication-artifact-metadata-action@d0ea2b26de2edf3ba08e649f9f06e6300460f2f6
+        uses: govuk-one-login/authentication-artifact-metadata-action@1184fbdf9626b4485932595462b7bb6efc3d501e # v1.0.0
         id: fetch-pr-metadata
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
