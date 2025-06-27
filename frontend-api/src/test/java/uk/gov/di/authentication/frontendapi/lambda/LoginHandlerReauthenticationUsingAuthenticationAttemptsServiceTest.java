@@ -203,7 +203,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
@@ -304,7 +304,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any(), any()))
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
