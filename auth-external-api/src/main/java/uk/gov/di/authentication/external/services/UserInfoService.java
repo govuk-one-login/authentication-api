@@ -7,25 +7,32 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import java.util.Objects;
 
 public class UserInfoService {
 
     private final AuthenticationService authenticationService;
+    private final MFAMethodsService mfaMethodsService;
     private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
             AuthenticationService authenticationService,
+            MFAMethodsService mfaMethodsService,
             ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
+        this.mfaMethodsService = mfaMethodsService;
         this.configurationService = configurationService;
     }
 
@@ -78,17 +85,50 @@ public class UserInfoService {
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.EMAIL_VERIFIED.getValue())) {
             userInfo.setEmailVerified(userProfile.isEmailVerified());
         }
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-        }
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
-            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-        }
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.SALT.getValue())) {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
             LOG.info("is salt from UserProfile defined: {}", base64StringFromSalt != null);
             userInfo.setClaim("salt", base64StringFromSalt);
         }
+
+        var phoneData = getPhoneDataIfSMSIsDefault(userProfile);
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_NUMBER.getValue())) {
+            userInfo.setPhoneNumber(phoneData.phoneNumber());
+        }
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.PHONE_VERIFIED.getValue())) {
+            userInfo.setPhoneNumberVerified(phoneData.phoneNumberVerified());
+        }
+    }
+
+    public record PhoneData(String phoneNumber, boolean phoneNumberVerified) {}
+
+    public PhoneData getPhoneDataIfSMSIsDefault(UserProfile userProfile) {
+        var retrievedMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail(), true);
+        if (retrievedMfaMethods.isFailure()) {
+            LOG.warn("Default MFA retrieval failed, error: {}", retrievedMfaMethods.getFailure());
+            return new PhoneData(null, false);
+        }
+
+        var defaultMfaMethod =
+                retrievedMfaMethods.getSuccess().stream()
+                        .filter(
+                                method ->
+                                        Objects.equals(
+                                                method.getPriority(),
+                                                PriorityIdentifier.DEFAULT.toString()))
+                        .findFirst();
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.warn("No default MFA method found");
+            return new PhoneData(null, false);
+        }
+
+        if (Objects.equals(
+                defaultMfaMethod.get().getMfaMethodType(), MFAMethodType.SMS.getValue())) {
+            return new PhoneData(
+                    defaultMfaMethod.get().getDestination(),
+                    defaultMfaMethod.get().isMethodVerified());
+        }
+        return new PhoneData(null, false);
     }
 
     private void addClaimsFromSession(

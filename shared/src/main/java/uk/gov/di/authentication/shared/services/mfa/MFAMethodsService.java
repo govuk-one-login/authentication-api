@@ -95,10 +95,15 @@ public class MFAMethodsService {
         return getMfaMethods(email, false);
     }
 
-    private Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
             String email, boolean readOnly) {
         var userProfile = persistentService.getUserProfileByEmail(email);
         var userCredentials = persistentService.getUserCredentialsFromEmail(email);
+        return getMfaMethods(userProfile, userCredentials, readOnly);
+    }
+
+    public Result<MfaRetrieveFailureReason, List<MFAMethod>> getMfaMethods(
+            UserProfile userProfile, UserCredentials userCredentials, boolean readOnly) {
         if (userProfile == null || userCredentials == null) {
             return Result.failure(USER_DOES_NOT_HAVE_ACCOUNT);
         }
@@ -169,16 +174,18 @@ public class MFAMethodsService {
                 mfaIdentifier = method.getMfaIdentifier();
             } else {
                 mfaIdentifier = UUID.randomUUID().toString();
-                var result =
-                        persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
-                                userProfile.getEmail(), mfaIdentifier);
-                if (result.isFailure()) {
-                    LOG.error(
-                            "Unexpected error updating non migrated auth app mfa identifier: {}",
-                            result.getFailure());
-                    return Result.failure(
-                            MfaRetrieveFailureReason
-                                    .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);
+                if (!readOnly) {
+                    var result =
+                            persistentService.setMfaIdentifierForNonMigratedUserEnabledAuthApp(
+                                    userProfile.getEmail(), mfaIdentifier);
+                    if (result.isFailure()) {
+                        LOG.error(
+                                "Unexpected error updating non migrated auth app mfa identifier: {}",
+                                result.getFailure());
+                        return Result.failure(
+                                MfaRetrieveFailureReason
+                                        .UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP);
+                    }
                 }
             }
             return Result.success(
