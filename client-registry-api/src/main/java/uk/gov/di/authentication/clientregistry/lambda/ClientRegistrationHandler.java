@@ -121,7 +121,8 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getClientLoCs(),
                     clientRegistrationRequest.getChannel(),
                     clientRegistrationRequest.isMaxAgeEnabled(),
-                    clientRegistrationRequest.isPkceEnforced());
+                    clientRegistrationRequest.isPkceEnforced(),
+                    null);
 
             var clientRegistrationResponse =
                     new ClientRegistrationResponse(
