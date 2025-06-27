@@ -16,11 +16,13 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
@@ -29,6 +31,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -38,6 +41,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -50,13 +54,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.*;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -76,7 +88,9 @@ class MFAMethodsCreateHandlerTest {
     private static final String TEST_AUTH_APP_ID = "f2ec40f3-9e63-496c-a0a5-a3bdafee868b";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final String TEST_CLIENT_ID = "some-client-id";
+    private static final String TEST_NON_CLIENT_SESSION_ID = "some-non-client-session-id";
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
+    private static final String TEST_IP_ADDRESS = "123.123.123.123";
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
     private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -87,13 +101,81 @@ class MFAMethodsCreateHandlerTest {
             mock(CloudwatchMetricsService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
-            new UserProfile().withSubjectID(TEST_PUBLIC_SUBJECT).withEmail(TEST_EMAIL);
+            new UserProfile()
+                    .withSubjectID(TEST_PUBLIC_SUBJECT)
+                    .withEmail(TEST_EMAIL)
+                    .withPhoneNumber(TEST_PHONE_NUMBER);
     private static final String TEST_INTERNAL_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private final Json objectMapper = SerializationService.getInstance();
 
+    private final AuditService auditService = mock(AuditService.class);
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    SESSION_ID,
+                    TEST_NON_CLIENT_SESSION_ID,
+                    TEST_INTERNAL_SUBJECT,
+                    TEST_EMAIL,
+                    TEST_IP_ADDRESS,
+                    TEST_PHONE_NUMBER,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                    new ArrayList<>());
+
     private MFAMethodsCreateHandler handler;
+
+    private APIGatewayProxyRequestEvent generateApiGatewayEvent(
+            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String principal) {
+
+        String body =
+                mfaDetail instanceof RequestSmsMfaDetail
+                        ? format(
+                                """
+                                 { "mfaMethod": {
+                                     "priorityIdentifier": "%s",
+                                     "method": {
+                                         "mfaMethodType": "SMS",
+                                         "phoneNumber": "%s",
+                                         "otp": "%s"
+                                     }
+                                     }
+                                 }
+                                """,
+                                priorityIdentifier,
+                                ((RequestSmsMfaDetail) mfaDetail).phoneNumber(),
+                                ((RequestSmsMfaDetail) mfaDetail).otp())
+                        : format(
+                                """
+                                 { "mfaMethod": {
+                                     "priorityIdentifier": "%s",
+                                     "method": {
+                                         "mfaMethodType": "AUTH_APP",
+                                         "credential": "%s" }
+                                     }
+                                 }
+                                """,
+                                priorityIdentifier,
+                                ((RequestAuthAppMfaDetail) mfaDetail).credential());
+
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", principal);
+        authorizerParams.put("clientId", TEST_CLIENT_ID);
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+
+        Map<String, String> headers = new HashMap<>(VALID_HEADERS);
+        headers.put(SESSION_ID_HEADER, TEST_NON_CLIENT_SESSION_ID);
+
+        return new APIGatewayProxyRequestEvent()
+                .withPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT))
+                .withBody(body)
+                .withRequestContext(proxyRequestContext)
+                .withHeaders(headers);
+    }
 
     @BeforeEach
     void setUp() {
@@ -105,6 +187,7 @@ class MFAMethodsCreateHandlerTest {
                         mfaMethodsService,
                         dynamoService,
                         codeStorageService,
+                        auditService,
                         sqsClient,
                         cloudwatchMetricsService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
@@ -162,20 +245,21 @@ class MFAMethodsCreateHandlerTest {
             var expectedResponse =
                     format(
                             """
-                    {
-                      "mfaIdentifier": "%s",
-                      "priorityIdentifier": "BACKUP",
-                      "methodVerified": true,
-                      "method": {
-                        "mfaMethodType": "SMS",
-                        "phoneNumber": "%s"
-                      }
-                    }
-                    """,
+                                    {
+                                      "mfaIdentifier": "%s",
+                                      "priorityIdentifier": "BACKUP",
+                                      "methodVerified": true,
+                                      "method": {
+                                        "mfaMethodType": "SMS",
+                                        "phoneNumber": "%s"
+                                      }
+                                    }
+                                    """,
                             TEST_SMS_MFA_ID, TEST_PHONE_NUMBER);
             var expectedResponseParsedToString =
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -233,6 +317,7 @@ class MFAMethodsCreateHandlerTest {
                                             TEST_EMAIL,
                                             NotificationType.BACKUP_METHOD_ADDED,
                                             LocaleHelper.SupportedLanguage.EN)));
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -321,6 +406,7 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -338,6 +424,7 @@ class MFAMethodsCreateHandlerTest {
                             withMessageContaining(
                                     "Subject missing from request prevents request being handled.")));
             verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -356,6 +443,7 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(404));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
             verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -371,13 +459,14 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            verifyNoInteractions(auditService);
         }
 
         @Test
         void shouldReturn400WhenRequestToCreateNewDefault() {
             var event =
                     generateApiGatewayEvent(
-                            PriorityIdentifier.DEFAULT,
+                            DEFAULT,
                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
                             TEST_INTERNAL_SUBJECT);
 
@@ -385,6 +474,7 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1080));
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -409,6 +499,31 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
+        }
+
+        private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
+            capturedObject
+                    .getMetadataItemByKey(field)
+                    .ifPresent(
+                            actualMetadataPairForMfaMethod ->
+                                    assertEquals(
+                                            AuditService.MetadataPair.pair(field, value),
+                                            actualMetadataPairForMfaMethod));
         }
 
         @Test
@@ -430,6 +545,20 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
         }
 
         @Test
@@ -455,6 +584,7 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
             verifyNoInteractions(sqsClient);
+            verifyNoInteractions(auditService);
         }
 
         @Test
@@ -473,6 +603,21 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
         }
 
         @Test
@@ -491,6 +636,21 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
         }
 
         @Test
@@ -513,6 +673,20 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
             verifyNoInteractions(sqsClient);
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
         }
 
         @Test
@@ -527,54 +701,7 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(401));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+            verifyNoInteractions(auditService);
         }
-    }
-
-    private APIGatewayProxyRequestEvent generateApiGatewayEvent(
-            PriorityIdentifier priorityIdentifier, MfaDetail mfaDetail, String principal) {
-
-        String body =
-                mfaDetail instanceof RequestSmsMfaDetail
-                        ? format(
-                                """
-                                { "mfaMethod": {
-                                    "priorityIdentifier": "%s",
-                                    "method": {
-                                        "mfaMethodType": "SMS",
-                                        "phoneNumber": "%s",
-                                        "otp": "%s"
-                                    }
-                                    }
-                                }
-                               """,
-                                priorityIdentifier,
-                                ((RequestSmsMfaDetail) mfaDetail).phoneNumber(),
-                                ((RequestSmsMfaDetail) mfaDetail).otp())
-                        : format(
-                                """
-                                { "mfaMethod": {
-                                    "priorityIdentifier": "%s",
-                                    "method": {
-                                        "mfaMethodType": "AUTH_APP",
-                                        "credential": "%s" }
-                                    }
-                                }
-                               """,
-                                priorityIdentifier,
-                                ((RequestAuthAppMfaDetail) mfaDetail).credential());
-
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", principal);
-        authorizerParams.put("clientId", TEST_CLIENT_ID);
-        proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-
-        return new APIGatewayProxyRequestEvent()
-                .withPathParameters(Map.of("publicSubjectId", TEST_PUBLIC_SUBJECT))
-                .withBody(body)
-                .withRequestContext(proxyRequestContext)
-                .withHeaders(VALID_HEADERS);
     }
 }
