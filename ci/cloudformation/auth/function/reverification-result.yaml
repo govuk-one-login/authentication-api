@@ -35,9 +35,17 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
-            - "{{resolve:ssm:/deploy/${env}/ipv_auth_authorize_callback_uri}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - "${BaseUrl}/ipv/callback/authorize"
+            - BaseUrl:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  frontendBaseUrl,
+                ]
           IPV_BACKEND_URI: !Sub
             - "{{resolve:ssm:/deploy/${env}/ipv_backend_uri}}"
             - env:

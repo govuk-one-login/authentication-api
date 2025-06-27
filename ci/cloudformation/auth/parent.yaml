@@ -156,6 +156,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       emailAcctCreationOtpCodeTtlDuration: 600
+      frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -182,6 +183,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
+      frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -205,6 +207,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
@@ -243,6 +246,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
@@ -280,6 +284,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      frontendBaseUrl: https://apitest.signin.staging.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
@@ -306,6 +311,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       docAppDomain: https://api.review-b.integration.account.gov.uk
       EnableSnapStart: "No"
+      frontendBaseUrl: https://signin.integration.account.gov.uk
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
@@ -319,6 +325,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       docAppDomain: https://api.review-b.account.gov.uk
       EnableSnapStart: "No"
+      frontendBaseUrl: https://signin.account.gov.uk
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
