@@ -4,6 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -151,14 +154,16 @@ public class UserInfoHandler
         }
         UserInfo userInfo;
         AccessTokenInfo accessTokenInfo;
+        String authorizationHeader;
         try {
+            authorizationHeader =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            AUTHORIZATION_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
             accessTokenInfo =
                     accessTokenService.parse(
-                            getHeaderValueFromHeaders(
-                                    input.getHeaders(),
-                                    AUTHORIZATION_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()),
-                            configurationService.isIdentityEnabled());
+                            authorizationHeader, configurationService.isIdentityEnabled());
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
             LOG.warn("AccessTokenException. Sending back UserInfoErrorResponse");
@@ -198,6 +203,17 @@ public class UserInfoHandler
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
                                 CLIENT.getValue(), accessTokenInfo.getClientID()));
         cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
+
+        try {
+            AccessToken accessToken =
+                    AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
+            SignedJWT signedJWT = SignedJWT.parse(accessToken.getValue());
+            LOG.info(
+                    "Successfully processed UserInfo request with JWT ID of {}",
+                    signedJWT.getJWTClaimsSet().getJWTID());
+        } catch (Exception ignored) {
+
+        }
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
