@@ -320,6 +320,7 @@ public class MFAMethodsCreateHandler
         var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
 
         if (maybeMfaMethods.isFailure()) {
+            LOG.error("No MFA methods found for user");
             return Result.failure(ERROR_1071);
         }
 
@@ -333,6 +334,11 @@ public class MFAMethodsCreateHandler
                                                 .equalsIgnoreCase(
                                                         PriorityIdentifier.DEFAULT.name()))
                         .findFirst();
+
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.error("No default MFA method found for user");
+            return Result.failure(ERROR_1071);
+        }
 
         if (defaultMfaMethod.get().getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
             auditContext = auditContext.withPhoneNumber(defaultMfaMethod.get().getDestination());

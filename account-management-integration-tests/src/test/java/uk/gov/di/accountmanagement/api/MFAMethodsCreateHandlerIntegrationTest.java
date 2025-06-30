@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseSmsMfaDetail;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -41,6 +42,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
@@ -207,8 +209,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     ACCOUNT_MANAGEMENT.name(),
                     extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
 
-            assertTrue(extensions.has("phone_number_country_code"));
-            assertEquals("44", extensions.get("phone_number_country_code").getAsString());
+            assertTrue(
+                    extensions.has(
+                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE));
+            assertEquals(
+                    "44",
+                    extensions
+                            .get(AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
+                            .getAsString());
 
             assertEquals(SMS.name(), extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
         }
@@ -307,8 +315,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(SMS.name(), extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
 
-            assertTrue(extensions.has("phone_number_country_code"));
-            assertEquals("44", extensions.get("phone_number_country_code").getAsString());
+            assertTrue(
+                    extensions.has(
+                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE));
+            assertEquals(
+                    "44",
+                    extensions
+                            .get(AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
+                            .getAsString());
 
             assertEquals(
                     ACCOUNT_MANAGEMENT.name(),
@@ -359,6 +373,10 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(
                     MFAMethodType.AUTH_APP.name(),
                     extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+
+            assertEquals(
+                    PriorityIdentifier.DEFAULT.name().toLowerCase(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
         }
 
         @DisplayName("Non-migrated Auth App User cannot add Auth App as backup MFA")
@@ -406,6 +424,10 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(
                     MFAMethodType.AUTH_APP.name(),
                     extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+
+            assertEquals(
+                    PriorityIdentifier.DEFAULT.name().toLowerCase(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
         }
 
         @Test
@@ -438,9 +460,12 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
         }
 
+        private static Stream<MFAMethodType> invalidMfaMethodTypes() {
+            return Stream.of(MFAMethodType.EMAIL, MFAMethodType.NONE);
+        }
+
         @ParameterizedTest
-        @MethodSource(
-                "uk.gov.di.accountmanagement.api.MFAMethodsCreateHandlerIntegrationTest#invalidMfaMethodTypes")
+        @MethodSource("invalidMfaMethodTypes")
         void shouldReturn400AndBadRequestWhenMfaMethodTypeIsInvalid(
                 MFAMethodType invalidMethodType) {
             var response =
@@ -526,10 +551,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(401, response.getStatusCode());
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
         }
-    }
-
-    private static Stream<MFAMethodType> invalidMfaMethodTypes() {
-        return Stream.of(MFAMethodType.EMAIL, MFAMethodType.NONE);
     }
 
     private static String constructRequestBody(
