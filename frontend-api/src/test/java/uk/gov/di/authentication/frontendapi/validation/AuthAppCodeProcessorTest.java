@@ -124,15 +124,19 @@ class AuthAppCodeProcessorTest {
 
     private static Stream<Arguments> validatorParams() {
         return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.MFA_SIGN_IN),
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA, null, CodeRequestType.MFA_PW_RESET_MFA),
+                        JourneyType.PASSWORD_RESET_MFA,
+                        null,
+                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET,
-                        CodeRequestType.MFA_REGISTRATION),
+                        CodeRequestType.AUTH_APP_REGISTRATION),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATION, null, CodeRequestType.MFA_REAUTHENTICATION));
+                        JourneyType.REAUTHENTICATION,
+                        null,
+                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -150,11 +154,15 @@ class AuthAppCodeProcessorTest {
 
     private static Stream<Arguments> validatorParamsWithoutRegistrationJourney() {
         return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.MFA_SIGN_IN),
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA, null, CodeRequestType.MFA_PW_RESET_MFA),
+                        JourneyType.PASSWORD_RESET_MFA,
+                        null,
+                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATION, null, CodeRequestType.MFA_REAUTHENTICATION));
+                        JourneyType.REAUTHENTICATION,
+                        null,
+                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -239,33 +247,6 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret),
                 codeRequestType);
-
-        assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @Test
-    void returnsCorrectErrorWhenCodeBlockedForEmailAddressWithDeprecatedPrefix() {
-        JourneyType journeyType = JourneyType.SIGN_IN;
-        when(mockCodeStorageService.isBlockedForEmail(
-                        EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX
-                                + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                        MFAMethodType.AUTH_APP, journeyType)))
-                .thenReturn(true);
-
-        this.authAppCodeProcessor =
-                new AuthAppCodeProcessor(
-                        mockUserContext,
-                        mockCodeStorageService,
-                        mockConfigurationService,
-                        mockDynamoService,
-                        MAX_RETRIES,
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", journeyType, "credential"),
-                        mockAuditService,
-                        mockAccountModifiersService,
-                        mockMfaMethodsService);
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
     }

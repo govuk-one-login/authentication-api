@@ -85,15 +85,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        AUTH_APP, codeRequest.getJourneyType());
-        if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1042);
-        }
-
         if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
             incrementRetryCount();
         }

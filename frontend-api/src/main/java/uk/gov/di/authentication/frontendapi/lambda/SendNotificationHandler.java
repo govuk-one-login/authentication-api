@@ -454,10 +454,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(
-                        notificationType.getMfaMethodType(), journeyType);
 
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.info(
@@ -477,23 +473,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     newCodeRequestBlockPrefix);
             return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
         }
-        if (deprecatedCodeRequestType != null
-                && codeStorageService.isBlockedForEmail(
-                        email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
-            return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
-        }
         if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    codeAttemptsBlockedPrefix);
-            return Optional.of(getErrorResponseForMaxCodeAttempts(notificationType));
-        }
-        if (deprecatedCodeRequestType != null
-                && codeStorageService.isBlockedForEmail(
-                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     codeAttemptsBlockedPrefix);

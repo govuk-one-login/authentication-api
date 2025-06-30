@@ -205,10 +205,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private static boolean isInvalidCodeRequestType(
             VerifyMfaCodeRequest codeRequest, JourneyType journeyType) {
-        CodeRequestType.SupportedCodeType supportedCodeType =
-                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
-                        codeRequest.getMfaMethodType());
-        if (!CodeRequestType.isValidCodeRequestType(supportedCodeType, journeyType)) {
+        if (!CodeRequestType.isValidCodeRequestType(codeRequest.getMfaMethodType(), journeyType)) {
             LOG.warn(
                     "Invalid MFA Type '{}' for journey '{}'",
                     codeRequest.getMfaMethodType(),
@@ -508,17 +505,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix)) {
             return;
         }
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
-        if (codeStorageService.isBlockedForEmail(
-                emailAddress, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            return;
-        }
-
         boolean reducedLockout =
-                List.of(CodeRequestType.MFA_REGISTRATION, CodeRequestType.MFA_ACCOUNT_RECOVERY)
+                List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
                         .contains(CodeRequestType.getCodeRequestType(mfaMethodType, journeyType));
         long blockDuration =
                 reducedLockout

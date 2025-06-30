@@ -298,45 +298,6 @@ class CodeStorageServiceTest {
                 equalTo(4L));
     }
 
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @ParameterizedTest
-    @CsvSource({"AUTH_APP", "SMS"})
-    void shouldReturnMfaCodeBlockTimeForAuthAppAndSMSWithDeprecatedPrefix(
-            MFAMethodType mfaMethodType) {
-        var codeBlockedKeyPrefix =
-                CODE_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                mfaMethodType, JourneyType.SIGN_IN);
-        when(redisConnectionService.getTimeToLive(codeBlockedKeyPrefix + TEST_EMAIL_HASH))
-                .thenReturn(4L);
-        assertThat(
-                codeStorageService.getMfaCodeBlockTimeToLive(
-                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
-                equalTo(4L));
-    }
-
-    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-    @ParameterizedTest
-    @CsvSource({"AUTH_APP", "SMS"})
-    void shouldReturnLargerMfaCodeBlockTimeForAuthAppAndSMSWithBothActiveAndDeprecatedPrefix(
-            MFAMethodType mfaMethodType) {
-        var activeCodeBlockedKeyPrefix =
-                CODE_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getCodeRequestType(mfaMethodType, JourneyType.SIGN_IN);
-        var deprecatedCodeBlockedKeyPrefix =
-                CODE_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                mfaMethodType, JourneyType.SIGN_IN);
-        when(redisConnectionService.getTimeToLive(activeCodeBlockedKeyPrefix + TEST_EMAIL_HASH))
-                .thenReturn(4L);
-        when(redisConnectionService.getTimeToLive(deprecatedCodeBlockedKeyPrefix + TEST_EMAIL_HASH))
-                .thenReturn(6L);
-        assertThat(
-                codeStorageService.getMfaCodeBlockTimeToLive(
-                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
-                equalTo(6L));
-    }
-
     @Test
     void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptGenericKey() {
         when(redisConnectionService.getValue(
