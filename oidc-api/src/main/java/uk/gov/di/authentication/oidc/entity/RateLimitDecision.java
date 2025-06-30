@@ -8,8 +8,9 @@ public class RateLimitDecision {
         // Future Rate Limit Actions
     }
 
-    public static final RateLimitDecision NONE = new RateLimitDecision(false, RateLimitAction.NONE);
-    public static final RateLimitDecision REDIRECT_TO_RP =
+    public static final RateLimitDecision UNDER_LIMIT_NO_ACTION =
+            new RateLimitDecision(false, RateLimitAction.NONE);
+    public static final RateLimitDecision OVER_LIMIT_RETURN_TO_RP =
             new RateLimitDecision(true, RateLimitAction.RETURN_TO_RP);
 
     private final boolean hasExceededRateLimit;
