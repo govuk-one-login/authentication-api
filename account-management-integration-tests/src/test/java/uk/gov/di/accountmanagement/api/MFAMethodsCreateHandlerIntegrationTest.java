@@ -328,6 +328,171 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     ACCOUNT_MANAGEMENT.name(),
                     extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
         }
+
+        @DisplayName("Non-migrated SMS User adds a Backup AUTH_APP MFA")
+        @Test
+        void aNonMigratedSmsUserAddsABackupAuthAppMFA() {
+            setupNonMigratedUserWithMfaMethod(defaultPrioritySms);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            PriorityIdentifier.BACKUP,
+                                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(200, response.getStatusCode());
+
+            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+
+            // Verify user is now migrated after the request
+            var userProfileAfter = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
+            assertTrue(userProfileAfter.isMfaMethodsMigrated());
+
+            var retrievedAuthAppMethod =
+                    mfaMethods.stream()
+                            .filter(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getPriority()
+                                                    .equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertEquals(
+                    PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
+            assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
+            assertTrue(retrievedAuthAppMethod.isEnabled());
+            assertTrue(retrievedAuthAppMethod.isMethodVerified());
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    BACKUP_METHOD_ADDED,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            var extractedMfaIdentifier = retrievedAuthAppMethod.getMfaIdentifier();
+            var expectedJson =
+                    constructExpectedResponse(
+                            extractedMfaIdentifier,
+                            PriorityIdentifier.BACKUP,
+                            true,
+                            new ResponseAuthAppMfaDetail(TEST_CREDENTIAL));
+            var expectedResponse =
+                    JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+
+            assertEquals(expectedResponse, response.getBody());
+
+            // Verify audit event was emitted
+            var receivedEvents =
+                    assertTxmaAuditEventsReceived(
+                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+
+            // Verify audit event contains correct metadata
+            var auditEvent = receivedEvents.get(0);
+            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+
+            var extensions = jsonEvent.getAsJsonObject("extensions");
+
+            assertEquals(
+                    ACCOUNT_MANAGEMENT.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+
+            assertEquals(
+                    MFAMethodType.AUTH_APP.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+        }
+
+        @DisplayName("Migrated SMS User adds a Backup AUTH_APP MFA")
+        @Test
+        void aMigratedSmsUserAddsABackupAuthAppMFA() {
+            setupMigratedUserWithMfaMethod(defaultPrioritySms);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            PriorityIdentifier.BACKUP,
+                                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(200, response.getStatusCode());
+
+            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+
+            // Verify user is still migrated
+            assertTrue(userStore.getUserProfileFromEmail(TEST_EMAIL).get().isMfaMethodsMigrated());
+
+            var retrievedAuthAppMethod =
+                    mfaMethods.stream()
+                            .filter(
+                                    mfaMethod ->
+                                            mfaMethod
+                                                    .getPriority()
+                                                    .equals(PriorityIdentifier.BACKUP.name()))
+                            .findFirst()
+                            .get();
+
+            assertEquals(
+                    PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
+            assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
+            assertTrue(retrievedAuthAppMethod.isEnabled());
+            assertTrue(retrievedAuthAppMethod.isMethodVerified());
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    TEST_EMAIL,
+                                    BACKUP_METHOD_ADDED,
+                                    LocaleHelper.SupportedLanguage.EN)));
+
+            var extractedMfaIdentifier = retrievedAuthAppMethod.getMfaIdentifier();
+            var expectedJson =
+                    constructExpectedResponse(
+                            extractedMfaIdentifier,
+                            PriorityIdentifier.BACKUP,
+                            true,
+                            new ResponseAuthAppMfaDetail(TEST_CREDENTIAL));
+            var expectedResponse =
+                    JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+
+            assertEquals(expectedResponse, response.getBody());
+
+            // Verify audit event was emitted
+            var receivedEvents =
+                    assertTxmaAuditEventsReceived(
+                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+
+            // Verify audit event contains correct metadata
+            var auditEvent = receivedEvents.get(0);
+            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+
+            var extensions = jsonEvent.getAsJsonObject("extensions");
+
+            assertEquals(
+                    MFAMethodType.AUTH_APP.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+
+            assertEquals(
+                    ACCOUNT_MANAGEMENT.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+        }
     }
 
     @Nested
