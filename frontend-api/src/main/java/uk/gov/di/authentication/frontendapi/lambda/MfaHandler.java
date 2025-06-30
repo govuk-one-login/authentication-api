@@ -159,11 +159,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             AuditService.UNKNOWN,
                             persistentSessionId);
 
-            var metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
-                    };
+            auditContext = auditContext.withMetadataItem(pair("journey-type", journeyType));
+            auditContext =
+                    auditContext.withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue()));
 
             CodeRequestType.SupportedCodeType supportedCodeType =
                     CodeRequestType.SupportedCodeType.getFromMfaMethodType(
@@ -180,16 +178,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     validateCodeRequestAttempts(email, journeyType, userContext);
 
             if (userHasRequestedTooManyOTPs.isPresent()) {
-                auditService.submitAuditEvent(
-                        AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
+                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
             }
 
             if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(
-                        AUTH_MFA_MISMATCHED_EMAIL, auditContext, metadataPairs);
+                auditService.submitAuditEvent(AUTH_MFA_MISMATCHED_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -222,8 +218,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             retrievedMfaMethods, request.getMfaMethodId(), MFAMethodType.SMS);
 
             if (maybeRequestedSmsMfaMethod.isEmpty()) {
-                auditService.submitAuditEvent(
-                        AUTH_MFA_MISSING_PHONE_NUMBER, auditContext, metadataPairs);
+                auditService.submitAuditEvent(AUTH_MFA_MISSING_PHONE_NUMBER, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
 
@@ -242,8 +237,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     validateCodeRequestAttempts(email, journeyType, userContext);
 
             if (thisRequestExceedsMaximumAllowedRequests.isPresent()) {
-                auditService.submitAuditEvent(
-                        AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
+                auditService.submitAuditEvent(AUTH_MFA_INVALID_CODE_REQUEST, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(
                         400, thisRequestExceedsMaximumAllowedRequests.get());
@@ -282,7 +276,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 auditableEvent = FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
             }
 
-            auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
+            auditService.submitAuditEvent(auditableEvent, auditContext);
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
