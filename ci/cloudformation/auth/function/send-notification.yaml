@@ -11,18 +11,12 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest
       Environment:
         Variables:
-          DEFAULT_OTP_CODE_EXPIRY: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                otpCodeTtlDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                otpCodeTtlDuration,
-              ]
+          DEFAULT_OTP_CODE_EXPIRY:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              otpCodeTtlDuration,
+            ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -31,18 +25,12 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                emailAcctCreationOtpCodeTtlDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                emailAcctCreationOtpCodeTtlDuration,
-              ]
+          EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              emailAcctCreationOtpCodeTtlDuration,
+            ]
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           INTERNAl_SECTOR_URI: !If
             - IsNotProduction
@@ -51,30 +39,18 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_DURATION: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutDuration,
-              ]
-          LOCKOUT_COUNT_TTL: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutCountTtl,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutCountTtl,
-              ]
+          LOCKOUT_COUNT_TTL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutCountTtl,
+            ]
+          LOCKOUT_DURATION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutDuration,
+            ]
           PENDING_EMAIL_CHECK_QUEUE_URL: !Sub
             - https://sqs.eu-west-2.amazonaws.com/${DataStoreAccountId}/${Env}-pending-email-check-queue
             - DataStoreAccountId:
@@ -96,18 +72,12 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                useStronglyConsistentReads,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                useStronglyConsistentReads,
-              ]
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref SendNotificationFunctionLogGroup
       Policies:

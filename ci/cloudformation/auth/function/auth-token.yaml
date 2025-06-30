@@ -45,18 +45,12 @@ Resources:
               Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ORCH_CLIENT_ID: "orchestrationAuth"
-          ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                orchToAuthSigningPublicKey,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                orchToAuthSigningPublicKey,
-              ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              orchToAuthSigningPublicKey,
+            ]
           ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY: !If
             - UseSubEnvironment
             - !FindInMap [
