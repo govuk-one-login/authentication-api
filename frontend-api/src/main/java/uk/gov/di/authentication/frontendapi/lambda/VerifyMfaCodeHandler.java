@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
@@ -114,6 +116,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -121,11 +124,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        new MFAMethodsService(configurationService));
+                        this.mfaMethodsService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -133,6 +135,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -140,11 +143,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        new MFAMethodsService(configurationService));
+                        this.mfaMethodsService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.mfaMethodsService = new MFAMethodsService(configurationService);
     }
 
     @Override
@@ -316,8 +318,33 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     userContext, authSessionService, authenticationService, configurationService);
         }
 
-        var errorResponseMaybe = mfaCodeProcessor.validateCode();
+        Optional<MFAMethod> activeMfaMethod = Optional.empty();
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
+        if (retrieveMfaMethods.isFailure()) {
+            LOG.error(
+                    "Failed to receive the users MFA methods because {}. Ignoring for audit events, this does not affect the journey",
+                    retrieveMfaMethods.getFailure());
+        } else {
+            List<MFAMethod> retrievedMfaMethods = retrieveMfaMethods.getSuccess();
+            activeMfaMethod =
+                    retrievedMfaMethods.stream()
+                            .filter(
+                                    mfaMethod ->
+                                            Objects.equals(
+                                                    MFAMethodType.valueOf(
+                                                            mfaMethod.getMfaMethodType()),
+                                                    codeRequest.getMfaMethodType()))
+                            .filter(
+                                    codeRequest.getMfaMethodType() == MFAMethodType.SMS
+                                            ? mfaMethod ->
+                                                    Objects.equals(
+                                                            mfaMethod.getDestination(),
+                                                            codeRequest.getProfileInformation())
+                                            : mfaMethod -> true)
+                            .findFirst();
+        }
 
+        var errorResponseMaybe = mfaCodeProcessor.validateCode();
         if (errorResponseMaybe.isPresent()) {
             var errorResponse = errorResponseMaybe.get();
             if (errorResponse.equals(ErrorResponse.ERROR_1041)) {
@@ -345,9 +372,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_MFA_CODE);
             }
-            auditFailure(codeRequest, errorResponse, authSession, auditContext);
+            auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
         } else {
-            auditSuccess(codeRequest, authSession, auditContext);
+            auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
             processSuccessfulCodeSession(
                     userContext.getAuthSession(),
                     input,
@@ -380,10 +407,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private void auditSuccess(
             VerifyMfaCodeRequest codeRequest,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            Optional<MFAMethod> activeMfaMethod) {
         var metadataPairs =
                 metadataPairsForEvent(
-                        AUTH_CODE_VERIFIED, authSession.getEmailAddress(), codeRequest);
+                        AUTH_CODE_VERIFIED,
+                        authSession.getEmailAddress(),
+                        codeRequest,
+                        activeMfaMethod);
         auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
     }
 
@@ -391,10 +422,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             ErrorResponse errorResponse,
             AuthSessionItem authSession,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            Optional<MFAMethod> activeMfaMethod) {
         var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
         var metadataPairs =
-                metadataPairsForEvent(auditableEvent, authSession.getEmailAddress(), codeRequest);
+                metadataPairsForEvent(
+                        auditableEvent,
+                        authSession.getEmailAddress(),
+                        codeRequest,
+                        activeMfaMethod);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
@@ -418,7 +454,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         getMfaMethodOrDefaultMfaMethod(
                                         retrievedMfaMethods, null, MFAMethodType.AUTH_APP)
                                 .map(method -> PriorityIdentifier.valueOf(method.getPriority()))
-                                .orElse(null);
+                                .orElse(PriorityIdentifier.DEFAULT);
             } else if (codeRequest.getMfaMethodType().equals(MFAMethodType.SMS)) {
                 mfaMethodType = MFAMethodType.SMS;
                 priorityIdentifier = PriorityIdentifier.DEFAULT;
@@ -568,7 +604,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
-            FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
+            FrontendAuditableEvent auditableEvent,
+            String email,
+            VerifyMfaCodeRequest codeRequest,
+            Optional<MFAMethod> activeMfaMethod) {
         var methodType = codeRequest.getMfaMethodType();
         var basicMetadataPairs =
                 List.of(
@@ -588,8 +627,30 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 pair("loginFailureCount", failureCount),
                                 pair("MFACodeEntered", codeRequest.getCode()));
                     }
-                    case AUTH_CODE_VERIFIED -> List.of(
-                            pair("MFACodeEntered", codeRequest.getCode()));
+                    case AUTH_CODE_VERIFIED -> {
+                        var list = new ArrayList<AuditService.MetadataPair>();
+                        list.add(pair("MFACodeEntered", codeRequest.getCode()));
+
+                        List<JourneyType> noMfaSavedJourneys =
+                                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION);
+
+                        if (noMfaSavedJourneys.contains(codeRequest.getJourneyType())) {
+                            list.add(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
+                        } else
+                            activeMfaMethod.ifPresent(
+                                    mfaMethod ->
+                                            list.add(
+                                                    pair(
+                                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                            mfaMethod
+                                                                    .getPriority()
+                                                                    .toLowerCase())));
+
+                        yield list;
+                    }
                     default -> List.<AuditService.MetadataPair>of();
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())

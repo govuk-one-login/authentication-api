@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
@@ -80,6 +81,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
@@ -89,6 +91,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
@@ -189,8 +192,7 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -250,7 +252,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", REGISTRATION),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.NEW,
@@ -288,7 +291,8 @@ class VerifyMfaCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false),
                         pair("journey-type", REGISTRATION),
-                        pair("MFACodeEntered", CODE));
+                        pair("MFACodeEntered", CODE),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
     }
 
     @ParameterizedTest
@@ -300,6 +304,8 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
 
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
@@ -325,7 +331,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", JourneyType.PASSWORD_RESET_MFA),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
@@ -371,7 +378,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", REGISTRATION),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.NEW,
@@ -414,7 +422,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", true),
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
@@ -466,7 +475,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", true),
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
@@ -485,17 +495,37 @@ class VerifyMfaCodeHandlerTest {
                                                 .equals(AuthSessionItem.ResetMfaState.SUCCEEDED)));
     }
 
-    private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION);
+    private static Stream existingUserAuthAppJourneyTypes() {
+        return Stream.of(
+                Arguments.of(JourneyType.SIGN_IN, List.of(DEFAULT_AUTH_APP_METHOD), "default"),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        List.of(DEFAULT_AUTH_APP_METHOD),
+                        "default"),
+                Arguments.of(REAUTHENTICATION, List.of(DEFAULT_AUTH_APP_METHOD), "default"),
+                Arguments.of(
+                        JourneyType.SIGN_IN,
+                        List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD),
+                        "backup"),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD),
+                        "backup"),
+                Arguments.of(
+                        REAUTHENTICATION,
+                        List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD),
+                        "backup"));
     }
 
     @ParameterizedTest
     @MethodSource("existingUserAuthAppJourneyTypes")
-    void shouldReturn204WhenExistingUserSuccessfulAuthAppCodeRequest(JourneyType journeyType)
+    void shouldReturn204WhenExistingUserSuccessfulAuthAppCodeRequest(
+            JourneyType journeyType, List<MFAMethod> mfaMethods, String expectedMethodPriority)
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType);
         var result = makeCallWithCode(codeRequest);
@@ -510,7 +540,8 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", journeyType),
-                pair("MFACodeEntered", CODE));
+                pair("MFACodeEntered", CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, expectedMethodPriority));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
