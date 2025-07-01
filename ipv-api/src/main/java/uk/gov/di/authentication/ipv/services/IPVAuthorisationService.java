@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
@@ -55,6 +56,7 @@ public class IPVAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final StateStorageService stateStorageService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -69,6 +71,7 @@ public class IPVAuthorisationService {
                 redisConnectionService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
+                new StateStorageService(configurationService),
                 new NowClock(Clock.systemUTC()));
     }
 
@@ -77,11 +80,13 @@ public class IPVAuthorisationService {
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
+            StateStorageService stateStorageService,
             NowClock nowClock) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.stateStorageService = stateStorageService;
         this.nowClock = nowClock;
     }
 
@@ -121,6 +126,7 @@ public class IPVAuthorisationService {
     }
 
     public void storeState(String sessionId, State state) {
+        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
         try {
             redisConnectionService.saveWithExpiry(
                     STATE_STORAGE_PREFIX + sessionId,
@@ -130,6 +136,7 @@ public class IPVAuthorisationService {
             LOG.error("Unable to save state to Redis");
             throw new RuntimeException(e);
         }
+        stateStorageService.storeState(prefixedSessionId, state.getValue());
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
