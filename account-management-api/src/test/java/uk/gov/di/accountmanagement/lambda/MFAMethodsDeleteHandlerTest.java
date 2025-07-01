@@ -63,6 +63,12 @@ class MFAMethodsDeleteHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private static final MFAMethod SMS_MFA_METHOD =
+            new MFAMethod()
+                    .withMfaMethodType(MFAMethodType.SMS.getValue())
+                    .withMethodVerified(true)
+                    .withEnabled(true)
+                    .withMfaIdentifier(MFA_IDENTIFIER_TO_DELETE);
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
@@ -86,7 +92,7 @@ class MFAMethodsDeleteHandlerTest {
         @Test
         void shouldReturn204WhenFeatureFlagEnabled() throws Json.JsonException {
             when(mfaMethodsService.deleteMfaMethod(MFA_IDENTIFIER_TO_DELETE, userProfile))
-                    .thenReturn(Result.success(MFA_IDENTIFIER_TO_DELETE));
+                    .thenReturn(Result.success(SMS_MFA_METHOD));
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
 

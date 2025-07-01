@@ -119,7 +119,7 @@ public class MFAMethodsService {
         return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
     }
 
-    public Result<MfaDeleteFailureReason, String> deleteMfaMethod(
+    public Result<MfaDeleteFailureReason, MFAMethod> deleteMfaMethod(
             String mfaIdentifier, UserProfile userProfile) {
         if (!userProfile.isMfaMethodsMigrated()) {
             return Result.failure(
@@ -156,7 +156,7 @@ public class MFAMethodsService {
                 methodToDelete.getMfaMethodType(),
                 BACKUP);
 
-        return Result.success(mfaIdentifier);
+        return Result.success(methodToDelete);
     }
 
     public void deleteMigratedMFAsAndCreateNewDefault(String email, MFAMethod mfaMethod) {
