@@ -65,6 +65,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
@@ -230,7 +231,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private static boolean userProfileMissingForReauthenticationJourney(
             UserProfile userProfile, JourneyType journeyType) {
-        return userProfile == null && journeyType == JourneyType.REAUTHENTICATION;
+        return userProfile == null && journeyType == REAUTHENTICATION;
     }
 
     private boolean checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
@@ -240,17 +241,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Optional<String> maybeRpPairwiseId,
             ClientRegistry client) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && JourneyType.REAUTHENTICATION.equals(journeyType)
+                && REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
             var counts =
                     maybeRpPairwiseId.isEmpty()
                             ? authenticationAttemptsService.getCountsByJourney(
-                                    userProfile.getSubjectID(), JourneyType.REAUTHENTICATION)
+                                    userProfile.getSubjectID(), REAUTHENTICATION)
                             : authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
                                             userProfile.getSubjectID(),
                                             maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION);
+                                            REAUTHENTICATION);
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
@@ -369,9 +370,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         ChronoUnit.SECONDS)
                                 .toInstant()
                                 .getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
+                        REAUTHENTICATION,
                         CountType.ENTER_MFA_CODE);
             }
+
             auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
         } else {
             auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
@@ -537,7 +539,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        uniqueIdentifier, JourneyType.REAUTHENTICATION, countType));
+                                        uniqueIdentifier, REAUTHENTICATION, countType));
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
@@ -545,18 +547,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String subjectId,
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == JourneyType.REAUTHENTICATION
+        if (journeyType == REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
                     maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService
                                     .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            subjectId,
-                                            maybeRpPairwiseId.get(),
-                                            JourneyType.REAUTHENTICATION)
+                                            subjectId, maybeRpPairwiseId.get(), REAUTHENTICATION)
                             : authenticationAttemptsService.getCountsByJourney(
-                                    subjectId, JourneyType.REAUTHENTICATION);
+                                    subjectId, REAUTHENTICATION);
             var updatedAuthSession = authSession.withPreservedReauthCountsForAuditMap(counts);
             authSessionService.updateSession(updatedAuthSession);
         }
@@ -565,7 +565,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private static boolean isInvalidReauthAuthAppAttempt(
             ErrorResponse errorResponse, VerifyMfaCodeRequest codeRequest) {
         return errorResponse == ErrorResponse.ERROR_1043
-                && codeRequest.getJourneyType() == JourneyType.REAUTHENTICATION;
+                && codeRequest.getJourneyType() == REAUTHENTICATION;
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
@@ -595,7 +595,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         : configurationService.getLockoutDuration();
 
         if (!configurationService.supportReauthSignoutEnabled()
-                || journeyType != JourneyType.REAUTHENTICATION) {
+                || journeyType != REAUTHENTICATION) {
             codeStorageService.saveBlockedForEmail(
                     emailAddress, codeBlockedKeyPrefix, blockDuration);
         }
