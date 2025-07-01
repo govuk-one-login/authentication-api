@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
@@ -55,6 +56,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +69,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -719,6 +722,12 @@ class VerifyMfaCodeHandlerTest {
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+
+        if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_METHOD)));
+        }
+
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
@@ -738,13 +747,31 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         verifyNoInteractions(authenticationAttemptsService);
-        assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
-                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("journey-type", journeyType),
-                pair("loginFailureCount", 3),
-                pair("MFACodeEntered", CODE));
+
+        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
+                        eq(AUDIT_CONTEXT),
+                        metadataCaptor.capture());
+
+        boolean accountRecovery = journeyType.equals(ACCOUNT_RECOVERY);
+
+        List<AuditService.MetadataPair> expected =
+                List.of(
+                        pair("MFACodeEntered", CODE),
+                        pair("account-recovery", accountRecovery),
+                        pair("journey-type", journeyType),
+                        pair("loginFailureCount", 3),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+
+        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
+
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
     }
 
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
@@ -870,9 +897,15 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
+
+        if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+        }
+
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
+                        MFAMethodType.SMS, CODE, journeyType, DEFAULT_SMS_METHOD.getDestination());
         if (!CodeRequestType.isValidCodeRequestType(
                 CodeRequestType.SupportedCodeType.getFromMfaMethodType(
                         codeRequest.getMfaMethodType()),
@@ -888,13 +921,31 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
-        assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
-                pair("mfa-type", MFAMethodType.SMS.getValue()),
-                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("journey-type", journeyType),
-                pair("loginFailureCount", 3),
-                pair("MFACodeEntered", CODE));
+
+        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
+                        any(AuditContext.class),
+                        metadataCaptor.capture());
+
+        boolean accountRecovery = journeyType.equals(ACCOUNT_RECOVERY);
+
+        List<AuditService.MetadataPair> expected =
+                List.of(
+                        pair("MFACodeEntered", CODE),
+                        pair("account-recovery", accountRecovery),
+                        pair("journey-type", journeyType),
+                        pair("loginFailureCount", 3),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+
+        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
+
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
     }
 
     @ParameterizedTest
