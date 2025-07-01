@@ -71,6 +71,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
@@ -592,6 +593,7 @@ class VerifyCodeHandlerTest {
                         pair(
                                 "journey-type",
                                 journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
@@ -614,7 +616,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForValidIdentifiedSmsMfaMethod() {
+    void shouldReturn204ForValidIdentifiedBackupSmsMfaMethod() {
         when(codeStorageService.getOtpCode(
                         EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS))
                 .thenReturn(Optional.of(CODE));
@@ -639,6 +641,17 @@ class VerifyCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService)
                 .deleteOtpCode(EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
+                        AUDIT_CONTEXT,
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("account-recovery", false),
+                        pair("journey-type", "SIGN_IN"),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "backup"),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("loginFailureCount", MAX_RETRIES - 1),
+                        pair("MFACodeEntered", "123456"));
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -670,6 +683,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
@@ -733,6 +747,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "6543221"),
@@ -781,6 +796,7 @@ class VerifyCodeHandlerTest {
                             pair(
                                     "journey-type",
                                     journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                            pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
                             pair("loginFailureCount", MAX_RETRIES + 1),
                             pair("MFACodeEntered", "6543221"),
@@ -815,7 +831,8 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
-                        pair("journey-type", "PASSWORD_RESET"));
+                        pair("journey-type", "PASSWORD_RESET"),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
     }
 
     @Test

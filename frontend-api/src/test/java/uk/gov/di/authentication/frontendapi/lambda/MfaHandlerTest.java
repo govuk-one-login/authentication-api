@@ -60,6 +60,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -233,9 +234,18 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
-                        AUDIT_CONTEXT,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.DEFAULT.name().toLowerCase())));
     }
 
     @Test
@@ -278,9 +288,52 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
-                        AUDIT_CONTEXT.withPhoneNumber(defaultSmsMethod.getDestination()),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(defaultSmsMethod.getDestination())
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.DEFAULT.name().toLowerCase())));
+    }
+
+    @Test
+    void shouldSubmitCorrectAuditEventForSuccessfulMfaRequestUsingBackupSms() {
+        usingValidSession();
+
+        List<MFAMethod> mfaMethods = List.of(backupSmsMethod, defaultSmsMethod);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
+
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"mfaMethodId\": \"%s\"}",
+                        EMAIL, backupSmsMethod.getMfaIdentifier());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        handler.handleRequest(event, context);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(backupSmsMethod.getDestination())
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.BACKUP.name().toLowerCase())));
     }
 
     @Test
@@ -347,9 +400,15 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue())));
     }
 
     @Test
@@ -370,9 +429,19 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withTxmaAuditEncoded(Optional.empty())
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.DEFAULT.name().toLowerCase())));
     }
 
     @Test
@@ -421,9 +490,18 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
-                        AUDIT_CONTEXT,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.DEFAULT.name().toLowerCase())));
     }
 
     @Test
@@ -472,9 +550,14 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.AUTH_MFA_MISMATCHED_EMAIL,
                         AUDIT_CONTEXT
                                 .withEmail("wrong.email@gov.uk")
-                                .withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue())));
     }
 
     @Test
@@ -509,9 +592,15 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue())));
     }
 
     @Test
@@ -594,9 +683,10 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", journeyType))
+                                .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     private void checkUserIsBlockedWhenNotReAuthenticating(
@@ -650,9 +740,10 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", journeyType))
+                                .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -678,9 +769,10 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", journeyType))
+                                .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @ParameterizedTest
@@ -704,9 +796,10 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
-                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        AUDIT_CONTEXT
+                                .withPhoneNumber(AuditService.UNKNOWN)
+                                .withMetadataItem(pair("journey-type", journeyType))
+                                .withMetadataItem(pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -753,9 +846,18 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        AUDIT_CONTEXT,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        AUDIT_CONTEXT
+                                .withMetadataItem(pair("journey-type", JourneyType.SIGN_IN))
+                                .withMetadataItem(
+                                        pair(
+                                                "mfa-type",
+                                                NotificationType.MFA_SMS
+                                                        .getMfaMethodType()
+                                                        .getValue()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                PriorityIdentifier.DEFAULT.name().toLowerCase())));
     }
 
     @Test
