@@ -26,45 +26,27 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_DURATION: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutDuration,
-              ]
-          LOCKOUT_COUNT_TTL: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutCountTtl,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutCountTtl,
-              ]
+          LOCKOUT_DURATION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutDuration,
+            ]
+          LOCKOUT_COUNT_TTL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutCountTtl,
+            ]
           REDIS_KEY: "session"
           SUPPORT_EMAIL_CHECK_ENABLED: true
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                useStronglyConsistentReads,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                useStronglyConsistentReads,
-              ]
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref CheckEmailFraudBlockFunctionLogGroup
       Policies:

@@ -50,18 +50,12 @@ Resources:
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                useStronglyConsistentReads,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                useStronglyConsistentReads,
-              ]
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref StartFunctionLogGroup
       Policies:

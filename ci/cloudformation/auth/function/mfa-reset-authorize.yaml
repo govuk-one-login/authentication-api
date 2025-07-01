@@ -12,10 +12,12 @@ Resources:
       Environment:
         Variables:
           AUTH_ISSUER_CLAIM: "auth"
-          AUTH_ISSUER_CLAIM_FOR_EVCS: !Sub
-            - "{{resolve:ssm:/deploy/${env}/auth_issuer_claim_for_evcs}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_ISSUER_CLAIM_FOR_EVCS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -74,9 +76,17 @@ Resources:
               env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MFA_RESET_CALLBACK_URI: !Sub
-            - "{{resolve:ssm:/deploy/${env}/ipv_auth_authorize_callback_uri}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - "${BaseUrl}/ipv/callback/authorize"
+            - BaseUrl:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  frontendBaseUrl,
+                ]
           MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Sub
             - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-mfa-reset-token-signing-key-ecc-alias
             - DataStoreAccountId:
@@ -89,18 +99,12 @@ Resources:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                useStronglyConsistentReads,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                useStronglyConsistentReads,
-              ]
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref MfaResetAuthorizeFunctionLogGroup
       Policies:

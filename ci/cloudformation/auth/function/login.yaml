@@ -35,30 +35,18 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
-          LOCKOUT_DURATION: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutDuration,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutDuration,
-              ]
-          LOCKOUT_COUNT_TTL: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                lockoutCountTtl,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                lockoutCountTtl,
-              ]
+          LOCKOUT_COUNT_TTL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutCountTtl,
+            ]
+          LOCKOUT_DURATION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              lockoutDuration,
+            ]
           REAUTH_ENTER_PASSWORD_COUNT_TTL: !Sub
             - "{{resolve:ssm:/deploy/${env}/reauth_enter_password_count_ttl}}"
             - env:
@@ -68,31 +56,19 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TERMS_CONDITIONS_VERSION: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                termsConditionsVersion,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                termsConditionsVersion,
-              ]
+          TERMS_CONDITIONS_VERSION:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              termsConditionsVersion,
+            ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                useStronglyConsistentReads,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                useStronglyConsistentReads,
-              ]
+          USE_STRONGLY_CONSISTENT_READS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              useStronglyConsistentReads,
+            ]
       LoggingConfig:
         LogGroup: !Ref LoginFunctionLogGroup
       Policies:
