@@ -620,24 +620,11 @@ class VerifyMfaCodeHandlerTest {
         private static Stream<Arguments> blockedCodeForAuthAppOTPEnteredTooManyTimes() {
             return Stream.of(
                     Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(
-                            REGISTRATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REGISTRATION),
-                    Arguments.of(
-                            JourneyType.SIGN_IN,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_SIGN_IN),
-                    Arguments.of(
-                            JourneyType.PASSWORD_RESET_MFA,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_PW_RESET_MFA),
-                    Arguments.of(
-                            REAUTHENTICATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REAUTHENTICATION));
+                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
+                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
+                    Arguments.of(JourneyType.SIGN_IN, CodeRequestType.MFA_SIGN_IN),
+                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
+                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
         }
 
         @ParameterizedTest
@@ -803,21 +790,10 @@ class VerifyMfaCodeHandlerTest {
         private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
             return Stream.of(
                     Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(
-                            JourneyType.PASSWORD_RESET_MFA,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_PW_RESET_MFA),
-                    Arguments.of(
-                            REGISTRATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REGISTRATION),
-                    Arguments.of(
-                            REAUTHENTICATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REAUTHENTICATION));
+                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
+                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
+                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
+                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
         }
 
         @ParameterizedTest
