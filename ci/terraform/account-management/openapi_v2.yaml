@@ -323,7 +323,7 @@ paths:
                 post-when-default-method-already-exists-new-one-cannot-be-created:
                   value:
                     code: 1080
-                    message: "Default method already exists, new one cannot be created."
+                    message: "Default method already exists, new one cannot be created"
                 post-when-invalid-otp-code:
                   value:
                     code: 1020
