@@ -69,6 +69,7 @@ import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATIO
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MFAMethodsService.getMfaMethodOrDefaultMfaMethod;
@@ -339,8 +340,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                     codeRequest.getMfaMethodType() == MFAMethodType.SMS
                                             ? mfaMethod ->
                                                     Objects.equals(
-                                                            mfaMethod.getDestination(),
-                                                            codeRequest.getProfileInformation())
+                                                            formatPhoneNumber(
+                                                                    mfaMethod.getDestination()),
+                                                            formatPhoneNumber(
+                                                                    codeRequest
+                                                                            .getProfileInformation()))
                                             : mfaMethod -> true)
                             .findFirst();
         }
