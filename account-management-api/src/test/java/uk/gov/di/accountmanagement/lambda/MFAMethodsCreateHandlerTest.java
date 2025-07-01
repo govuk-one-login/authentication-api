@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -101,6 +102,7 @@ class MFAMethodsCreateHandlerTest {
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final MfaMethodsMigrationService mfaMethodsMigrationService = mock(MfaMethodsMigrationService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile()
@@ -203,7 +205,8 @@ class MFAMethodsCreateHandlerTest {
                         codeStorageService,
                         auditService,
                         sqsClient,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        mfaMethodsMigrationService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
