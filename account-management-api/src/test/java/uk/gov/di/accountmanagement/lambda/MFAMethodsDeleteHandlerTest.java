@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -63,6 +64,7 @@ class MFAMethodsDeleteHandlerTest {
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AuditService auditService = mock(AuditService.class);
     private static final MFAMethod SMS_MFA_METHOD =
             new MFAMethod()
                     .withMfaMethodType(MFAMethodType.SMS.getValue())
@@ -82,7 +84,11 @@ class MFAMethodsDeleteHandlerTest {
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         handler =
                 new MFAMethodsDeleteHandler(
-                        configurationService, mfaMethodsService, dynamoService, sqsClient);
+                        configurationService,
+                        mfaMethodsService,
+                        dynamoService,
+                        sqsClient,
+                        auditService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
     }
