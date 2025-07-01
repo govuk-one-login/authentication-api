@@ -53,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -613,52 +612,42 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             Optional<MFAMethod> activeMfaMethod) {
         var methodType = codeRequest.getMfaMethodType();
-        var basicMetadataPairs =
-                List.of(
-                        pair("mfa-type", methodType.getValue()),
-                        pair(
-                                "account-recovery",
-                                codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY),
-                        pair("journey-type", codeRequest.getJourneyType()));
-        var additionalPairs =
-                switch (auditableEvent) {
-                    case AUTH_CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
-                    case AUTH_INVALID_CODE_SENT -> {
-                        var failureCount =
-                                codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-                        yield List.of(
-                                pair("loginFailureCount", failureCount),
-                                pair("MFACodeEntered", codeRequest.getCode()));
-                    }
-                    case AUTH_CODE_VERIFIED -> {
-                        var list = new ArrayList<AuditService.MetadataPair>();
-                        list.add(pair("MFACodeEntered", codeRequest.getCode()));
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(pair("mfa-type", methodType.getValue()));
+        metadataPairs.add(
+                pair(
+                        "account-recovery",
+                        codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY));
+        metadataPairs.add(pair("journey-type", codeRequest.getJourneyType()));
 
-                        List<JourneyType> noMfaSavedJourneys =
-                                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION);
+        switch (auditableEvent) {
+            case AUTH_CODE_MAX_RETRIES_REACHED -> metadataPairs.add(
+                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+            case AUTH_INVALID_CODE_SENT -> {
+                var failureCount = codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
+                metadataPairs.add(pair("loginFailureCount", failureCount));
+                metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));
+            }
+            case AUTH_CODE_VERIFIED -> {
+                metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));
 
-                        if (noMfaSavedJourneys.contains(codeRequest.getJourneyType())) {
-                            list.add(
-                                    pair(
-                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
-                        } else
-                            activeMfaMethod.ifPresent(
-                                    mfaMethod ->
-                                            list.add(
-                                                    pair(
-                                                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                            mfaMethod
-                                                                    .getPriority()
-                                                                    .toLowerCase())));
+                if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
+                        .contains(codeRequest.getJourneyType())) {
+                    metadataPairs.add(
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                    PriorityIdentifier.DEFAULT.name().toLowerCase()));
+                } else
+                    activeMfaMethod.ifPresent(
+                            mfaMethod ->
+                                    metadataPairs.add(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                    mfaMethod.getPriority().toLowerCase())));
+            }
+        }
 
-                        yield list;
-                    }
-                    default -> List.<AuditService.MetadataPair>of();
-                };
-        return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
-                .toArray(AuditService.MetadataPair[]::new);
+        return metadataPairs.stream().toArray(AuditService.MetadataPair[]::new);
     }
 
     private Optional<String> getRpPairwiseId(
