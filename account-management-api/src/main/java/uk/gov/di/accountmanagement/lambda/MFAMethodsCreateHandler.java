@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.MfaMethodResponse;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
@@ -25,7 +26,6 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -49,7 +49,6 @@ import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migr
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1020;
@@ -75,6 +74,7 @@ public class MFAMethodsCreateHandler
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final MfaMethodsMigrationService mfaMethodsMigrationService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -94,6 +94,7 @@ public class MFAMethodsCreateHandler
                         configurationService.getSqsEndpointUri());
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
@@ -103,7 +104,9 @@ public class MFAMethodsCreateHandler
             CodeStorageService codeStorageService,
             AuditService auditService,
             AwsSqsClient sqsClient,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            MfaMethodsMigrationService mfaMethodsMigrationService
+    ) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
@@ -111,6 +114,7 @@ public class MFAMethodsCreateHandler
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.mfaMethodsMigrationService = mfaMethodsMigrationService;
     }
 
     @Override

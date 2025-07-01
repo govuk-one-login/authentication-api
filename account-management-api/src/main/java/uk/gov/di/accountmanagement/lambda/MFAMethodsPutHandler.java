@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -33,7 +34,6 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
-import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -52,6 +52,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
+    private final MfaMethodsMigrationService mfaMethodsMigrationService;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -70,6 +71,7 @@ public class MFAMethodsPutHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -77,12 +79,14 @@ public class MFAMethodsPutHandler
             MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            MfaMethodsMigrationService mfaMethodsMigrationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.mfaMethodsMigrationService = mfaMethodsMigrationService;
     }
 
     @Override
@@ -125,8 +129,10 @@ public class MFAMethodsPutHandler
                 .toString()
                 .equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
             var maybeMigrationErrorResponse =
-                    migrateMfaCredentialsForUserIfRequired(
-                            putRequest.userProfile, mfaMethodsService, LOG);
+                    mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            putRequest.userProfile, LOG, input, putRequest.request.mfaMethod().method());
+
+            putRequest.request.mfaMethod();
 
             if (maybeMigrationErrorResponse.isPresent()) {
                 return maybeMigrationErrorResponse.get();

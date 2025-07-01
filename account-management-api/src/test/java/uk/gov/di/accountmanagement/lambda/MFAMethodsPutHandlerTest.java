@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -64,6 +65,7 @@ class MFAMethodsPutHandlerTest {
             mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final Context context = mock(Context.class);
+    private static final MfaMethodsMigrationService mfaMethodsMigrationService = mock(MfaMethodsMigrationService.class);
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
@@ -92,7 +94,8 @@ class MFAMethodsPutHandlerTest {
                         mfaMethodsService,
                         authenticationService,
                         codeStorageService,
-                        sqsClient);
+                        sqsClient,
+                        mfaMethodsMigrationService);
     }
 
     @Test
