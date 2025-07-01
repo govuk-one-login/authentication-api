@@ -1208,7 +1208,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
-            assertEquals(Result.success(identifierToDelete), result);
+            assertEquals(Result.success(backupPriorityAuthApp), result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
@@ -1226,7 +1226,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.deleteMfaMethod(identifierToDelete, userProfile);
 
-            assertEquals(Result.success(identifierToDelete), result);
+            assertEquals(Result.success(backupPrioritySms), result);
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
