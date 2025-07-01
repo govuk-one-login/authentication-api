@@ -29,6 +29,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.DocAppAuthorisationServiceException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -124,20 +125,31 @@ public class DocAppAuthorisationService {
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var value =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(STATE_STORAGE_PREFIX + sessionId));
-        if (value.isEmpty()) {
+        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
+        var valueFromRedis =
+                Optional.ofNullable(redisConnectionService.getValue(prefixedSessionId));
+        if (valueFromRedis.isEmpty()) {
             LOG.info("No Doc Checking App state found in Redis");
             return false;
         }
+
         State storedState;
         try {
-            storedState = objectMapper.readValue(value.get(), State.class);
+            storedState = objectMapper.readValue(valueFromRedis.get(), State.class);
         } catch (JsonException e) {
             LOG.info("Error when deserializing state from redis");
             return false;
         }
+
+        // Here we have to deserialise the state and get the value before we can compare the state
+        // values, as the serialised state value is surrounded by double quotes
+        var valueFromDynamo =
+                stateStorageService.getState(prefixedSessionId).map(StateItem::getState);
+        LOG.info(
+                "Is state from redis equal to state from dynamo? {}",
+                valueFromDynamo.isPresent()
+                        && storedState.getValue().equals(valueFromDynamo.get()));
+
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,

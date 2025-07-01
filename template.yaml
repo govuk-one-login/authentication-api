@@ -1682,6 +1682,7 @@ Resources:
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6360,6 +6361,25 @@ Resources:
           Value: ClientRateLimitTable
   #endregion
   #region StateStorage policies
+  StateStorageTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
   StateStorageTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
