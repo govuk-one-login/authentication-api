@@ -202,7 +202,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 emptyList(),
                 Channel.WEB.getValue(),
                 false,
-                false);
+                false,
+                null);
     }
 
     public void registerClient(
@@ -247,7 +248,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientLoCs,
                 Channel.WEB.getValue(),
                 maxAgeEnabled,
-                pkceEnforced);
+                pkceEnforced,
+                null);
     }
 
     public void registerClient(
@@ -291,7 +293,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 emptyList(),
                 Channel.WEB.getValue(),
                 false,
-                false);
+                false,
+                null);
     }
 
     public void registerClient(
@@ -333,7 +336,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 emptyList(),
                 Channel.WEB.getValue(),
                 false,
-                false);
+                false,
+                null);
     }
 
     public boolean clientExists(String clientID) {
