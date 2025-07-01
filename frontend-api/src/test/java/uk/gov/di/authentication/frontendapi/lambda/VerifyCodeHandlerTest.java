@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
@@ -47,6 +48,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +61,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -78,7 +82,9 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -333,28 +339,46 @@ class VerifyCodeHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
-        APIGatewayProxyResponseEvent result =
-                makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
-
-        String expectedJourneyType =
+        var expectedJourneyType =
                 switch (emailNotificationType) {
-                    case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> "ACCOUNT_RECOVERY";
-                    case VERIFY_EMAIL -> "REGISTRATION";
+                    case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ACCOUNT_RECOVERY;
+                    case VERIFY_EMAIL -> REGISTRATION;
                     default -> null;
                 };
+
+        if (expectedJourneyType == null) {
+            fail("Internal test error, must have a journey type");
+        }
+
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
         verifyNoInteractions(accountModifiersService);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
-                        AUDIT_CONTEXT,
+                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
+                        any(AuditContext.class),
+                        metadataCaptor.capture());
+
+        List<AuditService.MetadataPair> expected =
+                List.of(
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
-                        pair("journey-type", expectedJourneyType));
+                        pair("journey-type", expectedJourneyType.name()));
+
+        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
+
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
+
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -741,18 +765,32 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         verifyNoInteractions(accountModifiersService);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                        eq(FrontendAuditableEvent.AUTH_INVALID_CODE_SENT),
+                        eq(
+                                AUDIT_CONTEXT.withMetadataItem(
+                                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"))),
+                        metadataCaptor.capture());
+
+        List<AuditService.MetadataPair> expected =
+                List.of(
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
-                        pair("journey-type", "SIGN_IN"),
+                        pair("journey-type", SIGN_IN.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "6543221"),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+
+        List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
+
+        assertTrue(expected.containsAll(actual));
+        assertTrue(actual.containsAll(expected));
     }
 
     @ParameterizedTest
