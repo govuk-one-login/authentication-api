@@ -587,20 +587,21 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair(
                                 "journey-type",
                                 journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
@@ -644,11 +645,11 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "backup")),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "backup"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
@@ -679,11 +680,11 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
@@ -743,11 +744,11 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "6543221"),
@@ -790,13 +791,13 @@ class VerifyCodeHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                            AUDIT_CONTEXT,
+                            AUDIT_CONTEXT.withMetadataItem(
+                                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                             pair("notification-type", MFA_SMS.name()),
                             pair("account-recovery", false),
                             pair(
                                     "journey-type",
                                     journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
                             pair("loginFailureCount", MAX_RETRIES + 1),
                             pair("MFACodeEntered", "6543221"),
@@ -828,11 +829,11 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withMetadataItem(
+                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
-                        pair("journey-type", "PASSWORD_RESET"),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+                        pair("journey-type", "PASSWORD_RESET"));
     }
 
     @Test
