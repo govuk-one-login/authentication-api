@@ -326,13 +326,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
         var clientId = userContext.getAuthSession().getClientId();
         if (!userMfaDetail.isMfaRequired()) {
-            cloudwatchMetricsService.incrementAuthenticationSuccess(
+            cloudwatchMetricsService.incrementAuthenticationSuccessWithoutMfa(
                     AuthSessionItem.AccountState.EXISTING,
                     clientId,
                     authSessionItem.getClientName(),
                     "P0",
-                    clientService.isTestJourney(clientId, userProfile.getEmail()),
-                    false);
+                    clientService.isTestJourney(clientId, userProfile.getEmail()));
 
             if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
                     || !authSessionItem

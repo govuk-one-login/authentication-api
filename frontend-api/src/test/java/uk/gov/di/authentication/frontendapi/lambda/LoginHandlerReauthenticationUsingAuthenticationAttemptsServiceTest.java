@@ -262,8 +262,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                     configurationService.getMaxPasswordRetries()));
 
             verify(cloudwatchMetricsService, never())
-                    .incrementAuthenticationSuccess(
-                            any(), any(), any(), any(), anyBoolean(), anyBoolean());
+                    .incrementAuthenticationSuccessWithoutMfa(
+                            any(), any(), any(), any(), anyBoolean());
             verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
         }
     }

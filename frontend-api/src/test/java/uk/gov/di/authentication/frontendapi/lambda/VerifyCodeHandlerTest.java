@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -600,13 +601,15 @@ class VerifyCodeHandlerTest {
                         AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID,
                         CLIENT_NAME,
                         "P0",
                         false,
-                        true);
+                        journeyType != null ? journeyType : JourneyType.SIGN_IN,
+                        MFAMethodType.SMS,
+                        PriorityIdentifier.DEFAULT);
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -671,13 +674,15 @@ class VerifyCodeHandlerTest {
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
+                .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID,
                         CLIENT_NAME,
                         "P0",
                         false,
-                        true);
+                        JourneyType.SIGN_IN,
+                        MFAMethodType.SMS,
+                        PriorityIdentifier.DEFAULT);
     }
 
     @Test
