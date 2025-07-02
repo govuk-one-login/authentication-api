@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -631,23 +632,29 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
                 metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));
 
-                if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
-                        .contains(codeRequest.getJourneyType())) {
-                    metadataPairs.add(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    PriorityIdentifier.DEFAULT.name().toLowerCase()));
-                } else
-                    activeMfaMethod.ifPresent(
-                            mfaMethod ->
-                                    metadataPairs.add(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                    mfaMethod.getPriority().toLowerCase())));
+                getPriorityIdentifier(codeRequest, activeMfaMethod)
+                        .ifPresent(
+                                identifier ->
+                                        metadataPairs.add(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                        identifier.name().toLowerCase())));
             }
         }
 
         return metadataPairs.stream().toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private Optional<PriorityIdentifier> getPriorityIdentifier(
+            CodeRequest codeRequest, Optional<MFAMethod> activeMfaMethod) {
+        if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
+                .contains(codeRequest.getJourneyType())) {
+            return Optional.of(PriorityIdentifier.DEFAULT);
+        } else if (activeMfaMethod.isPresent()) {
+            return Optional.of(PriorityIdentifier.valueOf(activeMfaMethod.get().getPriority()));
+        } else {
+            return Optional.empty();
+        }
     }
 
     private Optional<String> getRpPairwiseId(
