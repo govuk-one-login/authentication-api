@@ -289,7 +289,7 @@ public class MFAMethodsService {
     public record MfaUpdateResponse(
             List<MFAMethod> mfaMethods, MFAMethodUpdateIdentifier updateTypeIdentifier) {}
 
-    public Result<MfaUpdateFailureReason, MfaUpdateResponse> updateMfaMethod(
+    public Result<MfaUpdateFailure, MfaUpdateResponse> updateMfaMethod(
             String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
         var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
 
@@ -311,7 +311,10 @@ public class MFAMethodsService {
                                     case BACKUP -> handleBackupMethodUpdate(
                                             method, request.mfaMethod(), email, mfaMethods);
                                 })
-                .orElse(Result.failure(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER));
+                .orElse(
+                        Result.failure(
+                                new MfaUpdateFailure(
+                                        MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER)));
     }
 
     public static Optional<MFAMethod> getMfaMethodOrDefaultMfaMethod(
@@ -334,14 +337,15 @@ public class MFAMethodsService {
                 .findFirst();
     }
 
-    private Result<MfaUpdateFailureReason, MfaUpdateResponse> handleBackupMethodUpdate(
+    private Result<MfaUpdateFailure, MfaUpdateResponse> handleBackupMethodUpdate(
             MFAMethod backupMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
             List<MFAMethod> allMethods) {
         if (updatedMethod.method() != null) {
             // ERROR a backup method can not be edited.
-            return Result.failure(MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD);
+            return Result.failure(
+                    new MfaUpdateFailure(MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD));
         }
 
         var maybeDefaultMethod =
@@ -351,7 +355,9 @@ public class MFAMethodsService {
 
         if (maybeDefaultMethod.isEmpty()) {
             return Result.failure(
-                    MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD);
+                    new MfaUpdateFailure(
+                            MfaUpdateFailureReason
+                                    .ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD));
         }
 
         var defaultMethod = maybeDefaultMethod.get();
@@ -380,20 +386,19 @@ public class MFAMethodsService {
         return updatedResult;
     }
 
-    private Result<MfaUpdateFailureReason, MfaUpdateResponse>
-            mfaUpdateFailureReasonOrSortedMfaMethods(
-                    Result<String, List<MFAMethod>> databaseUpdateResult,
-                    MFAMethodUpdateIdentifier updateTypeIdentifier) {
+    private Result<MfaUpdateFailure, MfaUpdateResponse> mfaUpdateFailureReasonOrSortedMfaMethods(
+            Result<String, List<MFAMethod>> databaseUpdateResult,
+            MFAMethodUpdateIdentifier updateTypeIdentifier) {
         return databaseUpdateResult
                 .map(m -> new MfaUpdateResponse(m.stream().sorted().toList(), updateTypeIdentifier))
                 .mapFailure(
                         errorString -> {
                             LOG.error(errorString);
-                            return MfaUpdateFailureReason.UNEXPECTED_ERROR;
+                            return new MfaUpdateFailure(MfaUpdateFailureReason.UNEXPECTED_ERROR);
                         });
     }
 
-    private Result<MfaUpdateFailureReason, MfaUpdateResponse> handleDefaultMethodUpdate(
+    private Result<MfaUpdateFailure, MfaUpdateResponse> handleDefaultMethodUpdate(
             MFAMethod defaultMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -401,10 +406,12 @@ public class MFAMethodsService {
             List<MFAMethod> allMethodsForUser) {
         var requestedPriority = updatedMethod.priorityIdentifier();
         if (requestedPriority == BACKUP) {
-            return Result.failure(MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD);
+            return Result.failure(
+                    new MfaUpdateFailure(
+                            MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD));
         }
 
-        Result<MfaUpdateFailureReason, MfaUpdateResponse> updateResult;
+        Result<MfaUpdateFailure, MfaUpdateResponse> updateResult;
         if (updatedMethod.method() instanceof RequestSmsMfaDetail updatedSmsDetail) {
             updateResult =
                     updateSmsMethod(
@@ -432,7 +439,7 @@ public class MFAMethodsService {
         return updateResult;
     }
 
-    private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateSmsMethod(
+    private Result<MfaUpdateFailure, MfaUpdateResponse> updateSmsMethod(
             MFAMethod defaultMethod,
             String email,
             String mfaIdentifier,
@@ -444,7 +451,8 @@ public class MFAMethodsService {
 
         if (maybePhoneNumberWithCountryCode.isFailure()) {
             LOG.warn(maybePhoneNumberWithCountryCode.getFailure());
-            return Result.failure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER);
+            return Result.failure(
+                    new MfaUpdateFailure(MfaUpdateFailureReason.INVALID_PHONE_NUMBER));
         }
 
         var phoneNumberWithCountryCode = maybePhoneNumberWithCountryCode.getSuccess();
@@ -454,7 +462,8 @@ public class MFAMethodsService {
 
         if (isExistingDefaultPhoneNumber) {
             return Result.failure(
-                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+                    new MfaUpdateFailure(
+                            MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE));
         }
 
         var otherMethods =
@@ -471,7 +480,9 @@ public class MFAMethodsService {
 
         if (isExistingBackupPhoneNumber) {
             return Result.failure(
-                    MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER);
+                    new MfaUpdateFailure(
+                            MfaUpdateFailureReason
+                                    .ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER));
         }
 
         MFAMethod updMethod = new MFAMethod();
@@ -503,7 +514,7 @@ public class MFAMethodsService {
         return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult, updateTypeIdentifier);
     }
 
-    private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateAuthApp(
+    private Result<MfaUpdateFailure, MfaUpdateResponse> updateAuthApp(
             MFAMethod defaultMethod,
             MfaMethodUpdateRequest.MfaMethod updatedMethod,
             String email,
@@ -518,12 +529,14 @@ public class MFAMethodsService {
                                 method.getMfaMethodType().equalsIgnoreCase(AUTH_APP.getValue())
                                         && !method.getPriority()
                                                 .equalsIgnoreCase(DEFAULT.name()))) {
-            return Result.failure(MfaUpdateFailureReason.CANNOT_ADD_SECOND_AUTH_APP);
+            return Result.failure(
+                    new MfaUpdateFailure(MfaUpdateFailureReason.CANNOT_ADD_SECOND_AUTH_APP));
         }
 
         if (authAppDetail.credential().equals(defaultMethod.getCredentialValue())) {
             return Result.failure(
-                    MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE);
+                    new MfaUpdateFailure(
+                            MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE));
         }
 
         MFAMethod updMethod = new MFAMethod();

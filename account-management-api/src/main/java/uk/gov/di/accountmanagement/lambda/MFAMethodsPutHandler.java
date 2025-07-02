@@ -39,7 +39,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
-import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
 import java.util.List;
 import java.util.Map;
@@ -228,7 +228,8 @@ public class MFAMethodsPutHandler
     }
 
     private static APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
-            MfaUpdateFailureReason failureReason) {
+            MfaUpdateFailure failure) {
+        var failureReason = failure.failureReason();
         var response =
                 switch (failureReason) {
                     case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(

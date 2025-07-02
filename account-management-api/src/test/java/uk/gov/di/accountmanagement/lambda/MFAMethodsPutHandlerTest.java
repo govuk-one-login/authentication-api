@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.HashMap;
@@ -487,7 +488,7 @@ class MFAMethodsPutHandlerTest {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Result.failure(failureReason));
+                .thenReturn(Result.failure(new MfaUpdateFailure(failureReason)));
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
         assertThat(result, hasStatus(expectedStatus));
