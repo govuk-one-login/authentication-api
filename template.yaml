@@ -2672,7 +2672,7 @@ Resources:
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
-        - !Ref StateStorageTableWriteAccessPolicy
+        - !Ref StateStorageTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6396,7 +6396,30 @@ Resources:
               - kms:Decrypt
               - kms:Encrypt
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
-
+  StateStorageTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
   #region IPV token signing key pair
 
