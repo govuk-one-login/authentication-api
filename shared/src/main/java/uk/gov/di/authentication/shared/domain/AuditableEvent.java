@@ -5,6 +5,7 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_MFA_TYPE = "mfa-type";
     String AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY = "account-recovery";
     String AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE = "journey-type";
+    String AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE = "phone_number_country_code";
 
     AuditableEvent parseFromName(String name);
 }

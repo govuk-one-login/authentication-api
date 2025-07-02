@@ -41,8 +41,8 @@ import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -54,14 +54,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
-import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.*;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
@@ -111,18 +110,6 @@ class MFAMethodsCreateHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
 
     private final AuditService auditService = mock(AuditService.class);
-    private final AuditContext auditContext =
-            new AuditContext(
-                    TEST_CLIENT_ID,
-                    SESSION_ID,
-                    TEST_NON_CLIENT_SESSION_ID,
-                    TEST_INTERNAL_SUBJECT,
-                    TEST_EMAIL,
-                    TEST_IP_ADDRESS,
-                    TEST_PHONE_NUMBER,
-                    PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
 
     private MFAMethodsCreateHandler handler;
 
@@ -165,7 +152,7 @@ class MFAMethodsCreateHandlerTest {
         authorizerParams.put("principalId", principal);
         authorizerParams.put("clientId", TEST_CLIENT_ID);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(TEST_IP_ADDRESS));
 
         Map<String, String> headers = new HashMap<>(VALID_HEADERS);
         headers.put(SESSION_ID_HEADER, TEST_NON_CLIENT_SESSION_ID);
@@ -175,6 +162,18 @@ class MFAMethodsCreateHandlerTest {
                 .withBody(body)
                 .withRequestContext(proxyRequestContext)
                 .withHeaders(headers);
+    }
+
+    private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
+        Optional<AuditService.MetadataPair> metadataItem =
+                capturedObject.getMetadataItemByKey(field);
+        assertTrue(
+                metadataItem.isPresent(),
+                "Metadata field '" + field + "' not found in audit context");
+        assertEquals(
+                AuditService.MetadataPair.pair(field, value),
+                metadataItem.get(),
+                "Metadata field '" + field + "' has incorrect value");
     }
 
     @BeforeEach
@@ -259,7 +258,16 @@ class MFAMethodsCreateHandlerTest {
             var expectedResponseParsedToString =
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
-            verifyNoInteractions(auditService);
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService)
+                    .submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_COMPLETED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.name());
         }
 
         @Test
@@ -273,6 +281,12 @@ class MFAMethodsCreateHandlerTest {
                             TEST_AUTH_APP_ID);
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.success(authAppBackup));
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var event =
                     generateApiGatewayEvent(
@@ -317,7 +331,18 @@ class MFAMethodsCreateHandlerTest {
                                             TEST_EMAIL,
                                             NotificationType.BACKUP_METHOD_ADDED,
                                             LocaleHelper.SupportedLanguage.EN)));
-            verifyNoInteractions(auditService);
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService)
+                    .submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_COMPLETED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.toString());
         }
 
         @Test
@@ -377,6 +402,7 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
                     .thenReturn(Optional.of(reason));
+            when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
 
             var event =
                     generateApiGatewayEvent(
@@ -495,6 +521,13 @@ class MFAMethodsCreateHandlerTest {
                                     MfaCreateFailureReason
                                             .BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST));
 
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
+
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
@@ -516,16 +549,6 @@ class MFAMethodsCreateHandlerTest {
                     MFAMethodType.AUTH_APP.toString());
         }
 
-        private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
-            capturedObject
-                    .getMetadataItemByKey(field)
-                    .ifPresent(
-                            actualMetadataPairForMfaMethod ->
-                                    assertEquals(
-                                            AuditService.MetadataPair.pair(field, value),
-                                            actualMetadataPairForMfaMethod));
-        }
-
         @Test
         void shouldReturn400WhenMfaMethodServiceReturnsInvalidPhoneNumberError() {
             var event =
@@ -540,6 +563,12 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.INVALID_PHONE_NUMBER));
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -598,6 +627,12 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS));
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -631,6 +666,12 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.failure(MfaCreateFailureReason.AUTH_APP_EXISTS));
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -667,6 +708,16 @@ class MFAMethodsCreateHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             when(mfaMethodsService.addBackupMfa(any(), any()))
                     .thenReturn(Result.success(mfaMethodWithInvalidMfaType));
+            var defaultMfa =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            TEST_PHONE_NUMBER,
+                            PriorityIdentifier.DEFAULT,
+                            TEST_SMS_MFA_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
 
             var result = handler.handleRequest(event, context);
 
@@ -684,9 +735,7 @@ class MFAMethodsCreateHandlerTest {
             containsMetadataPair(
                     capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             containsMetadataPair(
-                    capturedObject,
-                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                    MFAMethodType.AUTH_APP.toString());
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.toString());
         }
 
         @Test
