@@ -139,6 +139,7 @@ Conditions:
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
     ]
+  IsRpRateLimitingEnabled: false
 
 Mappings:
   EnvironmentConfiguration:
@@ -3294,6 +3295,10 @@ Resources:
               orchToAuthKeyArn,
             ]
           REDIS_KEY: session
+          RP_RATE_LIMITING_ENABLED: !If
+            - IsRpRateLimitingEnabled
+            - true
+            - false
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
