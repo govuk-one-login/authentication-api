@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -167,7 +168,7 @@ public class MFAMethodsCreateHandler
     }
 
     private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
-            APIGatewayProxyRequestEvent input, UserProfile userProfile) {
+            APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
         MfaMethodCreateRequest mfaMethodCreateRequest = null;
 
         try {
@@ -191,6 +192,12 @@ public class MFAMethodsCreateHandler
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
                 LOG.info("Invalid OTP presented.");
+                auditContext =
+                        auditContext.withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        PriorityIdentifier.BACKUP.name().toLowerCase()));
+                auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
                 return Result.failure(ERROR_1020);
             }
         }
@@ -211,7 +218,16 @@ public class MFAMethodsCreateHandler
 
         var userProfile = maybePassedGuardConditions.getSuccess();
 
-        var maybeValidRequest = validateRequest(input, userProfile);
+        Result<ErrorResponse, AuditContext> auditContextResult =
+                buildAuditContext(input, userProfile);
+
+        if (auditContextResult.isFailure()) {
+            return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
+        }
+
+        var auditContext = auditContextResult.getSuccess();
+
+        var maybeValidRequest = validateRequest(input, userProfile, auditContext);
 
         if (maybeValidRequest.isFailure()) {
             return generateApiGatewayProxyErrorResponse(400, maybeValidRequest.getFailure());
@@ -230,15 +246,6 @@ public class MFAMethodsCreateHandler
         Result<MfaCreateFailureReason, MFAMethod> addBackupMfaResult =
                 mfaMethodsService.addBackupMfa(
                         userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
-
-        Result<ErrorResponse, AuditContext> auditContextResult =
-                buildAuditContext(input, userProfile);
-
-        if (auditContextResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
-        }
-
-        var auditContext = auditContextResult.getSuccess();
 
         if (addBackupMfaResult.isFailure()) {
             var maybeAuditContext =
