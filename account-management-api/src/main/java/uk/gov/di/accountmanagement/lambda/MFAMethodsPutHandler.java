@@ -32,18 +32,15 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
@@ -73,6 +70,7 @@ public class MFAMethodsPutHandler
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
+    private final DynamoService dynamoService;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -92,6 +90,7 @@ public class MFAMethodsPutHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -100,13 +99,15 @@ public class MFAMethodsPutHandler
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AwsSqsClient sqsClient,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -164,6 +165,30 @@ public class MFAMethodsPutHandler
                                 requestSmsMfaDetail.otp(),
                                 NotificationType.VERIFY_PHONE_NUMBER);
                 if (!isValidOtpCode) {
+                    var maybeAuditContext =
+                            AuditHelper.buildAuditContext(
+                                    configurationService,
+                                    dynamoService,
+                                    input,
+                                    putRequest.userProfile);
+
+                    if (maybeAuditContext.isFailure()) {
+                        return generateApiGatewayProxyErrorResponse(
+                                401, maybeAuditContext.getFailure());
+                    }
+
+                    var auditContext =
+                            maybeAuditContext
+                                    .getSuccess()
+                                    .withMetadataItem(
+                                            pair(
+                                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                    PriorityIdentifier.DEFAULT
+                                                            .name()
+                                                            .toLowerCase()));
+
+                    auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
+
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
                 }
             }
