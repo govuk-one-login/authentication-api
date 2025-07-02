@@ -18,7 +18,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -118,7 +118,7 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
-                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
@@ -181,7 +181,7 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
-                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
         when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
                 .thenReturn(Optional.empty());
 
@@ -218,20 +218,20 @@ class MFAMethodsPutHandlerTest {
     private static Stream<Arguments> validEmailNotificationIdentifiers() {
         return Stream.of(
                 Arguments.of(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP,
+                        MFAMethodUpdateIdentifier.CHANGED_AUTHENTICATOR_APP,
                         NotificationType.CHANGED_AUTHENTICATOR_APP),
                 Arguments.of(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
+                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA,
                         NotificationType.CHANGED_DEFAULT_MFA),
                 Arguments.of(
-                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS,
+                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS,
                         NotificationType.SWITCHED_MFA_METHODS));
     }
 
     @ParameterizedTest
     @MethodSource("validEmailNotificationIdentifiers")
     void shouldSendAppropriateEmailNotificationUponSuccessWhenFeatureFlagEnabled(
-            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier,
+            MFAMethodUpdateIdentifier emailNotificationIdentifier,
             NotificationType notificationType)
             throws Json.JsonException {
         var phoneNumber = "123456789";
@@ -326,7 +326,7 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
-                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
         when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
                 .thenReturn(Optional.of(migrationFailureReason));
 
@@ -444,7 +444,7 @@ class MFAMethodsPutHandlerTest {
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(mfaWithInvalidType),
-                                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
 
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));

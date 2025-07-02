@@ -14,8 +14,8 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
@@ -890,8 +890,8 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedRemainingMethods, result.getSuccess().mfaMethods()));
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP,
-                        result.getSuccess().emailNotificationIdentifier());
+                        MFAMethodUpdateIdentifier.CHANGED_AUTHENTICATOR_APP,
+                        result.getSuccess().updateTypeIdentifier());
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
@@ -939,8 +939,8 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethods, result.getSuccess().mfaMethods()));
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_SMS,
-                        result.getSuccess().emailNotificationIdentifier());
+                        MFAMethodUpdateIdentifier.CHANGED_SMS,
+                        result.getSuccess().updateTypeIdentifier());
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethods, methodsInDatabase));
@@ -1005,8 +1005,8 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertTrue(result.isSuccess());
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
-                        result.getSuccess().emailNotificationIdentifier());
+                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA,
+                        result.getSuccess().updateTypeIdentifier());
             }
 
             @Test
@@ -1030,8 +1030,8 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertTrue(result.isSuccess());
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA,
-                        result.getSuccess().emailNotificationIdentifier());
+                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA,
+                        result.getSuccess().updateTypeIdentifier());
             }
 
             @Test
@@ -1150,8 +1150,8 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(
                                 expectedMethodsAfterUpdate, result.getSuccess().mfaMethods()));
                 assertEquals(
-                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS,
-                        result.getSuccess().emailNotificationIdentifier());
+                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS,
+                        result.getSuccess().updateTypeIdentifier());
 
                 assertTrue(
                         mfaMethodListsContainTheSameItemsIgnoringUpdatedField(

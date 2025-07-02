@@ -16,7 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -167,10 +167,9 @@ public class MFAMethodsPutHandler
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
         }
 
-        if (updateResult.emailNotificationIdentifier() != null) {
+        if (updateResult.updateTypeIdentifier() != null) {
             var emailNotificationType =
-                    mapEmailNotificationIdentifierToType(
-                            updateResult.emailNotificationIdentifier());
+                    mapEmailNotificationIdentifierToType(updateResult.updateTypeIdentifier());
 
             sendEmailNotification(
                     emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
@@ -288,8 +287,7 @@ public class MFAMethodsPutHandler
     }
 
     private NotificationType mapEmailNotificationIdentifierToType(
-            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier)
-            throws IllegalArgumentException {
+            MFAMethodUpdateIdentifier emailNotificationIdentifier) throws IllegalArgumentException {
         if (emailNotificationIdentifier == null) {
             throw new IllegalArgumentException("emailNotificationIdentifier cannot be null.");
         }
