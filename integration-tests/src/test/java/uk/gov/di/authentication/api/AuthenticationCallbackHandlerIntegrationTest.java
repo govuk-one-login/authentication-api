@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
@@ -136,6 +137,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     protected static ConfigurationService configurationService;
 

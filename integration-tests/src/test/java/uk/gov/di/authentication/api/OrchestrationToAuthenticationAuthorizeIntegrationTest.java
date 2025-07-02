@@ -25,6 +25,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -80,6 +81,9 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     @RegisterExtension
     public static final OrchClientSessionExtension orchClientSessionExtension =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     @BeforeEach
     void setup() {

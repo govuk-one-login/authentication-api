@@ -2661,8 +2661,7 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
-        - !Ref AuthUserInfoTableReadAccessPolicy
-        - !Ref AuthUserInfoTableWriteAccessPolicy
+        - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
@@ -2673,6 +2672,7 @@ Resources:
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref StateStorageTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3334,6 +3334,7 @@ Resources:
         - !Ref OrchSessionTableReadAndWriteAccessPolicy
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
+        - !Ref StateStorageTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5177,12 +5178,18 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
-  AuthUserInfoTableWriteAccessPolicy:
+  AuthUserInfoTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: AllowAuthUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt AuthUserInfoTable.Arn
           - Sid: AllowAuthUserInfoTableWriteAccess
             Effect: Allow
             Action:
@@ -6352,6 +6359,27 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRateLimitTable
+  #endregion
+  #region StateStorage policies
+  StateStorageTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStateStorageTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt StateStorageTable.Arn
+          - Sid: AllowStateStorageTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt StateStorageTableEncryptionKey.Arn
+
   #endregion
   #region IPV token signing key pair
 

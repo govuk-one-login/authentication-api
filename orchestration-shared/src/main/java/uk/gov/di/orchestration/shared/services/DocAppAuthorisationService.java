@@ -51,6 +51,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final StateStorageService stateStorageService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public static final String STATE_PARAM = "state";
@@ -62,11 +63,13 @@ public class DocAppAuthorisationService {
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
-            JwksService jwksService) {
+            JwksService jwksService,
+            StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.stateStorageService = stateStorageService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -106,16 +109,18 @@ public class DocAppAuthorisationService {
     }
 
     public void storeState(String sessionId, State state) {
+        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
         try {
-            LOG.info("Storing state");
+            LOG.info("Storing state in redis");
             redisConnectionService.saveWithExpiry(
-                    STATE_STORAGE_PREFIX + sessionId,
+                    prefixedSessionId,
                     objectMapper.writeValueAsString(state),
                     configurationService.getSessionExpiry());
         } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
             throw new DocAppAuthorisationServiceException(e);
         }
+        stateStorageService.storeState(prefixedSessionId, state.getValue());
     }
 
     private boolean isStateValid(String sessionId, String responseState) {

@@ -75,6 +75,7 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
@@ -168,27 +169,33 @@ public class AuthorisationHandler
 
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService);
+                new OrchestrationAuthorizationService(
+                        configurationService,
+                        kmsConnectionService,
+                        noSessionOrchestrationService,
+                        stateStorageService);
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
         this.requestObjectAuthorizeValidator =
                 new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        var jwksService = new JwksService(configurationService, kmsConnectionService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        jwksService);
+                        jwksService,
+                        stateStorageService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
@@ -209,9 +216,14 @@ public class AuthorisationHandler
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var stateStorageService = new StateStorageService(configurationService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
-                        configurationService, redis, kmsConnectionService, jwksService);
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        jwksService,
+                        stateStorageService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);

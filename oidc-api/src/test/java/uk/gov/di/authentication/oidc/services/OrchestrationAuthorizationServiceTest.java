@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -94,6 +95,7 @@ class OrchestrationAuthorizationServiceTest {
             mock(RedisConnectionService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -109,7 +111,8 @@ class OrchestrationAuthorizationServiceTest {
                         ipvCapacityService,
                         kmsConnectionService,
                         redisConnectionService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        stateStorageService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -303,7 +306,7 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldSaveStateInRedis() {
+    void shouldSaveStateInRedisAndDynamo() {
         when(configurationService.getSessionExpiry()).thenReturn(3600L);
         var sessionId = "new-session-id";
         var clientSessionId = "new-client-session-id";
@@ -311,8 +314,9 @@ class OrchestrationAuthorizationServiceTest {
 
         orchestrationAuthorizationService.storeState(sessionId, clientSessionId, state);
 
-        verify(redisConnectionService)
-                .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
+        var prefixedSessionId = "auth-state:" + sessionId;
+        verify(redisConnectionService).saveWithExpiry(prefixedSessionId, state.getValue(), 3600);
+        verify(stateStorageService).storeState(prefixedSessionId, state.getValue());
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(clientSessionId, state);
     }
