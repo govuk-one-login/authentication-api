@@ -59,6 +59,7 @@ import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -173,6 +174,7 @@ class AuthorisationHandlerTest {
             mock(RequestObjectAuthorizeValidator.class);
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
             mock(QueryParamsAuthorizeValidator.class);
+    private final RateLimitService rateLimitService = mock(RateLimitService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final String EXPECTED_NEW_SESSION_COOKIE_STRING =
             "gs=a-new-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -294,7 +296,8 @@ class AuthorisationHandlerTest {
                         noSessionOrchestrationService,
                         tokenValidationService,
                         authFrontend,
-                        authorisationService);
+                        authorisationService,
+                        rateLimitService);
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);

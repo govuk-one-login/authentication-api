@@ -40,6 +40,7 @@ import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -141,6 +142,7 @@ public class AuthorisationHandler
     // We will replace this with a proper implementation in future work
     private final RateLimitAlgorithm noOpRateLimitAlgorithm =
             (ignored) -> RateLimitDecision.UNDER_LIMIT_NO_ACTION;
+    private final RateLimitService rateLimitService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -156,7 +158,8 @@ public class AuthorisationHandler
             NoSessionOrchestrationService noSessionOrchestrationService,
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
-            AuthorisationService authorisationService) {
+            AuthorisationService authorisationService,
+            RateLimitService rateLimitService) {
         this.configurationService = configurationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -171,6 +174,7 @@ public class AuthorisationHandler
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
         this.authorisationService = authorisationService;
+        this.rateLimitService = rateLimitService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -205,6 +209,7 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
+        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
     }
 
     public AuthorisationHandler(
@@ -236,6 +241,7 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
+        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
     }
 
     public AuthorisationHandler() {
