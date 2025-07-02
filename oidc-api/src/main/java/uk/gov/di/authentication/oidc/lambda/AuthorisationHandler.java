@@ -30,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
@@ -356,6 +357,23 @@ public class AuthorisationHandler
                     new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
                     authRequest.getClientID().getValue(),
                     user);
+        }
+
+        if (configurationService.isRpRateLimitingEnabled()) {
+            var rateLimitDecision =
+                    rateLimitService.getClientRateLimitDecision(
+                            ClientRequestInfo.fromClientRegistry(client));
+
+            if (rateLimitDecision.hasExceededRateLimit()) {
+                switch (rateLimitDecision.getAction()) {
+                    case RETURN_TO_RP -> {
+                        // ATO-1783: return an oAuth Error here to say unavailable
+                    }
+                    case NONE -> {
+                        // continue
+                    }
+                }
+            }
         }
 
         try {
