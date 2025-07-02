@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -79,7 +80,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     public static final String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
             "number_of_attempts_user_allowed_to_login";
-    public static final String ATTEMPT_NO_FAILED_AT = "attemptNoFailedAt";
     public static final String INTERNAL_SUBJECT_ID = "internalSubjectId";
     public static final String INCORRECT_PASSWORD_COUNT = "incorrectPasswordCount";
     public static final String PASSWORD_RESET_TYPE = "passwordResetType";
@@ -249,7 +249,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
                     pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
-                    pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()),
+                    pair(
+                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                            configurationService.getMaxPasswordRetries()),
                     pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
 
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
@@ -462,7 +464,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 auditContext,
                 pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
                 pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
-                pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
+                pair(
+                        AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                        configurationService.getMaxPasswordRetries()));
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
             if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
@@ -568,7 +572,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                 auditContext,
                 pair(INTERNAL_SUBJECT_ID, subjectID),
-                pair(ATTEMPT_NO_FAILED_AT, updatedIncorrectPasswordCount),
+                pair(
+                        AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                        updatedIncorrectPasswordCount),
                 pair(
                         NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
                         configurationService.getMaxPasswordRetries()));

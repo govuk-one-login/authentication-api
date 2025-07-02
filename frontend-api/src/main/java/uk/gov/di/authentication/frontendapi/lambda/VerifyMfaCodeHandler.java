@@ -61,6 +61,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
@@ -624,7 +625,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         switch (auditableEvent) {
             case AUTH_CODE_MAX_RETRIES_REACHED -> {
                 metadataPairs.add(
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                                configurationService.getCodeMaxRetries()));
 
                 getPriorityIdentifier(codeRequest, activeMfaMethod)
                         .ifPresent(
