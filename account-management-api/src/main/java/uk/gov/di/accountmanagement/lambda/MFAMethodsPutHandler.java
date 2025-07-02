@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -227,9 +228,9 @@ public class MFAMethodsPutHandler
         }
     }
 
-    private static APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
-            MfaUpdateFailure failure) {
+    private APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(MfaUpdateFailure failure) {
         var failureReason = failure.failureReason();
+        var updateType = failure.updateTypeIdentifier();
         var response =
                 switch (failureReason) {
                     case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
@@ -238,8 +239,16 @@ public class MFAMethodsPutHandler
                             500, ErrorResponse.ERROR_1077);
                     case CANNOT_EDIT_MFA_BACKUP_METHOD -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1077);
-                    case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.ERROR_1071);
+                    case UNEXPECTED_ERROR -> {
+                        if (updateType != null
+                                && updateType.equals(
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)) {
+                            auditService.submitAuditEvent(
+                                    AUTH_MFA_METHOD_SWITCH_FAILED,
+                                    AuditContext.emptyAuditContext());
+                        }
+                        yield generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+                    }
                     case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
                             404, ErrorResponse.ERROR_1065);
                     case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(

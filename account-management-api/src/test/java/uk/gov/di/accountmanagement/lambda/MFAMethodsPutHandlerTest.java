@@ -53,6 +53,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
@@ -497,6 +498,33 @@ class MFAMethodsPutHandlerTest {
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRaiseSwitchFailedAuditEvent() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+        var phoneNumber = "123456789";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+
+        when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
+                .thenReturn(
+                        Result.failure(
+                                new MfaUpdateFailure(
+                                        MfaUpdateFailureReason.UNEXPECTED_ERROR,
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)));
+
+        handler.handleRequest(eventWithUpdateRequest, context);
+
+        verify(auditService)
+                .submitAuditEvent(AUTH_MFA_METHOD_SWITCH_FAILED, AuditContext.emptyAuditContext());
     }
 
     @Test

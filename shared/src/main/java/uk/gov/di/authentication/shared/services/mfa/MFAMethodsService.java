@@ -394,7 +394,8 @@ public class MFAMethodsService {
                 .mapFailure(
                         errorString -> {
                             LOG.error(errorString);
-                            return new MfaUpdateFailure(MfaUpdateFailureReason.UNEXPECTED_ERROR);
+                            return new MfaUpdateFailure(
+                                    MfaUpdateFailureReason.UNEXPECTED_ERROR, updateTypeIdentifier);
                         });
     }
 

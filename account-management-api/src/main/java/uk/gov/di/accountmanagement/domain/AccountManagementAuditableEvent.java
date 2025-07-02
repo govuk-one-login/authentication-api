@@ -14,6 +14,7 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
     AUTH_MFA_METHOD_ADD_FAILED,
     AUTH_MFA_METHOD_ADD_COMPLETED,
+    AUTH_MFA_METHOD_SWITCH_FAILED,
     AUTH_MFA_METHOD_SWITCH_COMPLETED;
 
     public AuditableEvent parseFromName(String name) {
