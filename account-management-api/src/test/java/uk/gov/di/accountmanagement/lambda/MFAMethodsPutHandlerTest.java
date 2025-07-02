@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
@@ -48,22 +49,25 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -76,10 +80,11 @@ class MFAMethodsPutHandlerTest {
             mock(ConfigurationService.class);
     private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private static final AuditService auditService = mock(AuditService.class);
+    private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private final AuditService auditService = mock(AuditService.class);
     private static final Context context = mock(Context.class);
     private static final MfaMethodsMigrationService mfaMethodsMigrationService =
             mock(MfaMethodsMigrationService.class);
@@ -102,6 +107,14 @@ class MFAMethodsPutHandlerTest {
 
     @BeforeEach
     void setUp() {
+        reset(
+                configurationService,
+                codeStorageService,
+                mfaMethodsService,
+                auditService,
+                dynamoService,
+                authenticationService);
+
         when(configurationService.isMfaMethodManagementApiEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -113,6 +126,7 @@ class MFAMethodsPutHandlerTest {
                         codeStorageService,
                         sqsClient,
                         auditService,
+                        dynamoService,
                         mfaMethodsMigrationService);
     }
 
@@ -692,6 +706,8 @@ class MFAMethodsPutHandlerTest {
         when(codeStorageService.isValidOtpCode(
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
 
         var phoneNumber = "123456789";
 
@@ -702,8 +718,15 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
 
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService).submitAuditEvent(eq(AUTH_INVALID_CODE_SENT), captor.capture());
+        AuditContext capturedObject = captor.getValue();
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+
         verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
@@ -755,5 +778,17 @@ class MFAMethodsPutHandlerTest {
         }
         """,
                 credential);
+    }
+
+    private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
+        Optional<AuditService.MetadataPair> metadataItem =
+                capturedObject.getMetadataItemByKey(field);
+        assertTrue(
+                metadataItem.isPresent(),
+                "Metadata field '" + field + "' not found in audit context");
+        assertEquals(
+                AuditService.MetadataPair.pair(field, value),
+                metadataItem.get(),
+                "Metadata field '" + field + "' has incorrect value");
     }
 }

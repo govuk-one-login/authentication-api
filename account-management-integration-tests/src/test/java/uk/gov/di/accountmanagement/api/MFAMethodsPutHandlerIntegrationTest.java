@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -13,8 +14,10 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,15 +32,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -87,6 +96,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final MFAMethod backupAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL, true, true, BACKUP, UUID.randomUUID().toString());
+    private static final String EXTENSIONS_MFA_METHOD =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+    public static final String EXTENSIONS_JOURNEY_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 
     @BeforeEach
     void setUp() {
@@ -438,6 +451,44 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThatJson(response.getBody()).node("code").isIntegralNumber().isEqualTo("1082");
 
             assertNoNotificationsReceived(notificationsQueue);
+        }
+
+        @Test
+        void shouldReturn400WhenInvalidOTPEnteredWhenChangingDefaultMFAToSMS() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultSms);
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupSms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var invalidOtp = otp + 1;
+
+            var mfaIdentifier = defaultSms.getMfaIdentifier();
+            var updatedPhoneNumber = "07900000123";
+            var updateRequest =
+                    format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, invalidOtp);
+
+            var response =
+                    makeRequest(
+                            Optional.of(updateRequest),
+                            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS"),
+                            Collections.emptyMap(),
+                            Map.ofEntries(
+                                    Map.entry("publicSubjectId", testPublicSubject),
+                                    Map.entry("mfaIdentifier", mfaIdentifier)),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(400, response.getStatusCode());
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_INVALID_CODE_SENT);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> addInvalidCodeSentAttributes = new HashMap<>();
+            addInvalidCodeSentAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            addInvalidCodeSentAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            eventExpectations.put(AUTH_INVALID_CODE_SENT.name(), addInvalidCodeSentAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
@@ -826,6 +877,30 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
 
             assertNoNotificationsReceived(notificationsQueue);
+        }
+    }
+
+    private void verifyAuditEvents(
+            List<AuditableEvent> expectedEvents,
+            Map<String, Map<String, String>> eventExpectations) {
+        // Assert that the expected events were received
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
+
+        // Create and verify expectations for each event
+        for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
+            String eventName = eventEntry.getKey();
+            Map<String, String> attributes = eventEntry.getValue();
+
+            // Create the expectation for this event
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
+
+            // Add all expected attributes
+            for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
+                expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+            }
+
+            // Verify the expectation against the received events
+            expectation.verify(receivedEvents);
         }
     }
 }

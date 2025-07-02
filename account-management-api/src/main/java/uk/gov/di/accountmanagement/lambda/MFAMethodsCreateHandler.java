@@ -24,12 +24,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -40,18 +35,14 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1020;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1071;
@@ -219,7 +210,8 @@ public class MFAMethodsCreateHandler
         var userProfile = maybePassedGuardConditions.getSuccess();
 
         Result<ErrorResponse, AuditContext> auditContextResult =
-                buildAuditContext(input, userProfile);
+                AuditHelper.buildAuditContext(
+                        configurationService, dynamoService, input, userProfile);
 
         if (auditContextResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
@@ -381,42 +373,6 @@ public class MFAMethodsCreateHandler
             case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.INVALID_PHONE_NUMBER);
         };
-    }
-
-    private Result<ErrorResponse, AuditContext> buildAuditContext(
-            APIGatewayProxyRequestEvent input, UserProfile userProfile) {
-        try {
-            var metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue())
-                    };
-
-            var context =
-                    new AuditContext(
-                            input.getRequestContext()
-                                    .getAuthorizer()
-                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
-                                    .toString(),
-                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                            RequestHeaderHelper.getHeaderValueOrElse(
-                                    input.getHeaders(), SESSION_ID_HEADER, ""),
-                            ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile,
-                                            configurationService.getInternalSectorUri(),
-                                            dynamoService)
-                                    .getValue(),
-                            userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            null,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(metadataPairs));
-
-            return Result.success(context);
-        } catch (Exception e) {
-            LOG.error("Error building audit context", e);
-            return Result.failure(ERROR_1071);
-        }
     }
 
     private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
