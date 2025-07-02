@@ -657,6 +657,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private Optional<PriorityIdentifier> getPriorityIdentifier(
             CodeRequest codeRequest, Optional<MFAMethod> activeMfaMethod) {
+        /*
+        Ideally, we would be provided the mfaMethodId and be able to find the priority using that, but unfortunately
+        we don't have that information to hand.
+
+        https://govukverify.atlassian.net/wiki/spaces/LO/pages/5379588160/How+frontend+uses+backend+MFA+lambdas
+        tells us which journeys this lambda may be called from.
+
+        - ACCOUNT_RECOVERY (aka MFA reset) and REGISTRATION journeys have no MFA methods, so the priority can be DEFAULT
+        - For all other journeys, activeMfaMethod should correctly find the method in use, which can tell us the priority
+        */
+
         if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
                 .contains(codeRequest.getJourneyType())) {
             return Optional.of(PriorityIdentifier.DEFAULT);
