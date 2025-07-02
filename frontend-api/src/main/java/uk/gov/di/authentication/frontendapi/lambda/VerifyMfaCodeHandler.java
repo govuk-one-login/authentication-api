@@ -622,8 +622,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         metadataPairs.add(pair("journey-type", codeRequest.getJourneyType()));
 
         switch (auditableEvent) {
-            case AUTH_CODE_MAX_RETRIES_REACHED -> metadataPairs.add(
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+            case AUTH_CODE_MAX_RETRIES_REACHED -> {
+                metadataPairs.add(
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+
+                getPriorityIdentifier(codeRequest, activeMfaMethod)
+                        .ifPresent(
+                                identifier ->
+                                        metadataPairs.add(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                        identifier.name().toLowerCase())));
+            }
             case AUTH_INVALID_CODE_SENT, AUTH_CODE_VERIFIED -> {
                 if (auditableEvent.equals(AUTH_INVALID_CODE_SENT)) {
                     var failureCount = codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
