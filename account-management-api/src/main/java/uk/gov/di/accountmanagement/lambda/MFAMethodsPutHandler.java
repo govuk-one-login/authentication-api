@@ -155,7 +155,10 @@ public class MFAMethodsPutHandler
                 .equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
             var maybeMigrationErrorResponse =
                     mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
-                            putRequest.userProfile, LOG, input, putRequest.request.mfaMethod().method());
+                            putRequest.userProfile,
+                            LOG,
+                            input,
+                            putRequest.request.mfaMethod().method());
 
             putRequest.request.mfaMethod();
 

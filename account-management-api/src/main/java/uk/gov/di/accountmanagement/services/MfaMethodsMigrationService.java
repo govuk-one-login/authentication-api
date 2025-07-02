@@ -8,9 +8,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
-import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -24,6 +22,8 @@ import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
@@ -43,8 +43,7 @@ public class MfaMethodsMigrationService {
     public MfaMethodsMigrationService(
             ConfigurationService configurationService,
             MFAMethodsService mfaMethodsService,
-            AuditService auditService
-    ) {
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.auditService = auditService;
@@ -60,11 +59,7 @@ public class MfaMethodsMigrationService {
                     mfaMethodsService.migrateMfaCredentialsForUser(userProfile);
 
             emitMfaMethodMigrationAttemptedAuditEvent(
-                    userProfile,
-                    input,
-                    mfaMethodType,
-                    maybeMfaMigrationFailureReason.isEmpty()
-            );
+                    userProfile, input, mfaMethodType, maybeMfaMigrationFailureReason.isEmpty());
 
             if (maybeMfaMigrationFailureReason.isPresent()) {
                 MfaMigrationFailureReason mfaMigrationFailureReason =
@@ -98,8 +93,7 @@ public class MfaMethodsMigrationService {
         var headers = input.getHeaders();
 
         String sessionId = getHeaderValueOrElse(headers, SESSION_ID_HEADER, "unknown");
-        String clientSessionId =
-                ClientSessionIdHelper.extractSessionIdFromHeaders(headers);
+        String clientSessionId = ClientSessionIdHelper.extractSessionIdFromHeaders(headers);
         String ipAddress = IpAddressHelper.extractIpAddress(input);
         String persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
         Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
@@ -116,18 +110,24 @@ public class MfaMethodsMigrationService {
                         .withPhoneNumber(userProfile.getPhoneNumber());
 
         if (mfaMethod instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            auditContext.withMetadataItem(
-                    pair(
-                            "phone_number_country_code",
-                            PhoneNumberHelper.getCountry(requestSmsMfaDetail.phoneNumber())));
+            auditContext =
+                    auditContext.withMetadataItem(
+                            pair(
+                                    "phone_number_country_code",
+                                    PhoneNumberHelper.getCountry(
+                                            requestSmsMfaDetail.phoneNumber())));
         }
 
-        auditContext.withMetadataItem(pair("mfa-type", mfaMethod.mfaMethodType()));
-        auditContext.withMetadataItem(pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT));
-        auditContext.withMetadataItem(pair("migration-succeeded", migrationSucceeded));
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()));
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
+        auditContext =
+                auditContext.withMetadataItem(pair("migration-succeeded", migrationSucceeded));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, auditContext);
     }
-
 }

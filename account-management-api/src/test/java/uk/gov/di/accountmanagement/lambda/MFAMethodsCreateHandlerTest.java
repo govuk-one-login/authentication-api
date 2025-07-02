@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,9 +40,9 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -102,7 +106,8 @@ class MFAMethodsCreateHandlerTest {
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final MfaMethodsMigrationService mfaMethodsMigrationService = mock(MfaMethodsMigrationService.class);
+    private final MfaMethodsMigrationService mfaMethodsMigrationService =
+            mock(MfaMethodsMigrationService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile()
@@ -114,7 +119,6 @@ class MFAMethodsCreateHandlerTest {
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private final Json objectMapper = SerializationService.getInstance();
 
-    private final AuditService auditService = mock(AuditService.class);
     private final AuditContext auditContext =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -400,27 +404,24 @@ class MFAMethodsCreateHandlerTest {
 
         private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
             return Stream.of(
-                    Arguments.of(
-                            MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
-                            ErrorResponse.ERROR_1056,
-                            404),
-                    Arguments.of(
-                            MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
-                            ErrorResponse.ERROR_1064,
-                            500));
+                    Arguments.of(ErrorResponse.ERROR_1056, 404),
+                    Arguments.of(ErrorResponse.ERROR_1064, 500));
         }
 
         @ParameterizedTest
         @MethodSource("migrationFailureReasonsToExpectedResponses")
         void shouldReturnRelevantStatusCodeWhenMigrationFailed(
-                MfaMigrationFailureReason reason,
-                ErrorResponse expectedError,
-                int expectedStatusCode) {
+                ErrorResponse expectedError, int expectedStatusCode) {
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
-            when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
-                    .thenReturn(Optional.of(reason));
             when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
+            var expectedGateway =
+                    new APIGatewayProxyResponseEvent()
+                            .withStatusCode(expectedStatusCode)
+                            .withBody(expectedError.toString() + expectedError.getMessage());
+            when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            any(), any(), any(), any()))
+                    .thenReturn(Optional.of(expectedGateway));
 
             var event =
                     generateApiGatewayEvent(
