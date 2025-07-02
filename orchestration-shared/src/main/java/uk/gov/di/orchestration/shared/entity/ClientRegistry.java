@@ -47,6 +47,7 @@ public class ClientRegistry {
     private String channel;
     private boolean maxAgeEnabled = false;
     private boolean pkceEnforced = false;
+    private Integer rateLimit;
 
     private static final Set<String> RS256_MAPPINGS =
             Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
@@ -513,6 +514,20 @@ public class ClientRegistry {
 
     public ClientRegistry withPKCEEnforced(boolean pkceEnforced) {
         this.pkceEnforced = pkceEnforced;
+        return this;
+    }
+
+    @DynamoDbAttribute("RateLimit")
+    public Integer getRateLimit() {
+        return rateLimit;
+    }
+
+    public void setRateLimit(Integer rateLimit) {
+        this.rateLimit = rateLimit;
+    }
+
+    public ClientRegistry withRateLimit(Integer rateLimit) {
+        this.rateLimit = rateLimit;
         return this;
     }
 }
