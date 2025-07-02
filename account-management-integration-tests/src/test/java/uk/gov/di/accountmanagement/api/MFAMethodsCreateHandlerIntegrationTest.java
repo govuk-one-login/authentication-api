@@ -37,8 +37,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -497,6 +496,50 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Nested
     class ErrorCases {
+        @DisplayName("Migrated User enters invalid OTP when adding backup SMS MFA")
+        @Test
+        void shouldReturn400WhenInvalidOTPEnteredWhenAddingSMSBackupMFA() {
+            setupMigratedUserWithMfaMethod(defaultPriorityAuthApp);
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var invalidOtp = otp + 1;
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            PriorityIdentifier.BACKUP,
+                                            new RequestSmsMfaDetail(
+                                                    TEST_PHONE_NUMBER, invalidOtp))),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(400, response.getStatusCode());
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+
+            // Verify audit event was emitted
+            var receivedEvents =
+                    assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+
+            // Verify audit event contains correct metadata
+            var auditEvent = receivedEvents.get(0);
+            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+
+            var extensions = jsonEvent.getAsJsonObject("extensions");
+
+            assertEquals(
+                    PriorityIdentifier.BACKUP.name().toLowerCase(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
+
+            assertEquals(
+                    ACCOUNT_MANAGEMENT.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+        }
+
         @DisplayName("Migrated Auth App User cannot add Auth App as backup MFA")
         @Test
         void shouldReturn400ErrorWhenMigratedAuthAppUserAddsAuthAppBackup() {
