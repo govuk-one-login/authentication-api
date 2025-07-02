@@ -2,12 +2,14 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
@@ -30,7 +32,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
-import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.HashMap;
@@ -65,7 +66,8 @@ class MFAMethodsPutHandlerTest {
             mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final Context context = mock(Context.class);
-    private static final MfaMethodsMigrationService mfaMethodsMigrationService = mock(MfaMethodsMigrationService.class);
+    private static final MfaMethodsMigrationService mfaMethodsMigrationService =
+            mock(MfaMethodsMigrationService.class);
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
@@ -289,17 +291,9 @@ class MFAMethodsPutHandlerTest {
                                         LocaleHelper.SupportedLanguage.EN)));
     }
 
-    private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
-        return Stream.of(
-                Arguments.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS, 500),
-                Arguments.of(MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER, 404),
-                Arguments.of(MfaMigrationFailureReason.ALREADY_MIGRATED, 200));
-    }
-
+    @CsvSource({"500", "404", "200"})
     @ParameterizedTest
-    @MethodSource("migrationFailureReasonsToExpectedStatusCodes")
-    void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(
-            MfaMigrationFailureReason migrationFailureReason, int expectedStatusCode)
+    void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(int expectedStatusCode)
             throws Json.JsonException {
         var nonMigratedEmail = "non-migrated-email@example.com";
         var nonMigratedUser =
@@ -330,8 +324,16 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA)));
-        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
-                .thenReturn(Optional.of(migrationFailureReason));
+        var expectedGateway = new APIGatewayProxyResponseEvent().withStatusCode(expectedStatusCode);
+        if (expectedStatusCode != 200) {
+            when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            any(), any(), any(), any()))
+                    .thenReturn(Optional.of(expectedGateway));
+        } else {
+            when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            any(), any(), any(), any()))
+                    .thenReturn(Optional.empty());
+        }
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
