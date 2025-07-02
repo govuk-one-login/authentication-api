@@ -132,13 +132,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  UseAnyKeyFromDocAppJwks:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3311,10 +3304,6 @@ Resources:
             - false
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
-            - true
-            - false
-          USE_ANY_KEY_FROM_DOC_APP_JWKS: !If
-            - UseAnyKeyFromDocAppJwks
             - true
             - false
           DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
