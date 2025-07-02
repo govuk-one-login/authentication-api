@@ -9,10 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -47,9 +49,15 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -247,6 +255,7 @@ class MFAMethodsPutHandlerTest {
                         EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
 
@@ -287,6 +296,58 @@ class MFAMethodsPutHandlerTest {
                                         EMAIL,
                                         notificationType,
                                         LocaleHelper.SupportedLanguage.EN)));
+    }
+
+    @Test
+    void shouldRaiseSwitchCompletedAuditEvent() {
+        var phoneNumber = "123456789";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var defaultMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        var backupMfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        "auth-app-credential-1",
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "auth-app-identifier-1");
+        var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
+
+        when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        postUpdateMfaMethods,
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(eq(AUTH_MFA_METHOD_SWITCH_COMPLETED), captor.capture());
+        AuditContext capturedObject = captor.getValue();
+
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                defaultMfaMethod.getMfaMethodType());
     }
 
     private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
@@ -366,6 +427,8 @@ class MFAMethodsPutHandlerTest {
         } else {
             verify(sqsClient, never()).send(any());
         }
+
+        verifyNoInteractions(auditService);
     }
 
     private static Stream<Arguments> updateFailureReasonsToExpectedResponses() {
@@ -432,6 +495,7 @@ class MFAMethodsPutHandlerTest {
                 expectedError -> assertThat(result, hasJsonBody(expectedError)));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -457,6 +521,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -471,6 +536,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -490,6 +556,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -509,6 +576,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -521,6 +589,7 @@ class MFAMethodsPutHandlerTest {
         assertEquals(400, result.getStatusCode());
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -536,6 +605,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -551,6 +621,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -571,6 +642,7 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
 
         verify(sqsClient, never()).send(any());
+        verifyNoInteractions(auditService);
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
