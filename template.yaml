@@ -2660,8 +2660,7 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref UserProfileTableWriteAccessPolicy
-        - !Ref AuthUserInfoTableReadAccessPolicy
-        - !Ref AuthUserInfoTableWriteAccessPolicy
+        - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
@@ -5178,12 +5177,18 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt AuthUserInfoTableEncryptionKey.Arn
 
-  AuthUserInfoTableWriteAccessPolicy:
+  AuthUserInfoTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: AllowAuthUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt AuthUserInfoTable.Arn
           - Sid: AllowAuthUserInfoTableWriteAccess
             Effect: Allow
             Action:
