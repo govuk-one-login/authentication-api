@@ -27,6 +27,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import org.apache.http.client.utils.URIBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,7 +42,6 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -77,8 +77,6 @@ import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
 import static java.lang.String.format;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -215,9 +213,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class AuthJourney {
+        @BeforeEach
+        void setup() {
+            setupForAuthJourney();
+        }
+
         @Test
         void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -244,7 +246,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -276,7 +277,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginWithSamePersistentCookieValueInRequest() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -323,7 +323,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginWithLanguageCookieSetWhenUILocalesPopulated() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -375,68 +374,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToLoginUriForAccountManagementClient() {
-            setupForAuthJourney();
-            registerClient(
-                    AM_CLIENT_ID,
-                    "am-client-name",
-                    List.of("openid", "am"),
-                    ClientType.WEB,
-                    false,
-                    false);
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(Optional.empty()),
-                            constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null),
-                            Optional.of("GET"));
-
-            assertThat(response, hasStatus(302));
-            String redirectUri = getLocationResponseHeader(response);
-            assertThat(
-                    redirectUri,
-                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-            var sessionCookie =
-                    getHttpCookieFromMultiValueResponseHeaders(
-                            response.getMultiValueHeaders(), "gs");
-            assertOnSessionCookie(sessionCookie);
-            assertTrue(
-                    getHttpCookieFromMultiValueResponseHeaders(
-                                    response.getMultiValueHeaders(), "bsid")
-                            .isPresent());
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTHORISATION_REQUEST_RECEIVED,
-                            AUTHORISATION_REQUEST_PARSED,
-                            AUTHORISATION_INITIATED));
-        }
-
-        @Test
-        void shouldReturnInvalidScopeErrorToRPWhenNotAccountManagementClient() {
-            setupForAuthJourney();
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(Optional.empty()),
-                            constructQueryStringParameters(CLIENT_ID, null, "openid am", null),
-                            Optional.of("GET"));
-
-            assertThat(response, hasStatus(302));
-            String redirectUri = getLocationResponseHeader(response);
-            assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
-            assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
-        }
-
-        @Test
         void shouldRedirectToLoginUriWhenBadSessionIdCookieIsPresent() {
-            setupForAuthJourney();
-
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -478,7 +416,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginUriWhenCookieHasUnknownSessionId() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -520,7 +457,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             orchSessionExtension.updateSession(
                     orchSessionExtension
@@ -576,7 +512,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
@@ -623,7 +558,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity()
                 throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
@@ -669,7 +603,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void
                 shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
                         throws Exception {
-            setupForAuthJourney();
             String sessionId = givenAnExistingSession();
             registerUser();
 
@@ -696,7 +629,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToFrontendWhenPromptNoneAndUserUnauthenticated() {
-            setupForAuthJourney();
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -721,7 +653,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
@@ -769,7 +700,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
@@ -819,7 +749,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
-            setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
@@ -870,7 +799,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldRedirectToLoginWithValidRequestObjectNonDocApp()
                 throws JOSEException, ParseException {
-            setupForAuthJourney();
             SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"));
 
             Map<String, String> requestParams =
@@ -939,7 +867,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String vtrString,
                 CredentialTrustLevel expectedCredentialStrength,
                 LevelOfConfidence expectedLevelOfConfidence) {
-            setupForAuthJourney();
             var baseParams = constructQueryStringParameters(CLIENT_ID, null, "openid", null);
             Map<String, String> queryParams = new HashMap<>(baseParams);
             queryParams.put("_ga", "12345");
@@ -984,7 +911,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 CredentialTrustLevel expectedCredentialStrength,
                 LevelOfConfidence expectedLevelOfConfidence)
                 throws JOSEException {
-            setupForAuthJourney();
             Map<String, String> extraParams = new HashMap<>();
             extraParams.put("_ga", "12345");
             extraParams.put("cookie_consent", "approve");
@@ -1053,21 +979,102 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Nested
+    class AccountManagementClient {
+        @Test
+        void shouldRedirectToLoginUriForAccountManagementClient() {
+            clientStore
+                    .registerClient()
+                    .withClientId(AM_CLIENT_ID)
+                    .withScopes(List.of("openid", "am"))
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .build();
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri,
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+            var sessionCookie =
+                    getHttpCookieFromMultiValueResponseHeaders(
+                            response.getMultiValueHeaders(), "gs");
+            assertOnSessionCookie(sessionCookie);
+            assertTrue(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "bsid")
+                            .isPresent());
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTHORISATION_REQUEST_RECEIVED,
+                            AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldReturnInvalidScopeErrorToRPWhenNotAccountManagementClient() {
+            setupForAuthJourney();
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid am", null),
+                            Optional.of("GET"));
+
+            assertThat(response, hasStatus(302));
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
+            assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        }
+    }
+
+    @Nested
     class DocAppJourney {
+        @BeforeEach
+        void setupForDocAppJourney() {
+            clientStore
+                    .registerClient()
+                    .withClientId(CLIENT_ID)
+                    .withScopes(List.of("openid", "doc-checking-app"))
+                    .withClientType(ClientType.APP)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .build();
+            handler = new AuthorisationHandler(configuration);
+            txmaAuditQueue.clear();
+
+            var jwkKey =
+                    new RSAKey.Builder((RSAPublicKey) DCMAW_ENCRYPTION_KEY_PAIR.getPublic())
+                            .keyUse(KeyUse.ENCRYPTION)
+                            .keyID(ENCRYPTION_KEY_ID)
+                            .build();
+            jwksExtension.init(new JWKSet(jwkKey));
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
         void shouldCallAuthorizeAsDocAppClient(String uiLocales)
                 throws JOSEException, ParseException {
-            setupForDocAppJourney();
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
-                    ClientType.APP,
-                    false,
-                    false);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
             var signedJWT = createSignedJWT(uiLocales);
             var queryStringParameters =
                     new HashMap<>(
@@ -1130,7 +1137,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldGenerateCorrectResponseGivenAValidRequestWhenOnDocAppJourney()
                 throws JOSEException {
-            setupForDocAppJourney();
             SignedJWT signedJWT = createSignedJWT("");
 
             Map<String, String> requestParams =
@@ -1168,25 +1174,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTHORISATION_REQUEST_PARSED,
                             DOC_APP_AUTHORISATION_REQUESTED));
         }
-
-        private void setupForDocAppJourney() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    List.of("openid", "doc-checking-app"),
-                    ClientType.APP,
-                    false,
-                    false);
-            handler = new AuthorisationHandler(configuration);
-            txmaAuditQueue.clear();
-
-            var jwkKey =
-                    new RSAKey.Builder((RSAPublicKey) DCMAW_ENCRYPTION_KEY_PAIR.getPublic())
-                            .keyUse(KeyUse.ENCRYPTION)
-                            .keyID(ENCRYPTION_KEY_ID)
-                            .build();
-            jwksExtension.init(new JWKSet(jwkKey));
-        }
     }
 
     @Nested
@@ -1219,66 +1206,78 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class InvalidRequest {
-        @Test
-        void
-                shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
-            handler = new AuthorisationHandler(configuration);
-            txmaAuditQueue.clear();
 
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(Optional.empty()),
-                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
-                            Optional.of("GET"));
+        @Nested
+        class JarValidationRequired {
+            @BeforeEach
+            void setupWithJarValidationRequired() {
+                clientStore
+                        .registerClient()
+                        .withClientId(CLIENT_ID)
+                        .withClientLoCs(
+                                List.of(
+                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                        LevelOfConfidence.HMRC200.getValue()))
+                        .withClaims(
+                                List.of(
+                                        CORE_IDENTITY_JWT.getValue(),
+                                        ValidClaims.ADDRESS.getValue()))
+                        .withJarValidationRequired(true)
+                        .build();
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
+            }
 
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            var expectedQueryStringRegex =
-                    "error=access_denied&error_description=JAR[+]required[+]for[+]client[+]but[+]request[+]does[+]not[+]contain[+]Request[+]Object.*";
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
+            @Test
+            void
+                    shouldRedirectToRedirectUriGivenAnInvalidRequestWhenRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(Optional.empty()),
+                                constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                                Optional.of("GET"));
 
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
-        }
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                var expectedQueryStringRegex =
+                        "error=access_denied&error_description=JAR[+]required[+]for[+]client[+]but[+]request[+]does[+]not[+]contain[+]Request[+]Object.*";
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
 
-        @Test
-        void
-                shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
-            handler = new AuthorisationHandler(configuration);
-            txmaAuditQueue.clear();
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+            }
 
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(Optional.empty()),
-                            constructQueryStringParameters(
-                                    CLIENT_ID,
-                                    null,
-                                    "openid",
-                                    "Cl.Cm",
-                                    URI.create("invalid-redirect-uri")),
-                            Optional.of("GET"));
+            @Test
+            void
+                    shouldReturnBadRequestGivenAnInvalidRequestWhenRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(Optional.empty()),
+                                constructQueryStringParameters(
+                                        CLIENT_ID,
+                                        null,
+                                        "openid",
+                                        "Cl.Cm",
+                                        URI.create("invalid-redirect-uri")),
+                                Optional.of("GET"));
 
-            assertThat(response, hasStatus(400));
-            assertThat(response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+                assertThat(response, hasStatus(400));
+                assertThat(
+                        response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+            }
         }
 
         @Test
         void shouldReturnBadRequestUnsupportedResponseMode() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+            setupForAuthJourney();
 
             var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
             queryParams.put("response_mode", "form_post");
@@ -1296,10 +1295,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnBadRequestWhenUnsupportedChannelIsSentInRequest() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+            setupForAuthJourney();
 
             var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
             queryParams.put("channel", "invalid-channel");
@@ -1323,17 +1319,32 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class MaxAge {
+        @BeforeEach
+        void setupWithMaxAgeEnabled() {
+            clientStore
+                    .registerClient()
+                    .withClientId(CLIENT_ID)
+                    .withMaxAgeEnabled(true)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .build();
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+        }
+
         @Test
         void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
             var previousSessionId = givenAnExistingSession();
             orchSessionExtension.addSession(
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
             assertTrue(previousSession.isPresent());
@@ -1362,9 +1373,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldReturnInvalidRequestForNegativeMaxAge() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        void shouldReturnInvalidRequestForNegativeMaxAge() throws Exception {
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1372,8 +1381,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
             assertTrue(previousSession.isPresent());
@@ -1404,7 +1411,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestForNegativeMaxAgeInRequestObject() throws JOSEException {
-            setupForAuthJourney();
             SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), -100);
 
             Map<String, String> requestParams =
@@ -1440,495 +1446,496 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Nested
-    class PKCE {
-        @Test
-        void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+    class CodeChallengeRequest {
 
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
+        @Nested
+        class PKCENotEnforced {
+            @BeforeEach
+            void setupForAuthJourneyWithPKCENotEnforced() {
+                setupForAuthJourney();
+            }
 
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
-                            Optional.of("GET"));
+            @Test
+            void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() throws Exception {
+                var previousClientSessionId = "a-previous-client-session";
+                var previousSessionId =
+                        givenAnExistingSessionWithClientSession(previousClientSessionId);
+                orchSessionExtension.addSession(
+                        new OrchSessionItem(previousSessionId)
+                                .withAuthenticated(true)
+                                .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
 
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    getLocationResponseHeader(response),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+                var previousSession = orchSessionExtension.getSession(previousSessionId);
+                assertTrue(previousSession.isPresent());
+                assertTrue(previousSession.get().getAuthenticated());
+                assertNull(previousSession.get().getPreviousSessionId());
 
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTHORISATION_REQUEST_RECEIVED,
-                            AUTHORISATION_REQUEST_PARSED,
-                            AUTHORISATION_INITIATED));
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        new HttpCookie[] {
+                                            buildSessionCookie(
+                                                    previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                        }),
+                                constructQueryStringParameters(
+                                        CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                                Optional.of("GET"));
+
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        getLocationResponseHeader(response),
+                        startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(
+                                AUTHORISATION_REQUEST_RECEIVED,
+                                AUTHORISATION_REQUEST_PARSED,
+                                AUTHORISATION_INITIATED));
+            }
+
+            @Test
+            void shouldRedirectToFrontendWhenCodeChallengeIsNotProvidedInRequestObject()
+                    throws JOSEException {
+                SignedJWT signedJWT =
+                        createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
+
+                Map<String, String> requestParams =
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID,
+                                "response_type",
+                                "code",
+                                "request",
+                                signedJWT.serialize(),
+                                "scope",
+                                "openid");
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                new HttpCookie(
+                                                        "di-persistent-session-id",
+                                                        "persistent-id-value"))),
+                                requestParams,
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(),
+                        startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(
+                                AUTHORISATION_REQUEST_RECEIVED,
+                                AUTHORISATION_REQUEST_PARSED,
+                                AUTHORISATION_INITIATED));
+            }
+
+            @Test
+            void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
+                    throws Exception {
+                var previousClientSessionId = "a-previous-client-session";
+                var previousSessionId =
+                        givenAnExistingSessionWithClientSession(previousClientSessionId);
+                orchSessionExtension.addSession(
+                        new OrchSessionItem(previousSessionId)
+                                .withAuthenticated(true)
+                                .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
+
+                var previousSession = orchSessionExtension.getSession(previousSessionId);
+                assertTrue(previousSession.isPresent());
+                assertTrue(previousSession.get().getAuthenticated());
+                assertNull(previousSession.get().getPreviousSessionId());
+
+                var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        new HttpCookie[] {
+                                            buildSessionCookie(
+                                                    previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                        }),
+                                constructQueryStringParameters(
+                                        CLIENT_ID, null, "openid", "P2.Cl.Cm", codeChallenge, null),
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+            }
+
+            @Test
+            void
+                    shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedInRequestObjectAndIsMissing()
+                            throws JOSEException, ParseException {
+                var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+
+                SignedJWT signedJWT =
+                        createSignedJWT(
+                                "", CLAIMS, List.of("openid"), null, aCodeChallenge, null, null);
+
+                Map<String, String> requestParams =
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID,
+                                "response_type",
+                                "code",
+                                "request",
+                                signedJWT.serialize(),
+                                "scope",
+                                "openid");
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                new HttpCookie(
+                                                        "di-persistent-session-id",
+                                                        "persistent-id-value"))),
+                                requestParams,
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
+            }
+
+            @Test
+            void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
+                var previousClientSessionId = "a-previous-client-session";
+                var previousSessionId =
+                        givenAnExistingSessionWithClientSession(previousClientSessionId);
+                orchSessionExtension.addSession(
+                        new OrchSessionItem(previousSessionId)
+                                .withAuthenticated(true)
+                                .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
+
+                var previousSession = orchSessionExtension.getSession(previousSessionId);
+                assertTrue(previousSession.isPresent());
+                assertTrue(previousSession.get().getAuthenticated());
+                assertNull(previousSession.get().getPreviousSessionId());
+
+                var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+                var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        new HttpCookie[] {
+                                            buildSessionCookie(
+                                                    previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                        }),
+                                constructQueryStringParameters(
+                                        CLIENT_ID,
+                                        null,
+                                        "openid",
+                                        "P2.Cl.Cm",
+                                        codeChallenge,
+                                        codeChallengeMethod),
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+            }
+
+            @Test
+            void shouldReturnInvalidRequestWhenCodeChallengeMethodInRequestObjectIsInvalid()
+                    throws JOSEException, ParseException {
+                var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
+                var codeChallengeMethod = CodeChallengeMethod.PLAIN;
+
+                SignedJWT signedJWT =
+                        createSignedJWT(
+                                "",
+                                CLAIMS,
+                                List.of("openid"),
+                                null,
+                                aCodeChallenge,
+                                codeChallengeMethod,
+                                null);
+
+                Map<String, String> requestParams =
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID,
+                                "response_type",
+                                "code",
+                                "request",
+                                signedJWT.serialize(),
+                                "scope",
+                                "openid");
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                new HttpCookie(
+                                                        "di-persistent-session-id",
+                                                        "persistent-id-value"))),
+                                requestParams,
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
+            }
+
+            @Test
+            void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
+                var previousClientSessionId = "a-previous-client-session";
+                var previousSessionId =
+                        givenAnExistingSessionWithClientSession(previousClientSessionId);
+                orchSessionExtension.addSession(
+                        new OrchSessionItem(previousSessionId)
+                                .withAuthenticated(true)
+                                .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
+
+                var previousSession = orchSessionExtension.getSession(previousSessionId);
+                assertTrue(previousSession.isPresent());
+                assertTrue(previousSession.get().getAuthenticated());
+                assertNull(previousSession.get().getPreviousSessionId());
+
+                var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+                var codeChallengeMethod = CodeChallengeMethod.S256;
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        new HttpCookie[] {
+                                            buildSessionCookie(
+                                                    previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                        }),
+                                constructQueryStringParameters(
+                                        CLIENT_ID,
+                                        null,
+                                        "openid",
+                                        "P2.Cl.Cm",
+                                        codeChallenge,
+                                        codeChallengeMethod),
+                                Optional.of("GET"));
+
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        getLocationResponseHeader(response),
+                        startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(
+                                AUTHORISATION_REQUEST_RECEIVED,
+                                AUTHORISATION_REQUEST_PARSED,
+                                AUTHORISATION_INITIATED));
+            }
+
+            @Test
+            void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValidInRequestObject()
+                    throws JOSEException, ParseException {
+                var codeChallenge = CodeChallenge.parse("aCodeChallenge");
+                var codeChallengeMethod = CodeChallengeMethod.S256;
+
+                SignedJWT signedJWT =
+                        createSignedJWT(
+                                "",
+                                CLAIMS,
+                                List.of("openid"),
+                                null,
+                                codeChallenge,
+                                codeChallengeMethod,
+                                null);
+
+                Map<String, String> requestParams =
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID,
+                                "response_type",
+                                "code",
+                                "request",
+                                signedJWT.serialize(),
+                                "scope",
+                                "openid");
+
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                new HttpCookie(
+                                                        "di-persistent-session-id",
+                                                        "persistent-id-value"))),
+                                requestParams,
+                                Optional.of("GET"));
+
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(),
+                        startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue,
+                        List.of(
+                                AUTHORISATION_REQUEST_RECEIVED,
+                                AUTHORISATION_REQUEST_PARSED,
+                                AUTHORISATION_INITIATED));
+            }
         }
 
-        @Test
-        void shouldRedirectToFrontendWhenCodeChallengeIsNotProvidedInRequestObject()
-                throws JOSEException {
-            setupForAuthJourney();
+        @Nested
+        class PKCEEnforced {
+            @BeforeEach
+            void setupForAuthJourneyWithPKCEEnforced() {
+                clientStore
+                        .registerClient()
+                        .withClientId(CLIENT_ID)
+                        .withPkceEnforced(true)
+                        .withClientLoCs(
+                                List.of(
+                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                        LevelOfConfidence.HMRC200.getValue()))
+                        .withClaims(
+                                List.of(
+                                        CORE_IDENTITY_JWT.getValue(),
+                                        ValidClaims.ADDRESS.getValue()))
+                        .build();
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
+            }
 
-            SignedJWT signedJWT =
-                    createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
+            @Test
+            void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced() {
+                var previousClientSessionId = "a-previous-client-session";
+                var previousSessionId =
+                        givenAnExistingSessionWithClientSession(previousClientSessionId);
+                orchSessionExtension.addSession(
+                        new OrchSessionItem(previousSessionId)
+                                .withAuthenticated(true)
+                                .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
+                handler = new AuthorisationHandler(configuration, redisConnectionService);
+                txmaAuditQueue.clear();
 
-            Map<String, String> requestParams =
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID,
-                            "response_type",
-                            "code",
-                            "request",
-                            signedJWT.serialize(),
-                            "scope",
-                            "openid");
+                var previousSession = orchSessionExtension.getSession(previousSessionId);
+                assertTrue(previousSession.isPresent());
+                assertTrue(previousSession.get().getAuthenticated());
+                assertNull(previousSession.get().getPreviousSessionId());
 
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(
-                                            new HttpCookie(
-                                                    "di-persistent-session-id",
-                                                    "persistent-id-value"))),
-                            requestParams,
-                            Optional.of("GET"));
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        new HttpCookie[] {
+                                            buildSessionCookie(
+                                                    previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                            new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                        }),
+                                constructQueryStringParameters(
+                                        CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
+                                Optional.of("GET"));
 
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    locationHeaderUri.toString(),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+            }
 
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTHORISATION_REQUEST_RECEIVED,
-                            AUTHORISATION_REQUEST_PARSED,
-                            AUTHORISATION_INITIATED));
-        }
+            @Test
+            void
+                    shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
+                            throws JOSEException {
+                SignedJWT signedJWT =
+                        createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
 
-        @Test
-        void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
-                throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+                Map<String, String> requestParams =
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID,
+                                "response_type",
+                                "code",
+                                "request",
+                                signedJWT.serialize(),
+                                "scope",
+                                "openid");
 
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
+                var response =
+                        makeRequest(
+                                Optional.empty(),
+                                constructHeaders(
+                                        Optional.of(
+                                                new HttpCookie(
+                                                        "di-persistent-session-id",
+                                                        "persistent-id-value"))),
+                                requestParams,
+                                Optional.of("GET"));
 
-            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", codeChallenge, null),
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
-        }
-
-        @Test
-        void
-                shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedInRequestObjectAndIsMissing()
-                        throws JOSEException, ParseException {
-            setupForAuthJourney();
-
-            var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
-
-            SignedJWT signedJWT =
-                    createSignedJWT(
-                            "", CLAIMS, List.of("openid"), null, aCodeChallenge, null, null);
-
-            Map<String, String> requestParams =
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID,
-                            "response_type",
-                            "code",
-                            "request",
-                            signedJWT.serialize(),
-                            "scope",
-                            "openid");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(
-                                            new HttpCookie(
-                                                    "di-persistent-session-id",
-                                                    "persistent-id-value"))),
-                            requestParams,
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Request+is+missing+code_challenge_method+parameter.+code_challenge_method+is+required+when+code_challenge+is+present."));
-        }
-
-        @Test
-        void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
-
-            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-            var codeChallengeMethod = CodeChallengeMethod.PLAIN;
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID,
-                                    null,
-                                    "openid",
-                                    "P2.Cl.Cm",
-                                    codeChallenge,
-                                    codeChallengeMethod),
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
-        }
-
-        @Test
-        void shouldReturnInvalidRequestWhenCodeChallengeMethodInRequestObjectIsInvalid()
-                throws JOSEException, ParseException {
-            setupForAuthJourney();
-
-            var aCodeChallenge = CodeChallenge.parse("aCodeChallenge");
-            var codeChallengeMethod = CodeChallengeMethod.PLAIN;
-
-            SignedJWT signedJWT =
-                    createSignedJWT(
-                            "",
-                            CLAIMS,
-                            List.of("openid"),
-                            null,
-                            aCodeChallenge,
-                            codeChallengeMethod,
-                            null);
-
-            Map<String, String> requestParams =
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID,
-                            "response_type",
-                            "code",
-                            "request",
-                            signedJWT.serialize(),
-                            "scope",
-                            "openid");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(
-                                            new HttpCookie(
-                                                    "di-persistent-session-id",
-                                                    "persistent-id-value"))),
-                            requestParams,
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Invalid+value+for+code_challenge_method+parameter."));
-        }
-
-        @Test
-        void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
-
-            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-            var codeChallengeMethod = CodeChallengeMethod.S256;
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID,
-                                    null,
-                                    "openid",
-                                    "P2.Cl.Cm",
-                                    codeChallenge,
-                                    codeChallengeMethod),
-                            Optional.of("GET"));
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    getLocationResponseHeader(response),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTHORISATION_REQUEST_RECEIVED,
-                            AUTHORISATION_REQUEST_PARSED,
-                            AUTHORISATION_INITIATED));
-        }
-
-        @Test
-        void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValidInRequestObject()
-                throws JOSEException, ParseException {
-            setupForAuthJourney();
-
-            var codeChallenge = CodeChallenge.parse("aCodeChallenge");
-            var codeChallengeMethod = CodeChallengeMethod.S256;
-
-            SignedJWT signedJWT =
-                    createSignedJWT(
-                            "",
-                            CLAIMS,
-                            List.of("openid"),
-                            null,
-                            codeChallenge,
-                            codeChallengeMethod,
-                            null);
-
-            Map<String, String> requestParams =
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID,
-                            "response_type",
-                            "code",
-                            "request",
-                            signedJWT.serialize(),
-                            "scope",
-                            "openid");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(
-                                            new HttpCookie(
-                                                    "di-persistent-session-id",
-                                                    "persistent-id-value"))),
-                            requestParams,
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    locationHeaderUri.toString(),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTHORISATION_REQUEST_RECEIVED,
-                            AUTHORISATION_REQUEST_PARSED,
-                            AUTHORISATION_INITIATED));
-        }
-
-        @Test
-        void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    singletonList("openid"),
-                    ClientType.WEB,
-                    false,
-                    true,
-                    emptyList(),
-                    true);
-            var previousClientSessionId = "a-previous-client-session";
-            var previousSessionId =
-                    givenAnExistingSessionWithClientSession(previousClientSessionId);
-            orchSessionExtension.addSession(
-                    new OrchSessionItem(previousSessionId)
-                            .withAuthenticated(true)
-                            .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
-            var previousSession = orchSessionExtension.getSession(previousSessionId);
-            assertTrue(previousSession.isPresent());
-            assertTrue(previousSession.get().getAuthenticated());
-            assertNull(previousSession.get().getPreviousSessionId());
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    new HttpCookie[] {
-                                        buildSessionCookie(
-                                                previousSessionId, DUMMY_CLIENT_SESSION_ID),
-                                        new HttpCookie("bsid", BROWSER_SESSION_ID)
-                                    }),
-                            constructQueryStringParameters(
-                                    CLIENT_ID, null, "openid", "P2.Cl.Cm", null, null),
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
-        }
-
-        @Test
-        void shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
-                throws JOSEException, ParseException {
-            setupForAuthJourneyWithPKCEEnforced();
-
-            SignedJWT signedJWT =
-                    createSignedJWT("", CLAIMS, List.of("openid"), null, null, null, null);
-
-            Map<String, String> requestParams =
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID,
-                            "response_type",
-                            "code",
-                            "request",
-                            signedJWT.serialize(),
-                            "scope",
-                            "openid");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(
-                                            new HttpCookie(
-                                                    "di-persistent-session-id",
-                                                    "persistent-id-value"))),
-                            requestParams,
-                            Optional.of("GET"));
-
-            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            assertThat(response, hasStatus(302));
-            assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
-            assertThat(
-                    locationHeaderUri.getQuery(),
-                    containsString(
-                            "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
-        }
-
-        private void setupForAuthJourneyWithPKCEEnforced() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    singletonList("openid"),
-                    ClientType.WEB,
-                    false,
-                    false,
-                    List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
-                    true);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+                var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+                assertThat(response, hasStatus(302));
+                assertThat(
+                        locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+                assertThat(
+                        locationHeaderUri.getQuery(),
+                        containsString(
+                                "error=invalid_request&error_description=Request+is+missing+code_challenge+parameter,+but+PKCE+is+enforced."));
+            }
         }
     }
 
     @Nested
     class LoginHint {
+        @BeforeEach
+        void setup() {
+            setupForAuthJourney();
+        }
+
         @Test
         void shouldRedirectToFrontendWhenValidLoginHintProvidedInRequestObject() throws Exception {
-            setupForAuthJourney();
             SignedJWT signedJWT =
                     createSignedJWT("", CLAIMS, List.of("openid"), TEST_EMAIL_ADDRESS);
 
@@ -1970,8 +1977,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturnInvalidRequestWhenInvalidLoginHintProvidedInRequestObject()
                 throws JOSEException {
-            setupForAuthJourney();
-
             SignedJWT signedJWT =
                     createSignedJWT(
                             "",
@@ -2012,8 +2017,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToFrontendWithoutLoginHintWhenValidLoginHintProvidedInQueryParams() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -2021,8 +2024,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
             assertTrue(previousSession.isPresent());
@@ -2158,15 +2159,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setupForAuthJourney() {
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("openid"),
-                ClientType.WEB,
-                false,
-                false,
-                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
-                false);
+        clientStore
+                .registerClient()
+                .withClientId(CLIENT_ID)
+                .withClientLoCs(
+                        List.of(
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.HMRC200.getValue()))
+                .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                .build();
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -2190,55 +2191,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void registerUser() {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
-    }
-
-    private void registerClient(
-            String clientId,
-            String clientName,
-            List<String> scopes,
-            ClientType clientType,
-            boolean jarValidationRequired,
-            boolean maxAgeEnabled,
-            List<String> claimsSupported,
-            boolean pkceEnforced) {
-        clientStore.registerClient(
-                clientId,
-                clientName,
-                singletonList(RP_REDIRECT_URI.toString()),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
-                scopes,
-                Base64.getMimeEncoder().encodeToString(RP_KEY_PAIR.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                clientType,
-                claimsSupported,
-                jarValidationRequired,
-                List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()),
-                maxAgeEnabled,
-                pkceEnforced);
-    }
-
-    private void registerClient(
-            String clientId,
-            String clientName,
-            List<String> scopes,
-            ClientType clientType,
-            boolean jarValidationRequired,
-            boolean maxAgeEnabled) {
-        registerClient(
-                clientId,
-                clientName,
-                scopes,
-                clientType,
-                jarValidationRequired,
-                maxAgeEnabled,
-                emptyList(),
-                false);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
