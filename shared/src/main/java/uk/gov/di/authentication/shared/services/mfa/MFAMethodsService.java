@@ -371,7 +371,9 @@ public class MFAMethodsService {
 
         var updatedResult =
                 mfaUpdateFailureReasonOrSortedMfaMethods(
-                        databaseUpdateResult, MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS);
+                        databaseUpdateResult,
+                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS,
+                        backupMethod);
 
         if (updatedResult.isSuccess()) {
             cloudwatchMetricsService.incrementMfaMethodCounter(
@@ -388,14 +390,17 @@ public class MFAMethodsService {
 
     private Result<MfaUpdateFailure, MfaUpdateResponse> mfaUpdateFailureReasonOrSortedMfaMethods(
             Result<String, List<MFAMethod>> databaseUpdateResult,
-            MFAMethodUpdateIdentifier updateTypeIdentifier) {
+            MFAMethodUpdateIdentifier updateTypeIdentifier,
+            MFAMethod mfaMethodToUpdate) {
         return databaseUpdateResult
                 .map(m -> new MfaUpdateResponse(m.stream().sorted().toList(), updateTypeIdentifier))
                 .mapFailure(
                         errorString -> {
                             LOG.error(errorString);
                             return new MfaUpdateFailure(
-                                    MfaUpdateFailureReason.UNEXPECTED_ERROR, updateTypeIdentifier);
+                                    MfaUpdateFailureReason.UNEXPECTED_ERROR,
+                                    updateTypeIdentifier,
+                                    mfaMethodToUpdate);
                         });
     }
 
@@ -512,7 +517,8 @@ public class MFAMethodsService {
             updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_SMS;
         }
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult, updateTypeIdentifier);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(
+                databaseUpdateResult, updateTypeIdentifier, defaultMethod);
     }
 
     private Result<MfaUpdateFailure, MfaUpdateResponse> updateAuthApp(
@@ -566,7 +572,8 @@ public class MFAMethodsService {
             updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_AUTHENTICATOR_APP;
         }
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult, updateTypeIdentifier);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(
+                databaseUpdateResult, updateTypeIdentifier, defaultMethod);
     }
 
     public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(
