@@ -57,14 +57,14 @@ public class CommonTestVariables {
             MFAMethod.smsMfaMethod(
                     true,
                     true,
-                    "+447900000100",
+                    UK_MOBILE_NUMBER,
                     PriorityIdentifier.DEFAULT,
                     "default-sms-identifier");
     public static final MFAMethod BACKUP_SMS_METHOD =
             MFAMethod.smsMfaMethod(
                     true,
                     true,
-                    "+447900000000",
+                    UK_MOBILE_NUMBER,
                     PriorityIdentifier.BACKUP,
                     "backup-sms-identifier");
 }
