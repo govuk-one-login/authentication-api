@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -52,6 +53,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
+    private final AuditService auditService;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -70,6 +72,7 @@ public class MFAMethodsPutHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -77,12 +80,14 @@ public class MFAMethodsPutHandler
             MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.auditService = auditService;
     }
 
     @Override
