@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -63,6 +64,7 @@ class MFAMethodsPutHandlerTest {
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final AuditService auditService = mock(AuditService.class);
     private static final Context context = mock(Context.class);
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
@@ -92,7 +94,8 @@ class MFAMethodsPutHandlerTest {
                         mfaMethodsService,
                         authenticationService,
                         codeStorageService,
-                        sqsClient);
+                        sqsClient,
+                        auditService);
     }
 
     @Test
