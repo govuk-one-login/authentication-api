@@ -24,6 +24,8 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
@@ -113,7 +115,7 @@ public class MfaMethodsMigrationService {
             auditContext =
                     auditContext.withMetadataItem(
                             pair(
-                                    "phone_number_country_code",
+                                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
                                     PhoneNumberHelper.getCountry(
                                             requestSmsMfaDetail.phoneNumber())));
         }
@@ -125,7 +127,7 @@ public class MfaMethodsMigrationService {
                 auditContext.withMetadataItem(
                         pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
         auditContext =
-                auditContext.withMetadataItem(pair("migration-succeeded", migrationSucceeded));
+                auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, auditContext);
