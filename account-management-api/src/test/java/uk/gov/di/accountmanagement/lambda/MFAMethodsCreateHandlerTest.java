@@ -61,7 +61,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -69,6 +68,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -163,18 +163,6 @@ class MFAMethodsCreateHandlerTest {
                 .withBody(body)
                 .withRequestContext(proxyRequestContext)
                 .withHeaders(headers);
-    }
-
-    private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
-        Optional<AuditService.MetadataPair> metadataItem =
-                capturedObject.getMetadataItemByKey(field);
-        assertTrue(
-                metadataItem.isPresent(),
-                "Metadata field '" + field + "' not found in audit context");
-        assertEquals(
-                AuditService.MetadataPair.pair(field, value),
-                metadataItem.get(),
-                "Metadata field '" + field + "' has incorrect value");
     }
 
     @BeforeEach
