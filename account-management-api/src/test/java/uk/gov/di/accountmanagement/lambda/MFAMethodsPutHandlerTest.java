@@ -204,7 +204,7 @@ class MFAMethodsPutHandlerTest {
                                         List.of(updatedMfaMethod),
                                         MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
         when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
-                .thenReturn(Optional.empty());
+                .thenReturn(Result.success(false));
 
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 

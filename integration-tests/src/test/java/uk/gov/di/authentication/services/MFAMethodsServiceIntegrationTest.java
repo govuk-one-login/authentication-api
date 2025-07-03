@@ -371,7 +371,7 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
-                assertTrue(mfaMigrationFailureReason.isEmpty());
+                assertTrue(mfaMigrationFailureReason.isSuccess());
 
                 var credentialsMfaMethodsAfter =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
@@ -420,7 +420,7 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
-                assertTrue(mfaMigrationFailureReason.isEmpty());
+                assertTrue(mfaMigrationFailureReason.isSuccess());
 
                 var credentialsMfaMethodsAfter =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
@@ -459,7 +459,7 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
-                assertTrue(mfaMigrationFailureReason.isEmpty());
+                assertTrue(mfaMigrationFailureReason.isSuccess());
 
                 var credentialsMfaMethods =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
@@ -498,7 +498,7 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodsService.migrateMfaCredentialsForUser(userProfileBefore);
 
                 // Assert
-                assertTrue(mfaMigrationFailureReason.isEmpty());
+                assertTrue(mfaMigrationFailureReason.isSuccess());
 
                 var credentialsMfaMethods =
                         userStoreExtension.getUserCredentialsFromEmail(email).get().getMfaMethods();
@@ -535,7 +535,7 @@ class MFAMethodsServiceIntegrationTest {
                 // Assert
                 assertEquals(
                         MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
-                        mfaMigrationFailureReason.get());
+                        mfaMigrationFailureReason.getFailure());
             }
         }
     }
@@ -823,7 +823,7 @@ class MFAMethodsServiceIntegrationTest {
                 // Assert
                 assertEquals(
                         MfaMigrationFailureReason.ALREADY_MIGRATED,
-                        mfaMigrationFailureReason.get());
+                        mfaMigrationFailureReason.getFailure());
             }
         }
     }

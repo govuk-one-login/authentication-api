@@ -217,7 +217,8 @@ class MFAMethodsCreateHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         reset(mfaMethodsService);
-        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
+                .thenReturn(Result.success(false));
     }
 
     @Nested

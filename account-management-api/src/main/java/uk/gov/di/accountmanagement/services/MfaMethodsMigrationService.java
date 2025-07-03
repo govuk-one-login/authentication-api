@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
@@ -58,15 +59,15 @@ public class MfaMethodsMigrationService {
             APIGatewayProxyRequestEvent input,
             MfaDetail mfaMethodType) {
         if (!userProfile.isMfaMethodsMigrated()) {
-            Optional<MfaMigrationFailureReason> maybeMfaMigrationFailureReason =
-                    mfaMethodsService.migrateMfaCredentialsForUser(userProfile);
+            var migrationResult = mfaMethodsService.migrateMfaCredentialsForUser(userProfile);
+
+            var userMigrated = migrationResult.isSuccess();
 
             emitMfaMethodMigrationAttemptedAuditEvent(
-                    userProfile, input, mfaMethodType, maybeMfaMigrationFailureReason.isEmpty());
+                    userProfile, input, mfaMethodType, userMigrated, migrationResult.isSuccess());
 
-            if (maybeMfaMigrationFailureReason.isPresent()) {
-                MfaMigrationFailureReason mfaMigrationFailureReason =
-                        maybeMfaMigrationFailureReason.get();
+            if (migrationResult.isFailure()) {
+                MfaMigrationFailureReason mfaMigrationFailureReason = migrationResult.getFailure();
 
                 loggerForCallingHandler.warn(
                         "Failed to migrate user's MFA credentials due to {}",
@@ -91,7 +92,8 @@ public class MfaMethodsMigrationService {
             UserProfile userProfile,
             APIGatewayProxyRequestEvent input,
             MfaDetail mfaMethod,
-            Boolean migrationSucceeded) {
+            Boolean migrationSucceeded,
+            boolean hadPartial) {
 
         var headers = input.getHeaders();
 
@@ -122,6 +124,8 @@ public class MfaMethodsMigrationService {
                                             requestSmsMfaDetail.phoneNumber())));
         }
 
+        auditContext =
+                auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL, hadPartial));
         auditContext =
                 auditContext.withMetadataItem(
                         pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.mfaMethodType()));
