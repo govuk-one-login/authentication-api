@@ -52,7 +52,6 @@ doc_app_authorisation_uri                   = "https://dcmaw-cri.dev.stubs.accou
 doc_app_jwks_endpoint                       = "https://dcmaw-cri.dev.stubs.account.gov.uk/.well-known/jwks.json"
 doc_app_aud                                 = "https://dcmaw-cri.dev.stubs.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
-doc_app_encryption_key_id                   = ""
 spot_enabled                                = false
 custom_doc_app_claim_enabled                = true
 ipv_audience                                = "https://ipvstub.signin.dev.account.gov.uk"

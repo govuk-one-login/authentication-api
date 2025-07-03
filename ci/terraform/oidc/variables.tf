@@ -406,11 +406,6 @@ variable "doc_app_cri_data_endpoint" {
   description = "The endpoint path to the protected resource on the Doc App CRI (this is appended to the doc_app_backend_uri variable)"
 }
 
-variable "doc_app_encryption_key_id" {
-  type    = string
-  default = "undefined"
-}
-
 variable "doc_app_jwks_endpoint" {
   type    = string
   default = "undefined"

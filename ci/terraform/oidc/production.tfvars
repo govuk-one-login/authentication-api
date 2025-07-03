@@ -91,7 +91,6 @@ doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri          = "https://www.review-b.account.gov.uk/dca/oauth2/authorize"
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.account.gov.uk/.well-known/jwks.json"
-doc_app_encryption_key_id          = "7958938d-eea0-4e6d-9ea1-ec0b9d421f77"
 
 cloudwatch_log_retention                    = 30
 client_registry_api_enabled                 = false

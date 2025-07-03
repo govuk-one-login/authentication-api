@@ -155,7 +155,6 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-dev
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
-      docAppEncryptionKeyId: dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
@@ -184,7 +183,6 @@ Mappings:
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-build
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
-      docAppEncryptionKeyId: dcmaw-cri-stubs-build-INqHBvMYWmNodklvbpTCgf1DS10Fv5ic4_8LdoBNjAw
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
@@ -213,7 +211,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
-      docAppEncryptionKeyId: ca6d5930-77a6-41a4-8192-125df996c084
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
@@ -242,7 +239,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
-      docAppEncryptionKeyId: 0948190d-384c-498d-81e2-a20dd30f147c
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
@@ -271,7 +267,6 @@ Mappings:
       docAppAuthorisationUrl: https://www.review-b.account.gov.uk/dca/oauth2/authorize
       docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
-      docAppEncryptionKeyId: 7958938d-eea0-4e6d-9ea1-ec0b9d421f77
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
@@ -3189,12 +3184,6 @@ Resources:
               EnvironmentConfiguration,
               !Ref Environment,
               docAppDomain,
-            ]
-          DOC_APP_ENCRYPTION_KEY_ID:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppEncryptionKeyId,
             ]
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
