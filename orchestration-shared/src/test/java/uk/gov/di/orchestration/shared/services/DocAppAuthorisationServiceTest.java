@@ -31,6 +31,7 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
@@ -101,8 +102,11 @@ class DocAppAuthorisationServiceTest {
     void setUp() throws Json.JsonException, MalformedURLException, KeySourceException {
         when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
+        when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new StateItem(STATE_STORAGE_PREFIX + SESSION_ID)
+                                        .withState(STATE.getValue())));
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
@@ -187,11 +191,8 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState()
-            throws Json.JsonException {
+    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState() {
         State differentState = new State();
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", differentState.getValue());
         responseHeaders.put("code", AUTH_CODE.getValue());
