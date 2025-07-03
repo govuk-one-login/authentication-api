@@ -7,6 +7,7 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE = "journey-type";
     String AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE = "phone_number_country_code";
     String AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED = "migration-succeeded";
+    String AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL = "had-partial";
 
     AuditableEvent parseFromName(String name);
 }

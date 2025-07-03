@@ -17,6 +17,7 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
@@ -104,7 +105,7 @@ class MfaMethodsMigrationServiceTest {
             var mfaDetail = new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123123");
 
             when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
-                    .thenReturn(Optional.empty());
+                    .thenReturn(Result.success(false));
 
             var result =
                     service.migrateMfaCredentialsForUserIfRequired(
@@ -149,7 +150,7 @@ class MfaMethodsMigrationServiceTest {
             var mfaDetail = new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123123");
 
             when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
-                    .thenReturn(Optional.of(migrationFailureReason));
+                    .thenReturn(Result.failure(migrationFailureReason));
 
             var maybeErrorResponse =
                     service.migrateMfaCredentialsForUserIfRequired(
@@ -178,7 +179,7 @@ class MfaMethodsMigrationServiceTest {
             var mfaDetail = new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123123");
 
             when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
-                    .thenReturn(Optional.of(ALREADY_MIGRATED));
+                    .thenReturn(Result.failure(ALREADY_MIGRATED));
 
             var maybeErrorResponse =
                     service.migrateMfaCredentialsForUserIfRequired(
@@ -218,6 +219,10 @@ class MfaMethodsMigrationServiceTest {
             var userProfile = new UserProfile().withEmail(EMAIL).withMfaMethodsMigrated(false);
             var input = generateApiGatewayEvent();
 
+            // Setup mock to return success
+            when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
+                    .thenReturn(Result.success(true));
+
             // When
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
 
@@ -254,7 +259,7 @@ class MfaMethodsMigrationServiceTest {
             var userProfile = new UserProfile().withEmail(EMAIL).withMfaMethodsMigrated(false);
             var input = generateApiGatewayEvent();
             when(mfaMethodsService.migrateMfaCredentialsForUser(userProfile))
-                    .thenReturn(Optional.of(ALREADY_MIGRATED));
+                    .thenReturn(Result.failure(ALREADY_MIGRATED));
 
             // When
             service.migrateMfaCredentialsForUserIfRequired(userProfile, logger, input, mfaDetail);
