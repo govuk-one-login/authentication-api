@@ -30,14 +30,18 @@ import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.OneLoginAuthenticationRequest;
+import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
+import uk.gov.di.authentication.oidc.services.AllowAllRateLimiter;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimiter;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -78,7 +82,9 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -91,6 +97,7 @@ import java.util.stream.Collectors;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.TEMPORARILY_UNAVAILABLE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
@@ -322,6 +329,19 @@ public class AuthorisationHandler
                 return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }
         }
+
+        var limiter = new AllowAllRateLimiter();
+        var decision = limiter.decision(
+                new OneLoginAuthenticationRequest(
+                        client.getClientID(),
+                        Clock.systemUTC().instant().atZone(ZoneId.systemDefault())
+                )
+        );
+
+        if (decision == RateLimitDecision.DENY) {
+
+        }
+        
 
         if (!client.isActive()) {
             LOG.error("Client configured as not active in Client Registry");
