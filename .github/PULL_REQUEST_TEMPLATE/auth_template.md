@@ -17,6 +17,20 @@ For example:
 
 ## Checklist
 
+<!-- Active user journey impact
+
+It’s crucial that deploying this change to production doesn’t disrupt users with active sessions.
+
+Existing sessions may contain data that this PR treats as invalid, potentially triggering errors. For example, if you remove support for an enum value that’s already stored in the database, casting the deprecated string back to an enum must handle any errors gracefully.
+
+When deprecating session data, split the work into two PRs:
+
+1. Remove all uses of the deprecated value.
+2. After any sessions containing that data have expired, remove the value’s definition.
+-->
+
+- [ ] Deployment of this PR will not break active user journeys
+
 <!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
 
 Be careful when making changes to code in 'shared' components where each team has a copy.
