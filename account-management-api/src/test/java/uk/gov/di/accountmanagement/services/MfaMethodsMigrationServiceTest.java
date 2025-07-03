@@ -65,7 +65,6 @@ class MfaMethodsMigrationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private static final String TEST_PHONE_NUMBER = "07123123123";
-    private static final String TEST_NON_CLIENT_SESSION_ID = "some-non-client-session-id";
     private static final String EMAIL = "email@example.com";
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
     private static final String TEST_CLIENT = "test-client";
@@ -83,9 +82,7 @@ class MfaMethodsMigrationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service =
-                new MfaMethodsMigrationService(
-                        configurationService, mfaMethodsService, auditService);
+        service = new MfaMethodsMigrationService(mfaMethodsService, auditService);
     }
 
     @AfterEach

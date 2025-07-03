@@ -20,9 +20,8 @@ public class AuditEventExpectation {
         this.expectedAttributes = new HashMap<>();
     }
 
-    public AuditEventExpectation withAttribute(String key, Object value) {
+    public void withAttribute(String key, Object value) {
         expectedAttributes.put(key, value);
-        return this;
     }
 
     public void verify(List<String> receivedEvents) {
@@ -34,21 +33,13 @@ public class AuditEventExpectation {
             Object expectedValue = entry.getValue();
 
             JsonElement actualElement = getJsonElementByPath(jsonEvent, path);
+            String message = "Attribute " + path + " in event " + eventName;
             if (expectedValue instanceof String) {
-                assertEquals(
-                        expectedValue,
-                        actualElement.getAsString(),
-                        "Attribute " + path + " in event " + eventName);
+                assertEquals(expectedValue, actualElement.getAsString(), message);
             } else if (expectedValue instanceof Boolean) {
-                assertEquals(
-                        expectedValue,
-                        actualElement.getAsBoolean(),
-                        "Attribute " + path + " in event " + eventName);
-            } else if (expectedValue instanceof Number) {
-                assertEquals(
-                        ((Number) expectedValue).doubleValue(),
-                        actualElement.getAsDouble(),
-                        "Attribute " + path + " in event " + eventName);
+                assertEquals(expectedValue, actualElement.getAsBoolean(), message);
+            } else if (expectedValue instanceof Number number) {
+                assertEquals(number, actualElement.getAsDouble(), message);
             }
         }
     }

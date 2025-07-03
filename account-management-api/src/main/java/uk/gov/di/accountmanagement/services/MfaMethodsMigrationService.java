@@ -34,21 +34,16 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHea
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MfaMethodsMigrationService {
-    private final ConfigurationService configurationService;
     private final MFAMethodsService mfaMethodsService;
     private final AuditService auditService;
 
     public MfaMethodsMigrationService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
     public MfaMethodsMigrationService(
-            ConfigurationService configurationService,
-            MFAMethodsService mfaMethodsService,
-            AuditService auditService) {
-        this.configurationService = configurationService;
+            MFAMethodsService mfaMethodsService, AuditService auditService) {
         this.mfaMethodsService = mfaMethodsService;
         this.auditService = auditService;
     }

@@ -42,7 +42,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +63,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
-import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
-import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.TXMA_ENCODED_HEADER_VALUE;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -118,19 +114,6 @@ class MFAMethodsCreateHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private final Json objectMapper = SerializationService.getInstance();
-
-    private final AuditContext auditContext =
-            new AuditContext(
-                    TEST_CLIENT_ID,
-                    SESSION_ID,
-                    TEST_NON_CLIENT_SESSION_ID,
-                    TEST_INTERNAL_SUBJECT,
-                    TEST_EMAIL,
-                    TEST_IP_ADDRESS,
-                    TEST_PHONE_NUMBER,
-                    PERSISTENT_ID,
-                    Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                    new ArrayList<>());
 
     private MFAMethodsCreateHandler handler;
 
