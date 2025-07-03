@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.net.URI;
@@ -60,9 +59,7 @@ public class OrchestrationAuthorizationService {
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
-    private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
-    private final RedisConnectionService redisConnectionService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final StateStorageService stateStorageService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
@@ -70,16 +67,12 @@ public class OrchestrationAuthorizationService {
     public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
-            IPVCapacityService ipvCapacityService,
             KmsConnectionService kmsConnectionService,
-            RedisConnectionService redisConnectionService,
             NoSessionOrchestrationService noSessionOrchestrationService,
             StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
-        this.ipvCapacityService = ipvCapacityService;
         this.kmsConnectionService = kmsConnectionService;
-        this.redisConnectionService = redisConnectionService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.stateStorageService = stateStorageService;
     }
@@ -87,6 +80,7 @@ public class OrchestrationAuthorizationService {
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
         this(
                 configurationService,
+                new DynamoClientService(configurationService),
                 new KmsConnectionService(configurationService),
                 new NoSessionOrchestrationService(configurationService),
                 new StateStorageService(configurationService));
@@ -100,23 +94,9 @@ public class OrchestrationAuthorizationService {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
                 kmsConnectionService,
-                new RedisConnectionService(configurationService),
                 noSessionOrchestrationService,
                 stateStorageService);
-    }
-
-    public OrchestrationAuthorizationService(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this(
-                configurationService,
-                new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
-                new KmsConnectionService(configurationService),
-                redis,
-                new NoSessionOrchestrationService(configurationService),
-                new StateStorageService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -269,10 +249,8 @@ public class OrchestrationAuthorizationService {
 
     public void storeState(String sessionId, String clientSessionId, State state) {
         LOG.info("Storing state");
-        var prefixedSessionId = AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId;
-        redisConnectionService.saveWithExpiry(
-                prefixedSessionId, state.getValue(), configurationService.getSessionExpiry());
-        stateStorageService.storeState(prefixedSessionId, state.getValue());
+        stateStorageService.storeState(
+                AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId, state.getValue());
         noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 

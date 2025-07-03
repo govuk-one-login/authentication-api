@@ -143,8 +143,7 @@ public class AuthenticationCallbackHandler
                 new InitiateIPVAuthorisationService(
                         configurationService,
                         auditService,
-                        new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
+                        new IPVAuthorisationService(configurationService, kmsConnectionService),
                         cloudwatchMetricsService,
                         new NoSessionOrchestrationService(configurationService),
                         new TokenService(
@@ -183,8 +182,7 @@ public class AuthenticationCallbackHandler
                 new InitiateIPVAuthorisationService(
                         configurationService,
                         auditService,
-                        new IPVAuthorisationService(
-                                configurationService, redisConnectionService, kmsConnectionService),
+                        new IPVAuthorisationService(configurationService, kmsConnectionService),
                         cloudwatchMetricsService,
                         new NoSessionOrchestrationService(
                                 configurationService, redisConnectionService),

@@ -131,10 +131,7 @@ public class IPVCallbackHandler
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
-                new IPVAuthorisationService(
-                        configurationService,
-                        new RedisConnectionService(configurationService),
-                        kmsConnectionService);
+                new IPVAuthorisationService(configurationService, kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =
@@ -159,7 +156,7 @@ public class IPVCallbackHandler
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
-                new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
+                new IPVAuthorisationService(configurationService, kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.authUserInfoStorageService =

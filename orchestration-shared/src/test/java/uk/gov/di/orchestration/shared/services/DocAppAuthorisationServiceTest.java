@@ -81,25 +81,19 @@ class DocAppAuthorisationServiceTest {
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
-                    configurationService,
-                    redisConnectionService,
-                    kmsConnectionService,
-                    jwksService,
-                    stateStorageService);
+                    configurationService, kmsConnectionService, jwksService, stateStorageService);
     private PrivateKey privateKey;
     private RSAKey publicRsaKey;
 
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
     @BeforeEach
-    void setUp() throws Json.JsonException, MalformedURLException, KeySourceException {
+    void setUp() throws MalformedURLException, KeySourceException {
         when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
@@ -223,14 +217,11 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void shouldSaveStateToRedisAndDynamo() throws Json.JsonException {
+    void shouldSaveStateToRedisAndDynamo() {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
 
         var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        prefixedSessionId, objectMapper.writeValueAsString(STATE), SESSION_EXPIRY);
         verify(stateStorageService).storeState(prefixedSessionId, STATE.getValue());
     }
 
