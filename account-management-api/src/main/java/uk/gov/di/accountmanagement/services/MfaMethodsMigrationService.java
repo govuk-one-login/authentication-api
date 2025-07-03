@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -109,7 +110,8 @@ public class MfaMethodsMigrationService {
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId)
                         .withSubjectId(input.getPathParameters().get("publicSubjectId"))
-                        .withPhoneNumber(userProfile.getPhoneNumber());
+                        .withPhoneNumber(userProfile.getPhoneNumber())
+                        .withTxmaAuditEncoded(AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
         if (mfaMethod instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
             auditContext =
@@ -127,7 +129,8 @@ public class MfaMethodsMigrationService {
                 auditContext.withMetadataItem(
                         pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT));
         auditContext =
-                auditContext.withMetadataItem(pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
+                auditContext.withMetadataItem(
+                        pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, auditContext);
