@@ -49,7 +49,6 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -69,6 +68,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -778,17 +778,5 @@ class MFAMethodsPutHandlerTest {
         }
         """,
                 credential);
-    }
-
-    private void containsMetadataPair(AuditContext capturedObject, String field, String value) {
-        Optional<AuditService.MetadataPair> metadataItem =
-                capturedObject.getMetadataItemByKey(field);
-        assertTrue(
-                metadataItem.isPresent(),
-                "Metadata field '" + field + "' not found in audit context");
-        assertEquals(
-                AuditService.MetadataPair.pair(field, value),
-                metadataItem.get(),
-                "Metadata field '" + field + "' has incorrect value");
     }
 }
