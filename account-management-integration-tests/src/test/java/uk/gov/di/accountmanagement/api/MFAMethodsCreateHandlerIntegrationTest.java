@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.AssertionFailedError;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseSmsMfaDetail;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,12 +41,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -59,6 +65,12 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
+    public static final String EXTENSIONS_JOURNEY_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+    public static final String EXTENSIONS_MFA_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+    public static final String EXTENSIONS_MFA_METHOD =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
     private static String testPublicSubject;
     private static String testInternalSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -70,11 +82,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     UUID.randomUUID().toString());
     private static final MFAMethod backupPrioritySms =
             MFAMethod.smsMfaMethod(
-                    true,
-                    true,
-                    TEST_PHONE_NUMBER_TWO,
-                    PriorityIdentifier.BACKUP,
-                    UUID.randomUUID().toString());
+                    true, true, TEST_PHONE_NUMBER_TWO, BACKUP, UUID.randomUUID().toString());
     private static final MFAMethod defaultPriorityAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL,
@@ -82,28 +90,6 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     true,
                     PriorityIdentifier.DEFAULT,
                     UUID.randomUUID().toString());
-
-    private void setupNonMigratedUserWithMfaMethod(MFAMethod mfaMethod) {
-        if (mfaMethod.getMfaMethodType().equalsIgnoreCase("AUTH_APP")) {
-            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
-        } else {
-            userStore.addVerifiedPhoneNumber(TEST_EMAIL, mfaMethod.getDestination());
-        }
-        userStore.setMfaMethodsMigrated(TEST_EMAIL, false);
-
-        // Verify user is not migrated
-        var userProfile = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
-        assertFalse(userProfile.isMfaMethodsMigrated(), "User should not be migrated");
-    }
-
-    private void setupMigratedUserWithMfaMethod(MFAMethod mfaMethod) {
-        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
-        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
-
-        // Verify user is migrated
-        var userProfile = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
-        assertTrue(userProfile.isMfaMethodsMigrated(), "User should be migrated");
-    }
 
     @BeforeEach
     void setUp() {
@@ -123,6 +109,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Nested
     class SuccessfulMFACreation {
+
         private static Stream<Arguments> defaultMfaMethodProvider() {
             return Stream.of(
                     Arguments.of("Auth App", defaultPriorityAuthApp),
@@ -139,40 +126,43 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> headers = new HashMap<>();
             headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
 
+            // WHEN
             var response =
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER_TWO, otp))),
                             headers,
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(200, response.getStatusCode());
+            // THEN
+            assertEquals(
+                    200,
+                    response.getStatusCode(),
+                    "Expected successful response for adding backup SMS MFA");
 
-            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+            assertUserMigrationStatus(true, "User should be migrated after adding backup MFA");
 
-            // Verify user is now migrated after the request
-            var userProfileAfter = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
-            assertTrue(userProfileAfter.isMfaMethodsMigrated());
-
-            var retrievedSmsMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            mfaMethod
-                                                    .getPriority()
-                                                    .equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
-
-            assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedSmsMethod.getPriority());
+            var retrievedSmsMethod = findMfaMethodByPriority(BACKUP, "Missing BACKUP MFA");
             assertEquals(
                     TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE, retrievedSmsMethod.getDestination());
             assertTrue(retrievedSmsMethod.isEnabled());
             assertTrue(retrievedSmsMethod.isMethodVerified());
+
+            var backupMfaIdentifier = retrievedSmsMethod.getMfaIdentifier();
+            var expectedJson =
+                    constructExpectedResponse(
+                            backupMfaIdentifier,
+                            BACKUP,
+                            true,
+                            new ResponseSmsMfaDetail(TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE));
+            var expectedResponse =
+                    JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+
+            assertEquals(expectedResponse, response.getBody());
 
             assertNotificationsReceived(
                     notificationsQueue,
@@ -182,43 +172,24 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                     BACKUP_METHOD_ADDED,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            var extractedMfaIdentifier = retrievedSmsMethod.getMfaIdentifier();
-            var expectedJson =
-                    constructExpectedResponse(
-                            extractedMfaIdentifier,
-                            PriorityIdentifier.BACKUP,
-                            true,
-                            new ResponseSmsMfaDetail(TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE));
-            var expectedResponse =
-                    JsonParser.parseString(expectedJson).getAsJsonObject().toString();
+            // Check audit events
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_COMPLETED);
 
-            assertEquals(expectedResponse, response.getBody());
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+            Map<String, String> migrationAttributes = new HashMap<>();
+            migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            eventExpectations.put(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttributes);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, String> addCompletedAttributes = new HashMap<>();
+            addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            addCompletedAttributes.put(
+                    "extensions." + AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
-
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
-
-            assertTrue(
-                    extensions.has(
-                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE));
-            assertEquals(
-                    "44",
-                    extensions
-                            .get(AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
-                            .getAsString());
-
-            assertEquals(SMS.name(), extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         private static Stream<Arguments> migratedMfaMethodProvider() {
@@ -253,31 +224,20 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
-                                            new RequestSmsMfaDetail(phoneNumber, otp))),
+                                            BACKUP, new RequestSmsMfaDetail(phoneNumber, otp))),
                             headers,
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(200, response.getStatusCode());
+            assertEquals(
+                    200,
+                    response.getStatusCode(),
+                    "Expected successful response for migrated user adding backup SMS MFA");
 
-            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+            assertUserMigrationStatus(true, "User should still be migrated");
 
-            // Verify user is still migrated
-            assertTrue(userStore.getUserProfileFromEmail(TEST_EMAIL).get().isMfaMethodsMigrated());
-
-            var retrievedSmsMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            mfaMethod
-                                                    .getPriority()
-                                                    .equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
-
-            assertEquals(PriorityIdentifier.BACKUP.toString(), retrievedSmsMethod.getPriority());
+            var retrievedSmsMethod = findMfaMethodByPriority(BACKUP, "Backup MFA method not found");
             assertEquals(phoneNumberWithCountryCode, retrievedSmsMethod.getDestination());
             assertTrue(retrievedSmsMethod.isEnabled());
             assertTrue(retrievedSmsMethod.isMethodVerified());
@@ -294,7 +254,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var expectedJson =
                     constructExpectedResponse(
                             extractedMfaIdentifier,
-                            PriorityIdentifier.BACKUP,
+                            BACKUP,
                             true,
                             new ResponseSmsMfaDetail(phoneNumberWithCountryCode));
             var expectedResponse =
@@ -302,31 +262,17 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+            // Check audit event
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_COMPLETED);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, String> addCompletedAttributes = new HashMap<>();
+            addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
-            assertEquals(SMS.name(), extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
-
-            assertTrue(
-                    extensions.has(
-                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE));
-            assertEquals(
-                    "44",
-                    extensions
-                            .get(AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE)
-                            .getAsString());
-
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @DisplayName("Non-migrated SMS User adds a Backup AUTH_APP MFA")
@@ -341,33 +287,21 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
-                                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
+                                            BACKUP, new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
                             headers,
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(200, response.getStatusCode());
+            assertEquals(
+                    200,
+                    response.getStatusCode(),
+                    "Expected successful response for non-migrated SMS user adding backup Auth App MFA");
 
-            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
-
-            // Verify user is now migrated after the request
-            var userProfileAfter = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
-            assertTrue(userProfileAfter.isMfaMethodsMigrated());
+            assertUserMigrationStatus(true, "User should be migrated after adding backup MFA");
 
             var retrievedAuthAppMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            mfaMethod
-                                                    .getPriority()
-                                                    .equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
-
-            assertEquals(
-                    PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
+                    findMfaMethodByPriority(BACKUP, "Backup Auth App MFA method not found");
             assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
             assertTrue(retrievedAuthAppMethod.isEnabled());
             assertTrue(retrievedAuthAppMethod.isMethodVerified());
@@ -384,7 +318,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var expectedJson =
                     constructExpectedResponse(
                             extractedMfaIdentifier,
-                            PriorityIdentifier.BACKUP,
+                            BACKUP,
                             true,
                             new ResponseAuthAppMfaDetail(TEST_CREDENTIAL));
             var expectedResponse =
@@ -392,24 +326,22 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+            // Check audit events
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_COMPLETED);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
+            Map<String, String> migrationAttributes = new HashMap<>();
+            migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            eventExpectations.put(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttributes);
 
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+            Map<String, String> addCompletedAttributes = new HashMap<>();
+            addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
-            assertEquals(
-                    MFAMethodType.AUTH_APP.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @DisplayName("Migrated SMS User adds a Backup AUTH_APP MFA")
@@ -424,32 +356,22 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
-                                            new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
+                                            BACKUP, new RequestAuthAppMfaDetail(TEST_CREDENTIAL))),
                             headers,
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(200, response.getStatusCode());
+            assertEquals(
+                    200,
+                    response.getStatusCode(),
+                    "Expected successful response for migrated SMS user adding backup Auth App MFA");
 
-            List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
-
-            // Verify user is still migrated
-            assertTrue(userStore.getUserProfileFromEmail(TEST_EMAIL).get().isMfaMethodsMigrated());
+            assertUserMigrationStatus(true, "User should still be migrated");
 
             var retrievedAuthAppMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    mfaMethod ->
-                                            mfaMethod
-                                                    .getPriority()
-                                                    .equals(PriorityIdentifier.BACKUP.name()))
-                            .findFirst()
-                            .get();
+                    findMfaMethodByPriority(BACKUP, "Backup Auth App MFA method not found");
 
-            assertEquals(
-                    PriorityIdentifier.BACKUP.toString(), retrievedAuthAppMethod.getPriority());
             assertEquals(TEST_CREDENTIAL, retrievedAuthAppMethod.getCredentialValue());
             assertTrue(retrievedAuthAppMethod.isEnabled());
             assertTrue(retrievedAuthAppMethod.isMethodVerified());
@@ -466,7 +388,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var expectedJson =
                     constructExpectedResponse(
                             extractedMfaIdentifier,
-                            PriorityIdentifier.BACKUP,
+                            BACKUP,
                             true,
                             new ResponseAuthAppMfaDetail(TEST_CREDENTIAL));
             var expectedResponse =
@@ -474,24 +396,16 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_COMPLETED);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
+            Map<String, String> addCompletedAttributes = new HashMap<>();
+            addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
-            assertEquals(
-                    MFAMethodType.AUTH_APP.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
-
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
@@ -509,7 +423,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestAuthAppMfaDetail(
                                                     "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                             headers,
@@ -517,31 +431,24 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when migrated Auth App user adds Auth App as backup");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_FAILED));
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_FAILED);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
+            Map<String, String> addFailedAttributes = new HashMap<>();
+            addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
+            addFailedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name().toLowerCase());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
-
-            assertEquals(
-                    MFAMethodType.AUTH_APP.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
-
-            assertEquals(
-                    PriorityIdentifier.DEFAULT.name().toLowerCase(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @DisplayName("Non-migrated Auth App User cannot add Auth App as backup MFA")
@@ -556,7 +463,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestAuthAppMfaDetail(
                                                     "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                             headers,
@@ -564,35 +471,32 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when non-migrated Auth App user adds Auth App as backup");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
 
             // Verify user is now migrated after the request (even though it failed)
-            var userProfileAfter = userStore.getUserProfileFromEmail(TEST_EMAIL).get();
-            assertTrue(userProfileAfter.isMfaMethodsMigrated());
+            assertUserMigrationStatus(true, "User should be migrated despite failure");
 
-            // Verify audit event was emitted
-            var receivedEvents =
-                    assertTxmaAuditEventsReceived(
-                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_FAILED));
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_FAILED);
 
-            // Verify audit event contains correct metadata
-            var auditEvent = receivedEvents.get(0);
-            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
-            var extensions = jsonEvent.getAsJsonObject("extensions");
+            Map<String, String> migrationAttributes = new HashMap<>();
+            migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            eventExpectations.put(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttributes);
 
-            assertEquals(
-                    ACCOUNT_MANAGEMENT.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
+            Map<String, String> addFailedAttributes = new HashMap<>();
+            addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
+            addFailedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name().toLowerCase());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
-            assertEquals(
-                    MFAMethodType.AUTH_APP.name(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_TYPE).getAsString());
-
-            assertEquals(
-                    PriorityIdentifier.DEFAULT.name().toLowerCase(),
-                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -601,11 +505,14 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
                             Collections.emptyMap(),
                             Collections.emptyMap());
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected bad request when path parameter is not present");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
         }
 
@@ -615,13 +522,16 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, "123456"))),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", "incorrect-public-subject-id"),
                             Map.of("principalId", testInternalSubject));
-            assertEquals(404, response.getStatusCode());
+            assertEquals(
+                    404,
+                    response.getStatusCode(),
+                    "Expected not found when public subject is not in user store");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
         }
 
@@ -653,7 +563,10 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected bad request when MFA method type is invalid");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
         }
 
@@ -667,14 +580,17 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when MFA count limit is reached");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1068));
         }
 
@@ -687,14 +603,17 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestSmsMfaDetail(TEST_PHONE_NUMBER, otp))),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", testInternalSubject));
 
-            assertEquals(400, response.getStatusCode());
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when adding SMS MFA with same phone number");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1069));
         }
 
@@ -704,17 +623,84 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     makeRequest(
                             Optional.of(
                                     constructRequestBody(
-                                            PriorityIdentifier.BACKUP,
+                                            BACKUP,
                                             new RequestAuthAppMfaDetail(
-                                                    MFAMethodType.AUTH_APP,
+                                                    AUTH_APP,
                                                     "AA99BB88CC77DD66EE55FF44GG33HH22II11JJ00"))),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
                             Map.of("publicSubjectId", testPublicSubject),
                             Map.of("principalId", "invalid"));
 
-            assertEquals(401, response.getStatusCode());
+            assertEquals(
+                    401,
+                    response.getStatusCode(),
+                    "Expected unauthorized when principal is invalid");
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+        }
+    }
+
+    private void assertUserMigrationStatus(boolean expectedMigrationStatus, String message) {
+        var userProfile =
+                userStore
+                        .getUserProfileFromEmail(TEST_EMAIL)
+                        .orElseThrow(() -> new AssertionFailedError("User profile not found"));
+        if (expectedMigrationStatus) {
+            assertTrue(userProfile.isMfaMethodsMigrated(), message);
+        } else {
+            assertFalse(userProfile.isMfaMethodsMigrated(), message);
+        }
+    }
+
+    private MFAMethod findMfaMethodByPriority(PriorityIdentifier priority, String errorMessage) {
+        List<MFAMethod> mfaMethods = userStore.getMfaMethod(TEST_EMAIL);
+        return mfaMethods.stream()
+                .filter(mfaMethod -> mfaMethod.getPriority().equals(priority.name()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionFailedError(errorMessage));
+    }
+
+    private void setupNonMigratedUserWithMfaMethod(MFAMethod mfaMethod) {
+        if (mfaMethod.getMfaMethodType().equalsIgnoreCase("AUTH_APP")) {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
+        } else {
+            userStore.addVerifiedPhoneNumber(TEST_EMAIL, mfaMethod.getDestination());
+        }
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, false);
+
+        // Verify user is not migrated
+        assertUserMigrationStatus(false, "User should not be migrated");
+    }
+
+    private void setupMigratedUserWithMfaMethod(MFAMethod mfaMethod) {
+        userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
+        userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+
+        // Verify user is migrated
+        assertUserMigrationStatus(true, "User should be migrated");
+    }
+
+    private void verifyAuditEvents(
+            List<AuditableEvent> expectedEvents,
+            Map<String, Map<String, String>> eventExpectations) {
+        // Assert that the expected events were received
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
+
+        // Create and verify expectations for each event
+        for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
+            String eventName = eventEntry.getKey();
+            Map<String, String> attributes = eventEntry.getValue();
+
+            // Create the expectation for this event
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
+
+            // Add all expected attributes
+            for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
+                expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+            }
+
+            // Verify the expectation against the received events
+            expectation.verify(receivedEvents);
         }
     }
 
