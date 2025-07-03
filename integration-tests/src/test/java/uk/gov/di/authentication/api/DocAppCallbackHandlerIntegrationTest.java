@@ -21,11 +21,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
@@ -51,8 +49,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.nimbusds.jose.JWSAlgorithm.ES256;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
@@ -127,21 +123,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 "https://test.com",
                                 SaltHelper.generateNewSalt()));
         criStub.init(privateKey, docAppSubjectId.getValue());
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList(REDIRECT_URI),
-                singletonList("contact@example.com"),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.APP,
-                ES256.getName(),
-                true);
+        clientStore.createClient().withClientId(CLIENT_ID).saveToDynamo();
         txmaAuditQueue.clear();
     }
 

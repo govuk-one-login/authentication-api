@@ -48,10 +48,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -745,23 +743,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void registerClientWithPrivateKeyJwtAuthentication(
             String clientId, PublicKey publicKey, Scope scope, SubjectType subjectType) {
-        clientStore.registerClient(
-                clientId,
-                "test-client",
-                singletonList(REDIRECT_URI),
-                singletonList(TEST_EMAIL),
-                scope.toStringList(),
-                Base64.getMimeEncoder().encodeToString(publicKey.getEncoded()),
-                singletonList("https://localhost/post-logout-redirect"),
-                "https://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                subjectType.toString(),
-                ClientType.WEB,
-                true,
-                null,
-                ES256.getName(),
-                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+        clientStore
+                .createClient()
+                .withClientId(clientId)
+                .withPublicKey(Base64.getMimeEncoder().encodeToString(publicKey.getEncoded()))
+                .withScopes(scope.toStringList())
+                .withSubjectType(subjectType.toString())
+                .withIdTokenSigningAlgorithm(ES256.getName())
+                .withTokenAuthMethod(ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue())
+                .saveToDynamo();
     }
 
     private void registerClientSecretClient(
@@ -776,23 +766,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             String clientSecret,
             ClientAuthenticationMethod clientAuthenticationMethod,
             Scope scope) {
-        clientStore.registerClient(
-                clientId,
-                "test-client",
-                singletonList(REDIRECT_URI),
-                singletonList(TEST_EMAIL),
-                scope.toStringList(),
-                null,
-                singletonList("https://localhost/post-logout-redirect"),
-                "https://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.WEB,
-                true,
-                clientSecret,
-                ES256.getName(),
-                clientAuthenticationMethod.getValue());
+        clientStore
+                .createClient()
+                .withClientId(clientId)
+                .withScopes(scope.toStringList())
+                .withSubjectType("pairwise")
+                .withClientSecret(clientSecret)
+                .withIdTokenSigningAlgorithm(ES256.getName())
+                .withTokenAuthMethod(clientAuthenticationMethod.getValue())
+                .saveToDynamo();
     }
 
     private AuthenticationRequest generateAuthRequest(

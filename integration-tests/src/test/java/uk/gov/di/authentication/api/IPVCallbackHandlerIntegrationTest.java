@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -646,19 +645,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     private void setupClientStore() {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList(REDIRECT_URI),
-                singletonList(EMAIL),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                List.of("https://vocab.account.gov.uk/v1/returnCode"));
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("test-client")
+                .withRedirectUris(singletonList(REDIRECT_URI))
+                .withContacts(singletonList(EMAIL))
+                .withSubjectType("pairwise")
+                .withClaims(singletonList("https://vocab.account.gov.uk/v1/returnCode"))
+                .saveToDynamo();
     }
 
     private void setupOrchSession(String internalCommonSubjectId) {

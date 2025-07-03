@@ -23,10 +23,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -35,15 +33,12 @@ import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserI
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
-import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPrivateKey;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -468,41 +463,20 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("redirect-url"),
-                singletonList(TEST_EMAIL_ADDRESS),
-                List.of("openid", "email", "phone"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                ES256.getName(),
-                identitySupported);
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withIdentityVerificationSupported(identitySupported)
+                .withScopes(List.of("openid", "email", "phone"))
+                .saveToDynamo();
     }
 
     private void setUpAppClientInDynamo() {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        clientStore.registerClient(
-                APP_CLIENT_ID,
-                "app-test-client",
-                singletonList("redirect-url"),
-                singletonList(TEST_EMAIL_ADDRESS),
-                List.of("openid", "doc-checking-app"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.APP,
-                ES256.getName(),
-                false);
+        clientStore
+                .createClient()
+                .withClientId(APP_CLIENT_ID)
+                .withScopes(List.of("openid", "doc-checking-app"))
+                .saveToDynamo();
     }
 
     private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {
