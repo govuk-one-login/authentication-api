@@ -39,6 +39,7 @@ import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -209,6 +210,23 @@ class IPVAuthorisationServiceTest {
                                 new ErrorObject(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No code param present in Authorisation response"))));
+    }
+
+    @Test
+    void shouldReturnErrorObjectWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(
+                        DocAppAuthorisationService.STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid state param present in Authorisation response"))));
     }
 
     @Test

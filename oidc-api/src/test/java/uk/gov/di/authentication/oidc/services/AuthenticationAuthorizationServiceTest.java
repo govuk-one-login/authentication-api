@@ -135,6 +135,23 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
+    void shouldThrowWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("state", new State().getValue());
+        queryParams.put("code", EXAMPLE_AUTH_CODE);
+
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
+        verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
+    }
+
+    @Test
     void shouldThrowWhenNoCodeParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("state", new State().getValue());

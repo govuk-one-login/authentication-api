@@ -191,6 +191,22 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorObjectWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid state param present in Authorisation response"))));
+    }
+
+    @Test
     void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState() {
         State differentState = new State();
         Map<String, String> responseHeaders = new HashMap<>();
