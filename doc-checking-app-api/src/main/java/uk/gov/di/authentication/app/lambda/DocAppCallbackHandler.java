@@ -118,7 +118,6 @@ public class DocAppCallbackHandler
         this.authorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService),
                         new StateStorageService(configurationService));
@@ -143,7 +142,6 @@ public class DocAppCallbackHandler
         this.authorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        redis,
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService),
                         new StateStorageService(configurationService));

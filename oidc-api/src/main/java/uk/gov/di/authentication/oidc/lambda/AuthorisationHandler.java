@@ -191,7 +191,6 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
@@ -220,7 +219,6 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        redis,
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
