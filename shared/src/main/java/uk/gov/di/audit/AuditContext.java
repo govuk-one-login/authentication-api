@@ -81,7 +81,7 @@ public record AuditContext(
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                txmaAuditEncoded != null ? txmaAuditEncoded : Optional.empty(),
+                txmaAuditEncoded,
                 metadata);
     }
 
