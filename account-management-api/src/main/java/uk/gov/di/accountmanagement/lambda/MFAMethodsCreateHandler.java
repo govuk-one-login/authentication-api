@@ -45,6 +45,7 @@ import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
@@ -262,7 +263,7 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(500, ERROR_1071);
         }
 
-        auditContext =
+        var addCompletedAuditContext =
                 auditContext.withMetadataItem(
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
@@ -274,10 +275,25 @@ public class MFAMethodsCreateHandler
 
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            auditContext = auditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
+            addCompletedAuditContext =
+                    addCompletedAuditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
         }
 
-        auditService.submitAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext);
+        auditService.submitAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, addCompletedAuditContext);
+
+        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
+            var updatePhoneNumberAuditContext =
+                    auditContext.withMetadataItem(
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                    mfaMethodCreateRequest
+                                            .mfaMethod()
+                                            .priorityIdentifier()
+                                            .name()
+                                            .toLowerCase()));
+
+            auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, updatePhoneNumberAuditContext);
+        }
 
         LocaleHelper.SupportedLanguage userLanguage =
                 matchSupportedLanguage(
