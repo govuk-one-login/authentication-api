@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.google.gson.JsonParser;
 import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -29,15 +30,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -438,6 +445,51 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThatJson(response.getBody()).node("code").isIntegralNumber().isEqualTo("1082");
 
             assertNoNotificationsReceived(notificationsQueue);
+        }
+
+        @Test
+        void shouldReturn400WhenInvalidOTPEnteredWhenChangingDefaultMFAToSMS() {
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultSms);
+            userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, backupSms);
+            userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var invalidOtp = otp + 1;
+
+            var mfaIdentifier = defaultSms.getMfaIdentifier();
+            var updatedPhoneNumber = "07900000123";
+            var updateRequest =
+                    format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, invalidOtp);
+
+            var response =
+                    makeRequest(
+                            Optional.of(updateRequest),
+                            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS"),
+                            Collections.emptyMap(),
+                            Map.ofEntries(
+                                    Map.entry("publicSubjectId", testPublicSubject),
+                                    Map.entry("mfaIdentifier", mfaIdentifier)),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(400, response.getStatusCode());
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+
+            // Verify audit event was emitted
+            var receivedEvents =
+                    assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+
+            // Verify audit event contains correct metadata
+            var auditEvent = receivedEvents.get(0);
+            var jsonEvent = JsonParser.parseString(auditEvent).getAsJsonObject();
+
+            var extensions = jsonEvent.getAsJsonObject("extensions");
+
+            assertEquals(
+                    DEFAULT.name().toLowerCase(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_MFA_METHOD).getAsString());
+
+            assertEquals(
+                    ACCOUNT_MANAGEMENT.name(),
+                    extensions.get(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE).getAsString());
         }
     }
 
