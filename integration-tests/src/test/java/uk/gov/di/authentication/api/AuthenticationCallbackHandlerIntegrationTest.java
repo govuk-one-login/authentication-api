@@ -174,7 +174,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     void authSetup() throws Json.JsonException {
         setupTestWithDefaultEnvVars();
         setupSession();
-        setupClientReg(CLIENT_ID);
+        setupClientRegWithoutIdentityVerificationSupported();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
     }
@@ -317,7 +317,35 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws ParseException {
+    void shouldRedirectToIPVWhenIdentityRequired()
+            throws ParseException, JOSEException, java.text.ParseException, Json.JsonException {
+        setupTestWithDefaultEnvVars();
+        setupSession();
+        setupClientRegWithIdentityVerificationSupported();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+        assertInformationStoredForNoSessionService(response);
+    }
+
+    void accountInterventionSetup() throws Json.JsonException {
+        setupSession();
+        setupClientRegWithoutIdentityVerificationSupported();
+    }
+
+    @Test
+    void shouldRedirectToRpWhenAccountStatusIsNoIntervention()
+            throws Json.JsonException, ParseException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
@@ -339,7 +367,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked() {
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
+            throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), true, false, false, false);
@@ -359,7 +389,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction() {
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction()
+            throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, false);
@@ -379,7 +411,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword() {
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
+            throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
@@ -399,7 +433,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() throws ParseException {
+    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity()
+            throws Json.JsonException, ParseException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, false);
@@ -422,7 +458,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void
-            shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity() {
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
+                    throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
@@ -444,7 +482,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                    throws ParseException {
+                    throws Json.JsonException, ParseException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
@@ -469,7 +508,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                    throws ParseException {
+                    throws Json.JsonException, ParseException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
@@ -492,7 +532,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void byDefaultDoesNotThrowWhenAisReturns500() {
+    void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
@@ -510,7 +551,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void doesThrowWhenAisReturns500AndAbortFlagIsOn() {
+    void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
+        accountInterventionSetup();
         setupTestWithAbortOnAisErrorResponseFlagOn();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
@@ -529,7 +571,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws ParseException {
+    void shouldRedirectToRpWhenFieldsAreMissingInResponse()
+            throws Json.JsonException, ParseException {
+        accountInterventionSetup();
         setupTestWithDefaultEnvVars();
         accountInterventionApiStub.initWithoutOptionalFields(
                 SUBJECT_ID.getValue(), false, false, false, false);
@@ -548,6 +592,196 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertOrchSessionIsUpdatedWithUserInfoClaims();
 
         assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
+    }
+
+    void accountInterventionSetupWithIdentity() throws Json.JsonException {
+        setupSession();
+        setupClientRegWithIdentityVerificationSupported();
+    }
+
+    @Test
+    void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+    }
+
+    @Test
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusWithIdentityIsBlocked()
+            throws Json.JsonException {
+        setupTestWithDefaultEnvVars();
+        accountInterventionSetupWithIdentity();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), true, false, false, false);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToBlockedPage(response);
+        assertSessionIsDeleted();
+    }
+
+    @Test
+    void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+    }
+
+    @Test
+    void
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountWithIdentityStatusIsSuspendedResetPassword()
+                    throws Json.JsonException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToSuspendedPage(response);
+        assertSessionIsDeleted();
+    }
+
+    @Test
+    void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, false);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, true);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+    }
+
+    @Test
+    void
+            shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException,
+                            java.text.ParseException,
+                            ParseException,
+                            JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+    }
+
+    @Test
+    void
+            shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException,
+                            java.text.ParseException,
+                            ParseException,
+                            JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, true);
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, true);
+        assertOrchSessionIsUpdatedWithUserInfoClaims();
+    }
+
+    @Test
+    void doesThrowWhenAisReturns500AndAbortFlagIsOnWithIdentity() throws Json.JsonException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithAbortOnAisErrorResponseFlagOn();
+        accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+        var orchSession = orchSessionExtension.getSession(SESSION_ID);
+        assertTrue(orchSession.isPresent());
+
+        assertThrows(
+                AccountInterventionException.class,
+                () ->
+                        makeRequest(
+                                Optional.of(TEST_EMAIL_ADDRESS),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters()));
     }
 
     @Test
@@ -578,191 +812,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 constructQueryStringParameters());
 
         assertAuthTimeHasBeenSetInOrchSessionTable();
-    }
-
-    @Nested
-    class IdentityVerificationSupported {
-        @BeforeEach
-        void setup() {
-            clientStore
-                    .registerClient()
-                    .withClientId(CLIENT_ID)
-                    .withRedirectUris(singletonList(REDIRECT_URI.toString()))
-                    .withSubjectType("pairwise")
-                    .withIdentityVerificationSupported(true)
-                    .build();
-        }
-
-        @Test
-        void shouldRedirectToIPVWhenAccountStatusIsNoIntervention()
-                throws ParseException, JOSEException, java.text.ParseException, Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, false);
-            assertOrchSessionIsUpdatedWithUserInfoClaims();
-            assertInformationStoredForNoSessionService(response);
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusWithIdentityIsBlocked() {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), true, false, false, false);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToBlockedPage(response);
-            assertSessionIsDeleted();
-        }
-
-        @Test
-        void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
-                throws java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, false);
-            assertOrchSessionIsUpdatedWithUserInfoClaims();
-        }
-
-        @Test
-        void
-                shouldLogoutAndRedirectToSuspendedPageWhenAccountWithIdentityStatusIsSuspendedResetPassword() {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToSuspendedPage(response);
-            assertSessionIsDeleted();
-        }
-
-        @Test
-        void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
-                throws java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, false);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, true);
-            assertOrchSessionIsUpdatedWithUserInfoClaims();
-        }
-
-        @Test
-        void
-                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                        throws java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, false);
-            assertOrchSessionIsUpdatedWithUserInfoClaims();
-        }
-
-        @Test
-        void
-                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                        throws java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, true);
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, true);
-            assertOrchSessionIsUpdatedWithUserInfoClaims();
-        }
-
-        @Test
-        void doesThrowWhenAisReturns500AndAbortFlagIsOnWithIdentity() {
-            setupTestWithAbortOnAisErrorResponseFlagOn();
-            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
-
-            var orchSession = orchSessionExtension.getSession(SESSION_ID);
-            assertTrue(orchSession.isPresent());
-
-            assertThrows(
-                    AccountInterventionException.class,
-                    () ->
-                            makeRequest(
-                                    Optional.of(TEST_EMAIL_ADDRESS),
-                                    constructHeaders(
-                                            Optional.of(
-                                                    buildSessionCookie(
-                                                            SESSION_ID, CLIENT_SESSION_ID))),
-                                    constructQueryStringParameters()));
-        }
     }
 
     @Nested
@@ -889,7 +938,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousClientsAndPreviousClientSessions() {
             PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.forEach(
-                    AuthenticationCallbackHandlerIntegrationTest.this::setupClientReg);
+                    AuthenticationCallbackHandlerIntegrationTest.this::setupClientRegWithClientId);
             for (String clientSessionId : PREVIOUS_CLIENT_SESSIONS) {
                 var index = PREVIOUS_CLIENT_SESSIONS.indexOf(clientSessionId);
                 setupClientSessionWithId(
@@ -1038,13 +1087,25 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertTrue(orchSession.isEmpty());
     }
 
-    private void setupClientReg(String clientId) {
+    private void setupClientRegWithClientId(String clientId) {
+        clientStore.registerClient().withClientId(clientId).withSubjectType("pairwise").build();
+    }
+
+    private void setupClientReg(boolean identityVerificationSupported) {
         clientStore
                 .registerClient()
-                .withClientId(clientId)
-                .withRedirectUris(singletonList(REDIRECT_URI.toString()))
+                .withClientId(CLIENT_ID)
                 .withSubjectType("pairwise")
+                .withIdentityVerificationSupported(identityVerificationSupported)
                 .build();
+    }
+
+    private void setupClientRegWithIdentityVerificationSupported() {
+        setupClientReg(true);
+    }
+
+    private void setupClientRegWithoutIdentityVerificationSupported() {
+        setupClientReg(false);
     }
 
     private void setupTestWithDefaultEnvVars() {
