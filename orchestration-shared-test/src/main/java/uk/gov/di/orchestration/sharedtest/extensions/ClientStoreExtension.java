@@ -40,49 +40,6 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
         return new ClientRegistrationBuilder();
     }
 
-    public void registerClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String backChannelLogoutUri,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType,
-            ClientType clientType,
-            String isTokenSigningAlgorithm,
-            boolean identityVerificationSupported) {
-        dynamoClientService.addClient(
-                clientID,
-                clientName,
-                redirectUris,
-                contacts,
-                PublicKeySource.STATIC.getValue(),
-                publicKey,
-                null,
-                scopes,
-                postLogoutRedirectUris,
-                backChannelLogoutUri,
-                serviceType,
-                sectorIdentifierUri,
-                subjectType,
-                false,
-                emptyList(),
-                clientType.getValue(),
-                identityVerificationSupported,
-                null,
-                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
-                isTokenSigningAlgorithm,
-                emptyList(),
-                Channel.WEB.getValue(),
-                false,
-                false,
-                null);
-    }
-
     public boolean clientExists(String clientID) {
         return dynamoClientService.isValidClient(clientID);
     }
