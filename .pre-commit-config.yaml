@@ -29,7 +29,7 @@ repos:
           checkov-policies.*|\
           .terraform-docs.yml|\
           package.json|\
-          tools/deprecation-config.json|\
+          deprecation-config.json|\
           http-client.env.json|\
           package-lock.json|\
           .*provider.json|\

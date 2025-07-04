@@ -38,7 +38,7 @@ public class DeprecationChecker {
     }
 
     private static Config loadConfig() throws IOException {
-        String configPath = "tools/deprecation-config.json";
+        String configPath = "deprecation-config.json";
         if (!Files.exists(Paths.get(configPath))) {
             return new Config("origin/main", Set.of());
         }
