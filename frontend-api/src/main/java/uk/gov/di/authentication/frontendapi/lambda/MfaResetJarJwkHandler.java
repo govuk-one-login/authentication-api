@@ -30,7 +30,7 @@ public class MfaResetJarJwkHandler
 
     public MfaResetJarJwkHandler(ConfigurationService configurationService) {
         this.jwksService =
-                new JwksService(
+                JwksService.getInstance(
                         configurationService, new KmsConnectionService(configurationService));
     }
 
