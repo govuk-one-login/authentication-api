@@ -183,6 +183,8 @@ public class AuthorisationHandler
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
         var stateStorageService = new StateStorageService(configurationService);
+        var cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+
         this.orchSessionService = new OrchSessionService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
@@ -206,16 +208,18 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
-        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
+        this.rateLimitService =
+                new RateLimitService(noOpRateLimitAlgorithm, cloudwatchMetricsService);
     }
 
     public AuthorisationHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
+        var cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
@@ -236,13 +240,14 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
-        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
+        this.rateLimitService =
+                new RateLimitService(noOpRateLimitAlgorithm, cloudwatchMetricsService);
     }
 
     public AuthorisationHandler() {
