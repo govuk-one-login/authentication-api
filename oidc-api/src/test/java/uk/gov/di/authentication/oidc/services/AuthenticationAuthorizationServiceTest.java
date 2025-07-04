@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.when;
 class AuthenticationAuthorizationServiceTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private AuthenticationAuthorizationService authService;
     private static final State REDIS_STORED_STATE = new State();
     private static final String SESSION_ID = "a-session-id";
@@ -39,7 +41,8 @@ class AuthenticationAuthorizationServiceTest {
     void setUp() {
         when(redisConnectionService.getValue(anyString()))
                 .thenReturn(REDIS_STORED_STATE.getValue());
-        authService = new AuthenticationAuthorizationService(redisConnectionService);
+        authService =
+                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
     }
 
     @Test

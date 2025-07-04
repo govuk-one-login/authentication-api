@@ -65,6 +65,7 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
@@ -123,9 +124,11 @@ public class AuthenticationCallbackHandler
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var redisConnectionService = new RedisConnectionService(configurationService);
+        var stateStorageService = new StateStorageService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
@@ -163,9 +166,11 @@ public class AuthenticationCallbackHandler
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService) {
 
+        var stateStorageService = new StateStorageService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.orchSessionService = new OrchSessionService(configurationService);
