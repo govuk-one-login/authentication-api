@@ -178,7 +178,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
         ClientRegistry client = clientMaybe.get();
 
-        Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client, authSession);
+        Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
 
         var auditContext =
                 auditContextFromUserContext(
@@ -682,16 +682,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private Optional<String> getRpPairwiseId(
-            UserProfile userProfile, ClientRegistry client, AuthSessionItem authSession) {
+    private Optional<String> getRpPairwiseId(UserProfile userProfile, AuthSessionItem authSession) {
         try {
             return Optional.of(
-                    ClientSubjectHelper.getSubject(
-                                    userProfile,
-                                    client,
-                                    authSession,
-                                    authenticationService,
-                                    configurationService.getInternalSectorUri())
+                    ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService)
                             .getValue());
         } catch (RuntimeException e) {
             LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");

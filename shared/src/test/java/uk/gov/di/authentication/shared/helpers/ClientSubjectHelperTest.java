@@ -18,7 +18,6 @@ import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -49,75 +48,39 @@ class ClientSubjectHelperTest {
 
     @Test
     void shouldReturnDifferentSubjectIDForMultipleClientsWithDifferentSectors() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), "not.test.com", false);
         var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), "not.test.com", false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertNotEquals(subject1, subject2);
     }
 
     @Test
     void shouldReturnSameSubjectIDForMultipleClientsWithSameSector() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertEquals(subject1, subject2);
     }
 
     @Test
     void shouldReturnSameSubjectIDForMultipleClientsWithPublicSubjectType() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
         var authSession1 = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PUBLIC.toString(), "not.test.com", false);
         var authSession2 = createSession(CLIENT_ID_2, PUBLIC.toString(), "not.test.com", false);
 
         Subject subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession1, authenticationService);
         Subject subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession2, authenticationService);
 
         assertThat(subject1, equalTo(PUBLIC_SUBJECT));
         assertThat(subject2, equalTo(PUBLIC_SUBJECT));
@@ -125,128 +88,23 @@ class ClientSubjectHelperTest {
 
     @Test
     void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwise() {
-        var clientRegistry = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
         var authSession = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, false);
 
         var subject =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry,
-                        authSession,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService);
 
         assertTrue(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
     @Test
-    void shouldReturnPairwiseSubjectIdWhenClientTypeIsPairwiseAndIsAOneLoginService() {
-        var clientRegistry1 = createClient(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, true);
-        var authSession1 = createSession(CLIENT_ID_1, PAIRWISE.toString(), SECTOR_HOST, true);
-        var clientRegistry2 = createClient(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
-        var authSession2 = createSession(CLIENT_ID_2, PAIRWISE.toString(), SECTOR_HOST, false);
-
-        var subject1 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry1,
-                        authSession1,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
-        var subject2 =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry2,
-                        authSession2,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
-
-        assertTrue(subject1.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-        assertThat(subject1, not(subject2));
-    }
-
-    @Test
     void shouldNotReturnPairwiseSubjectIdWhenClientTypeIsPublic() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
         var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
 
         var subject =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        clientRegistry,
-                        authSession,
-                        authenticationService,
-                        INTERNAL_SECTOR_URI);
+                ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService);
 
         assertFalse(subject.getValue().startsWith("urn:fdc:gov.uk:2022:"));
         assertThat(subject.getValue(), equalTo(PUBLIC_SUBJECT.getValue()));
-    }
-
-    @Test
-    void shouldGetHostAsSectorIdentifierWhenDefinedByClient() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
-        var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
-
-        var sectorId =
-                ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, authSession, INTERNAL_SECTOR_URI);
-
-        assertThat(sectorId, equalTo(SECTOR_HOST));
-    }
-
-    @Test
-    void shouldGetHostOfInternalSectorUriWhenClientIsOneLoginService() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), null, true);
-        var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), null, true);
-
-        var sectorId =
-                ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, authSession, INTERNAL_SECTOR_URI);
-
-        assertThat(sectorId, equalTo("test.account.gov.uk"));
-    }
-
-    @Test
-    void shouldUseHostOfInternalSectorUriWhenOneLoginServiceAndClientHasRegisteredSector() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, true);
-        var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, true);
-
-        var sectorId =
-                ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, authSession, INTERNAL_SECTOR_URI);
-
-        assertThat(sectorId, equalTo("test.account.gov.uk"));
-    }
-
-    @Test
-    void shouldCalculateHostFromRedirectUriWhenSectorUriIsNotDefinedByClient() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), null, false);
-        var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), null, false);
-
-        var sectorId =
-                ClientSubjectHelper.getSectorIdentifierForClient(
-                        clientRegistry, authSession, INTERNAL_SECTOR_URI);
-
-        assertThat(sectorId, equalTo("localhost"));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenClientConfigSectorIdInvalid() {
-        var clientRegistry =
-                createClient(
-                        CLIENT_ID_1,
-                        PUBLIC.toString(),
-                        null,
-                        List.of("https://www.test.com", "https://www.test2.com"),
-                        false);
-        var authSession = createSession(CLIENT_ID_1, PUBLIC.toString(), null, false);
-
-        assertThrows(
-                RuntimeException.class,
-                () ->
-                        ClientSubjectHelper.getSectorIdentifierForClient(
-                                clientRegistry, authSession, INTERNAL_SECTOR_URI),
-                "Expected to throw exception");
     }
 
     @Test
