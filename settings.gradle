@@ -18,7 +18,7 @@ include 'test-services-api'
 include 'auth-external-api'
 include 'interventions-api-stub'
 include 'ticf-cri-stub'
-include 'tools'
+include 'tools:deprecation-checker'
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
