@@ -10,11 +10,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,35 +28,33 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
 
 class AuthenticationAuthorizationServiceTest {
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private AuthenticationAuthorizationService authService;
-    private static final State REDIS_STORED_STATE = new State();
+    private static final State STORED_STATE = new State();
     private static final String SESSION_ID = "a-session-id";
     private static final String EXAMPLE_AUTH_CODE = "any-text-will-do";
 
     @BeforeEach
     void setUp() {
-        when(redisConnectionService.getValue(anyString()))
-                .thenReturn(REDIS_STORED_STATE.getValue());
-        authService =
-                new AuthenticationAuthorizationService(redisConnectionService, stateStorageService);
+        when(stateStorageService.getState(anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new StateItem(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID)
+                                        .withState(STORED_STATE.getValue())));
+        authService = new AuthenticationAuthorizationService(stateStorageService);
     }
 
     @Test
     void shouldValidateRequestWithValidParams() {
         Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("state", REDIS_STORED_STATE.getValue());
+        queryParams.put("state", STORED_STATE.getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
         assertDoesNotThrow(() -> authService.validateRequest(queryParams, SESSION_ID));
-        verify(redisConnectionService)
-                .getValue(
-                        AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
-                                + SESSION_ID);
+        verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
     }
 
     @Test
@@ -68,7 +67,7 @@ class AuthenticationAuthorizationServiceTest {
                         () -> authService.validateRequest(queryParams, SESSION_ID));
         assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
-        verify(redisConnectionService, never()).getValue(anyString());
+        verify(stateStorageService, never()).getState(anyString());
     }
 
     @Test
@@ -82,7 +81,7 @@ class AuthenticationAuthorizationServiceTest {
                         () -> authService.validateRequest(queryParams, SESSION_ID));
         assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
-        verify(redisConnectionService, never()).getValue(anyString());
+        verify(stateStorageService, never()).getState(anyString());
     }
 
     @ParameterizedTest
@@ -97,7 +96,7 @@ class AuthenticationAuthorizationServiceTest {
                         () -> authService.validateRequest(queryParams, SESSION_ID));
         assertThat(exception.getError(), is((equalTo(expectedErrorObject))));
         assertThat(exception.getLogoutRequired(), is((equalTo(true))));
-        verify(redisConnectionService, never()).getValue(anyString());
+        verify(stateStorageService, never()).getState(anyString());
     }
 
     static Stream<Arguments> reauthErrorCases() {
@@ -117,7 +116,7 @@ class AuthenticationAuthorizationServiceTest {
                         () -> authService.validateRequest(queryParams, SESSION_ID));
         assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
-        verify(redisConnectionService, never()).getValue(anyString());
+        verify(stateStorageService, never()).getState(anyString());
     }
 
     @Test
@@ -132,10 +131,24 @@ class AuthenticationAuthorizationServiceTest {
                         () -> authService.validateRequest(queryParams, SESSION_ID));
         assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
-        verify(redisConnectionService)
-                .getValue(
-                        AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
-                                + SESSION_ID);
+        verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
+    }
+
+    @Test
+    void shouldThrowWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("state", new State().getValue());
+        queryParams.put("code", EXAMPLE_AUTH_CODE);
+
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
+        verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
     }
 
     @Test

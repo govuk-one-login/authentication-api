@@ -35,9 +35,11 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -109,10 +111,13 @@ class IPVAuthorisationServiceTest {
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws Json.JsonException, MalformedURLException {
+    void setUp() throws MalformedURLException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
+        when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(
+                        Optional.of(
+                                new StateItem(STATE_STORAGE_PREFIX + SESSION_ID)
+                                        .withState(STATE.getValue())));
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
@@ -208,11 +213,25 @@ class IPVAuthorisationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState()
-            throws Json.JsonException {
+    void shouldReturnErrorObjectWhenNoStateFoundInDynamo() {
+        when(stateStorageService.getState(
+                        DocAppAuthorisationService.STATE_STORAGE_PREFIX + SESSION_ID))
+                .thenReturn(Optional.empty());
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid state param present in Authorisation response"))));
+    }
+
+    @Test
+    void shouldReturnErrorObjectWhenStateInResponseIsDifferentToStoredState() {
         State differentState = new State();
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
-                .thenReturn(objectMapper.writeValueAsString(STATE));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", differentState.getValue());
         responseHeaders.put("code", AUTH_CODE.getValue());
