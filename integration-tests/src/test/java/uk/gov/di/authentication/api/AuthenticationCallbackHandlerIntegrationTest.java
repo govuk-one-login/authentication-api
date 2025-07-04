@@ -35,14 +35,12 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubEx
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -1090,39 +1088,16 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setupClientRegWithClientId(String clientId) {
-        clientStore.registerClient(
-                clientId,
-                "test-client",
-                singletonList(REDIRECT_URI.toString()),
-                singletonList("contact@example.com"),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.APP,
-                ES256.getName(),
-                false);
+        clientStore.registerClient().withClientId(clientId).withSubjectType("pairwise").build();
     }
 
     private void setupClientReg(boolean identityVerificationSupported) {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList(REDIRECT_URI.toString()),
-                singletonList("contact@example.com"),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.APP,
-                ES256.getName(),
-                identityVerificationSupported);
+        clientStore
+                .registerClient()
+                .withClientId(CLIENT_ID)
+                .withSubjectType("pairwise")
+                .withIdentityVerificationSupported(identityVerificationSupported)
+                .build();
     }
 
     private void setupClientRegWithIdentityVerificationSupported() {

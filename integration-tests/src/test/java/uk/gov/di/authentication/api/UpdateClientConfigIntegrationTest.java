@@ -41,18 +41,13 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldUpdateClientSuccessfully() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
+        clientStore
+                .registerClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .build();
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
@@ -147,23 +142,12 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldRetainMaxAgeEnabledWhenUpdating() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                false,
-                List.of(),
-                true,
-                false);
+        clientStore
+                .registerClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withMaxAgeEnabled(true)
+                .build();
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
         updateRequest.setClientName(expectedClientName);
@@ -191,23 +175,12 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldRetainPKCEEnforcedWhenUpdating() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                false,
-                List.of(),
-                false,
-                true);
+        clientStore
+                .registerClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withPkceEnforced(true)
+                .build();
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
