@@ -68,17 +68,7 @@ public record AuditContext(
     }
 
     public AuditContext withUserId(String subjectId) {
-        return new AuditContext(
-                clientId,
-                clientSessionId,
-                sessionId,
-                subjectId,
-                email,
-                ipAddress,
-                phoneNumber,
-                persistentSessionId,
-                txmaAuditEncoded,
-                metadata);
+        return withSubjectId(subjectId);
     }
 
     public AuditContext withTxmaAuditEncoded(Optional<String> txmaAuditEncoded) {
@@ -166,6 +156,20 @@ public record AuditContext(
     }
 
     public AuditContext withSessionId(String sessionId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded,
+                metadata);
+    }
+
+    public AuditContext withPersistentSessionId(String persistentSessionId) {
         return new AuditContext(
                 clientId,
                 clientSessionId,
