@@ -18,5 +18,9 @@
   {
     "ParameterKey": "LogDestination",
     "ParameterValue": "csls_cw_logs_destination_prodpython"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule",
+    "ParameterValue": "MON#3"
   }
 ]
