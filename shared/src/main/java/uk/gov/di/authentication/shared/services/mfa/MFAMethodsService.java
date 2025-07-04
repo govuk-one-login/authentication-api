@@ -8,8 +8,8 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
@@ -287,8 +287,7 @@ public class MFAMethodsService {
     }
 
     public record MfaUpdateResponse(
-            List<MFAMethod> mfaMethods,
-            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier) {}
+            List<MFAMethod> mfaMethods, MFAMethodUpdateIdentifier updateTypeIdentifier) {}
 
     public Result<MfaUpdateFailureReason, MfaUpdateResponse> updateMfaMethod(
             String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
@@ -366,8 +365,7 @@ public class MFAMethodsService {
 
         var updatedResult =
                 mfaUpdateFailureReasonOrSortedMfaMethods(
-                        databaseUpdateResult,
-                        MFAMethodEmailNotificationIdentifier.SWITCHED_MFA_METHODS);
+                        databaseUpdateResult, MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS);
 
         if (updatedResult.isSuccess()) {
             cloudwatchMetricsService.incrementMfaMethodCounter(
@@ -385,12 +383,9 @@ public class MFAMethodsService {
     private Result<MfaUpdateFailureReason, MfaUpdateResponse>
             mfaUpdateFailureReasonOrSortedMfaMethods(
                     Result<String, List<MFAMethod>> databaseUpdateResult,
-                    MFAMethodEmailNotificationIdentifier emailNotificationIdentifier) {
+                    MFAMethodUpdateIdentifier updateTypeIdentifier) {
         return databaseUpdateResult
-                .map(
-                        m ->
-                                new MfaUpdateResponse(
-                                        m.stream().sorted().toList(), emailNotificationIdentifier))
+                .map(m -> new MfaUpdateResponse(m.stream().sorted().toList(), updateTypeIdentifier))
                 .mapFailure(
                         errorString -> {
                             LOG.error(errorString);
@@ -499,14 +494,13 @@ public class MFAMethodsService {
 
         databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
 
-        var emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA;
+        var updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA;
 
         if (defaultMethod.getMfaMethodType().equals(SMS.getValue())) {
-            emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_SMS;
+            updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_SMS;
         }
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(
-                databaseUpdateResult, emailNotificationIdentifier);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult, updateTypeIdentifier);
     }
 
     private Result<MfaUpdateFailureReason, MfaUpdateResponse> updateAuthApp(
@@ -552,15 +546,13 @@ public class MFAMethodsService {
 
         databaseUpdateResult = persistentService.updateMfaMethods(updatedMethods, email);
 
-        var emailNotificationIdentifier = MFAMethodEmailNotificationIdentifier.CHANGED_DEFAULT_MFA;
+        var updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA;
 
         if (defaultMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
-            emailNotificationIdentifier =
-                    MFAMethodEmailNotificationIdentifier.CHANGED_AUTHENTICATOR_APP;
+            updateTypeIdentifier = MFAMethodUpdateIdentifier.CHANGED_AUTHENTICATOR_APP;
         }
 
-        return mfaUpdateFailureReasonOrSortedMfaMethods(
-                databaseUpdateResult, emailNotificationIdentifier);
+        return mfaUpdateFailureReasonOrSortedMfaMethods(databaseUpdateResult, updateTypeIdentifier);
     }
 
     public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(

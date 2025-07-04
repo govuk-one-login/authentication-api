@@ -7,21 +7,32 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodEmailNotificationIdentifier;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -30,11 +41,17 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
+import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -42,6 +59,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MFAMethodsPutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -52,6 +70,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
+    private final AuditService auditService;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -70,6 +89,7 @@ public class MFAMethodsPutHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.auditService = new AuditService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -77,12 +97,14 @@ public class MFAMethodsPutHandler
             MFAMethodsService mfaMethodsService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.auditService = auditService;
     }
 
     @Override
@@ -167,13 +189,32 @@ public class MFAMethodsPutHandler
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
         }
 
-        if (updateResult.emailNotificationIdentifier() != null) {
-            var emailNotificationType =
-                    mapEmailNotificationIdentifierToType(
-                            updateResult.emailNotificationIdentifier());
+        var updateTypeIdentifier = updateResult.updateTypeIdentifier();
+
+        if (updateTypeIdentifier != null) {
+            var emailNotificationType = mapEmailNotificationIdentifierToType(updateTypeIdentifier);
 
             sendEmailNotification(
                     emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
+
+            var postUpdateDefaultMfaMethod =
+                    successfulUpdateMethods.stream()
+                            .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
+                            .findFirst()
+                            .orElseThrow();
+
+            if (updateTypeIdentifier == MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS) {
+                var maybeAuditEventStatus =
+                        sendAuditEvent(
+                                AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                                input,
+                                putRequest.userProfile,
+                                postUpdateDefaultMfaMethod);
+
+                if (maybeAuditEventStatus.isFailure()) {
+                    return maybeAuditEventStatus.getFailure();
+                }
+            }
         } else {
             LOG.warn(
                     "Update operation completed successfully. Email notification could not be sent due to missing or invalid notification ID in service response.");
@@ -288,8 +329,7 @@ public class MFAMethodsPutHandler
     }
 
     private NotificationType mapEmailNotificationIdentifierToType(
-            MFAMethodEmailNotificationIdentifier emailNotificationIdentifier)
-            throws IllegalArgumentException {
+            MFAMethodUpdateIdentifier emailNotificationIdentifier) throws IllegalArgumentException {
         if (emailNotificationIdentifier == null) {
             throw new IllegalArgumentException("emailNotificationIdentifier cannot be null.");
         }
@@ -325,5 +365,67 @@ public class MFAMethodsPutHandler
         LOG.info(
                 "Message successfully added to queue (notification type: '{}'). Generating successful response.",
                 notificationType.name());
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
+            AccountManagementAuditableEvent auditEvent,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            MFAMethod mfaMethod) {
+        var maybeAuditContext = buildAuditContext(input, userProfile, mfaMethod);
+
+        if (maybeAuditContext.isFailure()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure()));
+        }
+
+        auditService.submitAuditEvent(auditEvent, maybeAuditContext.getSuccess());
+
+        LOG.info("Successfully submitted audit event: {}", auditEvent.name());
+        return Result.success(null);
+    }
+
+    private Result<ErrorResponse, AuditContext> buildAuditContext(
+            APIGatewayProxyRequestEvent input, UserProfile userProfile, MFAMethod mfaMethod) {
+        try {
+            var phoneNumber =
+                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
+                            ? mfaMethod.getDestination()
+                            : AuditService.UNKNOWN;
+
+            var metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType())
+                    };
+
+            var context =
+                    new AuditContext(
+                            input.getRequestContext()
+                                    .getAuthorizer()
+                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
+                                    .toString(),
+                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                            RequestHeaderHelper.getHeaderValueOrElse(
+                                    input.getHeaders(), SESSION_ID_HEADER, ""),
+                            ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                            userProfile,
+                                            configurationService.getInternalSectorUri(),
+                                            authenticationService)
+                                    .getValue(),
+                            userProfile.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            phoneNumber,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
+                            List.of(metadataPairs));
+
+            return Result.success(context);
+        } catch (Exception e) {
+            LOG.error("Error building audit context", e);
+            return Result.failure(ErrorResponse.ERROR_1071);
+        }
     }
 }

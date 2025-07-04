@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.shared.entity.mfa;
 
-public enum MFAMethodEmailNotificationIdentifier {
+public enum MFAMethodUpdateIdentifier {
     CHANGED_AUTHENTICATOR_APP("CHANGED_AUTHENTICATOR_APP"),
     CHANGED_SMS("CHANGED_SMS"),
     CHANGED_DEFAULT_MFA("CHANGED_DEFAULT_MFA"),
@@ -8,7 +8,7 @@ public enum MFAMethodEmailNotificationIdentifier {
 
     private String value;
 
-    MFAMethodEmailNotificationIdentifier(String value) {
+    MFAMethodUpdateIdentifier(String value) {
         this.value = value;
     }
 
