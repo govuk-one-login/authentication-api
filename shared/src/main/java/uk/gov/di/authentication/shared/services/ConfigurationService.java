@@ -274,10 +274,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
     }
 
-    public String getDocAppEncryptionKeyID() {
-        return System.getenv().getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
-    }
-
     public URI getDocAppJwksUri() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_JWKS_URL", ""));
     }

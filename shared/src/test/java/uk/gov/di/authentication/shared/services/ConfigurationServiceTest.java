@@ -256,11 +256,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getDocAppEncryptionKeyIDShouldDefault() {
-        assertEquals("", configurationService.getDocAppEncryptionKeyID());
-    }
-
-    @Test
     void getDocAppJwksUriShouldDefault() {
         assertEquals(URI.create(""), configurationService.getDocAppJwksUri());
     }

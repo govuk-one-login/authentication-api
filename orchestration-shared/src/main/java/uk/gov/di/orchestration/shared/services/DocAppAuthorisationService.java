@@ -7,7 +7,6 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
@@ -249,20 +248,7 @@ public class DocAppAuthorisationService {
     private JWK getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            JWK encryptionJWK;
-            // TODO: ATO-1755 - Remove feature flag once this has been turned on in all environments
-            if (configurationService.isUseAnyKeyFromDocAppJwks()) {
-                encryptionJWK = jwksService.getDocAppJwk();
-            } else {
-                encryptionJWK =
-                        jwksService.retrieveJwkFromURLWithKeyId(
-                                configurationService.getDocAppJwksURI().toURL(),
-                                configurationService.getDocAppEncryptionKeyID());
-            }
-            return encryptionJWK;
-        } catch (KeySourceException e) {
-            LOG.error("Could not find key with provided key ID", e);
-            throw new RuntimeException(e);
+            return jwksService.getDocAppJwk();
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKs URL", e);
             throw new DocAppAuthorisationServiceException(e);
