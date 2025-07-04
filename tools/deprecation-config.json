@@ -1,0 +1,7 @@
+{
+  "baseBranch": "main",
+  "enums": [
+    "uk.gov.di.authentication.shared.entity.CodeRequestType",
+    "uk.gov.di.authentication.shared.entity.JourneyType"
+  ]
+}

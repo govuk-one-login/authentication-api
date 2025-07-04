@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+dependencies {
+    implementation 'com.github.javaparser:javaparser-core:3.25.7'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r'
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+application {
+    mainClass = 'DeprecationChecker'
+}
+
+task checkDeprecations(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'DeprecationChecker'
+    workingDir = project.rootDir
+}
