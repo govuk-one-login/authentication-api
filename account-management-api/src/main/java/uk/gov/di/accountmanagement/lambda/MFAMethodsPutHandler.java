@@ -52,6 +52,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -271,23 +272,15 @@ public class MFAMethodsPutHandler
             sendEmailNotification(
                     emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
 
-            var postUpdateDefaultMfaMethod =
-                    successfulUpdateMethods.stream()
-                            .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
-                            .findFirst()
-                            .orElseThrow();
+            var maybeAuditEventsStatus =
+                    sendSuccessAuditEvents(
+                            updateTypeIdentifier,
+                            input,
+                            putRequest,
+                            successfulUpdateMethods);
 
-            if (updateTypeIdentifier == MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS) {
-                var maybeAuditEventStatus =
-                        sendAuditEvent(
-                                AUTH_MFA_METHOD_SWITCH_COMPLETED,
-                                input,
-                                putRequest,
-                                postUpdateDefaultMfaMethod);
-
-                if (maybeAuditEventStatus.isFailure()) {
-                    return maybeAuditEventStatus.getFailure();
-                }
+            if (maybeAuditEventsStatus.isFailure()) {
+                return maybeAuditEventsStatus.getFailure();
             }
 
         } else {
@@ -506,6 +499,83 @@ public class MFAMethodsPutHandler
                 notificationType.name());
     }
 
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessAuditEvents(
+            MFAMethodUpdateIdentifier updateTypeIdentifier,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            List<MFAMethod> updatedMfaMethods) {
+        var postUpdateDefaultMfaMethod =
+                updatedMfaMethods.stream()
+                        .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
+                        .findFirst()
+                        .orElseThrow();
+
+        return switch (updateTypeIdentifier) {
+            case SWITCHED_MFA_METHODS -> handleSwitchedMfaMethodsAuditEvents(
+                    input, userProfile, updatedMfaMethods);
+            case CHANGED_SMS -> sendAuditEvent(
+                    AUTH_UPDATE_PHONE_NUMBER, input, userProfile, postUpdateDefaultMfaMethod);
+            case CHANGED_DEFAULT_MFA -> {
+                var isDefaultMfaMethodSMS =
+                        postUpdateDefaultMfaMethod
+                                .getMfaMethodType()
+                                .equals(MFAMethodType.SMS.getValue());
+                if (isDefaultMfaMethodSMS) {
+                    yield sendAuditEvent(
+                            AUTH_UPDATE_PHONE_NUMBER,
+                            input,
+                            userProfile,
+                            postUpdateDefaultMfaMethod);
+                }
+
+                yield Result.success(null);
+            }
+            default -> Result.success(null);
+        };
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> handleSwitchedMfaMethodsAuditEvents(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            List<MFAMethod> updatedMfaMethods) {
+        var postUpdateDefaultMfaMethod =
+                updatedMfaMethods.stream()
+                        .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
+                        .findFirst()
+                        .orElseThrow();
+
+        var maybeCompletedAuditEvent =
+                sendAuditEvent(
+                        AUTH_MFA_METHOD_SWITCH_COMPLETED,
+                        input,
+                        userProfile,
+                        postUpdateDefaultMfaMethod);
+
+        if (maybeCompletedAuditEvent.isFailure()) {
+            return maybeCompletedAuditEvent;
+        }
+
+        var allSmsMfaMethods =
+                updatedMfaMethods.stream()
+                        .filter(
+                                mfaMethod ->
+                                        MFAMethodType.SMS
+                                                .getValue()
+                                                .equals(mfaMethod.getMfaMethodType()))
+                        .toList();
+
+        for (var smsMfaMethod : allSmsMfaMethods) {
+            var maybeUpdatedPhoneNumberAuditEvent =
+                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, input, userProfile, smsMfaMethod);
+
+            if (maybeUpdatedPhoneNumberAuditEvent.isFailure()) {
+                return maybeUpdatedPhoneNumberAuditEvent;
+            }
+        }
+
+        return Result.success(null);
+    }
+
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
             AccountManagementAuditableEvent auditEvent,
             APIGatewayProxyRequestEvent input,
@@ -579,7 +649,6 @@ public class MFAMethodsPutHandler
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                 JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType())
                     };
 
             var context =
@@ -602,6 +671,15 @@ public class MFAMethodsPutHandler
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             List.of(initialMetadataPairs));
+
+
+            if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
+                context =
+                        context.withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                        mfaMethod.getMfaMethodType()));
+            }
 
             if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)
                     || auditEvent.equals(AUTH_INVALID_CODE_SENT)) {
