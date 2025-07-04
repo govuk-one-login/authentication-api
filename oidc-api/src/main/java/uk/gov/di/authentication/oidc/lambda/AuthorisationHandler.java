@@ -30,6 +30,9 @@ import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
+import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
@@ -38,6 +41,7 @@ import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -135,6 +139,11 @@ public class AuthorisationHandler
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
+    // ATO-1778: This is a hardcoded No-op algorithm.
+    // We will replace this with a proper implementation in future work
+    private final RateLimitAlgorithm noOpRateLimitAlgorithm =
+            (ignored) -> RateLimitDecision.UNDER_LIMIT_NO_ACTION;
+    private final RateLimitService rateLimitService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -150,7 +159,8 @@ public class AuthorisationHandler
             NoSessionOrchestrationService noSessionOrchestrationService,
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
-            AuthorisationService authorisationService) {
+            AuthorisationService authorisationService,
+            RateLimitService rateLimitService) {
         this.configurationService = configurationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -165,6 +175,7 @@ public class AuthorisationHandler
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
         this.authorisationService = authorisationService;
+        this.rateLimitService = rateLimitService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -199,6 +210,7 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
+        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
     }
 
     public AuthorisationHandler(
@@ -230,6 +242,7 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
+        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
     }
 
     public AuthorisationHandler() {
@@ -344,6 +357,23 @@ public class AuthorisationHandler
                     new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
                     authRequest.getClientID().getValue(),
                     user);
+        }
+
+        if (configurationService.isRpRateLimitingEnabled()) {
+            var rateLimitDecision =
+                    rateLimitService.getClientRateLimitDecision(
+                            ClientRequestInfo.fromClientRegistry(client));
+
+            if (rateLimitDecision.hasExceededRateLimit()) {
+                switch (rateLimitDecision.getAction()) {
+                    case RETURN_TO_RP -> {
+                        // ATO-1783: return an oAuth Error here to say unavailable
+                    }
+                    case NONE -> {
+                        // continue
+                    }
+                }
+            }
         }
 
         try {

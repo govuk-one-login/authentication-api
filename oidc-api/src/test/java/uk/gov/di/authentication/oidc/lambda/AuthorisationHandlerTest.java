@@ -52,6 +52,8 @@ import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
@@ -59,6 +61,7 @@ import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -173,6 +176,7 @@ class AuthorisationHandlerTest {
             mock(RequestObjectAuthorizeValidator.class);
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
             mock(QueryParamsAuthorizeValidator.class);
+    private final RateLimitService rateLimitService = mock(RateLimitService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final String EXPECTED_NEW_SESSION_COOKIE_STRING =
             "gs=a-new-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -294,7 +298,8 @@ class AuthorisationHandlerTest {
                         noSessionOrchestrationService,
                         tokenValidationService,
                         authFrontend,
-                        authorisationService);
+                        authorisationService,
+                        rateLimitService);
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
@@ -2654,6 +2659,45 @@ class AuthorisationHandlerTest {
                 APIGatewayProxyRequestEvent event) {
             event.withHeaders(Map.of("Cookie", SESSION_COOKIE));
             return makeHandlerRequest(event);
+        }
+    }
+
+    @Nested
+    class RPRateLimiting {
+        ClientRegistry clientRegistry;
+
+        @BeforeEach
+        void setup() {
+            when(configService.isRpRateLimitingEnabled()).thenReturn(true);
+            when(rateLimitService.getClientRateLimitDecision(any(ClientRequestInfo.class)))
+                    .thenReturn(RateLimitDecision.UNDER_LIMIT_NO_ACTION);
+            clientRegistry = generateClientRegistry().withRateLimit(400);
+            when(clientService.getClient(anyString())).thenReturn(Optional.of(clientRegistry));
+        }
+
+        @Test
+        void shouldCallRateLimitServiceWhenFeatureFlagOn() {
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            assertThat(response, hasStatus(302));
+            assertThat(uri.getAuthority(), containsString(FRONT_END_AUTHORIZE_URI.getAuthority()));
+
+            verify(rateLimitService)
+                    .getClientRateLimitDecision(
+                            argThat(
+                                    clientRequestInfo ->
+                                            clientRequestInfo
+                                                            .clientID()
+                                                            .equals(clientRegistry.getClientID())
+                                                    && clientRequestInfo
+                                                            .rateLimit()
+                                                            .equals(
+                                                                    clientRegistry
+                                                                            .getRateLimit())));
         }
     }
 
