@@ -852,7 +852,9 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.updateMfaMethod(EMAIL, "some-other-identifier", request);
 
-            assertEquals(MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER, result.getFailure());
+            assertEquals(
+                    MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER,
+                    result.getFailure().failureReason());
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
             assertEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
@@ -974,7 +976,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER,
-                        result.getFailure());
+                        result.getFailure().failureReason());
 
                 var methodsInDatabase =
                         mfaMethodsService.getMfaMethods(EMAIL).getSuccess().stream()
@@ -1064,7 +1066,9 @@ class MFAMethodsServiceIntegrationTest {
                         mfaMethodsService.updateMfaMethod(
                                 EMAIL, defaultPrioritySms.getMfaIdentifier(), request);
 
-                assertEquals(MfaUpdateFailureReason.INVALID_PHONE_NUMBER, result.getFailure());
+                assertEquals(
+                        MfaUpdateFailureReason.INVALID_PHONE_NUMBER,
+                        result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(defaultPrioritySms), remainingMfaMethods);
@@ -1081,7 +1085,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD,
-                        result.getFailure());
+                        result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
@@ -1108,7 +1112,7 @@ class MFAMethodsServiceIntegrationTest {
 
                 assertEquals(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
-                        result.getFailure());
+                        result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(existingMethod), remainingMfaMethods);
@@ -1177,7 +1181,8 @@ class MFAMethodsServiceIntegrationTest {
                                 EMAIL, existingMethod.getMfaIdentifier(), request);
 
                 assertEquals(
-                        MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD, result.getFailure());
+                        MfaUpdateFailureReason.CANNOT_EDIT_MFA_BACKUP_METHOD,
+                        result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
                 assertEquals(List.of(existingMethod), remainingMfaMethods);

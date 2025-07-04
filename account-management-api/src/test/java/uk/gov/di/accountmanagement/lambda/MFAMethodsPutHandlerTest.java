@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
 
 import java.util.HashMap;
@@ -52,12 +53,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -487,7 +491,7 @@ class MFAMethodsPutHandlerTest {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
         var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
         when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
-                .thenReturn(Result.failure(failureReason));
+                .thenReturn(Result.failure(new MfaUpdateFailure(failureReason)));
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
         assertThat(result, hasStatus(expectedStatus));
@@ -496,6 +500,46 @@ class MFAMethodsPutHandlerTest {
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRaiseSwitchFailedAuditEvent() {
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+        var phoneNumber = BACKUP_SMS_METHOD.getDestination();
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+
+        when(mfaMethodsService.updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest))
+                .thenReturn(
+                        Result.failure(
+                                new MfaUpdateFailure(
+                                        MfaUpdateFailureReason.UNEXPECTED_ERROR,
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS,
+                                        BACKUP_SMS_METHOD)));
+
+        handler.handleRequest(eventWithUpdateRequest, context);
+
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_SWITCH_FAILED), captor.capture());
+        AuditContext capturedObject = captor.getValue();
+
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                BACKUP_SMS_METHOD.getMfaMethodType());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                PriorityIdentifier.BACKUP.name().toLowerCase());
     }
 
     @Test

@@ -39,15 +39,17 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
-import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailureReason;
+import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
 import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
@@ -174,7 +176,8 @@ public class MFAMethodsPutHandler
                         putRequest.request);
 
         if (maybeUpdateResult.isFailure()) {
-            return handleUpdateMfaFailureReason(maybeUpdateResult.getFailure());
+            return handleUpdateMfaFailureReason(
+                    maybeUpdateResult.getFailure(), input, putRequest.userProfile);
         }
 
         var updateResult = maybeUpdateResult.getSuccess();
@@ -227,8 +230,11 @@ public class MFAMethodsPutHandler
         }
     }
 
-    private static APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
-            MfaUpdateFailureReason failureReason) {
+    private APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
+            MfaUpdateFailure failure, APIGatewayProxyRequestEvent input, UserProfile userProfile) {
+        var failureReason = failure.failureReason();
+        var updateType = failure.updateTypeIdentifier();
+        var mfaMethodToBeUpdated = failure.mfaMethodToUpdate();
         var response =
                 switch (failureReason) {
                     case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
@@ -237,8 +243,18 @@ public class MFAMethodsPutHandler
                             500, ErrorResponse.ERROR_1077);
                     case CANNOT_EDIT_MFA_BACKUP_METHOD -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.ERROR_1077);
-                    case UNEXPECTED_ERROR -> generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.ERROR_1071);
+                    case UNEXPECTED_ERROR -> {
+                        if (updateType != null
+                                && updateType.equals(
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)) {
+                            sendAuditEvent(
+                                    AUTH_MFA_METHOD_SWITCH_FAILED,
+                                    input,
+                                    userProfile,
+                                    mfaMethodToBeUpdated);
+                        }
+                        yield generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+                    }
                     case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
                             404, ErrorResponse.ERROR_1065);
                     case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
@@ -372,7 +388,7 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MFAMethod mfaMethod) {
-        var maybeAuditContext = buildAuditContext(input, userProfile, mfaMethod);
+        var maybeAuditContext = buildAuditContext(auditEvent, input, userProfile, mfaMethod);
 
         if (maybeAuditContext.isFailure()) {
             return Result.failure(
@@ -386,14 +402,17 @@ public class MFAMethodsPutHandler
     }
 
     private Result<ErrorResponse, AuditContext> buildAuditContext(
-            APIGatewayProxyRequestEvent input, UserProfile userProfile, MFAMethod mfaMethod) {
+            AccountManagementAuditableEvent auditEvent,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            MFAMethod mfaMethod) {
         try {
             var phoneNumber =
                     mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())
                             ? mfaMethod.getDestination()
                             : AuditService.UNKNOWN;
 
-            var metadataPairs =
+            var initialMetadataPairs =
                     new AuditService.MetadataPair[] {
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
@@ -420,7 +439,15 @@ public class MFAMethodsPutHandler
                             phoneNumber,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
-                            List.of(metadataPairs));
+                            List.of(initialMetadataPairs));
+
+            if (auditEvent.equals(AUTH_MFA_METHOD_SWITCH_FAILED)) {
+                context =
+                        context.withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        mfaMethod.getPriority().toLowerCase()));
+            }
 
             return Result.success(context);
         } catch (Exception e) {
