@@ -141,3 +141,9 @@ repos:
           - windows_amd64
           - -r
           - ci/terraform
+      - id: deprecation-checker
+        name: Check deprecation policy
+        entry: ./gradlew :tools:deprecation-checker:checkDeprecations
+        language: system
+        pass_filenames: false
+        files: '\.java$'

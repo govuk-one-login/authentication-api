@@ -1,3 +1,5 @@
+package uk.gov.di.deprecationchecker;
+
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.EnumConstantDeclaration;
@@ -24,7 +26,10 @@ public class DeprecationChecker {
             List<String> violations = performCheck(config);
 
             if (!violations.isEmpty()) {
-                System.err.println("Deprecation policy violations found:");
+                System.err.println(
+                        "Deprecation policy violations found (these must be marked as deprecated in "
+                                + config.baseBranch
+                                + " before removing):");
                 violations.forEach(System.err::println);
                 System.exit(1);
             }
@@ -94,7 +99,6 @@ public class DeprecationChecker {
             org.eclipse.jgit.api.Status status = git.status().call();
             List<String> modifiedFiles = new ArrayList<>();
 
-            // Add modified files
             for (String file : status.getModified()) {
                 if (file.endsWith(".java")) {
                     modifiedFiles.add(file);
@@ -130,7 +134,7 @@ public class DeprecationChecker {
         }
     }
 
-    private static List<String> checkEnumRemovals(
+    static List<String> checkEnumRemovals(
             String filePath, String oldContent, String newContent, Set<String> targetEnums) {
         List<String> violations = new ArrayList<>();
 
@@ -196,7 +200,7 @@ public class DeprecationChecker {
         return violations;
     }
 
-    private static boolean isDeprecated(EnumConstantDeclaration constant) {
+    static boolean isDeprecated(EnumConstantDeclaration constant) {
         return constant.getAnnotations().stream()
                 .anyMatch(annotation -> annotation.getNameAsString().equals("Deprecated"));
     }
