@@ -279,6 +279,7 @@ class DocAppAuthorisationServiceTest {
                 authorisationService.constructRequestJWT(
                         state, pairwise.getValue(), clientRegistry, "client-session-id");
 
+        assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(ENCRYPTION_KID));
         var signedJwt = decryptJWT(encryptedJWT);
         assertThat(signedJwt.getJWTClaimsSet().getAudience(), contains(newAudience));
     }
