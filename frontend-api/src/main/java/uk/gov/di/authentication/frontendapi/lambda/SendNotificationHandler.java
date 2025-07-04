@@ -54,6 +54,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
@@ -303,7 +304,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         auditContext =
                 auditContext.withMetadataItem(
                         new AuditService.MetadataPair(
-                                "journey-type", request.getJourneyType(), false));
+                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                request.getJourneyType(),
+                                false));
 
         return handleNotificationRequest(
                 PhoneNumberHelper.removeWhitespaceFromPhoneNumber(request.getPhoneNumber()),

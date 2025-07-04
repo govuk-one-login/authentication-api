@@ -829,8 +829,7 @@ class VerifyCodeHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                            AUDIT_CONTEXT.withMetadataItem(
-                                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                            AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "default")),
                             pair("notification-type", MFA_SMS.name()),
                             pair("account-recovery", false),
                             pair(
@@ -867,8 +866,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                        AUDIT_CONTEXT.withMetadataItem(
-                                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default")),
+                        AUDIT_CONTEXT.withMetadataItem(pair("mfa-method", "default")),
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "PASSWORD_RESET"));

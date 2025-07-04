@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -184,7 +185,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 persistentSessionId,
                 journeyType == JourneyType.ACCOUNT_RECOVERY,
                 mfaTypePair,
-                AuditService.MetadataPair.pair("journey-type", journeyType));
+                AuditService.MetadataPair.pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType));
     }
 
     private void requestPhoneNumberCheck(JourneyType journeyType, String phoneNumber) {

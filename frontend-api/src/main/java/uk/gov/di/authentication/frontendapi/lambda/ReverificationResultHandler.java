@@ -35,6 +35,7 @@ import java.util.List;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
@@ -136,7 +137,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(
                 AuditService.MetadataPair.pair(
-                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                        JourneyType.ACCOUNT_RECOVERY.getValue()));
 
         auditService.submitAuditEvent(
                 AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED,

@@ -56,6 +56,7 @@ import java.util.Optional;
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
@@ -584,7 +585,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("notification-type", notificationType.name()));
         metadataPairs.add(pair("account-recovery", journeyType == JourneyType.ACCOUNT_RECOVERY));
-        metadataPairs.add(pair("journey-type", String.valueOf(journeyType)));
+        metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, String.valueOf(journeyType)));
         if (notificationType == MFA_SMS) {
             metadataPairs.add(pair("mfa-type", MFAMethodType.SMS.getValue()));
             metadataPairs.add(pair("loginFailureCount", loginFailureCount));

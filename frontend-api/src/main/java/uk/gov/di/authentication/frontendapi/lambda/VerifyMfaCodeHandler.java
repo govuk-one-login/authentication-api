@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -60,6 +61,8 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
@@ -618,11 +621,23 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 pair(
                         "account-recovery",
                         codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY));
-        metadataPairs.add(pair("journey-type", codeRequest.getJourneyType()));
+        metadataPairs.add(pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, codeRequest.getJourneyType()));
 
         switch (auditableEvent) {
-            case AUTH_CODE_MAX_RETRIES_REACHED -> metadataPairs.add(
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+            case AUTH_CODE_MAX_RETRIES_REACHED -> {
+                metadataPairs.add(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                                configurationService.getCodeMaxRetries()));
+
+                getPriorityIdentifier(codeRequest, activeMfaMethod)
+                        .ifPresent(
+                                identifier ->
+                                        metadataPairs.add(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                        identifier.name().toLowerCase())));
+            }
             case AUTH_INVALID_CODE_SENT, AUTH_CODE_VERIFIED -> {
                 if (auditableEvent.equals(AUTH_INVALID_CODE_SENT)) {
                     var failureCount = codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
@@ -631,23 +646,40 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
                 metadataPairs.add(pair("MFACodeEntered", codeRequest.getCode()));
 
-                if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
-                        .contains(codeRequest.getJourneyType())) {
-                    metadataPairs.add(
-                            pair(
-                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                    PriorityIdentifier.DEFAULT.name().toLowerCase()));
-                } else
-                    activeMfaMethod.ifPresent(
-                            mfaMethod ->
-                                    metadataPairs.add(
-                                            pair(
-                                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                    mfaMethod.getPriority().toLowerCase())));
+                getPriorityIdentifier(codeRequest, activeMfaMethod)
+                        .ifPresent(
+                                identifier ->
+                                        metadataPairs.add(
+                                                pair(
+                                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                        identifier.name().toLowerCase())));
             }
         }
 
         return metadataPairs.stream().toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private Optional<PriorityIdentifier> getPriorityIdentifier(
+            CodeRequest codeRequest, Optional<MFAMethod> activeMfaMethod) {
+        /*
+        Ideally, we would be provided the mfaMethodId and be able to find the priority using that, but unfortunately
+        we don't have that information to hand.
+
+        https://govukverify.atlassian.net/wiki/spaces/LO/pages/5379588160/How+frontend+uses+backend+MFA+lambdas
+        tells us which journeys this lambda may be called from.
+
+        - ACCOUNT_RECOVERY (aka MFA reset) and REGISTRATION journeys have no MFA methods, so the priority can be DEFAULT
+        - For all other journeys, activeMfaMethod should correctly find the method in use, which can tell us the priority
+        */
+
+        if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
+                .contains(codeRequest.getJourneyType())) {
+            return Optional.of(PriorityIdentifier.DEFAULT);
+        } else if (activeMfaMethod.isPresent()) {
+            return Optional.of(PriorityIdentifier.valueOf(activeMfaMethod.get().getPriority()));
+        } else {
+            return Optional.empty();
+        }
     }
 
     private Optional<String> getRpPairwiseId(

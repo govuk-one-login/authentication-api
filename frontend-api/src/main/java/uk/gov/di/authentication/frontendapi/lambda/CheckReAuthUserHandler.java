@@ -41,6 +41,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
@@ -282,7 +283,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             auditService.submitAuditEvent(
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
                     auditContext,
-                    pair("attemptNoFailedAt", configurationService.getMaxEmailReAuthRetries()),
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                            configurationService.getMaxEmailReAuthRetries()),
                     pairwiseIdMetadataPair);
             throw new AccountLockedException(
                     "Re-authentication is locked due to too many failed attempts.",

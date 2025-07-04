@@ -620,24 +620,11 @@ class VerifyMfaCodeHandlerTest {
         private static Stream<Arguments> blockedCodeForAuthAppOTPEnteredTooManyTimes() {
             return Stream.of(
                     Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(
-                            REGISTRATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REGISTRATION),
-                    Arguments.of(
-                            JourneyType.SIGN_IN,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType.MFA_SIGN_IN),
-                    Arguments.of(
-                            JourneyType.PASSWORD_RESET_MFA,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_PW_RESET_MFA),
-                    Arguments.of(
-                            REAUTHENTICATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REAUTHENTICATION));
+                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
+                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
+                    Arguments.of(JourneyType.SIGN_IN, CodeRequestType.MFA_SIGN_IN),
+                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
+                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
         }
 
         @ParameterizedTest
@@ -650,6 +637,12 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+            when(mfaMethodsService.getMfaMethods(any()))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
+                                            ? List.of()
+                                            : List.of(DEFAULT_AUTH_APP_METHOD)));
             var authAppSecret =
                     List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
                                     .contains(journeyType)
@@ -688,7 +681,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                     pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                     pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                    pair("mfa-method", "default"));
         }
 
         @ParameterizedTest
@@ -701,6 +695,12 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
             when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                     .thenReturn(true);
+            when(mfaMethodsService.getMfaMethods(any()))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
+                                            ? List.of()
+                                            : List.of(DEFAULT_AUTH_APP_METHOD)));
             var authAppSecret =
                     List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
                                     .contains(journeyType)
@@ -731,7 +731,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                     pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                     pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                    pair("mfa-method", "default"));
         }
 
         @ParameterizedTest
@@ -803,21 +804,10 @@ class VerifyMfaCodeHandlerTest {
         private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
             return Stream.of(
                     Arguments.of(
-                            JourneyType.ACCOUNT_RECOVERY,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_ACCOUNT_RECOVERY),
-                    Arguments.of(
-                            JourneyType.PASSWORD_RESET_MFA,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_PW_RESET_MFA),
-                    Arguments.of(
-                            REGISTRATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REGISTRATION),
-                    Arguments.of(
-                            REAUTHENTICATION,
-                            uk.gov.di.authentication.shared.entity.CodeRequestType
-                                    .MFA_REAUTHENTICATION));
+                            JourneyType.ACCOUNT_RECOVERY, CodeRequestType.MFA_ACCOUNT_RECOVERY),
+                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.MFA_PW_RESET_MFA),
+                    Arguments.of(REGISTRATION, CodeRequestType.MFA_REGISTRATION),
+                    Arguments.of(REAUTHENTICATION, CodeRequestType.MFA_REAUTHENTICATION));
         }
 
         @ParameterizedTest
@@ -830,6 +820,12 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
                     .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+            when(mfaMethodsService.getMfaMethods(any()))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
+                                            ? List.of()
+                                            : List.of(DEFAULT_SMS_METHOD)));
             var codeRequest =
                     new VerifyMfaCodeRequest(
                             MFAMethodType.SMS,
@@ -858,7 +854,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("mfa-type", MFAMethodType.SMS.getValue()),
                     pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                     pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                    pair("mfa-method", "default"));
         }
 
         @ParameterizedTest
@@ -872,6 +869,12 @@ class VerifyMfaCodeHandlerTest {
                     .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
             var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedPrefix)).thenReturn(true);
+            when(mfaMethodsService.getMfaMethods(any()))
+                    .thenReturn(
+                            Result.success(
+                                    List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)
+                                            ? List.of()
+                                            : List.of(DEFAULT_SMS_METHOD)));
             var codeRequest =
                     new VerifyMfaCodeRequest(
                             MFAMethodType.SMS,
@@ -891,7 +894,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("mfa-type", MFAMethodType.SMS.getValue()),
                     pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                     pair("journey-type", journeyType),
-                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                    pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                    pair("mfa-method", "default"));
         }
 
         // TODO remove temporary ZDD measure to reference existing deprecated keys when expired

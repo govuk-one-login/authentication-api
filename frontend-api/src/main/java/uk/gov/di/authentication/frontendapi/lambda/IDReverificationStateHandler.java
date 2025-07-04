@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -75,7 +76,8 @@ public class IDReverificationStateHandler {
                 AUTH_REVERIFY_AUTHORISATION_ERROR_RECEIVED,
                 auditContext,
                 AuditService.MetadataPair.pair(
-                        "journey-type", JourneyType.ACCOUNT_RECOVERY.getValue()));
+                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                        JourneyType.ACCOUNT_RECOVERY.getValue()));
         cloudwatchMetricsService.incrementReverifyAuthorisationErrorCount();
         var response =
                 new IDReverificationStateResponse(
