@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -44,7 +45,10 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
@@ -56,6 +60,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class MFAMethodsCreateHandler
@@ -287,13 +292,52 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
-        auditEventStatus =
-                sendAuditEvent(
-                        AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
+        Result<ErrorResponse, AuditContext> auditContextResult =
+                buildAuditContext(AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
+
+        if (auditContextResult.isFailure()) {
+            return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
+        }
+
+        var auditContext = auditContextResult.getSuccess();
+
+        var addCompletedAuditContext =
+                auditContext.withMetadataItem(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                mfaMethodCreateRequest
+                                        .mfaMethod()
+                                        .method()
+                                        .mfaMethodType()
+                                        .toString()));
+
+        if (mfaMethodCreateRequest.mfaMethod().method()
+                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            addCompletedAuditContext =
+                    addCompletedAuditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
+        }
+
+        auditService.submitAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext);
+
         if (auditEventStatus.isFailure()) {
             LOG.error(auditEventStatus.getFailure());
             return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
         }
+
+        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
+            var updatePhoneNumberAuditContext =
+                    auditContext.withMetadataItem(
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                    mfaMethodCreateRequest
+                                            .mfaMethod()
+                                            .priorityIdentifier()
+                                            .name()
+                                            .toLowerCase()));
+
+            auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, updatePhoneNumberAuditContext);
+        }
+
         LocaleHelper.SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(
@@ -328,6 +372,48 @@ public class MFAMethodsCreateHandler
             LOG.error("Failed to build successful response: ", e);
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
+    }
+
+    private Result<ErrorResponse, AuditContext> updateAuditContextForFailedMFACreation(
+            UserProfile userProfile, AuditContext auditContext) {
+        var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+
+        if (maybeMfaMethods.isFailure()) {
+            LOG.error("No MFA methods found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        var mfaMethods = maybeMfaMethods.getSuccess();
+
+        var defaultMfaMethod =
+                mfaMethods.stream()
+                        .filter(
+                                method ->
+                                        method.getPriority()
+                                                .equalsIgnoreCase(
+                                                        PriorityIdentifier.DEFAULT.name()))
+                        .findFirst();
+
+        if (defaultMfaMethod.isEmpty()) {
+            LOG.error("No default MFA method found for user");
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        if (defaultMfaMethod.get().getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
+            auditContext = auditContext.withPhoneNumber(defaultMfaMethod.get().getDestination());
+        }
+
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                defaultMfaMethod.get().getMfaMethodType()));
+        auditContext =
+                auditContext.withMetadataItem(
+                        pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name().toLowerCase()));
+        return Result.success(auditContext);
     }
 
     private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(

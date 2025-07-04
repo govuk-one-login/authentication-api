@@ -43,6 +43,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
@@ -277,9 +278,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
-            // Check audit event
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_ADD_COMPLETED);
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER, AUTH_MFA_METHOD_ADD_COMPLETED);
 
             Map<String, String> codeVerifiedAttributes = new HashMap<>();
             codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
