@@ -35,8 +35,8 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
@@ -158,30 +158,33 @@ public class MFAMethodsDeleteHandler
             };
         }
 
-        LOG.info("Successfully deleted MFA method {}", mfaIdentifier);
+        LOG.info("MFA method deleted {}", mfaIdentifier);
 
         Result<ErrorResponse, AuditContext> auditContextResult =
                 buildAuditContext(input, userProfile, deleteResult.getSuccess());
-        //        if (auditContextResult.isFailure()) {
-        //            return generateApiGatewayProxyErrorResponse(401,
-        // auditContextResult.getFailure());
-        //        }
-        //        auditService.submitAuditEvent(AUTH_MFA_METHOD_DELETE_COMPLETED,
-        // auditContextResult.getSuccess());
+
+        if (auditContextResult.isFailure()) {
+            return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
+        }
+
+        auditService.submitAuditEvent(
+                AUTH_MFA_METHOD_DELETE_COMPLETED, auditContextResult.getSuccess());
+
+        LOG.info("Audit event emitted.");
 
         LocaleHelper.SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
 
-        LOG.info("Backup method deleted successfully. Adding confirmation message to SQS queue.");
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         userProfile.getEmail(),
                         NotificationType.BACKUP_METHOD_REMOVED,
                         userLanguage);
         sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-        LOG.info("Message successfully added to queue. Generating successful response.");
+
+        LOG.info("Notify request sent.");
 
         return generateEmptySuccessApiGatewayResponse();
     }
@@ -197,7 +200,7 @@ public class MFAMethodsDeleteHandler
         try {
 
             var phoneNumber =
-                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS)
+                    mfaMethod.getMfaMethodType().equals(MFAMethodType.SMS.name())
                             ? mfaMethod.getDestination()
                             : AuditService.UNKNOWN;
 
@@ -206,12 +209,7 @@ public class MFAMethodsDeleteHandler
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                                 JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                mfaMethod.getPriority().toLowerCase()),
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                mfaMethod.getMfaMethodType().toLowerCase())
+                        pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, mfaMethod.getMfaMethodType())
                     };
 
             var context =
