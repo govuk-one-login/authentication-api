@@ -74,6 +74,18 @@ public class MFAMethod implements Comparable<MFAMethod> {
                 .withMfaIdentifier(mfaIdentifier);
     }
 
+    public static MFAMethod clone(MFAMethod source) {
+        return new MFAMethod()
+                .withMfaMethodType(source.getMfaMethodType())
+                .withCredentialValue(source.getCredentialValue())
+                .withMethodVerified(source.methodVerified)
+                .withEnabled(source.enabled)
+                .withUpdated(source.getUpdated())
+                .withDestination(source.getDestination())
+                .withPriority(source.getPriority())
+                .withMfaIdentifier(source.getMfaIdentifier());
+    }
+
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
     public String getMfaMethodType() {
         return mfaMethodType;
@@ -197,7 +209,6 @@ public class MFAMethod implements Comparable<MFAMethod> {
                 && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
-                && Objects.equals(updated, that.updated)
                 && Objects.equals(destination, that.destination)
                 && Objects.equals(priority, that.priority)
                 && Objects.equals(mfaIdentifier, that.mfaIdentifier);
