@@ -14,6 +14,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.Locale;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
+
 public class DynamoDeleteService {
 
     private static final String USER_PROFILE_TABLE = "user-profile";
@@ -30,7 +32,8 @@ public class DynamoDeleteService {
                 configurationService.getEnvironment() + "-" + USER_CREDENTIAL_TABLE;
         var accountModifiersTableName =
                 configurationService.getEnvironment() + "-" + ACCOUNT_MODIFIERS_TABLE_NAME;
-        dynamoDbEnhancedClient =
+
+        this.dynamoDbEnhancedClient =
                 DynamoClientHelper.createDynamoEnhancedClient(configurationService);
         this.dynamoUserProfileTable =
                 dynamoDbEnhancedClient.table(
@@ -38,10 +41,13 @@ public class DynamoDeleteService {
         this.dynamoUserCredentialsTable =
                 dynamoDbEnhancedClient.table(
                         userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
-        dynamoAccountModifiersTable =
+        this.dynamoAccountModifiersTable =
                 dynamoDbEnhancedClient.table(
                         accountModifiersTableName, TableSchema.fromBean(AccountModifiers.class));
-        warmUp();
+
+        warmUp(dynamoUserProfileTable);
+        warmUp(dynamoUserCredentialsTable);
+        warmUp(dynamoAccountModifiersTable);
     }
 
     public void deleteAccount(String email, String internalSubPairwiseId) {
@@ -67,11 +73,5 @@ public class DynamoDeleteService {
                                         dynamoAccountModifiersTable, t));
 
         dynamoDbEnhancedClient.transactWriteItems(transactionWriterBuilder.build());
-    }
-
-    private void warmUp() {
-        dynamoUserCredentialsTable.describeTable();
-        dynamoUserProfileTable.describeTable();
-        dynamoAccountModifiersTable.describeTable();
     }
 }
