@@ -44,6 +44,18 @@ public class MFAMethod implements Comparable<MFAMethod> {
         this.updated = updated;
     }
 
+    public MFAMethod(MFAMethod source) {
+        if (source == null) throw new IllegalArgumentException("MFAMethod is required to copy");
+        this.mfaMethodType = source.getMfaMethodType();
+        this.credentialValue = source.getCredentialValue();
+        this.methodVerified = source.methodVerified;
+        this.enabled = source.enabled;
+        this.updated = source.getUpdated();
+        this.destination = source.getDestination();
+        this.priority = source.getPriority();
+        this.mfaIdentifier = source.getMfaIdentifier();
+    }
+
     public static MFAMethod authAppMfaMethod(
             String credentialValue,
             boolean methodVerified,
@@ -197,7 +209,6 @@ public class MFAMethod implements Comparable<MFAMethod> {
                 && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
-                && Objects.equals(updated, that.updated)
                 && Objects.equals(destination, that.destination)
                 && Objects.equals(priority, that.priority)
                 && Objects.equals(mfaIdentifier, that.mfaIdentifier);

@@ -38,55 +38,41 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 class MFAMethodsServiceIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@example.com";
-    private static final String PHONE_NUMBER_WITHOUT_COUNTRY_CODE = "07900000000";
-    private static final String PHONE_NUMBER_WITH_COUNTRY_CODE = "+447900000000";
-    private static final String PHONE_NUMBER_TWO_WITH_COUNTRY_CODE = "+447900000100";
+    private static final String PHONE_NUMBER_WITH_COUNTRY_CODE =
+            DEFAULT_SMS_METHOD.getDestination();
+    private static final String PHONE_NUMBER_WITHOUT_COUNTRY_CODE =
+            "0" + PHONE_NUMBER_WITH_COUNTRY_CODE.substring(3);
     private static final String AUTH_APP_CREDENTIAL = "some-credential";
-    private static final String SMS_MFA_IDENTIFIER_1 = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
-    private static final String SMS_MFA_IDENTIFIER_2 = "3634a5e3-dac8-4804-8d40-181722b48ae1";
-    private static final String APP_MFA_IDENTIFIER_1 = "a87e57e5-6175-4be7-af7d-547a390b36c1";
-    private static final String APP_MFA_IDENTIFIER_2 = "898a7e13-c354-430a-a3ca-8cc6c6391057";
-    private static final MFAMethod defaultPriorityAuthApp =
-            MFAMethod.authAppMfaMethod(
-                    AUTH_APP_CREDENTIAL,
-                    true,
-                    true,
-                    PriorityIdentifier.DEFAULT,
-                    APP_MFA_IDENTIFIER_1);
     private static final String AUTH_APP_CREDENTIAL_TWO = "another-credential";
-    private static final MFAMethod backupPriorityAuthApp =
-            MFAMethod.authAppMfaMethod(
-                    AUTH_APP_CREDENTIAL_TWO,
-                    true,
-                    true,
-                    PriorityIdentifier.BACKUP,
-                    APP_MFA_IDENTIFIER_2);
-    private static final MFAMethod defaultPrioritySms =
-            MFAMethod.smsMfaMethod(
-                    true,
-                    true,
-                    PHONE_NUMBER_WITH_COUNTRY_CODE,
-                    PriorityIdentifier.DEFAULT,
-                    SMS_MFA_IDENTIFIER_1);
-    private static final MFAMethod backupPrioritySms =
-            MFAMethod.smsMfaMethod(
-                    true,
-                    true,
-                    PHONE_NUMBER_TWO_WITH_COUNTRY_CODE,
-                    PriorityIdentifier.BACKUP,
-                    SMS_MFA_IDENTIFIER_2);
+    private static MFAMethod defaultPriorityAuthApp;
+    private static MFAMethod backupPriorityAuthApp;
+    private static MFAMethod defaultPrioritySms;
+    private static MFAMethod backupPrioritySms;
     MFAMethodsService mfaMethodsService = new MFAMethodsService(ConfigurationService.getInstance());
     private UserProfile userProfile;
 
     @RegisterExtension static UserStoreExtension userStoreExtension = new UserStoreExtension();
+
+    @BeforeEach
+    void setUp() {
+        defaultPriorityAuthApp = new MFAMethod(DEFAULT_AUTH_APP_METHOD);
+        backupPriorityAuthApp = new MFAMethod(BACKUP_AUTH_APP_METHOD);
+        defaultPrioritySms = new MFAMethod(DEFAULT_SMS_METHOD);
+        backupPrioritySms = new MFAMethod(BACKUP_SMS_METHOD);
+    }
 
     @Nested
     class CheckIfPhoneNumberInUse {
@@ -223,7 +209,7 @@ class MFAMethodsServiceIntegrationTest {
                             PHONE_NUMBER_WITH_COUNTRY_CODE,
                             PriorityIdentifier.DEFAULT,
                             mfaIdentifier);
-            assertEquals(List.of(expectedData), result);
+            assertIterableEquals(List.of(expectedData), result);
         }
 
         @ParameterizedTest
@@ -244,7 +230,7 @@ class MFAMethodsServiceIntegrationTest {
                             PHONE_NUMBER_WITH_COUNTRY_CODE,
                             PriorityIdentifier.DEFAULT,
                             mfaIdentifier);
-            assertEquals(List.of(expectedData), result);
+            assertIterableEquals(List.of(expectedData), result);
         }
 
         @ParameterizedTest
@@ -333,7 +319,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.getMfaMethods(email).getSuccess();
 
-            assertEquals(List.of(), result);
+            assertIterableEquals(List.of(), result);
         }
 
         @ParameterizedTest
@@ -559,7 +545,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
-            assertEquals(List.of(defaultPrioritySms), result);
+            assertIterableEquals(List.of(defaultPrioritySms), result);
         }
 
         @Test
@@ -568,7 +554,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var result = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
-            assertEquals(List.of(defaultPriorityAuthApp), result);
+            assertIterableEquals(List.of(defaultPriorityAuthApp), result);
         }
 
         private static Stream<List<MFAMethod>> mfaMethodsCombinations() {
@@ -1071,7 +1057,7 @@ class MFAMethodsServiceIntegrationTest {
                         result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
-                assertEquals(List.of(defaultPrioritySms), remainingMfaMethods);
+                assertIterableEquals(List.of(defaultPrioritySms), remainingMfaMethods);
             }
 
             @Test
@@ -1115,7 +1101,7 @@ class MFAMethodsServiceIntegrationTest {
                         result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
-                assertEquals(List.of(existingMethod), remainingMfaMethods);
+                assertIterableEquals(List.of(existingMethod), remainingMfaMethods);
             }
         }
 
@@ -1185,7 +1171,7 @@ class MFAMethodsServiceIntegrationTest {
                         result.getFailure().failureReason());
 
                 var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
-                assertEquals(List.of(existingMethod), remainingMfaMethods);
+                assertIterableEquals(List.of(existingMethod), remainingMfaMethods);
             }
         }
     }
@@ -1212,7 +1198,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
-            assertEquals(List.of(defaultPrioritySms), remainingMfaMethods);
+            assertIterableEquals(List.of(defaultPrioritySms), remainingMfaMethods);
         }
 
         @Test
@@ -1230,7 +1216,7 @@ class MFAMethodsServiceIntegrationTest {
 
             var remainingMfaMethods = mfaMethodsService.getMfaMethods(EMAIL).getSuccess();
 
-            assertEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
+            assertIterableEquals(List.of(defaultPriorityAuthApp), remainingMfaMethods);
         }
 
         @Test
