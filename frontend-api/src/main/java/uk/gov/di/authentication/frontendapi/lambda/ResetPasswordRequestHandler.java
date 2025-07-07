@@ -273,6 +273,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     LOG.error("Could not find user profile for reset password request");
                     yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
                 }
+                case UNKNOWN_MFA_IDENTIFIER -> {
+                    yield generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.INVALID_MFA_METHOD);
+                }
             };
         }
 

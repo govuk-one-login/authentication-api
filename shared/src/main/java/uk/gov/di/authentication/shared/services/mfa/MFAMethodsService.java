@@ -34,6 +34,7 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
 public class MFAMethodsService {
@@ -113,6 +114,27 @@ public class MFAMethodsService {
             return getMfaMethodForNonMigratedUser(userProfile, userCredentials, readOnly)
                     .map(optional -> optional.map(List::of).orElseGet(List::of));
         }
+    }
+
+    public record GetMfaResult(MFAMethod mfaMethod, List<MFAMethod> allMfaMethods) {}
+
+    public Result<MfaRetrieveFailureReason, GetMfaResult> getMfaMethod(
+            String email, String mfaIdentifier) {
+        var maybeMfaMethods = getMfaMethods(email);
+        if (maybeMfaMethods.isFailure()) return Result.failure(maybeMfaMethods.getFailure());
+
+        var mfaMethods = maybeMfaMethods.getSuccess();
+
+        var maybeMfaMethod =
+                mfaMethods.stream()
+                        .filter(mfaMethod -> mfaIdentifier.equals(mfaMethod.getMfaIdentifier()))
+                        .findFirst();
+
+        if (maybeMfaMethod.isEmpty()) {
+            return Result.failure(UNKNOWN_MFA_IDENTIFIER);
+        }
+
+        return Result.success(new GetMfaResult(maybeMfaMethod.get(), mfaMethods));
     }
 
     private List<MFAMethod> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {

@@ -106,6 +106,8 @@ public class MFAMethodsRetrieveHandler
                         500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ACCT_DOES_NOT_EXIST);
+                case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.MFA_METHOD_NOT_FOUND);
             };
         }
 
