@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest.MfaMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
+import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -30,6 +32,7 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
 
 public class MFAMethodsServiceTest {
 
@@ -37,6 +40,8 @@ public class MFAMethodsServiceTest {
     private final AuthenticationService persistentService = mock(AuthenticationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+
+    private final UserProfile userProfile = new UserProfile().withMfaMethodsMigrated(true);
 
     private static final String TEST_PHONE_NUMBER = "01234567890";
 
@@ -94,6 +99,44 @@ public class MFAMethodsServiceTest {
     }
 
     @Nested
+    class GetMfaMethod {
+        @Test
+        void shouldReturnIdentifiedMfaAndAllMfas() {
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            mockUserCredentials.setMfaMethods(List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD));
+            when(persistentService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(mockUserCredentials);
+            when(persistentService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+
+            var result =
+                    service.getMfaMethod(EMAIL, DEFAULT_SMS_METHOD.getMfaIdentifier()).getSuccess();
+
+            assertEquals(DEFAULT_SMS_METHOD, result.mfaMethod());
+            assertIterableEquals(
+                    List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD), result.allMfaMethods());
+        }
+
+        @Test
+        void returnsAnErrorWhenTheMfaIdentifierIsNotFound() {
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            mockUserCredentials.setMfaMethods(List.of(DEFAULT_SMS_METHOD, BACKUP_AUTH_APP_METHOD));
+            when(persistentService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(mockUserCredentials);
+            when(persistentService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+
+            var result = service.getMfaMethod(EMAIL, "some-other-identifier").getFailure();
+
+            assertEquals(MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER, result);
+        }
+    }
+
+    @Nested
     class DeleteMfaMethod {
 
         @Test
@@ -101,8 +144,6 @@ public class MFAMethodsServiceTest {
             var service =
                     new MFAMethodsService(
                             configurationService, persistentService, cloudwatchMetricsService);
-            var userProfile = new UserProfile();
-            userProfile.setMfaMethodsMigrated(true);
             var mockUserCredentials = new UserCredentials();
             var mockMfaMethods = new ArrayList<MFAMethod>();
             var identifier = UUID.randomUUID().toString();

@@ -579,6 +579,39 @@ class MFAMethodsServiceIntegrationTest {
     }
 
     @Nested
+    class RetrieveMfaMethod {
+        @BeforeEach
+        void setUp() {
+            userStoreExtension.signUp(EMAIL, "password-1", new Subject());
+            userStoreExtension.setMfaMethodsMigrated(EMAIL, true);
+        }
+
+        @Test
+        void shouldReturnIdentifiedMfaAndAllMfas() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, backupPrioritySms);
+
+            var result =
+                    mfaMethodsService
+                            .getMfaMethod(EMAIL, defaultPriorityAuthApp.getMfaIdentifier())
+                            .getSuccess();
+
+            assertEquals(defaultPriorityAuthApp, result.mfaMethod());
+            assertIterableEquals(
+                    List.of(defaultPriorityAuthApp, backupPrioritySms), result.allMfaMethods());
+        }
+
+        @Test
+        void returnsAnErrorWhenTheMfaIdentifierIsNotFound() {
+            userStoreExtension.addMfaMethodSupportingMultiple(EMAIL, defaultPriorityAuthApp);
+
+            var result = mfaMethodsService.getMfaMethod(EMAIL, "some-other-identifier");
+
+            assertEquals(MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER, result.getFailure());
+        }
+    }
+
+    @Nested
     class AddBackupMfaTests {
         @BeforeEach
         void setUp() {
