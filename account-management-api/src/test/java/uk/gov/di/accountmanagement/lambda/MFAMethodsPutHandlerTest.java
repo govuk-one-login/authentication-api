@@ -370,7 +370,8 @@ class MFAMethodsPutHandlerTest {
 
     @ParameterizedTest
     @MethodSource("migrationFailureReasonsToExpectedStatusCodes")
-    void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(int expectedStatusCode)
+    void shouldReturnAppropriateResponseWhenUserMigrationNotSuccessful(
+            MfaMigrationFailureReason migrationFailureReason, int expectedStatusCode)
             throws Json.JsonException {
         var nonMigratedEmail = "non-migrated-email@example.com";
         var nonMigratedUser =
@@ -401,6 +402,8 @@ class MFAMethodsPutHandlerTest {
                                 new MFAMethodsService.MfaUpdateResponse(
                                         List.of(updatedMfaMethod),
                                         MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
+        when(mfaMethodsService.migrateMfaCredentialsForUser(nonMigratedUser))
+                .thenReturn(Result.failure(migrationFailureReason));
         var expectedGateway = new APIGatewayProxyResponseEvent().withStatusCode(expectedStatusCode);
         if (expectedStatusCode != 200) {
             when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
