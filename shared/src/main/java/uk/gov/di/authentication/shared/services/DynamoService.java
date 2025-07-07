@@ -47,6 +47,7 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 
@@ -72,7 +73,8 @@ public class DynamoService implements AuthenticationService {
         this.dynamoUserCredentialsTable =
                 dynamoDbEnhancedClient.table(
                         userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
-        warmUp();
+        warmUp(dynamoUserProfileTable);
+        warmUp(dynamoUserCredentialsTable);
     }
 
     @Override
@@ -950,9 +952,5 @@ public class DynamoService implements AuthenticationService {
 
     private static String hashPassword(String password) {
         return Argon2EncoderHelper.argon2Hash(password);
-    }
-
-    private void warmUp() {
-        dynamoUserProfileTable.describeTable();
     }
 }
