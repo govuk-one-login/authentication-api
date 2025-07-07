@@ -7,6 +7,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 public class DynamoDocAppCriService extends BaseDynamoService<DocAppCredential> {
 
@@ -15,6 +16,11 @@ public class DynamoDocAppCriService extends BaseDynamoService<DocAppCredential> 
     public DynamoDocAppCriService(ConfigurationService configurationService) {
         super(DocAppCredential.class, "Orch-Doc-App-Credential", configurationService, true);
         this.timeToExist = configurationService.getAccessTokenExpiry();
+    }
+
+    public Optional<DocAppCredential> getDocAppCredential(String subjectID) {
+        return get(subjectID)
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void addDocAppCredential(String subjectID, List<String> credential) {

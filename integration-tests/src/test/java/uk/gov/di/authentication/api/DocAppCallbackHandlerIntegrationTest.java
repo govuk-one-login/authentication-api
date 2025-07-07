@@ -171,6 +171,11 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
 
+        var orchDocAppCredential =
+                documentAppCredentialStore.getOrchCredential(docAppSubjectId.getValue());
+        assertTrue(orchDocAppCredential.isPresent());
+        assertThat(orchDocAppCredential.get().getCredential().size(), equalTo(1));
+
         assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
 
@@ -201,6 +206,11 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+
+        var orchDocAppCredential =
+                documentAppCredentialStore.getOrchCredential(docAppSubjectId.getValue());
+        assertTrue(orchDocAppCredential.isPresent());
+        assertThat(orchDocAppCredential.get().getCredential().size(), equalTo(1));
 
         assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
     }
