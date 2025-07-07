@@ -312,31 +312,20 @@ public class MFAMethodsService {
             List<MFAMethod> mfaMethods, MFAMethodUpdateIdentifier updateTypeIdentifier) {}
 
     public Result<MfaUpdateFailure, MfaUpdateResponse> updateMfaMethod(
-            String email, String mfaIdentifier, MfaMethodUpdateRequest request) {
-        var mfaMethods = persistentService.getUserCredentialsFromEmail(email).getMfaMethods();
-
-        var maybeMethodToUpdate =
-                mfaMethods.stream()
-                        .filter(mfaMethod -> mfaIdentifier.equals(mfaMethod.getMfaIdentifier()))
-                        .findFirst();
-
-        return maybeMethodToUpdate
-                .map(
-                        method ->
-                                switch (PriorityIdentifier.valueOf(method.getPriority())) {
-                                    case DEFAULT -> handleDefaultMethodUpdate(
-                                            method,
-                                            request.mfaMethod(),
-                                            email,
-                                            mfaIdentifier,
-                                            mfaMethods);
-                                    case BACKUP -> handleBackupMethodUpdate(
-                                            method, request.mfaMethod(), email, mfaMethods);
-                                })
-                .orElse(
-                        Result.failure(
-                                new MfaUpdateFailure(
-                                        MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER)));
+            String email,
+            MFAMethod mfaMethodToUpdate,
+            List<MFAMethod> allMfaMethods,
+            MfaMethodUpdateRequest request) {
+        return switch (PriorityIdentifier.valueOf(mfaMethodToUpdate.getPriority())) {
+            case DEFAULT -> handleDefaultMethodUpdate(
+                    mfaMethodToUpdate,
+                    request.mfaMethod(),
+                    email,
+                    mfaMethodToUpdate.getMfaIdentifier(),
+                    allMfaMethods);
+            case BACKUP -> handleBackupMethodUpdate(
+                    mfaMethodToUpdate, request.mfaMethod(), email, allMfaMethods);
+        };
     }
 
     public static Optional<MFAMethod> getMfaMethodOrDefaultMfaMethod(

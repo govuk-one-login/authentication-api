@@ -188,7 +188,7 @@ public class MFAMethodsServiceTest {
             when(persistentService.updateMfaMethods(any(), any()))
                     .thenReturn(Result.success(mockMfaMethods));
 
-            service.updateMfaMethod("some-email@email.com", identifier, request);
+            service.updateMfaMethod("some-email@email.com", mfaMethod, mockMfaMethods, request);
 
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(
@@ -224,7 +224,8 @@ public class MFAMethodsServiceTest {
             when(persistentService.updateAllMfaMethodsForUser(any(), any()))
                     .thenReturn(Result.success(mockMfaMethods));
 
-            service.updateMfaMethod("some-email@email.com", backupIdentifier, request);
+            service.updateMfaMethod(
+                    "some-email@email.com", backupMfaMethod, mockMfaMethods, request);
 
             verify(cloudwatchMetricsService)
                     .incrementMfaMethodCounter(

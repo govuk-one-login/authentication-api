@@ -63,6 +63,7 @@ import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLangua
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 
 public class MFAMethodsPutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -207,10 +208,22 @@ public class MFAMethodsPutHandler
             }
         }
 
+        var maybeMfaMethodResult =
+                mfaMethodsService.getMfaMethod(
+                        putRequest.userProfile.getEmail(), putRequest.mfaIdentifier);
+        if (maybeMfaMethodResult.isFailure()) {
+            var failure = maybeMfaMethodResult.getFailure();
+            if (failure.equals(UNKNOWN_MFA_IDENTIFIER))
+                return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1065);
+            else return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+        }
+
+        var mfaMethodResult = maybeMfaMethodResult.getSuccess();
         var maybeUpdateResult =
                 mfaMethodsService.updateMfaMethod(
                         putRequest.userProfile.getEmail(),
-                        putRequest.mfaIdentifier,
+                        mfaMethodResult.mfaMethod(),
+                        mfaMethodResult.allMfaMethods(),
                         putRequest.request);
 
         if (maybeUpdateResult.isFailure()) {
