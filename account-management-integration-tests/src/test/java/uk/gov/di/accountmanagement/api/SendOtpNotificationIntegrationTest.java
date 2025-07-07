@@ -90,7 +90,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_WITH_EMAIL_EXISTS)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

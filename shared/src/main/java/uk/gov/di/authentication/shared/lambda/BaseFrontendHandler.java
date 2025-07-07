@@ -138,7 +138,7 @@ public abstract class BaseFrontendHandler<T>
 
         if (sessionId.isEmpty() || authSession.isEmpty()) {
             LOG.warn("Auth session cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         } else {
             attachSessionIdToLogs(sessionId.get());
         }
@@ -160,7 +160,7 @@ public abstract class BaseFrontendHandler<T>
         } catch (JsonException e) {
             LOG.warn("Request is missing parameters.");
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         userContextBuilder.withClientSessionId(clientSessionId);

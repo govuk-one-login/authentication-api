@@ -70,14 +70,14 @@ public class MFAMethodsRetrieveHandler
             LOG.error(
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
         }
 
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
 
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
         }
 
         var maybeUserProfile =
@@ -85,7 +85,7 @@ public class MFAMethodsRetrieveHandler
 
         if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
         }
         UserProfile userProfile = maybeUserProfile.get();
 
@@ -95,7 +95,7 @@ public class MFAMethodsRetrieveHandler
                 configurationService.getInternalSectorUri(),
                 dynamoService,
                 authorizerParams)) {
-            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL);
         }
 
         var retrieveResult = mfaMethodsService.getMfaMethods(maybeUserProfile.get().getEmail());
@@ -103,9 +103,9 @@ public class MFAMethodsRetrieveHandler
         if (retrieveResult.isFailure()) {
             return switch (retrieveResult.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1078);
+                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1010);
+                        500, ErrorResponse.ACCT_DOES_NOT_EXIST);
             };
         }
 
@@ -113,7 +113,8 @@ public class MFAMethodsRetrieveHandler
         var maybeResponse = convertMfaMethodsToMfaMethodResponse(retrievedMethods);
         if (maybeResponse.isFailure()) {
             LOG.error(maybeResponse.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
         }
 
         var mfaMethodResponses = maybeResponse.getSuccess();

@@ -152,7 +152,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -167,7 +167,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -183,7 +183,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
 
         verify(auditService)
                 .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
@@ -207,7 +207,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(403));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1084));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_BLOCKED));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -233,7 +233,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(403));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1083));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_SUSPENDED));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -335,7 +335,7 @@ class AuthenticateHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1055));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR));
 
         verify(auditService)
                 .submitAuditEvent(

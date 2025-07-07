@@ -391,7 +391,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_SECRET));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(false));
         assertTrue(Objects.isNull(userStore.getMfaMethod(EMAIL_ADDRESS)));
@@ -412,7 +412,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_SECRET));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
@@ -580,7 +580,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var isAccountVerified = accountVerifiedJourneyTypes.contains(journeyType);
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
@@ -608,7 +608,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
@@ -631,7 +631,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1081));
+        assertThat(response, hasJsonBody(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
     }
 
@@ -650,7 +650,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
     }
 
     @ParameterizedTest
@@ -671,7 +671,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var isAccountVerified = accountVerifiedJourneyTypes.contains(journeyType);
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1081));
+        assertThat(response, hasJsonBody(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_INVALID_CODE_SENT));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
@@ -708,7 +708,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_CODE_MAX_RETRIES_REACHED));
         var isAccountVerified = accountVerifiedJourneyTypes.contains(journeyType);
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
@@ -749,7 +749,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
         assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
         if (journeyType != JourneyType.REAUTHENTICATION) {
             assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
@@ -786,7 +786,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
     }
 
@@ -950,7 +950,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
 
         var isAccountVerified = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
@@ -981,7 +981,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
         var isAccountVerified = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var expectedPhoneNumber =
@@ -1016,7 +1016,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(AUTH_CODE_MAX_RETRIES_REACHED));
 
         var isAccountVerified = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
@@ -1055,7 +1055,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
@@ -1095,7 +1095,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
     }
 
     private void setupUser(String sessionId, String email, boolean mfaMethodsMigrated) {

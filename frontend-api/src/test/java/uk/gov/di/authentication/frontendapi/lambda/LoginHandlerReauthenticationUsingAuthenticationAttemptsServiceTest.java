@@ -224,7 +224,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
@@ -323,7 +323,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
             verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 

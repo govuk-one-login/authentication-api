@@ -435,7 +435,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.of("principalId", testInternalSubject));
 
             assertEquals(400, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_OTP));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_INVALID_CODE_SENT);
 
@@ -474,7 +474,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected error response when migrated Auth App user adds Auth App as backup");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
+            assertThat(response, hasJsonBody(ErrorResponse.AUTH_APP_EXISTS));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_FAILED);
 
@@ -514,7 +514,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected error response when non-migrated Auth App user adds Auth App as backup");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1070));
+            assertThat(response, hasJsonBody(ErrorResponse.AUTH_APP_EXISTS));
 
             // Verify user is now migrated after the request (even though it failed)
             assertUserMigrationStatus(true, "User should be migrated despite failure");
@@ -552,7 +552,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected bad request when path parameter is not present");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
+            assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         @Test
@@ -571,7 +571,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     404,
                     response.getStatusCode(),
                     "Expected not found when public subject is not in user store");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
         }
 
         private static Stream<MFAMethodType> invalidMfaMethodTypes() {
@@ -606,7 +606,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected bad request when MFA method type is invalid");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
+            assertThat(response, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         @Test
@@ -630,7 +630,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected error response when MFA count limit is reached");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1068));
+            assertThat(response, hasJsonBody(ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED));
         }
 
         @Test
@@ -653,7 +653,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     400,
                     response.getStatusCode(),
                     "Expected error response when adding SMS MFA with same phone number");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1069));
+            assertThat(response, hasJsonBody(ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS));
         }
 
         @Test
@@ -675,7 +675,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     401,
                     response.getStatusCode(),
                     "Expected unauthorized when principal is invalid");
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
         }
     }
 

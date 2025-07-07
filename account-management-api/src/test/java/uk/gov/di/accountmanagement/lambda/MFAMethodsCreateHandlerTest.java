@@ -378,8 +378,8 @@ class MFAMethodsCreateHandlerTest {
 
         private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
             return Stream.of(
-                    Arguments.of(ErrorResponse.ERROR_1056, 404),
-                    Arguments.of(ErrorResponse.ERROR_1064, 500));
+                    Arguments.of(ErrorResponse.USER_NOT_FOUND, 404),
+                    Arguments.of(ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR, 500));
         }
 
         @ParameterizedTest
@@ -389,10 +389,14 @@ class MFAMethodsCreateHandlerTest {
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
             when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
+            var expectedResponseBody =
+                    format(
+                            "{\"code\":%d,\"message\":\"%s\"}",
+                            expectedError.getCode(), expectedError.getMessage());
             var expectedGateway =
                     new APIGatewayProxyResponseEvent()
                             .withStatusCode(expectedStatusCode)
-                            .withBody(expectedError.toString() + expectedError.getMessage());
+                            .withBody(expectedResponseBody);
             when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
                             any(), any(), any(), any()))
                     .thenReturn(Optional.of(expectedGateway));
@@ -436,7 +440,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
             assertThat(
                     logging.events(),
                     hasItem(
@@ -460,7 +464,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(404));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
             verifyNoInteractions(sqsClient);
             verifyNoInteractions(auditService);
         }
@@ -477,7 +481,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
             verifyNoInteractions(auditService);
         }
 
@@ -492,7 +496,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1080));
+            assertThat(result, hasJsonBody(ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS));
             verifyNoInteractions(auditService);
         }
 
@@ -524,7 +528,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
+            assertThat(result, hasJsonBody(ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
@@ -604,7 +608,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
 
             verify(auditService).submitAuditEvent(eq(AUTH_INVALID_CODE_SENT), captor.capture());
@@ -638,7 +642,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
+            assertThat(result, hasJsonBody(ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
@@ -677,7 +681,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
+            assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_EXISTS));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
@@ -723,7 +727,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(500));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
+            assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR));
             verifyNoInteractions(sqsClient);
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
@@ -750,7 +754,7 @@ class MFAMethodsCreateHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(401));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
             verifyNoInteractions(auditService);
         }
     }

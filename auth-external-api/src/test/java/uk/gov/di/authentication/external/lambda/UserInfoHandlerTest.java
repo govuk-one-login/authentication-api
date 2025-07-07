@@ -200,7 +200,9 @@ class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
         assertEquals(400, response.getStatusCode());
-        assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
+        assertEquals(
+                objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING),
+                response.getBody());
         verify(authSessionService).getSessionFromRequestHeaders(request.getHeaders());
         verifyNoInteractions(accessTokenService, userInfoService, auditService);
     }
@@ -222,7 +224,9 @@ class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
         assertEquals(400, response.getStatusCode());
-        assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
+        assertEquals(
+                objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING),
+                response.getBody());
         verify(authSessionService).getSessionFromRequestHeaders(request.getHeaders());
         verifyNoInteractions(accessTokenService, userInfoService, auditService);
     }

@@ -141,7 +141,7 @@ class ValidationHelperTest {
         void shouldRejectBlankEmail(String emailAddress) {
 
             assertEquals(
-                    Optional.of(ErrorResponse.ERROR_1003),
+                    Optional.of(ErrorResponse.EMAIL_ADDRESS_EMPTY),
                     ValidationHelper.validateEmailAddress(emailAddress));
         }
 
@@ -187,7 +187,7 @@ class ValidationHelperTest {
         void shouldRejectMalformattedEmail(String emailAddress) {
 
             assertEquals(
-                    Optional.of(ErrorResponse.ERROR_1004),
+                    Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT),
                     ValidationHelper.validateEmailAddress(emailAddress));
         }
 
@@ -215,7 +215,7 @@ class ValidationHelperTest {
         void shouldReturnErrorWhenEmailAddressesAreTheSame() {
             String email = "joe.bloggs@digital.cabinet-office.gov.uk";
             assertEquals(
-                    Optional.of(ErrorResponse.ERROR_1019),
+                    Optional.of(ErrorResponse.EMAIL_ADDRESSES_MATCH),
                     ValidationHelper.validateEmailAddressUpdate(email, email));
         }
 
@@ -224,7 +224,7 @@ class ValidationHelperTest {
             String existingEmail = "joe.bloggs";
             String replacementEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
             assertEquals(
-                    Optional.of(ErrorResponse.ERROR_1004),
+                    Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT),
                     ValidationHelper.validateEmailAddressUpdate(existingEmail, replacementEmail));
         }
 
@@ -233,7 +233,7 @@ class ValidationHelperTest {
             String existingEmail = "joe.bloggs@digital.cabinet-office.gov.uk";
             String replacementEmail = "joe.bloggs";
             assertEquals(
-                    Optional.of(ErrorResponse.ERROR_1004),
+                    Optional.of(ErrorResponse.INVALID_EMAIL_FORMAT),
                     ValidationHelper.validateEmailAddressUpdate(existingEmail, replacementEmail));
         }
     }
@@ -271,98 +271,98 @@ class ValidationHelperTest {
                 arguments(
                         VERIFY_EMAIL,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1036),
+                        Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.ACCOUNT_RECOVERY,
-                        Optional.of(ErrorResponse.ERROR_1037),
+                        Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         MFA_SMS,
                         JourneyType.REAUTHENTICATION,
-                        Optional.of(ErrorResponse.ERROR_1035),
+                        Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1021),
+                        Optional.of(ErrorResponse.INVALID_PW_RESET_CODE),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         VERIFY_EMAIL,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1036),
+                        Optional.of(ErrorResponse.INVALID_EMAIL_CODE_ENTERED),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.REGISTRATION,
-                        Optional.of(ErrorResponse.ERROR_1037),
+                        Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         MFA_SMS,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.ERROR_1035),
+                        Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1021),
+                        Optional.of(ErrorResponse.INVALID_PW_RESET_CODE),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_EMAIL,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1033),
+                        Optional.of(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.REGISTRATION,
-                        Optional.of(ErrorResponse.ERROR_1034),
+                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         MFA_SMS,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.ERROR_1027),
+                        Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
                         JourneyType.PASSWORD_RESET,
-                        Optional.of(ErrorResponse.ERROR_1039),
+                        Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.ERROR_1034),
+                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
                         INVALID_CODE,
                         100,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
                         JourneyType.PASSWORD_RESET_MFA,
-                        Optional.of(ErrorResponse.ERROR_1034),
+                        Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED),
                         INVALID_CODE,
                         100,
                         STORED_VALID_CODE));

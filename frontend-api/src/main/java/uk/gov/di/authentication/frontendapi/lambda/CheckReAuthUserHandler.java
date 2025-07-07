@@ -44,7 +44,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_NOT_FOUND;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -283,10 +283,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     pairwiseIdMetadataPair);
             throw new AccountLockedException(
                     "Re-authentication is locked due to too many failed attempts.",
-                    ErrorResponse.ERROR_1057);
+                    ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
 
-        return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
+        return generateApiGatewayProxyErrorResponse(404, USER_NOT_FOUND);
     }
 
     private boolean hasEnteredIncorrectEmailTooManyTimes(int count) {
@@ -328,7 +328,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             failureReason == null ? "unknown" : failureReason.getValue()));
 
             throw new AccountLockedException(
-                    "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
+                    "Account is locked due to too many failed attempts.",
+                    ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
     }
 }

@@ -771,7 +771,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
         verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
@@ -809,7 +809,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
         verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
@@ -848,7 +848,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -918,7 +918,7 @@ class LoginHandlerTest {
                         pair("attemptNoFailedAt", MAX_ALLOWED_PASSWORD_RETRIES));
 
         assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
@@ -967,7 +967,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
@@ -981,7 +981,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
@@ -996,7 +996,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
@@ -1009,7 +1009,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
@@ -1028,7 +1028,7 @@ class LoginHandlerTest {
                                 Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
@@ -1049,7 +1049,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1078));
+        assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_MFA_ID_ERROR));
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
@@ -1076,7 +1076,7 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1064));
+        assertThat(result, hasJsonBody(ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
@@ -1201,25 +1201,27 @@ class LoginHandlerTest {
                 Arguments.of(
                         AUTH_APP,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
-                        ErrorResponse.ERROR_1027),
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
                         AUTH_APP,
                         CODE_BLOCKED_KEY_PREFIX + AUTH_APP + "_SIGN_IN",
-                        ErrorResponse.ERROR_1027),
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
                         SMS,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
-                        ErrorResponse.ERROR_1027),
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
-                        SMS, CODE_BLOCKED_KEY_PREFIX + SMS + "_SIGN_IN", ErrorResponse.ERROR_1027),
+                        SMS,
+                        CODE_BLOCKED_KEY_PREFIX + SMS + "_SIGN_IN",
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
                         SMS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN,
-                        ErrorResponse.ERROR_1026),
+                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS),
                 Arguments.of(
                         SMS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + SMS + "_SIGN_IN",
-                        ErrorResponse.ERROR_1026));
+                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
     }
 
     @ParameterizedTest

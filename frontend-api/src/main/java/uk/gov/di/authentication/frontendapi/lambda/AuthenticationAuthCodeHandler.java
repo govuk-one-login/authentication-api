@@ -94,7 +94,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             if (userProfile.isEmpty()) {
                 LOG.info(
                         "Error message: Email from session does not have a user profile required to extract Subject ID");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
             }
 
             var authorisationCode = new AuthorizationCode();
@@ -154,7 +155,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

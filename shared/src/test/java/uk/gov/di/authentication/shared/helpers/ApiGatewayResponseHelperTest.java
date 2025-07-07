@@ -14,7 +14,7 @@ public class ApiGatewayResponseHelperTest {
     void ShouldAddDefaultSecurityHeadersForErrorResponses() {
         APIGatewayProxyResponseEvent result =
                 ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse(
-                        404, ErrorResponse.ERROR_1000);
+                        404, ErrorResponse.SESSION_ID_MISSING);
 
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.CACHE_CONTROL, "no-cache, no-store"));
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.PRAGMA, "no-cache"));

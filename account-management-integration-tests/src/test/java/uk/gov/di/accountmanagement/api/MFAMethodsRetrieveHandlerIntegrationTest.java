@@ -250,7 +250,7 @@ class MFAMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("principalId", testInternalSubject));
 
         assertEquals(404, response.getStatusCode());
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
     }
 
     @Test
@@ -264,6 +264,6 @@ class MFAMethodsRetrieveHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
                         Map.of("principalId", "invalid-principal"));
 
         assertEquals(401, response.getStatusCode());
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
     }
 }
