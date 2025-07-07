@@ -27,6 +27,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import org.apache.http.client.utils.URIBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,12 +42,10 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -77,8 +76,6 @@ import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.LOGIN;
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.NONE;
 import static java.lang.String.format;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -376,14 +373,20 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToLoginUriForAccountManagementClient() {
-            setupForAuthJourney();
-            registerClient(
-                    AM_CLIENT_ID,
-                    "am-client-name",
-                    List.of("openid", "am"),
-                    ClientType.WEB,
-                    false,
-                    false);
+            clientStore
+                    .createClient()
+                    .withClientId(AM_CLIENT_ID)
+                    .withScopes(List.of("openid", "am"))
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .saveToDynamo();
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -519,7 +522,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
+        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             orchSessionExtension.updateSession(
@@ -575,7 +578,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
+        void shouldRedirectToLoginUriWhenUserHasPreviousSession() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
@@ -621,8 +624,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity()
-                throws Exception {
+        void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
@@ -667,8 +669,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void
-                shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
-                        throws Exception {
+                shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors() {
             setupForAuthJourney();
             String sessionId = givenAnExistingSession();
             registerUser();
@@ -720,7 +721,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
+        void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
@@ -768,7 +769,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
+        void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
@@ -818,7 +819,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
+        void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
             registerUser();
@@ -1059,15 +1060,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldCallAuthorizeAsDocAppClient(String uiLocales)
                 throws JOSEException, ParseException {
             setupForDocAppJourney();
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
-                    ClientType.APP,
-                    false,
-                    false);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
+
             var signedJWT = createSignedJWT(uiLocales);
             var queryStringParameters =
                     new HashMap<>(
@@ -1170,13 +1163,16 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         private void setupForDocAppJourney() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    List.of("openid", "doc-checking-app"),
-                    ClientType.APP,
-                    false,
-                    false);
+            clientStore
+                    .createClient()
+                    .withClientId(CLIENT_ID)
+                    .withScopes(List.of("openid", "doc-checking-app"))
+                    .withClientType(ClientType.APP)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
@@ -1222,8 +1218,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void
                 shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
+            clientStore
+                    .createClient()
+                    .withClientId(CLIENT_ID)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withJarValidationRequired(true)
+                    .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
@@ -1249,8 +1254,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void
                 shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true, false);
+            clientStore
+                    .createClient()
+                    .withClientId(CLIENT_ID)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withJarValidationRequired(true)
+                    .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
@@ -1275,11 +1289,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnBadRequestUnsupportedResponseMode() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
+            setupForAuthJourney();
             var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
             queryParams.put("response_mode", "form_post");
 
@@ -1296,11 +1306,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnBadRequestWhenUnsupportedChannelIsSentInRequest() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
-
+            setupForAuthJourney();
             var queryParams = constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm");
             queryParams.put("channel", "invalid-channel");
 
@@ -1323,17 +1329,32 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class MaxAge {
+        @BeforeEach
+        void setupWithMaxAgeEnabled() {
+            clientStore
+                    .createClient()
+                    .withClientId(CLIENT_ID)
+                    .withMaxAgeEnabled(true)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .saveToDynamo();
+            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            txmaAuditQueue.clear();
+        }
+
         @Test
-        void shouldUpdateOrchSessionWhenMaxAgeHasExpired() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+        void shouldUpdateOrchSessionWhenMaxAgeHasExpired() {
             var previousSessionId = givenAnExistingSession();
             orchSessionExtension.addSession(
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
             assertTrue(previousSession.isPresent());
@@ -1363,8 +1384,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestForNegativeMaxAge() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1372,8 +1391,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
-            txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
             assertTrue(previousSession.isPresent());
@@ -1404,7 +1421,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestForNegativeMaxAgeInRequestObject() throws JOSEException {
-            setupForAuthJourney();
             SignedJWT signedJWT = createSignedJWT("", CLAIMS, List.of("openid"), -100);
 
             Map<String, String> requestParams =
@@ -1443,8 +1459,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     class PKCE {
         @Test
         void shouldRedirectToFrontendWhenCodeChallengeIsNotProvided() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            setupForAuthJourney();
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1533,8 +1548,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Test
         void shouldReturnInvalidRequestWhenCodeChallengeMethodIsExpectedAndIsMissing()
                 throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            setupForAuthJourney();
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1619,8 +1633,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestWhenCodeChallengeMethodIsInvalid() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            setupForAuthJourney();
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1717,8 +1730,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToFrontendWhenCodeChallengeAndMethodAreValid() throws Exception {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
+            setupForAuthJourney();
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1824,15 +1836,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestWhenCodeChallengeIsMissingAndPKCEEnforced() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    singletonList("openid"),
-                    ClientType.WEB,
-                    false,
-                    true,
-                    emptyList(),
-                    true);
+            setupForAuthJourneyWithPKCEEnforced();
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -1872,7 +1876,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldReturnInvalidRequestWhenCodeChallengeIsMissingInRequestObjectAndPKCEEnforced()
-                throws JOSEException, ParseException {
+                throws JOSEException {
             setupForAuthJourneyWithPKCEEnforced();
 
             SignedJWT signedJWT =
@@ -1910,15 +1914,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         private void setupForAuthJourneyWithPKCEEnforced() {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    singletonList("openid"),
-                    ClientType.WEB,
-                    false,
-                    false,
-                    List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
-                    true);
+            clientStore
+                    .createClient()
+                    .withClientId(CLIENT_ID)
+                    .withClientLoCs(
+                            List.of(
+                                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                    LevelOfConfidence.HMRC200.getValue()))
+                    .withClaims(
+                            List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withPkceEnforced(true)
+                    .saveToDynamo();
             handler = new AuthorisationHandler(configuration, redisConnectionService);
             txmaAuditQueue.clear();
         }
@@ -1926,9 +1932,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class LoginHint {
+        @BeforeEach
+        void setup() {
+            setupForAuthJourney();
+        }
+
         @Test
         void shouldRedirectToFrontendWhenValidLoginHintProvidedInRequestObject() throws Exception {
-            setupForAuthJourney();
             SignedJWT signedJWT =
                     createSignedJWT("", CLAIMS, List.of("openid"), TEST_EMAIL_ADDRESS);
 
@@ -2012,8 +2022,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Test
         void shouldRedirectToFrontendWithoutLoginHintWhenValidLoginHintProvidedInQueryParams() {
-            registerClient(
-                    CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false, true);
             var previousClientSessionId = "a-previous-client-session";
             var previousSessionId =
                     givenAnExistingSessionWithClientSession(previousClientSessionId);
@@ -2158,15 +2166,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setupForAuthJourney() {
-        registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("openid"),
-                ClientType.WEB,
-                false,
-                false,
-                List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()),
-                false);
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientLoCs(
+                        List.of(
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.HMRC200.getValue()))
+                .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                .saveToDynamo();
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
@@ -2178,7 +2186,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return sessionId;
     }
 
-    private String givenAnExistingSession() throws Json.JsonException {
+    private String givenAnExistingSession() {
         var sessionId = IdGenerator.generate();
         orchSessionExtension.addSession(new OrchSessionItem(sessionId));
         return sessionId;
@@ -2190,55 +2198,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void registerUser() {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
-    }
-
-    private void registerClient(
-            String clientId,
-            String clientName,
-            List<String> scopes,
-            ClientType clientType,
-            boolean jarValidationRequired,
-            boolean maxAgeEnabled,
-            List<String> claimsSupported,
-            boolean pkceEnforced) {
-        clientStore.registerClient(
-                clientId,
-                clientName,
-                singletonList(RP_REDIRECT_URI.toString()),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
-                scopes,
-                Base64.getMimeEncoder().encodeToString(RP_KEY_PAIR.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                clientType,
-                claimsSupported,
-                jarValidationRequired,
-                List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()),
-                maxAgeEnabled,
-                pkceEnforced);
-    }
-
-    private void registerClient(
-            String clientId,
-            String clientName,
-            List<String> scopes,
-            ClientType clientType,
-            boolean jarValidationRequired,
-            boolean maxAgeEnabled) {
-        registerClient(
-                clientId,
-                clientName,
-                scopes,
-                clientType,
-                jarValidationRequired,
-                maxAgeEnabled,
-                emptyList(),
-                false);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
