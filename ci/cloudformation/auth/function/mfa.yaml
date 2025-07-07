@@ -52,14 +52,18 @@ Resources:
               lockoutDuration,
             ]
           REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TEST_CLIENTS_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/test_clients_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          SUPPORT_REAUTH_SIGNOUT_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              supportReauthSignoutEnabled,
+            ]
+          TEST_CLIENTS_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              testClientsEnabled,
+            ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
