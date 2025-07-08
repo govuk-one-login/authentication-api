@@ -182,7 +182,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
@@ -314,7 +313,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         makeRequest(
@@ -474,7 +472,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
@@ -566,7 +563,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
@@ -622,7 +618,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
 
         var response =
                 makeRequest(
