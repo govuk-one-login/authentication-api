@@ -124,31 +124,16 @@ public class DocAppAuthorisationService {
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
-        var valueFromRedis =
-                Optional.ofNullable(redisConnectionService.getValue(prefixedSessionId));
-        if (valueFromRedis.isEmpty()) {
-            LOG.info("No Doc Checking App state found in Redis");
-            return false;
-        }
-
-        State storedState;
-        try {
-            storedState = objectMapper.readValue(valueFromRedis.get(), State.class);
-        } catch (JsonException e) {
-            LOG.info("Error when deserializing state from redis");
-            return false;
-        }
-
-        // Here we have to deserialise the state and get the value before we can compare the state
-        // values, as the serialised state value is surrounded by double quotes
         var valueFromDynamo =
-                stateStorageService.getState(prefixedSessionId).map(StateItem::getState);
-        LOG.info(
-                "Is state from redis equal to state from dynamo? {}",
-                valueFromDynamo.isPresent()
-                        && storedState.getValue().equals(valueFromDynamo.get()));
+                stateStorageService
+                        .getState(STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No Doc Checking App state found in Dynamo");
+            return false;
+        }
 
+        State storedState = new State(valueFromDynamo.get());
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,

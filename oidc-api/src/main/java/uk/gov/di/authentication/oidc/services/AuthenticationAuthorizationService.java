@@ -8,30 +8,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.orchestration.shared.entity.StateItem;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class AuthenticationAuthorizationService {
     private static final Logger LOG =
             LogManager.getLogger(AuthenticationAuthorizationService.class);
-    private final RedisConnectionService redisConnectionService;
     private final StateStorageService stateStorageService;
     public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
-    private final Json objectMapper = SerializationService.getInstance();
     public static final List<ErrorObject> reauthErrors =
             List.of(OIDCError.LOGIN_REQUIRED, OAuth2Error.ACCESS_DENIED);
 
-    public AuthenticationAuthorizationService(
-            RedisConnectionService redisConnectionService,
-            StateStorageService stateStorageService) {
-        this.redisConnectionService = redisConnectionService;
+    public AuthenticationAuthorizationService(StateStorageService stateStorageService) {
         this.stateStorageService = stateStorageService;
     }
 
@@ -70,31 +60,16 @@ public class AuthenticationAuthorizationService {
     }
 
     private boolean isStateValid(String sessionId, String responseState) {
-        var prefixedSessionId = AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId;
-        var valueFromRedis =
-                Optional.ofNullable(redisConnectionService.getValue(prefixedSessionId));
-        if (valueFromRedis.isEmpty()) {
-            LOG.info("No Authentication state found in Redis");
-            return false;
-        }
-
-        State storedState;
-        try {
-            storedState = objectMapper.readValue(valueFromRedis.get(), State.class);
-        } catch (JsonException e) {
-            LOG.info("Error when deserializing state from redis");
-            return false;
-        }
-
-        // Here we have to deserialise the state and get the value before we can compare the state
-        // values, as the serialised state value is surrounded by double quotes
         var valueFromDynamo =
-                stateStorageService.getState(prefixedSessionId).map(StateItem::getState);
-        LOG.info(
-                "Is state from redis equal to state from dynamo? {}",
-                valueFromDynamo.isPresent()
-                        && storedState.getValue().equals(valueFromDynamo.get()));
+                stateStorageService
+                        .getState(AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No Authentication state found in Dynamo");
+            return false;
+        }
 
+        State storedState = new State(valueFromDynamo.get());
         LOG.info(
                 "Response state: {} and Stored state: {}. Are equal: {}",
                 responseState,

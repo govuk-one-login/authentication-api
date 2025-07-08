@@ -30,7 +30,6 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
-import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
@@ -94,6 +93,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.testsupport.helpers.OrchAuthCodeAssertionHelper.assertOrchAuthCodeSaved;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -910,9 +910,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupMaxAgeSession() throws Json.JsonException {
             redis.addStateToRedis(
-                    AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
-                    ORCH_TO_AUTH_STATE,
-                    SESSION_ID);
+                    AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
+            stateStorageExtension.storeState(
+                    AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID,
+                    ORCH_TO_AUTH_STATE.getValue());
             setUpClientSession();
             orchSessionExtension.addSession(
                     new OrchSessionItem(SESSION_ID)
@@ -931,9 +932,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                             .getEpochSecond());
             PREVIOUS_CLIENT_SESSIONS.forEach(orchSession::addClientSession);
             redis.addStateToRedis(
-                    AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
-                    ORCH_TO_AUTH_STATE,
-                    SESSION_ID);
+                    AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
+            stateStorageExtension.storeState(
+                    AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID,
+                    ORCH_TO_AUTH_STATE.getValue());
             setUpClientSession();
             orchSessionExtension.addSession(orchSession);
         }
@@ -1160,10 +1162,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setupSession() throws Json.JsonException {
-        redis.addStateToRedis(
-                AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
-                ORCH_TO_AUTH_STATE,
-                SESSION_ID);
+        redis.addStateToRedis(AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
+        stateStorageExtension.storeState(
+                AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID, ORCH_TO_AUTH_STATE.getValue());
         setUpClientSession();
         orchSessionExtension.addSession(new OrchSessionItem(SESSION_ID));
     }

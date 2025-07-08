@@ -50,6 +50,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
@@ -104,6 +105,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
+
+    @RegisterExtension
+    public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -179,6 +183,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
                 makeRequest(
@@ -310,6 +315,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         makeRequest(
                 Optional.empty(),
@@ -469,6 +475,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
                 makeRequest(
@@ -560,6 +567,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addStateToRedis(ORCHESTRATION_STATE, SESSION_ID);
+        stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
 
         var response =
                 makeRequest(
