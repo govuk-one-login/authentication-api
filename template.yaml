@@ -4452,7 +4452,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-ipv-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -4460,7 +4460,7 @@ Resources:
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
-      Threshold: 10
+      Threshold: 20
 
   IpvCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
