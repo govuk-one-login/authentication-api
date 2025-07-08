@@ -1,0 +1,5 @@
+{
+  "authenticationResult": "SUCCESS",
+  "redirectUri": "https://example.com/callback",
+  "mfaRequired": true
+}

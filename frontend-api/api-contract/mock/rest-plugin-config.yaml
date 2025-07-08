@@ -1,0 +1,182 @@
+plugin: rest
+resources:
+  - path: "/start"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: start-success.json
+  - path: "/login"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: login-success.json
+  - path: "/login-mfa"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: login-success-mfa.json
+  - path: "/login-locked"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: login-account-locked.json
+  - path: "/login-invalid-credentials"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 401
+      file: login-error-invalid-credentials.json
+  - path: "/user-exists"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: user-exists-true.json
+  - path: "/user-exists-no-mfa"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: user-exists-no-mfa.json
+  - path: "/user-does-not-exist"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: user-does-not-exist.json
+  - path: "/user-exists-error"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: user-exists-error.json
+  - path: "/signup"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: signup-success.json
+  - path: "/signup-error-missing-email"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: signup-error-missing-email.json
+  - path: "/signup-error-user-exists"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 409
+      file: signup-error-user-exists.json
+  - path: "/mfa"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: mfa-both-methods.json
+  - path: "/mfa-sms-only"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: mfa-sms-only.json
+  - path: "/mfa-app-only"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: mfa-app-only.json
+  - path: "/mfa-invalid-session"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 401
+      file: mfa-error-invalid-session.json
+  - path: "/verify-code"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: verify-code-success.json
+  - path: "/verify-code-no-redirect"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: verify-code-success-no-redirect.json
+  - path: "/verify-code-invalid"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: verify-code-error-invalid.json
+  - path: "/verify-code-expired"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: verify-code-error-expired.json
+  - path: "/reset-password-request"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: reset-password-request-success.json
+  - path: "/reset-password-request-user-not-found"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: reset-password-request-error-user-not-found.json
+  - path: "/reset-password"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: reset-password-success.json
+  - path: "/reset-password-invalid-code"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: reset-password-error-invalid-code.json
+  - path: "/reset-password-expired-code"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: reset-password-error-expired-code.json
+  - path: "/account-recovery"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: account-recovery-success.json
+  - path: "/account-recovery-user-not-found"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: account-recovery-error-user-not-found.json
+  - path: "/update-profile"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 200
+      file: update-profile-success.json
+  - path: "/update-profile-invalid-session"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 401
+      file: update-profile-error-invalid-session.json
+  - path: "/update-profile-incorrect-password"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      file: update-profile-error-incorrect-password.json

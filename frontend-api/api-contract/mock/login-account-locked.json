@@ -1,0 +1,8 @@
+{
+  "authenticationResult": "FAILED",
+  "lockoutInformation": {
+    "isLocked": true,
+    "remainingAttempts": 0,
+    "lockoutTime": "2023-12-31T23:59:59Z"
+  }
+}

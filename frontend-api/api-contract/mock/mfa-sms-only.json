@@ -1,0 +1,10 @@
+{
+  "mfaMethods": [
+    {
+      "id": "sms-123",
+      "type": "SMS",
+      "priority": 1,
+      "lastVerified": "2023-01-15T14:30:00Z"
+    }
+  ]
+}
