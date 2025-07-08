@@ -142,6 +142,7 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
+  UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -6021,6 +6022,36 @@ Resources:
             Action:
               - kms:Decrypt
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+
+  GlobalLogoutTxmaQueueConsumePolicy:
+    Condition: UseGlobalLogoutTxmaQueue
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowConsumeFromGlobalLogoutTxmaQueue
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                globalLogoutQueueArn,
+              ]
+          - Sid: AllowDecryptGlobalLogoutTxmaQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                globalLogoutQueueKmsKeyArn,
+              ]
 
   GlobalLogoutTestQueueConsumePolicy:
     Condition: IsDevOrBuild
