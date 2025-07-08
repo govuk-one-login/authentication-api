@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
@@ -17,19 +16,11 @@ public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
     private final ConfigurationService configurationService;
 
-    private final Json objectMapper;
-
     private RedisConnectionService redis;
     private RedisClient client;
 
-    public RedisExtension(Json objectMapper, ConfigurationService configurationService) {
-        this.objectMapper = objectMapper;
+    public RedisExtension(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-    }
-
-    public void addStateToRedis(String prefix, State state, String sessionId)
-            throws Json.JsonException {
-        redis.saveWithExpiry(prefix + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
     public void addClientSessionAndStateToRedis(State state, String clientSessionId) {

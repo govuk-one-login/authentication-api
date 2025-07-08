@@ -909,8 +909,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         private void setupMaxAgeSession() throws Json.JsonException {
-            redis.addStateToRedis(
-                    AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
             stateStorageExtension.storeState(
                     AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID,
                     ORCH_TO_AUTH_STATE.getValue());
@@ -931,8 +929,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                             .toInstant()
                                             .getEpochSecond());
             PREVIOUS_CLIENT_SESSIONS.forEach(orchSession::addClientSession);
-            redis.addStateToRedis(
-                    AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
             stateStorageExtension.storeState(
                     AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID,
                     ORCH_TO_AUTH_STATE.getValue());
@@ -1162,7 +1158,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setupSession() throws Json.JsonException {
-        redis.addStateToRedis(AUTHENTICATION_STATE_STORAGE_PREFIX, ORCH_TO_AUTH_STATE, SESSION_ID);
         stateStorageExtension.storeState(
                 AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID, ORCH_TO_AUTH_STATE.getValue());
         setUpClientSession();
