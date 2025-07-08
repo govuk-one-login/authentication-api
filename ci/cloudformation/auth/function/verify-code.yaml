@@ -8,6 +8,9 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      DeploymentPreference:
+        Type: !Ref LambdaDeploymentPreference
+        Role: !GetAtt CodeDeployServiceRoleC.Arn
       Handler: uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest
       Environment:
         Variables:
