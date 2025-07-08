@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -45,7 +46,6 @@ import java.util.Optional;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
-import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -75,6 +75,7 @@ public class MFAMethodsCreateHandler
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final MfaMethodsMigrationService mfaMethodsMigrationService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -94,6 +95,7 @@ public class MFAMethodsCreateHandler
                         configurationService.getSqsEndpointUri());
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
@@ -103,7 +105,8 @@ public class MFAMethodsCreateHandler
             CodeStorageService codeStorageService,
             AuditService auditService,
             AwsSqsClient sqsClient,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            MfaMethodsMigrationService mfaMethodsMigrationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
@@ -111,6 +114,7 @@ public class MFAMethodsCreateHandler
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.mfaMethodsMigrationService = mfaMethodsMigrationService;
     }
 
     @Override
@@ -216,7 +220,8 @@ public class MFAMethodsCreateHandler
         MfaMethodCreateRequest mfaMethodCreateRequest = maybeValidRequest.getSuccess();
 
         var maybeMigrationErrorResponse =
-                migrateMfaCredentialsForUserIfRequired(userProfile, mfaMethodsService, LOG);
+                mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                        userProfile, LOG, input, mfaMethodCreateRequest.mfaMethod().method());
 
         if (maybeMigrationErrorResponse.isPresent()) {
             return maybeMigrationErrorResponse.get();

@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -84,6 +85,19 @@ class AccountDeletionServiceTest {
     public void setup() {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any())).thenReturn(new byte[0xaa]);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (clientSessionIdHelperMockedStatic != null) {
+            clientSessionIdHelperMockedStatic.close();
+        }
+        if (persistentSessionIdHelperMockedStatic != null) {
+            persistentSessionIdHelperMockedStatic.close();
+        }
+        if (ipAddressHelperMockedStatic != null) {
+            ipAddressHelperMockedStatic.close();
+        }
     }
 
     @Test

@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -47,7 +48,6 @@ import java.util.Map;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
-import static uk.gov.di.accountmanagement.helpers.MfaMethodsMigrationHelper.migrateMfaCredentialsForUserIfRequired;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -72,6 +72,7 @@ public class MFAMethodsPutHandler
     private final MFAMethodsService mfaMethodsService;
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
+    private final MfaMethodsMigrationService mfaMethodsMigrationService;
     private final AuditService auditService;
 
     private final Json serialisationService = SerializationService.getInstance();
@@ -92,6 +93,7 @@ public class MFAMethodsPutHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
+        this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -100,12 +102,14 @@ public class MFAMethodsPutHandler
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AwsSqsClient sqsClient,
-            AuditService auditService) {
+            AuditService auditService,
+            MfaMethodsMigrationService mfaMethodsMigrationService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
         this.codeStorageService = codeStorageService;
         this.sqsClient = sqsClient;
+        this.mfaMethodsMigrationService = mfaMethodsMigrationService;
         this.auditService = auditService;
     }
 
@@ -149,8 +153,13 @@ public class MFAMethodsPutHandler
                 .toString()
                 .equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
             var maybeMigrationErrorResponse =
-                    migrateMfaCredentialsForUserIfRequired(
-                            putRequest.userProfile, mfaMethodsService, LOG);
+                    mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            putRequest.userProfile,
+                            LOG,
+                            input,
+                            putRequest.request.mfaMethod().method());
+
+            putRequest.request.mfaMethod();
 
             if (maybeMigrationErrorResponse.isPresent()) {
                 return maybeMigrationErrorResponse.get();

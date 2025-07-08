@@ -2,6 +2,7 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -38,7 +40,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
-import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
@@ -54,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -99,6 +101,9 @@ class MFAMethodsCreateHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final MfaMethodsMigrationService mfaMethodsMigrationService =
+            mock(MfaMethodsMigrationService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final UserProfile userProfile =
             new UserProfile()
@@ -109,8 +114,6 @@ class MFAMethodsCreateHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private final Json objectMapper = SerializationService.getInstance();
-
-    private final AuditService auditService = mock(AuditService.class);
 
     private MFAMethodsCreateHandler handler;
 
@@ -189,14 +192,16 @@ class MFAMethodsCreateHandlerTest {
                         codeStorageService,
                         auditService,
                         sqsClient,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        mfaMethodsMigrationService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.of(userProfile));
         reset(mfaMethodsService);
-        when(mfaMethodsService.migrateMfaCredentialsForUser(any())).thenReturn(Optional.empty());
+        when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
+                .thenReturn(Result.success(false));
     }
 
     @Nested
@@ -383,27 +388,24 @@ class MFAMethodsCreateHandlerTest {
 
         private static Stream<Arguments> migrationFailureReasonsToExpectedResponses() {
             return Stream.of(
-                    Arguments.of(
-                            MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER,
-                            ErrorResponse.ERROR_1056,
-                            404),
-                    Arguments.of(
-                            MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS,
-                            ErrorResponse.ERROR_1064,
-                            500));
+                    Arguments.of(ErrorResponse.ERROR_1056, 404),
+                    Arguments.of(ErrorResponse.ERROR_1064, 500));
         }
 
         @ParameterizedTest
         @MethodSource("migrationFailureReasonsToExpectedResponses")
         void shouldReturnRelevantStatusCodeWhenMigrationFailed(
-                MfaMigrationFailureReason reason,
-                ErrorResponse expectedError,
-                int expectedStatusCode) {
+                ErrorResponse expectedError, int expectedStatusCode) {
             when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                     .thenReturn(Optional.of(userProfile));
-            when(mfaMethodsService.migrateMfaCredentialsForUser(any()))
-                    .thenReturn(Optional.of(reason));
             when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
+            var expectedGateway =
+                    new APIGatewayProxyResponseEvent()
+                            .withStatusCode(expectedStatusCode)
+                            .withBody(expectedError.toString() + expectedError.getMessage());
+            when(mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                            any(), any(), any(), any()))
+                    .thenReturn(Optional.of(expectedGateway));
 
             var event =
                     generateApiGatewayEvent(

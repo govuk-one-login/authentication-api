@@ -576,27 +576,27 @@ public class MFAMethodsService {
                 databaseUpdateResult, updateTypeIdentifier, defaultMethod);
     }
 
-    public Optional<MfaMigrationFailureReason> migrateMfaCredentialsForUser(
+    public Result<MfaMigrationFailureReason, Boolean> migrateMfaCredentialsForUser(
             UserProfile userProfile) {
         // Bail if user credentials don't exist
         Optional<UserCredentials> maybeUserCredentials =
                 Optional.ofNullable(
                         persistentService.getUserCredentialsFromEmail(userProfile.getEmail()));
         if (maybeUserCredentials.isEmpty()) {
-            return Optional.of(MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER);
+            return Result.failure(MfaMigrationFailureReason.NO_CREDENTIALS_FOUND_FOR_USER);
         }
         UserCredentials userCredentials = maybeUserCredentials.get();
 
         // Bail if already migrated
         if (userProfile.isMfaMethodsMigrated()) {
-            return Optional.of(MfaMigrationFailureReason.ALREADY_MIGRATED);
+            return Result.failure(MfaMigrationFailureReason.ALREADY_MIGRATED);
         }
 
         var nonMigratedRetrieveResult =
                 getMfaMethodForNonMigratedUser(userProfile, userCredentials, false);
 
         if (nonMigratedRetrieveResult.isFailure()) {
-            return Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+            return Result.failure(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         }
 
         var maybeNonMigratedMfaMethod = nonMigratedRetrieveResult.getSuccess();
@@ -604,21 +604,31 @@ public class MFAMethodsService {
         // Bail if no MFA methods to migrate
         if (maybeNonMigratedMfaMethod.isEmpty()) {
             persistentService.setMfaMethodsMigrated(userProfile.getEmail(), true);
-            return Optional.empty();
+            return Result.success(false);
         }
+
+        var mfaMethod = maybeNonMigratedMfaMethod.get();
+        boolean hadPartial = !mfaMethod.isMethodVerified();
 
         var nonMigratedMfaMethod = maybeNonMigratedMfaMethod.get();
 
         return switch (MFAMethodType.valueOf(nonMigratedMfaMethod.getMfaMethodType())) {
-            case SMS -> migrateSmsToNewFormat(
-                    userProfile.getEmail(),
-                    nonMigratedMfaMethod.getDestination(),
-                    nonMigratedMfaMethod.getMfaIdentifier());
-            case AUTH_APP -> migrateAuthAppToNewFormat(
-                    userProfile.getEmail(),
-                    nonMigratedMfaMethod.getCredentialValue(),
-                    nonMigratedMfaMethod.getMfaIdentifier());
-            default -> Optional.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
+            case SMS -> {
+                migrateSmsToNewFormat(
+                        userProfile.getEmail(),
+                        nonMigratedMfaMethod.getDestination(),
+                        nonMigratedMfaMethod.getMfaIdentifier());
+                yield Result.success(hadPartial);
+            }
+            case AUTH_APP -> {
+                migrateAuthAppToNewFormat(
+                        userProfile.getEmail(),
+                        nonMigratedMfaMethod.getCredentialValue(),
+                        nonMigratedMfaMethod.getMfaIdentifier());
+                yield Result.success(hadPartial);
+            }
+            default -> Result.failure(
+                    MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS);
         };
     }
 
@@ -631,14 +641,11 @@ public class MFAMethodsService {
         return Optional.empty();
     }
 
-    private Optional<MfaMigrationFailureReason> migrateSmsToNewFormat(
-            String email, String phoneNumber, String identifier) {
+    private void migrateSmsToNewFormat(String email, String phoneNumber, String identifier) {
         persistentService.overwriteMfaMethodToCredentialsAndDeleteProfilePhoneNumberForUser(
                 email,
                 MFAMethod.smsMfaMethod(
                         true, true, phoneNumber, PriorityIdentifier.DEFAULT, identifier));
-
-        return Optional.empty();
     }
 
     private Result<String, String> getPhoneNumberWithCountryCode(String phoneNumber) {
