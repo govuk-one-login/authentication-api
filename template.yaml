@@ -2387,6 +2387,20 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  GlobalLogoutTxmaQueueEventSource:
+    Condition: UseGlobalLogoutTxmaQueue
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          globalLogoutQueueArn,
+        ]
+      FunctionName: !GetAtt GlobalLogoutFunction.Arn
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
   GlobalLogoutTestQueue:
     Condition: IsDevOrBuild
     Type: AWS::SQS::Queue
