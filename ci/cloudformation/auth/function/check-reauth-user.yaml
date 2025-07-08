@@ -11,10 +11,7 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest
       Environment:
         Variables:
-          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/authentication_attempts_service_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
@@ -49,10 +46,12 @@ Resources:
               reauthEnterEmailCountTtl,
             ]
           REDIS_KEY: "session"
-          SUPPORT_REAUTH_SIGNOUT_ENABLED: !Sub
-            - "{{resolve:ssm:/deploy/${env}/support_reauth_signout_enabled}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          SUPPORT_REAUTH_SIGNOUT_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              supportReauthSignoutEnabled,
+            ]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
