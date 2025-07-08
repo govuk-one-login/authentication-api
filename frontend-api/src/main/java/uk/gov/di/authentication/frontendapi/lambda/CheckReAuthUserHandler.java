@@ -146,7 +146,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             request.email(),
                                             maybeUserProfileOfUserSuppliedEmail));
         } catch (AccountLockedException e) {
-            LOG.error("Account is unable to reauth due to too many failed attempts.");
+            LOG.warn("Account is unable to reauth due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
     }
