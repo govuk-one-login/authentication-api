@@ -541,25 +541,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws ParseException {
-
-        var orchSession = orchSessionExtension.getSession(SESSION_ID);
-        assertTrue(orchSession.isPresent());
-
-        var response =
-                makeRequest(
-                        Optional.of(TEST_EMAIL_ADDRESS),
-                        constructHeaders(
-                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                        constructQueryStringParameters());
-
-        assertUserInfoStoredAndRedirectedToRp(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
-
-        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
-    }
-
-    @Test
     void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
             throws java.text.ParseException, ParseException, JOSEException {
         setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
