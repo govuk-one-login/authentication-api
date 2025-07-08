@@ -17,6 +17,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
@@ -72,6 +73,7 @@ public class DocAppCallbackHandler
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
+    private final DynamoDocAppCriService dynamoDocAppCriService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final OrchAuthCodeService orchAuthCodeService;
@@ -91,6 +93,7 @@ public class DocAppCallbackHandler
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
+            DynamoDocAppCriService dynamoDocAppCriService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
@@ -103,6 +106,7 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
+        this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
@@ -127,6 +131,7 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
@@ -152,6 +157,7 @@ public class DocAppCallbackHandler
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
@@ -286,6 +292,8 @@ public class DocAppCallbackHandler
                         user);
                 LOG.info("Adding DocAppCredential to dynamo");
                 dynamoDocAppService.addDocAppCredential(
+                        orchClientSession.getDocAppSubjectId(), credential);
+                dynamoDocAppCriService.addDocAppCredential(
                         orchClientSession.getDocAppSubjectId(), credential);
 
                 LOG.info("Redirecting to frontend");

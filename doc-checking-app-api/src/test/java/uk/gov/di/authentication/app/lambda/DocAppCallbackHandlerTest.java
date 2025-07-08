@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppCriService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
@@ -90,6 +91,8 @@ class DocAppCallbackHandlerTest {
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
+    private final DynamoDocAppCriService dynamoDocAppCriService =
+            mock(DynamoDocAppCriService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
@@ -154,6 +157,7 @@ class DocAppCallbackHandlerTest {
                         orchClientSessionService,
                         auditService,
                         dynamoDocAppService,
+                        dynamoDocAppCriService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
@@ -213,6 +217,9 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verify(dynamoDocAppService)
+                .addDocAppCredential(
+                        PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
+        verify(dynamoDocAppCriService)
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
         verify(cloudwatchMetricsService)

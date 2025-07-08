@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
@@ -20,9 +21,11 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
         implements AfterEachCallback {
 
     public static final String CREDENTIAL_REGISTRY_TABLE = "local-doc-app-credential";
+    public static final String DOC_APP_CREDENTIAL_TABLE = "local-Orch-Doc-App-Credential";
     public static final String SUBJECT_ID_FIELD = "SubjectID";
 
     private DynamoDocAppService dynamoDocAppService;
+    private DynamoDocAppCriService dynamoDocAppCriService;
     private final ConfigurationService configuration;
 
     public DocumentAppCredentialStoreExtension(long ttl) {
@@ -38,6 +41,7 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
                     }
                 };
         dynamoDocAppService = new DynamoDocAppService(configuration);
+        dynamoDocAppCriService = new DynamoDocAppCriService(configuration);
     }
 
     @Override
@@ -45,17 +49,22 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
         super.beforeAll(context);
 
         dynamoDocAppService = new DynamoDocAppService(configuration);
+        dynamoDocAppCriService = new DynamoDocAppCriService(configuration);
     }
 
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
         clearDynamoTable(dynamoDB, CREDENTIAL_REGISTRY_TABLE, SUBJECT_ID_FIELD);
+        clearDynamoTable(dynamoDB, DOC_APP_CREDENTIAL_TABLE, SUBJECT_ID_FIELD);
     }
 
     @Override
     protected void createTables() {
         if (!tableExists(CREDENTIAL_REGISTRY_TABLE)) {
             createCredentialRegistryTable(CREDENTIAL_REGISTRY_TABLE);
+        }
+        if (!tableExists(DOC_APP_CREDENTIAL_TABLE)) {
+            createCredentialRegistryTable(DOC_APP_CREDENTIAL_TABLE);
         }
     }
 
@@ -84,5 +93,9 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
 
     public Optional<DocAppCredential> getCredential(String subjectId) {
         return dynamoDocAppService.getDocAppCredential(subjectId);
+    }
+
+    public Optional<DocAppCredential> getOrchCredential(String subjectId) {
+        return dynamoDocAppCriService.getDocAppCredential(subjectId);
     }
 }

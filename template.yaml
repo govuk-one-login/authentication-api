@@ -1665,6 +1665,8 @@ Resources:
       Policies:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref DocAppCredentialTableWriteAccessPolicy
+        - !Ref OrchDocAppCredentialTableReadAccessPolicy
+        - !Ref OrchDocAppCredentialTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
@@ -5565,6 +5567,56 @@ Resources:
                 !Ref Environment,
                 docAppCredentialTableKeyArn,
               ]
+
+  OrchDocAppCredentialTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchDocAppCredentialTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !GetAtt DocAppCredentialTable.Arn
+          - Sid: AllowOrchDocAppCredentialTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt DocAppCredentialTableEncryptionKey.Arn
+
+  OrchDocAppCredentialTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchDocAppCredentialTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !GetAtt DocAppCredentialTable.Arn
+          - Sid: AllowOrchDocAppCredentialTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt DocAppCredentialTableEncryptionKey.Arn
 
   UserProfileTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
