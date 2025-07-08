@@ -4,16 +4,18 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.services.AuditService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class CommonTestAuditHelpers {
     public static void containsMetadataPair(
             AuditContext capturedObject, String field, String value) {
         capturedObject
                 .getMetadataItemByKey(field)
-                .ifPresent(
+                .ifPresentOrElse(
                         actualMetadataPairForMfaMethod ->
                                 assertEquals(
                                         AuditService.MetadataPair.pair(field, value),
-                                        actualMetadataPairForMfaMethod));
+                                        actualMetadataPairForMfaMethod),
+                        () -> fail("Missing metadata key: " + field));
     }
 }
