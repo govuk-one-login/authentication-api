@@ -24,7 +24,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -265,19 +264,15 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var creationDate = LocalDateTime.now();
         var idTokenHint = signedJWT.serialize();
         setupOrchClientSession(clientSessionId, authRequestParams, idTokenHint, creationDate);
-        clientStore.registerClient(
-                "client-id",
-                "client-name",
-                singletonList("http://localhost:8080/redirect"),
-                singletonList("client-1"),
-                singletonList("openid"),
-                "public-key",
-                singletonList(REDIRECT_URL),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
 
+        clientStore
+                .createClient()
+                .withClientId("client-id")
+                .withClientName("client-name")
+                .withRedirectUris(singletonList("http://localhost:8080/redirect"))
+                .withContacts(singletonList("client-1"))
+                .withPostLogoutRedirectUris(singletonList(REDIRECT_URL))
+                .saveToDynamo();
         return signedJWT;
     }
 

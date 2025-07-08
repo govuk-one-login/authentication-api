@@ -25,7 +25,6 @@ import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -39,13 +38,11 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import java.net.URI;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -214,18 +211,13 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void registerClient(Scope scope) {
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                CLIENT_NAME,
-                singletonList(REDIRECT_URI.toString()),
-                singletonList(EMAIL),
-                scope.toStringList(),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID.getValue())
+                .withClientName(CLIENT_NAME)
+                .withRedirectUris(List.of(REDIRECT_URI.toString()))
+                .withScopes(scope.toStringList())
+                .saveToDynamo();
     }
 
     private void setupOrchSession() {

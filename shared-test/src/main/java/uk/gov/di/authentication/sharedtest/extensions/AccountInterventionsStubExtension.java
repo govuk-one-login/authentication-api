@@ -91,39 +91,6 @@ public class AccountInterventionsStubExtension extends HttpStubExtension {
                         + "}");
     }
 
-    public void initWithoutOptionalFields(
-            String userId,
-            boolean blocked,
-            boolean suspended,
-            boolean reproveIdentity,
-            boolean resetPassword) {
-        register(
-                "/v1/ais/" + userId,
-                200,
-                "application/json",
-                "{"
-                        + "  \"intervention\": {"
-                        + "    \"updatedAt\": 1696969322935,"
-                        + "    \"appliedAt\": 1696869005821,"
-                        + "    \"sentAt\": 1696869003456,"
-                        + "    \"description\": \"EXAMPLE_DESCRIPTION\""
-                        + "  },"
-                        + "  \"state\": {"
-                        + "    \"blocked\": "
-                        + blocked
-                        + ","
-                        + "    \"suspended\": "
-                        + suspended
-                        + ","
-                        + "    \"reproveIdentity\": "
-                        + reproveIdentity
-                        + ","
-                        + "    \"resetPassword\": "
-                        + resetPassword
-                        + "  }"
-                        + "}");
-    }
-
     public void initWithErrorResponse(String userId) {
         register("/v1/ais/" + userId, 500, "application/json", "{}");
     }

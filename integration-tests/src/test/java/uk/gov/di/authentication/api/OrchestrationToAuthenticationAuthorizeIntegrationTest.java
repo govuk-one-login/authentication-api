@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -41,7 +40,6 @@ import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.EMAIL;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.PHONE;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -387,21 +385,14 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     }
 
     private void registerClient(List<String> scopes, boolean identitySupported) {
-        clientStore.registerClient(
-                CLIENT_ID,
-                CLIENT_NAME,
-                singletonList(RP_REDIRECT_URI),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
-                scopes,
-                Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
-                singletonList("https://localhost/post-redirect-logout"),
-                "https://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                RP_SECTOR_URI,
-                SubjectType.PUBLIC.toString(),
-                ClientType.WEB,
-                ES256.getName(),
-                identitySupported);
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName(CLIENT_NAME)
+                .withScopes(scopes)
+                .withSectorIdentifierUri(RP_SECTOR_URI)
+                .withIdentityVerificationSupported(identitySupported)
+                .saveToDynamo();
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {

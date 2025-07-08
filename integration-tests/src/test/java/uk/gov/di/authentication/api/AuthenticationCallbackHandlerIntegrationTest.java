@@ -34,14 +34,12 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubEx
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -176,7 +174,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     void authSetup() throws Json.JsonException {
         setupTestWithDefaultEnvVars();
         setupSession();
-        setupClientRegWithoutIdentityVerificationSupported();
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
     }
@@ -320,13 +318,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void shouldRedirectToIPVWhenIdentityRequired()
-            throws ParseException, JOSEException, java.text.ParseException, Json.JsonException {
-        setupTestWithDefaultEnvVars();
-        setupSession();
-        setupClientRegWithIdentityVerificationSupported();
-        accountInterventionApiStub.initWithAccountStatus(
-                SUBJECT_ID.getValue(), false, false, false, false);
-
+            throws ParseException, JOSEException, java.text.ParseException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -339,19 +332,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertInformationStoredForNoSessionService(response);
     }
 
-    void accountInterventionSetup() throws Json.JsonException {
-        setupSession();
-        setupClientRegWithoutIdentityVerificationSupported();
-    }
-
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsNoIntervention()
-            throws Json.JsonException, ParseException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
-        accountInterventionApiStub.initWithAccountStatus(
-                SUBJECT_ID.getValue(), false, false, false, false);
-
+    void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws ParseException {
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
 
@@ -369,10 +351,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
-            throws Json.JsonException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked() {
+
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), true, false, false, false);
 
@@ -391,10 +371,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction()
-            throws Json.JsonException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction() {
+
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, false);
 
@@ -413,10 +391,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
-            throws Json.JsonException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword() {
+
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
@@ -435,10 +411,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity()
-            throws Json.JsonException, ParseException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() throws ParseException {
+
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, false);
 
@@ -460,10 +434,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void
-            shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
-                    throws Json.JsonException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity() {
+
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
 
@@ -484,9 +456,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException, ParseException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+                    throws ParseException {
+
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
@@ -510,9 +481,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException, ParseException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+                    throws ParseException {
+
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
@@ -534,9 +504,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
+    void byDefaultDoesNotThrowWhenAisReturns500() {
+
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
@@ -553,8 +522,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
-        accountInterventionSetup();
+    void doesThrowWhenAisReturns500AndAbortFlagIsOn() {
         setupTestWithAbortOnAisErrorResponseFlagOn();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
@@ -573,39 +541,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToRpWhenFieldsAreMissingInResponse()
-            throws Json.JsonException, ParseException {
-        accountInterventionSetup();
-        setupTestWithDefaultEnvVars();
-        accountInterventionApiStub.initWithoutOptionalFields(
-                SUBJECT_ID.getValue(), false, false, false, false);
-
-        var orchSession = orchSessionExtension.getSession(SESSION_ID);
-        assertTrue(orchSession.isPresent());
-
-        var response =
-                makeRequest(
-                        Optional.of(TEST_EMAIL_ADDRESS),
-                        constructHeaders(
-                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                        constructQueryStringParameters());
-
-        assertUserInfoStoredAndRedirectedToRp(response);
-        assertOrchSessionIsUpdatedWithUserInfoClaims();
-
-        assertOrchAuthCodeSaved(orchAuthCodeExtension, response);
-    }
-
-    void accountInterventionSetupWithIdentity() throws Json.JsonException {
-        setupSession();
-        setupClientRegWithIdentityVerificationSupported();
-    }
-
-    @Test
     void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
-            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+            throws java.text.ParseException, ParseException, JOSEException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, false, false, false);
 
@@ -624,10 +562,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusWithIdentityIsBlocked()
-            throws Json.JsonException {
-        setupTestWithDefaultEnvVars();
-        accountInterventionSetupWithIdentity();
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusWithIdentityIsBlocked() {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), true, false, false, false);
 
@@ -646,12 +582,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
-            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+    void shouldRedirectToIpvWhenAccountStatusIsSuspendedNoAction()
+            throws java.text.ParseException, ParseException, JOSEException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         accountInterventionApiStub.initWithAccountStatus(
-                SUBJECT_ID.getValue(), false, false, false, false);
+                SUBJECT_ID.getValue(), false, true, false, false);
 
         var orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
@@ -669,10 +604,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void
-            shouldLogoutAndRedirectToSuspendedPageWhenAccountWithIdentityStatusIsSuspendedResetPassword()
-                    throws Json.JsonException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountWithIdentityStatusIsSuspendedResetPassword() {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
 
@@ -692,9 +625,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @Test
     void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
-            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+            throws java.text.ParseException, ParseException, JOSEException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, false);
 
@@ -715,12 +647,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException,
-                            java.text.ParseException,
-                            ParseException,
-                            JOSEException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+                    throws java.text.ParseException, ParseException, JOSEException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, false, true);
@@ -742,12 +670,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                    throws Json.JsonException,
-                            java.text.ParseException,
-                            ParseException,
-                            JOSEException {
-        accountInterventionSetupWithIdentity();
-        setupTestWithDefaultEnvVars();
+                    throws java.text.ParseException, ParseException, JOSEException {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE, false);
         accountInterventionApiStub.initWithAccountStatus(
                 SUBJECT_ID.getValue(), false, true, true, true);
@@ -767,8 +691,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Test
-    void doesThrowWhenAisReturns500AndAbortFlagIsOnWithIdentity() throws Json.JsonException {
-        accountInterventionSetupWithIdentity();
+    void doesThrowWhenAisReturns500AndAbortFlagIsOnWithIdentity() {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, true);
         setupTestWithAbortOnAisErrorResponseFlagOn();
         accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
 
@@ -942,7 +866,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupPreviousClientsAndPreviousClientSessions() {
             PREVIOUS_CLIENTS_FOR_CLIENT_SESSION.forEach(
-                    AuthenticationCallbackHandlerIntegrationTest.this::setupClientRegWithClientId);
+                    AuthenticationCallbackHandlerIntegrationTest.this
+                            ::setupClientRegByClientIdWithoutIdentityVerification);
             for (String clientSessionId : PREVIOUS_CLIENT_SESSIONS) {
                 var index = PREVIOUS_CLIENT_SESSIONS.indexOf(clientSessionId);
                 setupClientSessionWithId(
@@ -1083,7 +1008,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     private void assertAuthTimeHasNotBeenSetInOrchSessionTable() {
         Optional<OrchSessionItem> orchSession = orchSessionExtension.getSession(SESSION_ID);
         assertTrue(orchSession.isPresent());
-        assertEquals(null, orchSession.get().getAuthTime());
+        assertNull(orchSession.get().getAuthTime());
     }
 
     private void assertSessionIsDeleted() {
@@ -1091,48 +1016,18 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertTrue(orchSession.isEmpty());
     }
 
-    private void setupClientRegWithClientId(String clientId) {
-        clientStore.registerClient(
-                clientId,
-                "test-client",
-                singletonList(REDIRECT_URI.toString()),
-                singletonList("contact@example.com"),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.APP,
-                ES256.getName(),
-                false);
+    private void setupClientRegByClientIdWithoutIdentityVerification(String clientId) {
+        setupClientRegByClientIdAndByIdentityVerificationSupported(clientId, false);
     }
 
-    private void setupClientReg(boolean identityVerificationSupported) {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList(REDIRECT_URI.toString()),
-                singletonList("contact@example.com"),
-                singletonList("openid"),
-                null,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "pairwise",
-                ClientType.APP,
-                ES256.getName(),
-                identityVerificationSupported);
-    }
-
-    private void setupClientRegWithIdentityVerificationSupported() {
-        setupClientReg(true);
-    }
-
-    private void setupClientRegWithoutIdentityVerificationSupported() {
-        setupClientReg(false);
+    private void setupClientRegByClientIdAndByIdentityVerificationSupported(
+            String clientId, boolean identityVerificationSupported) {
+        clientStore
+                .createClient()
+                .withClientId(clientId)
+                .withSubjectType("pairwise")
+                .withIdentityVerificationSupported(identityVerificationSupported)
+                .saveToDynamo();
     }
 
     private void setupTestWithDefaultEnvVars() {

@@ -30,8 +30,6 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENT_ID = "client-id-1";
-    private static final String VALID_PUBLIC_CERT =
-            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
     @BeforeEach
     void setup() {
@@ -41,18 +39,13 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldUpdateClientSuccessfully() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withRedirectUris(singletonList("http://localhost:1000/redirect"))
+                .withContacts(singletonList("test-client@test.com"))
+                .saveToDynamo();
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
@@ -147,23 +140,12 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldRetainMaxAgeEnabledWhenUpdating() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                false,
-                List.of(),
-                true,
-                false);
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withMaxAgeEnabled(true)
+                .saveToDynamo();
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";
         updateRequest.setClientName(expectedClientName);
@@ -191,23 +173,12 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @Test
     void shouldRetainPKCEEnforcedWhenUpdating() throws Json.JsonException {
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList("http://localhost:1000/redirect"),
-                singletonList("test-client@test.com"),
-                singletonList("openid"),
-                VALID_PUBLIC_CERT,
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                false,
-                List.of(),
-                false,
-                true);
+        clientStore
+                .createClient()
+                .withClientId(CLIENT_ID)
+                .withClientName("The test client")
+                .withPkceEnforced(true)
+                .saveToDynamo();
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";

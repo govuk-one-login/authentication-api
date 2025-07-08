@@ -14,11 +14,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
-import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -34,10 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -53,7 +49,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "client-name";
-    private static final String CLIENT_SECTOR = "https://test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
@@ -71,6 +66,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setup() {
+        clientStore.createClient().withClientId(CLIENT_ID.getValue()).saveToDynamo();
         handler = new ProcessingIdentityHandler(TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
@@ -79,7 +75,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     void shouldReturnStatusOfCOMPLETEDWhenEntryInDatabaseAndJWTIsPresent()
             throws Json.JsonException {
         setupSession(false);
-        setupClient();
         var signedCredential = SignedCredentialHelper.generateCredential();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", SALT);
@@ -110,7 +105,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     void shouldReturnStatusOfPROCESSINGWhenEntryInDatabaseButNoJWTIsPresent()
             throws Json.JsonException {
         setupSession(false);
-        setupClient();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", SALT);
         identityStore.saveIdentityClaims(
@@ -144,7 +138,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     void shouldReturnStatusOfERRORWhenEntryIsNotInDatabaseOnSecondAttempt()
             throws Json.JsonException {
         setupSession(true);
-        setupClient();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -170,7 +163,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     void shouldReturnStatusOfNO_ENTRYWhenEntryIsNotInDatabaseOnFirstAttempt()
             throws Json.JsonException {
         setupSession(false);
-        setupClient();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);
@@ -219,23 +211,5 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
             session.incrementProcessingIdentityAttempts();
             orchSessionExtension.updateSession(session);
         }
-    }
-
-    private void setupClient() {
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                "test-client",
-                singletonList(URI.create("http://localhost/redirect").toString()),
-                singletonList(TEST_EMAIL_ADDRESS),
-                singletonList("openid"),
-                "",
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                CLIENT_SECTOR,
-                "pairwise",
-                ClientType.WEB,
-                ES256.getName(),
-                true);
     }
 }
