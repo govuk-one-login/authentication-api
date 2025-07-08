@@ -18,6 +18,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
@@ -138,10 +139,11 @@ public class AuditAssertionsHelper {
             AuditContext capturedObject, String field, String value) {
         capturedObject
                 .getMetadataItemByKey(field)
-                .ifPresent(
+                .ifPresentOrElse(
                         actualMetadataPairForMfaMethod ->
                                 assertEquals(
                                         AuditService.MetadataPair.pair(field, value),
-                                        actualMetadataPairForMfaMethod));
+                                        actualMetadataPairForMfaMethod),
+                        () -> fail("Missing metadata key: " + field));
     }
 }
