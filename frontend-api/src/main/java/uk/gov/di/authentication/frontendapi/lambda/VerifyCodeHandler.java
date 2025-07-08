@@ -621,9 +621,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         AuditableEvent auditableEvent;
         switch (errorResponse) {
-            case TOO_MANY_INVALID_MFA_OTPS_ENTERED:
-            case TOO_MANY_INVALID_PW_RESET_CODES_ENTERED:
-            case TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
+            case TOO_MANY_INVALID_MFA_OTPS_ENTERED,
+                    TOO_MANY_INVALID_PW_RESET_CODES_ENTERED,
+                    TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED:
                 if (!configurationService.supportReauthSignoutEnabled()
                         || journeyType != JourneyType.REAUTHENTICATION) {
                     blockCodeForSession(authSession, codeBlockedKeyPrefix);
