@@ -1,0 +1,1131 @@
+openapi: 3.0.3
+info:
+  title: Frontend API
+  description: |
+    The Frontend API provides an interface for frontend applications to interact with the Authentication service.
+    
+    This API allows frontend applications to:
+    - Start Authentication journeys
+    - Perform Subject sign-up and login
+    - Handle MFA verification
+    - Manage Subject profiles
+    - Process Credential resets
+    - Handle account recovery
+    - Interact with Identity Proofing and Verification services
+  version: 1.0.0
+  contact:
+    name: Authentication Team
+servers:
+  - url: https://{environment}-frontend-api.auth.service.gov.uk
+    description: Authentication Frontend API
+    variables:
+      environment:
+        default: build
+        enum:
+          - build
+          - staging
+          - integration
+          - production
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message
+    
+    StartRequest:
+      type: object
+      required:
+        - clientId
+        - redirectUri
+      properties:
+        clientId:
+          type: string
+          description: OAuth Client ID
+        redirectUri:
+          type: string
+          description: URI to redirect to after authentication
+        state:
+          type: string
+          description: OAuth state parameter
+        responseType:
+          type: string
+          description: OAuth response type
+        scope:
+          type: string
+          description: OAuth scope
+    
+    StartResponse:
+      type: object
+      required:
+        - sessionId
+        - clientName
+      properties:
+        sessionId:
+          type: string
+          description: Session identifier
+        clientName:
+          type: string
+          description: Name of the Client application
+        clientSessionId:
+          type: string
+          description: Client Session identifier
+    
+    CheckUserExistsRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+        sessionId:
+          type: string
+          description: Session identifier
+    
+    CheckUserExistsResponse:
+      type: object
+      required:
+        - exists
+      properties:
+        exists:
+          type: boolean
+          description: Whether the Subject exists
+        mfaMethodVerified:
+          type: boolean
+          description: Whether the Subject has verified an MFA method
+    
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subject's email address
+        password:
+          type: string
+          description: Subject's Credential
+        sessionId:
+          type: string
+          description: Session identifier
+    
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subject's email address
+        password:
+          type: string
+          description: Subject's Credential
+        sessionId:
+          type: string
+          description: Session identifier
+    
+    LoginResponse:
+      type: object
+      required:
+        - authenticationResult
+      properties:
+        authenticationResult:
+          type: string
+          enum: [SUCCESS, ADDITIONAL_VERIFICATION_REQUIRED, FAILED]
+          description: Result of the authentication attempt
+        redirectUri:
+          type: string
+          description: URI to redirect to after successful authentication
+        mfaRequired:
+          type: boolean
+          description: Whether MFA is required
+        lockoutInformation:
+          type: object
+          properties:
+            isLocked:
+              type: boolean
+              description: Whether the account is locked
+            remainingAttempts:
+              type: integer
+              description: Number of remaining login attempts
+            lockoutTime:
+              type: string
+              format: date-time
+              description: Time when the lockout will expire
+    
+    MfaRequest:
+      type: object
+      required:
+        - sessionId
+      properties:
+        sessionId:
+          type: string
+          description: Session identifier
+    
+    VerifyCodeRequest:
+      type: object
+      required:
+        - code
+        - sessionId
+      properties:
+        code:
+          type: string
+          description: Verification code
+        sessionId:
+          type: string
+          description: Session identifier
+        mfaMethodType:
+          type: string
+          enum: [SMS, APP]
+          description: Type of MFA method
+    
+    ResetPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subject's email address
+        clientSessionId:
+          type: string
+          description: Client Session identifier
+    
+    ResetPasswordCompletionRequest:
+      type: object
+      required:
+        - code
+        - password
+        - email
+      properties:
+        code:
+          type: string
+          description: Reset code
+        password:
+          type: string
+          description: New Credential
+        email:
+          type: string
+          format: email
+          description: Subject's email address
+    
+    AccountRecoveryRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subject's email address
+        sessionId:
+          type: string
+          description: Session identifier
+    
+    AccountRecoveryResponse:
+      type: object
+      required:
+        - recoveryUrl
+      properties:
+        recoveryUrl:
+          type: string
+          description: URL for account recovery
+    
+    UpdateProfileRequest:
+      type: object
+      required:
+        - sessionId
+        - updateType
+      properties:
+        sessionId:
+          type: string
+          description: Session identifier
+        updateType:
+          type: string
+          enum: [EMAIL, PHONE_NUMBER, PASSWORD]
+          description: Type of profile update
+        email:
+          type: string
+          format: email
+          description: New email address for Subject
+        phoneNumber:
+          type: string
+          description: New phone number
+        password:
+          type: string
+          description: New Credential
+        currentPassword:
+          type: string
+          description: Current Credential for verification
+
+paths:
+  /start:
+    post:
+      summary: Start an Authentication journey
+      description: Initiates a new Authentication journey for a Client application
+      operationId: start
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRequest'
+      responses:
+        '200':
+          description: Successfully started authentication journey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    sessionId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    clientName: "GOV.UK One Login"
+                    clientSessionId: "client-session-12345"
+                withoutClientSessionId:
+                  summary: Response without client session ID
+                  value:
+                    sessionId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    clientName: "GOV.UK One Login"
+                identityRequired:
+                  summary: Response for Client requiring Identity verification
+                  value:
+                    sessionId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    clientName: "GOV.UK One Login"
+                    clientSessionId: "client-session-12345"
+                    identityRequired: true
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingClientId:
+                  summary: Missing Client ID
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                invalidClientId:
+                  summary: Invalid Client ID
+                  value:
+                    code: 1015
+                    message: "Client not found"
+                invalidRedirectUri:
+                  summary: Invalid redirect URI
+                  value:
+                    code: 1016
+                    message: "Invalid Redirect URI"
+                missingRedirectUri:
+                  summary: Missing redirect URI
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /user-exists:
+    post:
+      summary: Check if a Subject exists
+      description: Checks if a Subject with the given email exists
+      operationId: checkUserExists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckUserExistsRequest'
+      responses:
+        '200':
+          description: Successfully checked user existence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckUserExistsResponse'
+              examples:
+                userExists:
+                  summary: User exists with verified MFA
+                  value:
+                    exists: true
+                    mfaMethodVerified: true
+                userExistsNoMfa:
+                  summary: User exists without verified MFA
+                  value:
+                    exists: true
+                    mfaMethodVerified: false
+                userDoesNotExist:
+                  summary: User does not exist
+                  value:
+                    exists: false
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /signup:
+    post:
+      summary: Sign up a new Subject
+      description: Creates a new Subject account
+      operationId: signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: Successfully created user account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the signup was successful
+              examples:
+                success:
+                  summary: Successful signup
+                  value:
+                    success: true
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                missingPassword:
+                  summary: Missing password
+                  value:
+                    code: 1005
+                    message: "Password is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                weakPassword:
+                  summary: Password too weak
+                  value:
+                    code: 1006
+                    message: "Password must be at least 8 characters and not longer than 256 characters"
+        '409':
+          description: Subject already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                userExists:
+                  summary: User already exists
+                  value:
+                    code: 1009
+                    message: "An account with this email address already exists"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /login:
+    post:
+      summary: Interactive Login with Credentials
+      description: Authenticates a Subject with email and Credential
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  summary: Successful login
+                  value:
+                    authenticationResult: "SUCCESS"
+                    redirectUri: "https://example.com/callback"
+                    mfaRequired: false
+                mfaRequired:
+                  summary: Login successful but MFA required
+                  value:
+                    authenticationResult: "ADDITIONAL_VERIFICATION_REQUIRED"
+                    mfaRequired: true
+                accountLocked:
+                  summary: Login with account lockout information
+                  value:
+                    authenticationResult: "FAILED"
+                    lockoutInformation:
+                      isLocked: true
+                      remainingAttempts: 0
+                      lockoutTime: "2023-12-31T23:59:59Z"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                missingPassword:
+                  summary: Missing password
+                  value:
+                    code: 1005
+                    message: "Password is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                missingSessionId:
+                  summary: Missing session ID
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCredentials:
+                  summary: Invalid credentials
+                  value:
+                    code: 1008
+                    message: "Invalid login credentials"
+                accountLocked:
+                  summary: Account locked
+                  value:
+                    code: 1045
+                    message: "User account is temporarily locked from sign in"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /mfa:
+    post:
+      summary: Get MFA options
+      description: Retrieves available MFA methods for the Subject
+      operationId: getMfaOptions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaRequest'
+      responses:
+        '200':
+          description: Successfully retrieved MFA options
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mfaMethods:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: MFA method identifier
+                        type:
+                          type: string
+                          enum: [SMS, APP]
+                          description: Type of MFA method
+                        priority:
+                          type: integer
+                          description: Priority of the MFA method
+                        lastVerified:
+                          type: string
+                          format: date-time
+                          description: When the MFA method was last verified
+              examples:
+                bothMethods:
+                  summary: Both SMS and APP MFA methods available
+                  value:
+                    mfaMethods: [
+                      {
+                        "id": "sms-123",
+                        "type": "SMS",
+                        "priority": 1,
+                        "lastVerified": "2023-01-15T14:30:00Z"
+                      },
+                      {
+                        "id": "app-456",
+                        "type": "APP",
+                        "priority": 2,
+                        "lastVerified": "2023-02-20T09:15:00Z"
+                      }
+                    ]
+                smsOnly:
+                  summary: Only SMS MFA method available
+                  value:
+                    mfaMethods: [
+                      {
+                        "id": "sms-123",
+                        "type": "SMS",
+                        "priority": 1,
+                        "lastVerified": "2023-01-15T14:30:00Z"
+                      }
+                    ]
+                appOnly:
+                  summary: Only APP MFA method available
+                  value:
+                    mfaMethods: [
+                      {
+                        "id": "app-456",
+                        "type": "APP",
+                        "priority": 1,
+                        "lastVerified": "2023-02-20T09:15:00Z"
+                      }
+                    ]
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingSessionId:
+                  summary: Missing session ID
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                invalidSessionId:
+                  summary: Invalid session ID
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidSession:
+                  summary: Invalid session
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                notAuthenticated:
+                  summary: Not authenticated
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /verify-code:
+    post:
+      summary: Verify MFA code
+      description: Verifies a code for MFA
+      operationId: verifyCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCodeRequest'
+      responses:
+        '200':
+          description: Successfully verified code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the verification was successful
+                  redirectUri:
+                    type: string
+                    description: URI to redirect to after successful verification
+              examples:
+                success:
+                  summary: Successful verification with redirect
+                  value:
+                    success: true
+                    redirectUri: "https://example.com/callback"
+                successNoRedirect:
+                  summary: Successful verification without redirect
+                  value:
+                    success: true
+        '400':
+          description: Invalid request or code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingCode:
+                  summary: Missing verification code
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                missingSessionId:
+                  summary: Missing session ID
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                invalidCode:
+                  summary: Invalid verification code
+                  value:
+                    code: 1035
+                    message: "User entered invalid mfa code"
+                codeExpired:
+                  summary: Verification code expired
+                  value:
+                    code: 1027
+                    message: "User has entered invalid mfa code too many times"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidSession:
+                  summary: Invalid session
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                notAuthenticated:
+                  summary: Not authenticated
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /reset-password-request:
+    post:
+      summary: Request Credential reset
+      description: Initiates a Credential reset process
+      operationId: resetPasswordRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Successfully initiated password reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the request was successful
+              examples:
+                success:
+                  summary: Successful password reset request
+                  value:
+                    success: true
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                userNotFound:
+                  summary: User not found
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /reset-password:
+    post:
+      summary: Complete Credential reset
+      description: Completes the Credential reset process with a code and new Credential
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordCompletionRequest'
+      responses:
+        '200':
+          description: Successfully reset password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the password reset was successful
+              examples:
+                success:
+                  summary: Successful password reset
+                  value:
+                    success: true
+        '400':
+          description: Invalid request or code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingCode:
+                  summary: Missing reset code
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                missingPassword:
+                  summary: Missing password
+                  value:
+                    code: 1005
+                    message: "Password is empty"
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                invalidCode:
+                  summary: Invalid reset code
+                  value:
+                    code: 1021
+                    message: "User entered invalid password reset code"
+                codeExpired:
+                  summary: Reset code expired
+                  value:
+                    code: 1039
+                    message: "User entered invalid password reset code too many times"
+                weakPassword:
+                  summary: Password too weak
+                  value:
+                    code: 1006
+                    message: "Password must be at least 8 characters and not longer than 256 characters"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /account-recovery:
+    post:
+      summary: Initiate account recovery
+      description: Starts the account recovery process
+      operationId: accountRecovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRecoveryRequest'
+      responses:
+        '200':
+          description: Successfully initiated account recovery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountRecoveryResponse'
+              examples:
+                success:
+                  summary: Successful account recovery
+                  value:
+                    recoveryUrl: "https://example.com/recovery?token=abc123"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingEmail:
+                  summary: Missing email address
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                userNotFound:
+                  summary: User not found
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+  
+  /update-profile:
+    post:
+      summary: Update Subject profile
+      description: Updates Subject profile information
+      operationId: updateProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Successfully updated profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the update was successful
+              examples:
+                success:
+                  summary: Successful profile update
+                  value:
+                    success: true
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingSessionId:
+                  summary: Missing session ID
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                missingUpdateType:
+                  summary: Missing update type
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                invalidUpdateType:
+                  summary: Invalid update type
+                  value:
+                    code: 1013
+                    message: "Update profile type is invalid"
+                missingEmail:
+                  summary: Missing email for EMAIL update
+                  value:
+                    code: 1003
+                    message: "Email address is empty"
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                missingPhoneNumber:
+                  summary: Missing phone number for PHONE_NUMBER update
+                  value:
+                    code: 1011
+                    message: "Phone number is missing"
+                invalidPhoneNumber:
+                  summary: Invalid phone number format
+                  value:
+                    code: 1012
+                    message: "Phone number is invalid"
+                missingPassword:
+                  summary: Missing password for PASSWORD update
+                  value:
+                    code: 1005
+                    message: "Password is empty"
+                missingCurrentPassword:
+                  summary: Missing current password for PASSWORD update
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                weakPassword:
+                  summary: Password too weak
+                  value:
+                    code: 1006
+                    message: "Password must be at least 8 characters and not longer than 256 characters"
+                incorrectCurrentPassword:
+                  summary: Incorrect current password
+                  value:
+                    code: 1008
+                    message: "Invalid login credentials"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidSession:
+                  summary: Invalid session
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+                notAuthenticated:
+                  summary: Not authenticated
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                internalServerError:
+                  summary: Generic server error
+                  value:
+                    code: 1000
+                    message: "Session-Id is missing or invalid"
