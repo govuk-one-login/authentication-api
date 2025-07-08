@@ -9,6 +9,8 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED = "migration-succeeded";
     String AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL = "had-partial";
     String AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT = "attemptNoFailedAt";
+    String AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE = "notification-type";
+    String AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED = "MFACodeEntered";
 
     AuditableEvent parseFromName(String name);
 }
