@@ -48,6 +48,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -55,14 +56,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.accountmanagement.lambda.CommonTestAuditHelpers.containsMetadataPair;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
@@ -98,6 +103,7 @@ class MFAMethodsPutHandlerTest {
                     TEST_PUBLIC_SUBJECT, "test.account.gov.uk", TEST_SALT);
     private static final String MFA_IDENTIFIER = "some-mfa-identifier";
     public static final String TEST_OTP = "123456";
+    public static final String INCORRECT_OTP = "111111";
 
     private MFAMethodsPutHandler handler;
 
@@ -369,6 +375,86 @@ class MFAMethodsPutHandlerTest {
                 defaultMfaMethod.getMfaMethodType());
     }
 
+    @Test
+    void shouldRaiseAuthCodeVerifiedAuditEvent() {
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestSmsMfaDetail(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest =
+                event.withBody(updateSmsRequest(DEFAULT_SMS_METHOD.getDestination(), TEST_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(DEFAULT_SMS_METHOD),
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
+
+        handler.handleRequest(eventWithUpdateRequest, context);
+
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService).submitAuditEvent(eq(AUTH_CODE_VERIFIED), captor.capture());
+        AuditContext capturedObject = captor.getValue();
+
+        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, TEST_OTP);
+        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                DEFAULT_SMS_METHOD.getMfaMethodType());
+        containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, "MFA_SMS");
+    }
+
+    @Test
+    void shouldNotRaiseAuthCodeVerifiedAuditEvent() {
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestSmsMfaDetail(
+                                DEFAULT_SMS_METHOD.getDestination(), INCORRECT_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest =
+                event.withBody(
+                        updateSmsRequest(DEFAULT_SMS_METHOD.getDestination(), INCORRECT_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, INCORRECT_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(false);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(DEFAULT_SMS_METHOD),
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
+
+        handler.handleRequest(eventWithUpdateRequest, context);
+
+        verify(auditService, never()).submitAuditEvent(eq(AUTH_CODE_VERIFIED), any());
+    }
+
     private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
         return Stream.of(
                 Arguments.of(MfaMigrationFailureReason.UNEXPECTED_ERROR_RETRIEVING_METHODS, 500),
@@ -464,7 +550,9 @@ class MFAMethodsPutHandlerTest {
             verify(sqsClient, never()).send(any());
         }
 
-        verifyNoInteractions(auditService);
+        verify(auditService, never())
+                .submitAuditEvent(
+                        not(eq(AUTH_CODE_VERIFIED)), any(), any(AuditService.MetadataPair[].class));
     }
 
     private static Stream<Arguments> updateFailureReasonsToExpectedResponses() {
@@ -531,7 +619,9 @@ class MFAMethodsPutHandlerTest {
                 expectedError -> assertThat(result, hasJsonBody(expectedError)));
 
         verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
+        verify(auditService, never())
+                .submitAuditEvent(
+                        not(eq(AUTH_CODE_VERIFIED)), any(), any(AuditService.MetadataPair[].class));
     }
 
     @Test
@@ -602,7 +692,9 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
 
         verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
+        verify(auditService, never())
+                .submitAuditEvent(
+                        not(eq(AUTH_CODE_VERIFIED)), any(), any(AuditService.MetadataPair[].class));
     }
 
     @Test

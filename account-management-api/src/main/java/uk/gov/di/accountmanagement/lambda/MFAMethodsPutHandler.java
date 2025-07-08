@@ -18,7 +18,6 @@ import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -45,18 +44,24 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
@@ -147,12 +152,15 @@ public class MFAMethodsPutHandler
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
 
-        if (putRequest
-                .request()
-                .mfaMethod()
-                .priorityIdentifier()
-                .toString()
-                .equalsIgnoreCase(PriorityIdentifier.DEFAULT.name())) {
+        boolean isDefaultMethod =
+                putRequest
+                        .request()
+                        .mfaMethod()
+                        .priorityIdentifier()
+                        .toString()
+                        .equalsIgnoreCase(DEFAULT.name());
+
+        if (isDefaultMethod) {
             var maybeMigrationErrorResponse =
                     mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
                             putRequest.userProfile,
@@ -164,18 +172,6 @@ public class MFAMethodsPutHandler
 
             if (maybeMigrationErrorResponse.isPresent()) {
                 return maybeMigrationErrorResponse.get();
-            }
-
-            if (putRequest.request.mfaMethod().method()
-                    instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-                boolean isValidOtpCode =
-                        codeStorageService.isValidOtpCode(
-                                putRequest.userProfile.getEmail(),
-                                requestSmsMfaDetail.otp(),
-                                NotificationType.VERIFY_PHONE_NUMBER);
-                if (!isValidOtpCode) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
-                }
             }
         }
 
@@ -190,6 +186,22 @@ public class MFAMethodsPutHandler
         }
 
         var mfaMethodResult = maybeMfaMethodResult.getSuccess();
+
+        if (isDefaultMethod
+                && putRequest.request.mfaMethod().method()
+                        instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            boolean isValidOtpCode =
+                    codeStorageService.isValidOtpCode(
+                            putRequest.userProfile.getEmail(),
+                            requestSmsMfaDetail.otp(),
+                            NotificationType.VERIFY_PHONE_NUMBER);
+            if (!isValidOtpCode) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+            }
+        }
+
+        sendAuditEvent(AUTH_CODE_VERIFIED, input, putRequest, mfaMethodResult.mfaMethod());
+
         var maybeUpdateResult =
                 mfaMethodsService.updateMfaMethod(
                         putRequest.userProfile.getEmail(),
@@ -470,6 +482,37 @@ public class MFAMethodsPutHandler
                                 pair(
                                         AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                         mfaMethod.getPriority().toLowerCase()));
+            }
+
+            if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
+                if (putRequest.request.mfaMethod().method()
+                                instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                        && requestSmsMfaDetail.otp() != null) {
+                    context =
+                            context.withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED,
+                                            requestSmsMfaDetail.otp()));
+                }
+                context =
+                        context.withMetadataItem(
+                                        pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false"))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                                ACCOUNT_MANAGEMENT.name()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                                DEFAULT_SMS_METHOD.getPriority().toLowerCase()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                                DEFAULT_SMS_METHOD.getMfaMethodType()))
+                                .withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                                                "MFA_SMS")); // TODO AUTH_APP?
             }
 
             return Result.success(context);

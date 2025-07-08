@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
@@ -54,6 +55,7 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -265,6 +267,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     CHANGED_AUTHENTICATOR_APP,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -339,6 +355,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     PHONE_NUMBER_UPDATED,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -411,6 +441,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     CHANGED_DEFAULT_MFA,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -476,6 +520,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     CHANGED_DEFAULT_MFA,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -502,6 +560,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThatJson(response.getBody()).node("code").isIntegralNumber().isEqualTo("1082");
 
             assertNoNotificationsReceived(notificationsQueue);
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
@@ -612,9 +684,18 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_SWITCH_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> switchCompletedAttributes = new HashMap<>();
             switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
@@ -681,9 +762,18 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_SWITCH_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> switchCompletedAttributes = new HashMap<>();
             switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
@@ -769,7 +859,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertTrue(retrievedMethod.isMethodVerified()),
                     () -> assertEquals(secondPhoneNumber, retrievedMethod.getDestination()));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_CODE_VERIFIED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -781,6 +872,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             migrationAttemptedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
             eventExpectations.put(
                     AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttemptedAttributes);
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
@@ -844,6 +943,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 assertEquals(
                         retrievedMethodAfterFirstRequest.getCredentialValue(),
                         retrievedMethod.getCredentialValue());
+
+                List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+                Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+                Map<String, String> codeVerifiedAttributes = new HashMap<>();
+                codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+                codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+                codeVerifiedAttributes.put(
+                        EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+                codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+                eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+                verifyAuditEvents(expectedEvents, eventExpectations);
             }
         }
     }
@@ -891,6 +1004,20 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     backupSms, getMethodWithPriority(retrievedMfaMethods, BACKUP));
 
             assertNoNotificationsReceived(notificationsQueue);
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(
+                    EXTENSIONS_MFA_METHOD, DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
