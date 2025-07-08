@@ -227,8 +227,7 @@ public class MFAMethodsPutHandler
                         putRequest.request);
 
         if (maybeUpdateResult.isFailure()) {
-            return handleUpdateMfaFailureReason(
-                    maybeUpdateResult.getFailure(), input, putRequest.userProfile);
+            return handleUpdateMfaFailureReason(maybeUpdateResult.getFailure(), input, putRequest);
         }
 
         var updateResult = maybeUpdateResult.getSuccess();
@@ -263,7 +262,7 @@ public class MFAMethodsPutHandler
                         sendAuditEvent(
                                 AUTH_MFA_METHOD_SWITCH_COMPLETED,
                                 input,
-                                putRequest.userProfile,
+                                putRequest,
                                 postUpdateDefaultMfaMethod);
 
                 if (maybeAuditEventStatus.isFailure()) {
@@ -283,7 +282,9 @@ public class MFAMethodsPutHandler
     }
 
     private APIGatewayProxyResponseEvent handleUpdateMfaFailureReason(
-            MfaUpdateFailure failure, APIGatewayProxyRequestEvent input, UserProfile userProfile) {
+            MfaUpdateFailure failure,
+            APIGatewayProxyRequestEvent input,
+            ValidPutRequest putRequest) {
         var failureReason = failure.failureReason();
         var updateType = failure.updateTypeIdentifier();
         var mfaMethodToBeUpdated = failure.mfaMethodToUpdate();
@@ -302,7 +303,7 @@ public class MFAMethodsPutHandler
                             sendAuditEvent(
                                     AUTH_MFA_METHOD_SWITCH_FAILED,
                                     input,
-                                    userProfile,
+                                    putRequest,
                                     mfaMethodToBeUpdated);
                         }
                         yield generateApiGatewayProxyErrorResponse(
@@ -442,9 +443,9 @@ public class MFAMethodsPutHandler
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
             AccountManagementAuditableEvent auditEvent,
             APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
+            ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
-        var maybeAuditContext = buildAuditContext(auditEvent, input, userProfile, mfaMethod);
+        var maybeAuditContext = buildAuditContext(auditEvent, input, putRequest, mfaMethod);
 
         if (maybeAuditContext.isFailure()) {
             return Result.failure(
@@ -460,7 +461,7 @@ public class MFAMethodsPutHandler
     private Result<ErrorResponse, AuditContext> buildAuditContext(
             AccountManagementAuditableEvent auditEvent,
             APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
+            ValidPutRequest putRequest,
             MFAMethod mfaMethod) {
         try {
             var phoneNumber =
@@ -486,11 +487,11 @@ public class MFAMethodsPutHandler
                             RequestHeaderHelper.getHeaderValueOrElse(
                                     input.getHeaders(), SESSION_ID_HEADER, ""),
                             ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                            userProfile,
+                                            putRequest.userProfile,
                                             configurationService.getInternalSectorUri(),
                                             authenticationService)
                                     .getValue(),
-                            userProfile.getEmail(),
+                            putRequest.userProfile.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
                             phoneNumber,
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
