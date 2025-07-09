@@ -37,6 +37,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
@@ -826,7 +827,8 @@ class IPVCallbackHandlerTest {
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
                         Optional.of(
-                                new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
+                                new IpvCallbackValidationError(
+                                        errorObject.getCode(), redirectUriErrorMessage)));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -861,7 +863,8 @@ class IPVCallbackHandlerTest {
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
                         Optional.of(
-                                new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
+                                new IpvCallbackValidationError(
+                                        errorObject.getCode(), redirectUriErrorMessage)));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -1058,7 +1061,8 @@ class IPVCallbackHandlerTest {
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
                         Optional.of(
-                                new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
+                                new IpvCallbackValidationError(
+                                        errorObject.getCode(), redirectUriErrorMessage)));
         var intervention =
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         when(accountInterventionService.getAccountIntervention(anyString(), any()))

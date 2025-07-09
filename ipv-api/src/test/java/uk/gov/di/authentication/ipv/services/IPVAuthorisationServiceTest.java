@@ -35,6 +35,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -162,7 +163,7 @@ class IPVAuthorisationServiceTest {
 
         assertThat(
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
-                equalTo(Optional.of(new ErrorObject(errorObject.getCode()))));
+                equalTo(Optional.of(new IpvCallbackValidationError(errorObject.getCode(), null))));
     }
 
     @Test
@@ -171,7 +172,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(Collections.emptyMap(), SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No query parameters present"))));
     }
@@ -185,7 +186,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No state param present in Authorisation response"))));
     }
@@ -199,7 +200,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "No code param present in Authorisation response"))));
     }
@@ -216,7 +217,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "Invalid state param present in Authorisation response"))));
     }
@@ -232,7 +233,7 @@ class IPVAuthorisationServiceTest {
                 authorisationService.validateResponse(responseHeaders, SESSION_ID),
                 equalTo(
                         Optional.of(
-                                new ErrorObject(
+                                new IpvCallbackValidationError(
                                         OAuth2Error.INVALID_REQUEST_CODE,
                                         "Invalid state param present in Authorisation response"))));
     }

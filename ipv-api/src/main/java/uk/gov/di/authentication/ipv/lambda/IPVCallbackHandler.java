@@ -293,7 +293,7 @@ public class IPVCallbackHandler
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
                         authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().errorDescription()),
                         false,
                         clientSessionId,
                         sessionId);
