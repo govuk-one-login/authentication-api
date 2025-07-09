@@ -23,6 +23,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
 import java.net.URI;
@@ -63,6 +64,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     @RegisterExtension
     protected static final OrchClientSessionExtension orchClientSessionExtension =
             new OrchClientSessionExtension();
+
+    @RegisterExtension
+    protected static final StateStorageExtension stateStorageExtension =
+            new StateStorageExtension();
 
     @BeforeEach
     void setup() {
@@ -205,7 +210,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                         List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         orchClientSessionExtension.storeClientSession(orchClientSession);
-        redis.addStateToRedis(STATE, SESSION_ID);
+        stateStorageExtension.storeState("state:" + SESSION_ID, STATE.getValue());
         if (incrementProcessIdentityAttempts) {
             var session = orchSessionExtension.getSession(SESSION_ID).orElseThrow();
             session.incrementProcessingIdentityAttempts();

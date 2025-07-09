@@ -371,7 +371,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         CLIENT_NAME);
         orchClientSession.setDocAppSubjectId(docAppSubjectId.getValue());
         orchClientSessionExtension.storeClientSession(orchClientSession);
-        redis.addStateToRedis(DOC_APP_STATE, SESSION_ID);
         stateStorageExtension.storeState("state:" + SESSION_ID, DOC_APP_STATE.getValue());
         orchSessionExtension.addSession(
                 new OrchSessionItem(SESSION_ID)

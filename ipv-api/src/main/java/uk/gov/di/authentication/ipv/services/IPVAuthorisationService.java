@@ -32,13 +32,9 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.nio.charset.StandardCharsets;
@@ -54,22 +50,17 @@ public class IPVAuthorisationService {
 
     private static final Logger LOG = LogManager.getLogger(IPVAuthorisationService.class);
     private final ConfigurationService configurationService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
     private final StateStorageService stateStorageService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
-    private static final Json objectMapper = SerializationService.getInstance();
 
     public IPVAuthorisationService(
-            ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
         this(
                 configurationService,
-                redisConnectionService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
                 new StateStorageService(configurationService),
@@ -78,13 +69,11 @@ public class IPVAuthorisationService {
 
     public IPVAuthorisationService(
             ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
             StateStorageService stateStorageService,
             NowClock nowClock) {
         this.configurationService = configurationService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
         this.stateStorageService = stateStorageService;
@@ -127,17 +116,7 @@ public class IPVAuthorisationService {
     }
 
     public void storeState(String sessionId, State state) {
-        var prefixedSessionId = STATE_STORAGE_PREFIX + sessionId;
-        try {
-            redisConnectionService.saveWithExpiry(
-                    STATE_STORAGE_PREFIX + sessionId,
-                    objectMapper.writeValueAsString(state),
-                    configurationService.getSessionExpiry());
-        } catch (JsonException e) {
-            LOG.error("Unable to save state to Redis");
-            throw new RuntimeException(e);
-        }
-        stateStorageService.storeState(prefixedSessionId, state.getValue());
+        stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state.getValue());
     }
 
     private boolean isStateValid(String sessionId, String responseState) {

@@ -13,7 +13,16 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
-import uk.gov.di.orchestration.sharedtest.extensions.*;
+import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.RedisExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
 import java.net.URI;
@@ -189,8 +198,7 @@ public class IntegrationTest {
     protected final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
-    protected static final RedisExtension redis =
-            new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
+    protected static final RedisExtension redis = new RedisExtension(TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();

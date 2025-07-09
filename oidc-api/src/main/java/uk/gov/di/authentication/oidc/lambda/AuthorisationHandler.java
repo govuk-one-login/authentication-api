@@ -202,7 +202,6 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
@@ -219,7 +218,7 @@ public class AuthorisationHandler
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService, redis);
+                new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
@@ -232,7 +231,6 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        redis,
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
