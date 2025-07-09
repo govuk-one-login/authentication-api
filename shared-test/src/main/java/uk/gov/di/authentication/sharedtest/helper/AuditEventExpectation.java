@@ -52,7 +52,10 @@ public class AuditEventExpectation {
                             return jsonObj.get("event_name").getAsString().equalsIgnoreCase(name);
                         })
                 .findFirst()
-                .orElseThrow(() -> new AssertionFailedError("Missing " + name + " audit event."));
+                .orElseThrow(
+                        () ->
+                                new AssertionFailedError(
+                                        "Missing " + name + " audit event " + eventName));
     }
 
     private JsonElement getJsonElementByPath(JsonObject json, String path) {
@@ -63,10 +66,12 @@ public class AuditEventExpectation {
             if (current.isJsonObject()) {
                 current = current.getAsJsonObject().get(part);
                 if (current == null) {
-                    throw new AssertionFailedError("Path " + path + " not found in event");
+                    throw new AssertionFailedError(
+                            "Path " + path + " not found in event " + eventName);
                 }
             } else {
-                throw new AssertionFailedError("Cannot navigate path " + path + " in event");
+                throw new AssertionFailedError(
+                        "Cannot navigate path " + path + " in event " + eventName);
             }
         }
 
