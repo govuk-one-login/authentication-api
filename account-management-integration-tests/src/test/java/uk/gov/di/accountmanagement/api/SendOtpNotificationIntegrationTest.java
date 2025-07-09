@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.api;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
@@ -14,8 +15,10 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,8 +29,9 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -52,149 +56,195 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
         txmaAuditQueue.clear();
     }
 
-    @Test
-    void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
-        userStore.signUp(TEST_EMAIL, "password");
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        TEST_NEW_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
+    @Nested
+    class EmailVerification {
+        
+        @Nested
+        class UserReceivesVerificationEmail {
+            @Test
+            void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
+                userStore.signUp(TEST_EMAIL, "password");
+                
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                TEST_NEW_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+                assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
-        NotificationAssertionHelper.assertNotificationsReceived(
-                notificationsQueue,
-                List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
+                NotificationAssertionHelper.assertNotificationsReceived(
+                        notificationsQueue,
+                        List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+                
+                AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
+                expectation.withAttribute("extensions.notification-type", VERIFY_EMAIL.name());
+                expectation.withAttribute("extensions.test-user", false);
+                expectation.verify(receivedEvents);
+            }
+        }
+
+        @Nested
+        class EmailAlreadyInUseErrors {
+            @Test
+            void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() throws Exception {
+                String password = "password-1";
+                userStore.signUp(TEST_EMAIL, password);
+
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+                assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+                assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
+
+                assertNoNotificationsReceived(notificationsQueue);
+                assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+            }
+        }
     }
 
-    @Test
-    void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() throws Exception {
-        String password = "password-1";
-        userStore.signUp(TEST_EMAIL, password);
+    @Nested
+    class PhoneNumberVerification {
+        
+        @Nested
+        class UserReceivesVerificationSms {
+            @Test
+            void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
+                String password = "password-1";
+                userStore.signUp(TEST_EMAIL, password);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
+                assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
-        assertNoNotificationsReceived(notificationsQueue);
+                NotificationAssertionHelper.assertNotificationsReceived(
+                        notificationsQueue,
+                        List.of(
+                                new NotifyRequest(
+                                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
+                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+                
+                AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
+                expectation.withAttribute("extensions.notification-type", VERIFY_PHONE_NUMBER.name());
+                expectation.withAttribute("extensions.test-user", false);
+                expectation.verify(receivedEvents);
+            }
+        }
+        
+        @Nested
+        class PhoneNumberValidationErrors {
+            @Test
+            void smsNotSentForUnknownUsers() {
+                var nonExistentUserEmail = "i.do.not.exist@digital.cabinet-office.gov.uk";
 
-    @Test
-    void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
-        String password = "password-1";
-        userStore.signUp(TEST_EMAIL, password);
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                nonExistentUserEmail,
+                                                VERIFY_PHONE_NUMBER,
+                                                TEST_PHONE_NUMBER)),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
+                assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+                assertNoNotificationsReceived(notificationsQueue);
+                assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+            }
 
-        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+            @Test
+            void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
+                String password = "password-1";
+                userStore.signUp(TEST_EMAIL, password);
+                String badPhoneNumber = "This is not a valid phone number";
 
-        NotificationAssertionHelper.assertNotificationsReceived(
-                notificationsQueue,
-                List.of(
-                        new NotifyRequest(
-                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-    }
+                assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+                assertThat(
+                        response,
+                        hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_PHONE_NUMBER)));
 
-    @Test
-    void smsNotSentForUnknownUsers() {
-        var nonExistentUserEmail = "i.do.not.exist@digital.cabinet-office.gov.uk";
+                assertNoNotificationsReceived(notificationsQueue);
+                assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+            }
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        nonExistentUserEmail,
-                                        VERIFY_PHONE_NUMBER,
-                                        TEST_PHONE_NUMBER)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
+            @Test
+            void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
+                    throws Json.JsonException {
+                userStore.signUp(TEST_EMAIL, "password");
+                userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
 
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertNoNotificationsReceived(notificationsQueue);
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
+                Map<String, String> headers = new HashMap<>();
+                headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+                
+                var response =
+                        makeRequest(
+                                Optional.of(
+                                        new SendNotificationRequest(
+                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, "+447755551084")),
+                                headers,
+                                Collections.emptyMap(),
+                                Collections.emptyMap(),
+                                Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
-    @Test
-    void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
-        String password = "password-1";
-        userStore.signUp(TEST_EMAIL, password);
-        String badPhoneNumber = "This is not a valid phone number";
+                assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+                assertThat(
+                        response,
+                        hasBody(
+                                objectMapper.writeValueAsString(
+                                        ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE)));
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
-
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_PHONE_NUMBER)));
-
-        assertNoNotificationsReceived(notificationsQueue);
-
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    @Test
-    void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
-            throws Json.JsonException {
-        userStore.signUp(TEST_EMAIL, "password");
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
-
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, "+447755551084")),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
-
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(
-                response,
-                hasBody(
-                        objectMapper.writeValueAsString(
-                                ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE)));
-
-        assertNoNotificationsReceived(notificationsQueue);
-
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+                assertNoNotificationsReceived(notificationsQueue);
+                assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+            }
+        }
     }
 }

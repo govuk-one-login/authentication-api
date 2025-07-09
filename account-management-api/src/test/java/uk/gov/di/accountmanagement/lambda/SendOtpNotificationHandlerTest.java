@@ -637,7 +637,7 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void cannotChangeEmailToOneInUseByAnotherUser() {
-                when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+                when(dynamoService.userExists(TEST_EMAIL_ADDRESS)).thenReturn(true);
 
                 var event = createEmptyEvent();
                 event.setBody(
