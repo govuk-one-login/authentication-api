@@ -251,27 +251,7 @@ public class IPVCallbackHandler
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
 
-            UserInfo authUserInfo =
-                    getAuthUserInfo(
-                                    authUserInfoStorageService,
-                                    orchSession.getInternalCommonSubjectId(),
-                                    clientSessionId)
-                            .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
-
             var ipAddress = IpAddressHelper.extractIpAddress(input);
-
-            var auditContext =
-                    new AuditContext(
-                            clientSessionId,
-                            sessionId,
-                            clientId,
-                            orchSession.getInternalCommonSubjectId(),
-                            authUserInfo.getEmailAddress(),
-                            ipAddress,
-                            Objects.isNull(authUserInfo.getPhoneNumber())
-                                    ? AuditService.UNKNOWN
-                                    : authUserInfo.getPhoneNumber(),
-                            persistentId);
 
             if (errorObject.isPresent()) {
                 var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
@@ -281,7 +261,15 @@ public class IPVCallbackHandler
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
                                                 orchSession.getInternalCommonSubjectId(),
-                                                auditContext));
+                                                new AuditContext(
+                                                        clientSessionId,
+                                                        sessionId,
+                                                        clientId,
+                                                        orchSession.getInternalCommonSubjectId(),
+                                                        AuditService.UNKNOWN,
+                                                        ipAddress,
+                                                        AuditService.UNKNOWN,
+                                                        persistentId)));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -307,6 +295,26 @@ public class IPVCallbackHandler
                         clientSessionId,
                         sessionId);
             }
+
+            UserInfo authUserInfo =
+                    getAuthUserInfo(
+                                    authUserInfoStorageService,
+                                    orchSession.getInternalCommonSubjectId(),
+                                    clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("authUserInfo not found"));
+
+            var auditContext =
+                    new AuditContext(
+                            clientSessionId,
+                            sessionId,
+                            clientId,
+                            orchSession.getInternalCommonSubjectId(),
+                            authUserInfo.getEmailAddress(),
+                            ipAddress,
+                            Objects.isNull(authUserInfo.getPhoneNumber())
+                                    ? AuditService.UNKNOWN
+                                    : authUserInfo.getPhoneNumber(),
+                            persistentId);
 
             var rpPairwiseSubject =
                     new Subject(
