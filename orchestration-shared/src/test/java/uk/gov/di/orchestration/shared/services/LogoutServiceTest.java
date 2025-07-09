@@ -600,6 +600,33 @@ class LogoutServiceTest {
                         expectedExtensions.toArray(AuditService.MetadataPair[]::new));
     }
 
+    @Test
+    void handlesASessionInvalidatedLogout() {
+        APIGatewayProxyResponseEvent response =
+                logoutService.handleSessionInvalidationLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of(CLIENT_SESSION_ID)),
+                        SUBJECT.getValue(),
+                        event,
+                        CLIENT_ID);
+
+        verify(orchClientSessionService)
+                .deleteStoredClientSession(orchSession.getClientSessions().get(0));
+        verify(orchSessionService).deleteSession(SESSION_ID);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        pair("logoutReason", "intervention"));
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(FRONTEND_BASE_URL + "signed-out"));
+    }
+
     private LogoutService logoutServiceWithClock(Clock clock) {
         return new LogoutService(
                 orchSessionService,
