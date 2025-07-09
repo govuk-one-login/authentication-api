@@ -142,6 +142,7 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
+  UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -229,6 +230,8 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       defaultProvisionedConcurrency: 3
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
+      globalLogoutQueueArn: arn:aws:sqs:eu-west-2:178023842775:self-staging-EC-SQS-Output-Queue-orchGlobalLogout
+      globalLogoutQueueKmsKeyArn: arn:aws:kms:eu-west-2:178023842775:key/7cf407f9-958e-4039-a095-c46ba0a08d82
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -2292,7 +2295,11 @@ Resources:
         - !If [
             IsDevOrBuild,
             !Ref GlobalLogoutTestQueueConsumePolicy,
-            !Ref AWS::NoValue,
+            !If [
+              UseGlobalLogoutTxmaQueue,
+              !Ref GlobalLogoutTxmaQueueConsumePolicy,
+              !Ref AWS::NoValue,
+            ],
           ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
@@ -2379,6 +2386,20 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+
+  GlobalLogoutTxmaQueueEventSource:
+    Condition: UseGlobalLogoutTxmaQueue
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          globalLogoutQueueArn,
+        ]
+      FunctionName: !GetAtt GlobalLogoutFunction.Arn
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
 
   GlobalLogoutTestQueue:
     Condition: IsDevOrBuild
@@ -6019,6 +6040,36 @@ Resources:
             Action:
               - kms:Decrypt
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+
+  GlobalLogoutTxmaQueueConsumePolicy:
+    Condition: UseGlobalLogoutTxmaQueue
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowConsumeFromGlobalLogoutTxmaQueue
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                globalLogoutQueueArn,
+              ]
+          - Sid: AllowDecryptGlobalLogoutTxmaQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                globalLogoutQueueKmsKeyArn,
+              ]
 
   GlobalLogoutTestQueueConsumePolicy:
     Condition: IsDevOrBuild
