@@ -167,6 +167,23 @@ class IPVAuthorisationServiceTest {
     }
 
     @Test
+    void shouldReturnSessionInvalidationErrorObjectWhenErrorCodeIsSessionInvalidated() {
+        ErrorObject errorObject =
+                new ErrorObject("session_invalidated", "Session invalidated for security reasons");
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+
+        assertThat(
+                authorisationService.validateResponse(responseHeaders, SESSION_ID),
+                equalTo(
+                        Optional.of(
+                                new IpvCallbackValidationError(
+                                        errorObject.getCode(), null, true))));
+    }
+
+    @Test
     void shouldReturnErrorObjectWhenResponseContainsNoQueryParams() {
         assertThat(
                 authorisationService.validateResponse(Collections.emptyMap(), SESSION_ID),

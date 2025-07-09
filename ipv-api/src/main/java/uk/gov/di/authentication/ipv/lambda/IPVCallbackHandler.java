@@ -274,6 +274,7 @@ public class IPVCallbackHandler
                             persistentId);
 
             if (errorObject.isPresent()) {
+                var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
                 AccountIntervention intervention =
                         segmentedFunctionCall(
                                 "AIS: getAccountIntervention",
@@ -284,11 +285,19 @@ public class IPVCallbackHandler
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, orchSession),
+                            destroySessionRequest,
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId,
                             intervention);
+                }
+
+                if (errorObject.get().isSessionInvalidation()) {
+                    return logoutService.handleSessionInvalidationLogout(
+                            destroySessionRequest,
+                            orchSession.getInternalCommonSubjectId(),
+                            input,
+                            clientId);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(

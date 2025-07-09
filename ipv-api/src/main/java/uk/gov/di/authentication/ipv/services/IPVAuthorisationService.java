@@ -56,6 +56,7 @@ public class IPVAuthorisationService {
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
+    public static final String SESSION_INVALIDATED_ERROR_CODE = "session_invalidated";
 
     public IPVAuthorisationService(
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
@@ -89,6 +90,13 @@ public class IPVAuthorisationService {
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
         if (headers.containsKey("error")) {
+
+            if (SESSION_INVALIDATED_ERROR_CODE.equals(headers.get("error"))) {
+                LOG.warn("Session invalidated response from IPV");
+                return Optional.of(
+                        new IpvCallbackValidationError(headers.get("error"), null, true));
+            }
+
             LOG.warn("Error response found in IPV Authorisation response");
             return Optional.of(new IpvCallbackValidationError(headers.get("error"), null));
         }

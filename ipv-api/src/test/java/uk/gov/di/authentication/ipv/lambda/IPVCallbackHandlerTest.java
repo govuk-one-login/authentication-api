@@ -108,6 +108,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -132,7 +133,7 @@ class IPVCallbackHandlerTest {
             mock(NoSessionOrchestrationService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final AccountInterventionService accountInterventionService =
-            mock(AccountInterventionService.class);
+            mock(AccountInterventionService.class, withSettings().verboseLogging());
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -364,6 +365,39 @@ class IPVCallbackHandlerTest {
         verify(accountInterventionService)
                 .getAccountIntervention(
                         eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
+    }
+
+    @Test
+    void shouldCallAisAndLogoutServiceIfSessionInvalidatedError() throws ParseException {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidAuthUserInfo();
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
+
+        when(responseService.validateResponse(anyMap(), anyString()))
+                .thenReturn(
+                        Optional.of(
+                                new IpvCallbackValidationError("session_invalidated", null, true)));
+
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", "session_invalidated");
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        event.setQueryStringParameters(responseHeaders);
+        handler.handleRequest(event, context);
+
+        verify(accountInterventionService)
+                .getAccountIntervention(
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
+        verify(logoutService)
+                .handleSessionInvalidationLogout(
+                        new DestroySessionsRequest(SESSION_ID, List.of()),
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                        event,
+                        CLIENT_ID.getValue());
     }
 
     @ParameterizedTest
