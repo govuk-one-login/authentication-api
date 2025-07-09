@@ -39,18 +39,23 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -72,6 +77,12 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
     public static final String EXTENSIONS_MFA_METHOD =
             "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+    public static final String EXTENSIONS_MFA_CODE_ENTERED =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+    public static final String EXTENSIONS_ACCOUNT_RECOVERY =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+    public static final String EXTENSIONS_NOTIFICATION_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
     private static String testPublicSubject;
     private static String testInternalSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -175,9 +186,21 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             // Check audit events
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_COMPLETED);
+                    List.of(
+                            AUTH_CODE_VERIFIED,
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            AUTH_MFA_METHOD_ADD_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, "MFA_SMS");
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> migrationAttributes = new HashMap<>();
             migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
@@ -264,13 +287,23 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(expectedResponse, response.getBody());
 
             // Check audit event
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_COMPLETED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_ADD_COMPLETED);
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, "MFA_SMS");
 
             Map<String, String> addCompletedAttributes = new HashMap<>();
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -329,9 +362,19 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             // Check audit events
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_COMPLETED);
+                    List.of(
+                            AUTH_CODE_VERIFIED,
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            AUTH_MFA_METHOD_ADD_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> migrationAttributes = new HashMap<>();
             migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
@@ -397,9 +440,17 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_COMPLETED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_ADD_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> addCompletedAttributes = new HashMap<>();
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
@@ -476,15 +527,22 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     "Expected error response when migrated Auth App user adds Auth App as backup");
             assertThat(response, hasJsonBody(ErrorResponse.AUTH_APP_EXISTS));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_FAILED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_ADD_FAILED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> addFailedAttributes = new HashMap<>();
             addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addFailedAttributes.put(EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
-            addFailedAttributes.put(
-                    EXTENSIONS_MFA_METHOD, PriorityIdentifier.DEFAULT.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -520,9 +578,19 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertUserMigrationStatus(true, "User should be migrated despite failure");
 
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_MFA_METHOD_ADD_FAILED);
+                    List.of(
+                            AUTH_CODE_VERIFIED,
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            AUTH_MFA_METHOD_ADD_FAILED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> codeVerifiedAttributes = new HashMap<>();
+            codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             Map<String, String> migrationAttributes = new HashMap<>();
             migrationAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());

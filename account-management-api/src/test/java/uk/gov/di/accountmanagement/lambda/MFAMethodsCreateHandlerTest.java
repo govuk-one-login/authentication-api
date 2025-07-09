@@ -60,17 +60,23 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.containsMetadataPair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -369,6 +375,47 @@ class MFAMethodsCreateHandlerTest {
                             ACCOUNT_MANAGEMENT,
                             "AUTH_APP",
                             PriorityIdentifier.BACKUP);
+        }
+
+        @Test
+        void shouldRaiseAuthCodeVerifiedAuditEvent() {
+            var backupMfa =
+                    MFAMethod.smsMfaMethod(
+                            true,
+                            true,
+                            TEST_PHONE_NUMBER,
+                            PriorityIdentifier.BACKUP,
+                            TEST_SMS_MFA_ID);
+            when(mfaMethodsService.addBackupMfa(any(), any()))
+                    .thenReturn(Result.success(backupMfa));
+            when(codeStorageService.isValidOtpCode(any(), any(), any())).thenReturn(true);
+
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(TEST_PHONE_NUMBER, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+
+            handler.handleRequest(event, context);
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService).submitAuditEvent(eq(AUTH_CODE_VERIFIED), captor.capture());
+            AuditContext capturedObject = captor.getValue();
+
+            containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, TEST_OTP);
+            containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    PriorityIdentifier.BACKUP.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    DEFAULT_SMS_METHOD.getMfaMethodType());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
         }
     }
 
