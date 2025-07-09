@@ -409,6 +409,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("TEST_CLIENTS_ENABLED");
     }
 
+    public boolean isRpRateLimitingEnabled() {
+        return getFlagOrFalse("RP_RATE_LIMITING_ENABLED");
+    }
+
     public String getExternalTokenSigningKeyAlias() {
         return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_ALIAS");
     }
