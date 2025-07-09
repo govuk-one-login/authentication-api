@@ -58,7 +58,6 @@ module "mfa-methods-create" {
   dynatrace_secret      = local.dynatrace_secret
 
   runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
-  lambda_log_alarm_threshold            = 1
   lambda_log_alarm_error_rate_threshold = 25
 
   depends_on = [module.account_management_api_mfa_methods_create_role]
