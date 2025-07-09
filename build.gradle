@@ -94,7 +94,7 @@ subprojects {
 
     checkstyle {
         toolVersion = '10.12.4'
-        configFile = file("$rootProject.projectDir/checkstyle.xml")
+        configFile = file("$rootProject.projectDir/google_checks.xml")
     }
 
     configurations {
