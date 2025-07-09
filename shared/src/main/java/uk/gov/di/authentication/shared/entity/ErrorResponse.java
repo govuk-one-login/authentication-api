@@ -109,7 +109,8 @@ public enum ErrorResponse {
     ACCT_SUSPENDED(1083, "User's account is suspended"),
     ACCT_BLOCKED(1084, "User's account is blocked"),
     NO_USER_PROFILE_FOR_EMAIL(1085, "Email from request does not have a user profile"),
-    USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials");
+    USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials"),
+    FAILED_TO_RAISE_AUDIT_EVENT(1087, "Failed to raise an audit event");
 
     private int code;
 
