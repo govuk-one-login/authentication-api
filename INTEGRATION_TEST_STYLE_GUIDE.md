@@ -1,12 +1,32 @@
 # Integration Test Style Guide
 
+## Document Status
+
+**🚧 DRAFT** - This document is currently in draft status and subject to change based on team feedback and discussion.
+
+### Emoji Key
+
+| Emoji | Meaning |
+|-------|----------|
+| 🤔 | Items that need further discussion or are contentious |
+| ⚠️ | Critical warnings or important considerations |
+| ✅ | Best practices and recommended approaches |
+| 🔧 | Technical implementation details |
+| 📊 | Data management and organization |
+| 🧪 | Testing patterns and methodologies |
+| ❌ | Error handling and negative test cases |
+| 🏗️ | Test structure and organization |
+| 🐛 | Debugging and troubleshooting guidance |
+| 🔄 | Migration and legacy support patterns |
+| 🚨 | Critical requirements that must be followed |
+
 ## Summary
 
 This document establishes conventions for writing consistent, maintainable integration tests across the authentication API project.
 
 Integration tests verify that our lambda handler classes integrate correctly with external resources such as AWS services, APIs and data stores. LocalStack is used to provide useful stubs of AWS services for testing purposes.
 
-Unlike unit tests, integration tests should not mock any services they use. Instead, they should test how the lambda handler works in a realistic AWS environment, using actual service implementations or LocalStack equivalents. This approach ensures that integration points, configuration, and service interactions are properly validated. Logging should be treated as a first-class feature in integration tests, with proper verification of audit events, metrics, and structured logging output to ensure observability requirements are met in production.
+Unlike unit tests, integration tests should not mock any services they use. Instead, they should test how the lambda handler works in a realistic AWS environment, using actual service implementations or LocalStack equivalents. This approach ensures that integration points, configuration, and service interactions are properly validated. 🤔 Logging should be treated as a first-class feature in integration tests, with proper verification of audit events, metrics, and structured logging output to ensure observability requirements are met in production.
 
 ### Blueprint
 
@@ -142,7 +162,7 @@ class UserRegistrationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 - **Test Classes**: Use descriptive class names ending with `IntegrationTest`
 - **Test Constants**: Use `private static final` with descriptive, ALL_CAPS naming with underscores
 - **Test Methods**: Use descriptive method names that explain the scenario in camelCase
-- **Two Test Method Styles**:
+- **🤔 Two Test Method Styles** *(contentious - needs discussion)*:
   - **User Action Style**: `aNonMigratedUserAddsABackupSMSMFA()` - focuses on business scenario and user behavior
   - **Technical Style**: `shouldReturn400WhenInvalidOTPEnteredWhenAddingSMSBackupMFA()` - includes technical details like HTTP status codes
 - **@DisplayName**: Use human-readable descriptions with sentence case and proper grammar
@@ -274,7 +294,7 @@ void testMethod(String testName, MFAMethod defaultMfaMethod)
 
 ## Test Structure
 
-### Given-When-Then Pattern
+### 🤔 Given-When-Then Pattern
 ```java
 void testMethod() {
     // GIVEN (setup)
@@ -426,7 +446,417 @@ verifyAuditEvents(expectedEvents, eventExpectations);
 - Use consistent pattern for audit event verification
 - Include relevant attributes in audit event expectations
 
-## Appendix: Available JUnit Extensions
+## 🔧 Extension Usage Patterns
+
+### **@RegisterExtension vs @ExtendWith**
+- **Use `@RegisterExtension`** for extensions requiring configuration or programmatic setup:
+```java
+@RegisterExtension
+static UserStoreExtension userStore = new UserStoreExtension();
+
+@RegisterExtension
+static KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
+```
+- **Use `@ExtendWith`** for simple extensions without configuration:
+```java
+@ExtendWith(RedisExtension.class)
+class MyIntegrationTest {
+    // Test implementation
+}
+```
+
+### **Extension Initialization Patterns**
+- **TTL Configuration**: Extensions requiring time-to-live settings
+```java
+@RegisterExtension
+static RpPublicKeyCacheExtension cache = new RpPublicKeyCacheExtension(180);
+```
+- **Port Configuration**: HTTP stub extensions with specific ports
+```java
+@RegisterExtension
+static DocAppJwksExtension jwks = new DocAppJwksExtension(8080);
+```
+
+### **⚠️ Extension Ordering**
+- Extensions are initialized in declaration order
+- Place dependent extensions after their dependencies
+- Use static extensions for shared resources across test methods
+
+## 📊 Test Data Management
+
+### **Builder Pattern Usage**
+```java
+// ✅ Preferred: Fluent builder pattern
+clientStore.createClient()
+    .withClientId(CLIENT_ID)
+    .withScopes(List.of("openid", "profile"))
+    .withClientLoCs(List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
+    .saveToDynamo();
+
+// ✅ Complex test data with builder
+var testUser = UserProfile.builder()
+    .email(TEST_EMAIL)
+    .phoneNumber(TEST_PHONE_NUMBER)
+    .mfaMethodsMigrated(true)
+    .build();
+```
+
+### **Test Data Constants Organization**
+```java
+// ✅ Group related constants
+private static final String TEST_EMAIL = "test@example.com";
+private static final String TEST_PASSWORD = "test-password";
+private static final String TEST_PHONE_NUMBER = "+447700900000";
+private static final String TEST_PHONE_NUMBER_TWO = "+447700900111";
+
+// ✅ Complex test objects as constants
+private static final MFAMethod DEFAULT_SMS_MFA = 
+    MFAMethod.smsMfaMethod(
+        true, true, TEST_PHONE_NUMBER, 
+        PriorityIdentifier.DEFAULT, 
+        UUID.randomUUID().toString());
+```
+
+### **🔑 UUID Generation Patterns**
+- **Consistent Identifiers**: Use meaningful variable names for UUIDs
+- **Pre-generated vs Dynamic**: Use constants for stable tests, generate for unique scenarios
+```java
+private static final String SMS_MFA_IDENTIFIER = "ea83592f-b9bf-436f-b4f4-ee33f610ee05";
+private static final String APP_MFA_IDENTIFIER = "a87e57e5-6175-4be7-af7d-547a390b36c1";
+```
+
+## 🧪 Complex Test Scenarios
+
+### **Parameterized Test Patterns**
+```java
+// ✅ Method source with descriptive names
+private static Stream<Arguments> mfaMethodProvider() {
+    return Stream.of(
+        Arguments.of("Auth App", defaultPriorityAuthApp),
+        Arguments.of("SMS", defaultPrioritySms)
+    );
+}
+
+@ParameterizedTest(name = "Default MFA: {0}")
+@MethodSource("mfaMethodProvider")
+void testWithDifferentMfaMethods(String testName, MFAMethod mfaMethod) {
+    // Test implementation
+}
+```
+
+### **Stream-based Test Data**
+```java
+// ✅ Complex argument combinations
+private static Stream<Arguments> phoneNumberVariations() {
+    return Stream.of(
+        Arguments.of("+447700900000", "+447700900000"),
+        Arguments.of("07700900000", "+447700900000")
+    );
+}
+```
+
+### **Cross-Product Testing**
+- Test multiple combinations systematically
+- Use descriptive parameter names in test methods
+- Include edge cases and boundary conditions
+
+## 🔧 Service Layer Testing
+
+### **Direct Service Testing**
+```java
+// ✅ Test services directly, not just handlers
+class MFAMethodsServiceIntegrationTest {
+    MFAMethodsService mfaService = new MFAMethodsService(ConfigurationService.getInstance());
+    
+    @RegisterExtension 
+    static UserStoreExtension userStore = new UserStoreExtension();
+}
+```
+
+### **Result Pattern Testing**
+```java
+// ✅ Test Result<Success, Failure> patterns
+var result = mfaService.addBackupMfa(email, mfaMethod);
+
+if (result.isSuccess()) {
+    assertEquals(expectedValue, result.getSuccess());
+} else {
+    assertEquals(expectedFailure, result.getFailure());
+}
+```
+
+### **State Verification Across Multiple Stores**
+- Verify changes in primary data store
+- Check side effects in related stores
+- Validate audit trails and notifications
+
+## ❌ Error Testing Patterns
+
+### **Comprehensive Error Coverage**
+```java
+@Nested
+class ErrorCases {
+    @Test
+    void shouldReturn400WhenEmailIsInvalid() { /* ... */ }
+    
+    @Test
+    void shouldReturn401WhenUnauthorized() { /* ... */ }
+    
+    @Test
+    void shouldReturn404WhenUserNotFound() { /* ... */ }
+}
+```
+
+### **Error Response Verification**
+```java
+// ✅ Verify specific error codes and messages
+assertEquals(400, response.getStatusCode());
+assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+
+// ✅ Test custom failure reasons
+equals(MfaCreateFailureReason.PHONE_NUMBER_ALREADY_EXISTS, result.getFailure());
+```
+
+### **🚨 Critical Error Testing**
+- **Always test negative cases** for each positive scenario
+- **Verify error audit events** are generated correctly
+- **Test error message clarity** and user experience
+
+## ✅ Advanced Assertion Patterns
+
+### **Custom Equality Methods**
+```java
+// ✅ Compare complex objects ignoring certain fields
+private boolean mfaMethodsAreEqualIgnoringUpdated(MFAMethod method1, MFAMethod method2) {
+    return method1.getMfaIdentifier().equals(method2.getMfaIdentifier())
+        && method1.getPriority().equals(method2.getPriority())
+        && method1.isMethodVerified() == method2.isMethodVerified()
+        && Objects.equals(method1.getCredentialValue(), method2.getCredentialValue());
+}
+```
+
+### **List Comparison Helpers**
+```java
+// ✅ Compare lists with custom equality
+private boolean listsContainSameItemsIgnoringUpdated(List<MFAMethod> list1, List<MFAMethod> list2) {
+    var sorted1 = list1.stream().sorted().toList();
+    var sorted2 = list2.stream().sorted().toList();
+    return list1.size() == list2.size() && 
+           IntStream.range(0, list1.size())
+               .allMatch(i -> mfaMethodsAreEqualIgnoringUpdated(sorted1.get(i), sorted2.get(i)));
+}
+```
+
+### **State Assertion Helpers**
+```java
+// ✅ Create reusable state verification methods
+private void assertUserMigrationStatus(boolean expected, String message) {
+    var userProfile = userStore.getUserProfileFromEmail(TEST_EMAIL)
+        .orElseThrow(() -> new AssertionFailedError("User profile not found"));
+    assertEquals(expected, userProfile.isMfaMethodsMigrated(), message);
+}
+```
+
+## 🏗️ Test Organization Strategies
+
+### **Deep Nesting Guidelines**
+```java
+@Nested
+class MfaMethodOperations {
+    @Nested
+    class WhenUserIsMigrated {
+        @Nested
+        class AddingBackupMethods {
+            @Test
+            void shouldSucceedWithValidSmsMethod() { /* ... */ }
+        }
+    }
+}
+```
+
+### **Test Method Grouping**
+- **By functionality**: Group related operations together
+- **By user state**: Separate migrated vs non-migrated user tests
+- **By success/failure**: Organize positive and negative test cases
+
+### **Setup Method Variations**
+```java
+// ✅ Different setup methods for different scenarios
+private void setupMigratedUser() {
+    userStore.signUp(EMAIL, PASSWORD);
+    userStore.setMfaMethodsMigrated(EMAIL, true);
+}
+
+private void setupNonMigratedUserWithSms() {
+    userStore.signUp(EMAIL, PASSWORD);
+    userStore.addVerifiedPhoneNumber(EMAIL, PHONE_NUMBER);
+    userStore.setMfaMethodsMigrated(EMAIL, false);
+}
+```
+
+## ⚙️ Configuration and Environment
+
+### **Custom Configuration Services**
+```java
+// ✅ Test-specific configuration implementations
+private static final TestConfigurationService configuration = 
+    new TestConfigurationService() {
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
+        
+        @Override
+        public URI getDocAppJwksURI() {
+            return jwksExtension.getJwksUri();
+        }
+    };
+```
+
+### **Environment-Specific Testing**
+- Use configuration overrides for different test scenarios
+- Test feature toggles and conditional behavior
+- Validate environment-specific configurations
+
+### **Feature Flag Testing**
+```java
+// ✅ Test different feature flag states
+@Test
+void shouldBehaveDifferentlyWhenFeatureEnabled() {
+    // Override configuration for this test
+    var config = new TestConfiguration() {
+        @Override
+        public boolean isFeatureEnabled() { return true; }
+    };
+    // Test with feature enabled
+}
+```
+
+## 🧹 Performance and Resource Management
+
+### **Resource Cleanup Strategies**
+```java
+@AfterEach
+void tearDown() {
+    // ✅ Clear queues
+    notificationsQueue.clear();
+    txmaAuditQueue.clear();
+    
+    // ✅ Clean up test data
+    userStore.deleteUser(TEST_EMAIL);
+    
+    // ✅ Reset Redis state
+    redis.flushData();
+}
+```
+
+### **🔒 Test Isolation**
+- **Each test must be independent** - no shared state between tests
+- **Clean up after each test** - use `@AfterEach` consistently
+- **Use unique identifiers** - avoid conflicts between parallel tests
+
+### **Memory Management**
+- Limit test data size to essential elements only
+- Clean up large objects after use
+- Use streaming for large data sets when possible
+
+## 🔗 Integration-Specific Patterns
+
+### **Multi-Service Interactions**
+```java
+// ✅ Test interactions between multiple services
+@Test
+void shouldUpdateUserAndSendNotification() {
+    // Update user in one service
+    userService.updateProfile(userId, newProfile);
+    
+    // Verify notification sent by another service
+    assertNotificationsReceived(notificationQueue, 
+        List.of(new NotifyRequest(email, PROFILE_UPDATED)));
+    
+    // Verify audit event generated
+    assertTxmaAuditEventsReceived(auditQueue, 
+        List.of(USER_PROFILE_UPDATED));
+}
+```
+
+### **Event-Driven Testing**
+- Test asynchronous operations with appropriate waits
+- Verify event ordering and timing
+- Handle eventual consistency scenarios
+
+### **External Service Stubbing**
+```java
+// ✅ Advanced stubbing patterns
+@RegisterExtension
+static IPVStubExtension ipvStub = new IPVStubExtension();
+
+@BeforeEach
+void setupStubs() {
+    ipvStub.initWithValidLoCAndReturnCode();
+    criStub.init(signingKey, docAppSubjectId);
+}
+```
+
+## 🐛 Debugging and Troubleshooting
+
+### **Test Debugging Strategies**
+- **Add descriptive assertion messages** for easier failure diagnosis
+- **Use helper methods** to inspect test state
+- **Log intermediate states** when debugging complex scenarios
+
+### **Logging in Tests**
+```java
+// ✅ Strategic logging for debugging
+System.out.println("Response headers: " + response.getMultiValueHeaders());
+System.out.println("Current user state: " + userStore.getUserProfile(email));
+```
+
+### **Test Data Inspection**
+```java
+// ✅ Helper methods for examining state
+private void debugUserState(String email) {
+    var profile = userStore.getUserProfile(email);
+    var credentials = userStore.getUserCredentials(email);
+    System.out.println("Profile: " + profile);
+    System.out.println("Credentials: " + credentials);
+}
+```
+
+## 🔄 Migration and Legacy Support
+
+### **Migration Testing Patterns**
+```java
+@Nested
+class WhenMigratingAUser {
+    @Test
+    void shouldMigrateActiveSmsNeedingMigration() {
+        // Arrange - setup pre-migration state
+        setupNonMigratedUserWithSms();
+        
+        // Act - perform migration
+        var result = mfaService.migrateMfaCredentialsForUser(userProfile);
+        
+        // Assert - verify post-migration state
+        assertTrue(result.isSuccess());
+        assertUserMigrationStatus(true, "User should be migrated");
+        verifyMigratedMfaMethodsInCredentials();
+        verifyLegacyDataCleanedUp();
+    }
+}
+```
+
+### **Backward Compatibility Testing**
+- Test old and new data formats side by side
+- Verify graceful handling of legacy data
+- Ensure migration doesn't break existing functionality
+
+### **Feature Migration Patterns**
+- Test gradual rollout scenarios
+- Verify feature flag transitions
+- Test rollback scenarios
+
+## 📋 Appendix: Available JUnit Extensions
 
 > **Note**: This list may not be complete as new extensions may be added to the project over time. Check the `orchestration-shared-test/src/main/java/uk/gov/di/orchestration/sharedtest/extensions/` directory for the most current list of available extensions.
 
