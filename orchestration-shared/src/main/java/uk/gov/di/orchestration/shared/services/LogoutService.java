@@ -206,6 +206,23 @@ public class LogoutService {
                 Optional.of(sessionAge));
     }
 
+    public APIGatewayProxyResponseEvent handleSessionInvalidationLogout(
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
+            APIGatewayProxyRequestEvent input,
+            String clientId) {
+        LOG.info("Handling session invalidation logout");
+        destroySessions(request);
+        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
+        return generateLogoutResponse(
+                // ATO-1796: Create new error page on auth frontend for this scenario
+                authFrontend.defaultLogoutURI(),
+                LogoutReason.INTERVENTION,
+                auditUser,
+                Optional.of(clientId),
+                Optional.empty());
+    }
+
     private void sendAuditEvent(
             TxmaAuditUser auditUser,
             LogoutReason logoutReason,

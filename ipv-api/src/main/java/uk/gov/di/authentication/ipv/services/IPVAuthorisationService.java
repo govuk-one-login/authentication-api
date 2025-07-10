@@ -16,7 +16,6 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -29,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
@@ -56,6 +56,7 @@ public class IPVAuthorisationService {
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
+    public static final String SESSION_INVALIDATED_ERROR_CODE = "session_invalidated";
 
     public IPVAuthorisationService(
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
@@ -80,34 +81,42 @@ public class IPVAuthorisationService {
         this.nowClock = nowClock;
     }
 
-    public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
+    public Optional<IpvCallbackValidationError> validateResponse(
+            Map<String, String> headers, String sessionId) {
         if (headers == null || headers.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
         if (headers.containsKey("error")) {
+
+            if (SESSION_INVALIDATED_ERROR_CODE.equals(headers.get("error"))) {
+                LOG.warn("Session invalidated response from IPV");
+                return Optional.of(
+                        new IpvCallbackValidationError(headers.get("error"), null, true));
+            }
+
             LOG.warn("Error response found in IPV Authorisation response");
-            return Optional.of(new ErrorObject(headers.get("error")));
+            return Optional.of(new IpvCallbackValidationError(headers.get("error"), null));
         }
         if (!headers.containsKey("state") || headers.get("state").isEmpty()) {
             LOG.warn("No state param in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
         }
         if (!isStateValid(sessionId, headers.get("state"))) {
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid state param present in Authorisation response"));
         }
         if (!headers.containsKey("code") || headers.get("code").isEmpty()) {
             LOG.warn("No code param in IPV Authorisation response");
             return Optional.of(
-                    new ErrorObject(
+                    new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No code param present in Authorisation response"));
         }
