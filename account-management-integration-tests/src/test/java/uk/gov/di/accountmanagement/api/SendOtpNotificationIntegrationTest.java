@@ -58,16 +58,16 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Nested
     class EmailVerification {
-        
+
         @Nested
         class UserReceivesVerificationEmail {
             @Test
             void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
                 userStore.signUp(TEST_EMAIL, "password");
-                
+
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
@@ -82,10 +82,13 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 NotificationAssertionHelper.assertNotificationsReceived(
                         notificationsQueue,
-                        List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
+                        List.of(
+                                new NotifyRequest(
+                                        TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
-                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-                
+                List<String> receivedEvents =
+                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
                 expectation.withAttribute("extensions.notification-type", VERIFY_EMAIL.name());
                 expectation.withAttribute("extensions.test-user", false);
@@ -102,7 +105,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
@@ -114,7 +117,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                 Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
                 assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-                assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
+                assertThat(
+                        response,
+                        hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
 
                 assertNoNotificationsReceived(notificationsQueue);
                 assertNoTxmaAuditEventsReceived(txmaAuditQueue);
@@ -124,7 +129,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Nested
     class PhoneNumberVerification {
-        
+
         @Nested
         class UserReceivesVerificationSms {
             @Test
@@ -134,12 +139,14 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
                                         new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                                                TEST_EMAIL,
+                                                VERIFY_PHONE_NUMBER,
+                                                TEST_PHONE_NUMBER)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -151,17 +158,21 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         notificationsQueue,
                         List.of(
                                 new NotifyRequest(
-                                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
+                                        TEST_PHONE_NUMBER,
+                                        VERIFY_PHONE_NUMBER,
+                                        SupportedLanguage.EN)));
 
-                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-                
+                List<String> receivedEvents =
+                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
+
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
-                expectation.withAttribute("extensions.notification-type", VERIFY_PHONE_NUMBER.name());
+                expectation.withAttribute(
+                        "extensions.notification-type", VERIFY_PHONE_NUMBER.name());
                 expectation.withAttribute("extensions.test-user", false);
                 expectation.verify(receivedEvents);
             }
         }
-        
+
         @Nested
         class PhoneNumberValidationErrors {
             @Test
@@ -170,7 +181,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
@@ -196,7 +207,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
@@ -210,7 +221,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
                 assertThat(
                         response,
-                        hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_PHONE_NUMBER)));
+                        hasBody(
+                                objectMapper.writeValueAsString(
+                                        ErrorResponse.INVALID_PHONE_NUMBER)));
 
                 assertNoNotificationsReceived(notificationsQueue);
                 assertNoTxmaAuditEventsReceived(txmaAuditQueue);
@@ -224,7 +237,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
-                
+
                 var response =
                         makeRequest(
                                 Optional.of(
