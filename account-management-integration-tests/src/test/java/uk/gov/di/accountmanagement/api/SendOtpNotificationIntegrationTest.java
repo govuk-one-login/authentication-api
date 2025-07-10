@@ -152,7 +152,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         makeRequest(
                                 Optional.of(
                                         new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                                                TEST_EMAIL,
+                                                VERIFY_PHONE_NUMBER,
+                                                TEST_PHONE_NUMBER)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -169,8 +171,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                         SupportedLanguage.EN)));
 
                 List<String> receivedEvents =
-                        assertTxmaAuditEventsReceived(
-                                txmaAuditQueue, List.of(AUTH_SEND_OTP, AUTH_PHONE_CODE_SENT));
+                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP, AUTH_PHONE_CODE_SENT));
+
                 AuditEventExpectation sendOtpExpectation =
                         new AuditEventExpectation(AUTH_SEND_OTP.name());
                 sendOtpExpectation.withAttribute(
