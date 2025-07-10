@@ -19,7 +19,7 @@ module "mfa-methods-retrieve" {
   endpoint_name = "mfa-methods-retrieve"
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = local.redis_key
+    REDIS_KEY                         = var.environment == "production" ? local.redis_key : null
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
     MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
