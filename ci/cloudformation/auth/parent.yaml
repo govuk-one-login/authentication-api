@@ -373,6 +373,9 @@ Globals:
       - UseCodeSigning
       - !Ref CodeSigningConfigArn
       - !Ref AWS::NoValue
+    DeploymentPreference:
+      Type: !Ref LambdaDeploymentPreference
+      Role: !GetAtt CodeDeployServiceRole.Arn
     Environment:
       Variables:
         ENVIRONMENT:
@@ -451,49 +454,7 @@ Globals:
     Timeout: 30
 
 Resources:
-  CodeDeployServiceRoleA:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Action:
-              - sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service:
-                - codedeploy.amazonaws.com
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
-      PermissionsBoundary:
-        !If [
-          UsePermissionsBoundary,
-          !Ref PermissionsBoundary,
-          !Ref AWS::NoValue,
-        ]
-
-  CodeDeployServiceRoleB:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Action:
-              - sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service:
-                - codedeploy.amazonaws.com
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
-      PermissionsBoundary:
-        !If [
-          UsePermissionsBoundary,
-          !Ref PermissionsBoundary,
-          !Ref AWS::NoValue,
-        ]
-
-  CodeDeployServiceRoleC:
+  CodeDeployServiceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

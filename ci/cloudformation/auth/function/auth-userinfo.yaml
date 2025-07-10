@@ -8,9 +8,6 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./auth-external-api/build/distributions/auth-external-api.zip
-      DeploymentPreference:
-        Type: !Ref LambdaDeploymentPreference
-        Role: !GetAtt CodeDeployServiceRoleA.Arn
       Handler: uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest
       Environment:
         Variables:
