@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -13,8 +14,10 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,15 +32,31 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -68,12 +87,32 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             }
             """;
     private static String testInternalSubject;
+    private static final Map<String, String> TEST_HEADERS =
+            Map.of(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
 
     private static final String TEST_EMAIL = "test@email.com";
     private static final String TEST_PASSWORD = "test-password";
     private static final String TEST_PHONE_NUMBER = "+447700900000";
     private static final String TEST_PHONE_NUMBER_TWO = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
+    public static final String EXTENSIONS_JOURNEY_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+    public static final String EXTENSIONS_MFA_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+    public static final String EXTENSIONS_MFA_METHOD =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+    public static final String EXTENSIONS_MFA_CODE_ENTERED =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
+    public static final String EXTENSIONS_ACCOUNT_RECOVERY =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+    public static final String EXTENSIONS_NOTIFICATION_TYPE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+    public static final String EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
+    public static final String EXTENSIONS_MIGRATION_SUCCEEDED =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
+    public static final String EXTENSIONS_HAD_PARTIAL =
+            "extensions." + AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
     private static String testPublicSubject;
     private static final MFAMethod defaultSms =
             MFAMethod.smsMfaMethod(
@@ -103,6 +142,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         handler = new MFAMethodsPutHandler(ACCOUNT_MANAGEMENT_TXMA_ENABLED_CONFIGUARION_SERVICE);
 
         notificationsQueue.clear();
+        txmaAuditQueue.clear();
     }
 
     private MFAMethod getMethodWithPriority(
@@ -126,6 +166,30 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertAll(
                 () -> assertEquals(retrieved.getCredentialValue(), updatedCredential),
                 () -> assertNull(retrieved.getDestination()));
+    }
+
+    private void verifyAuditEvents(
+            List<AuditableEvent> expectedEvents,
+            Map<String, Map<String, String>> eventExpectations) {
+        // Assert that the expected events were received
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
+
+        // Create and verify expectations for each event
+        for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
+            String eventName = eventEntry.getKey();
+            Map<String, String> attributes = eventEntry.getValue();
+
+            // Create the expectation for this event
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
+
+            // Add all expected attributes
+            for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
+                expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+            }
+
+            // Verify the expectation against the received events
+            expectation.verify(receivedEvents);
+        }
     }
 
     @Nested
@@ -170,7 +234,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -218,7 +282,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -290,7 +354,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -362,7 +426,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -427,7 +491,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -503,7 +567,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(SWITCH_REQUEST),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -547,6 +611,18 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> switchCompletedAttributes = new HashMap<>();
+            switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            switchCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_SWITCH_COMPLETED.name(), switchCompletedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -560,7 +636,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(SWITCH_REQUEST),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -604,6 +680,18 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     TEST_EMAIL,
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> switchCompletedAttributes = new HashMap<>();
+            switchCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            switchCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_SWITCH_COMPLETED.name(), switchCompletedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
@@ -630,7 +718,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -680,6 +768,21 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertTrue(retrievedMethod.isEnabled()),
                     () -> assertTrue(retrievedMethod.isMethodVerified()),
                     () -> assertEquals(secondPhoneNumber, retrievedMethod.getDestination()));
+
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> migrationAttemptedAttributes = new HashMap<>();
+            migrationAttemptedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            migrationAttemptedAttributes.put(EXTENSIONS_MIGRATION_SUCCEEDED, "true");
+            migrationAttemptedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            migrationAttemptedAttributes.put(EXTENSIONS_HAD_PARTIAL, "true");
+            migrationAttemptedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            eventExpectations.put(
+                    AUTH_MFA_METHOD_MIGRATION_ATTEMPTED.name(), migrationAttemptedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
     }
 
@@ -697,7 +800,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var firstResponse =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -717,10 +820,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertMfaCredentialUpdated(retrievedMethodAfterFirstRequest, updatedCredential);
 
             for (int i = 0; i < 5; i++) {
+                txmaAuditQueue.clear();
+
                 var response =
                         makeRequest(
                                 Optional.of(updateRequest),
-                                Collections.emptyMap(),
+                                TEST_HEADERS,
                                 Collections.emptyMap(),
                                 Map.ofEntries(
                                         Map.entry("publicSubjectId", testPublicSubject),
@@ -768,7 +873,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.of(updateRequest),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             requestPathParams,
                             Map.of("principalId", testInternalSubject));
@@ -797,7 +902,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.empty(),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", testPublicSubject),
@@ -808,6 +913,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
 
             assertNoNotificationsReceived(notificationsQueue);
+
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
 
         @Test
@@ -815,7 +922,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var response =
                     makeRequest(
                             Optional.empty(),
-                            Collections.emptyMap(),
+                            TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
                                     Map.entry("publicSubjectId", "invalid-public-subject-id"),
@@ -826,6 +933,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
 
             assertNoNotificationsReceived(notificationsQueue);
+
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }
 }
