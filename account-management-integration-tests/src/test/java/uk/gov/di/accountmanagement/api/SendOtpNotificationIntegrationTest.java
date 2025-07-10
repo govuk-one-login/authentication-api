@@ -82,10 +82,12 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 NotificationAssertionHelper.assertNotificationsReceived(
                         notificationsQueue,
-                        List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
+                        List.of(
+                                new NotifyRequest(
+                                        TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
-                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-
+                List<String> receivedEvents =
+                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
                 expectation.withAttribute("extensions.notification-type", VERIFY_EMAIL.name());
                 expectation.withAttribute("extensions.test-user", false);
@@ -115,8 +117,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
                 assertThat(
-                response,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_WITH_EMAIL_EXISTS)));
+                        response,
+                        hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_WITH_EMAIL_EXISTS)));
 
                 assertNoNotificationsReceived(notificationsQueue);
                 assertNoTxmaAuditEventsReceived(txmaAuditQueue);
@@ -141,7 +143,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         makeRequest(
                                 Optional.of(
                                         new SendNotificationRequest(
-                                                TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                                                TEST_EMAIL,
+                                                VERIFY_PHONE_NUMBER,
+                                                TEST_PHONE_NUMBER)),
                                 headers,
                                 Collections.emptyMap(),
                                 Collections.emptyMap(),
@@ -153,12 +157,15 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         notificationsQueue,
                         List.of(
                                 new NotifyRequest(
-                                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
+                                        TEST_PHONE_NUMBER,
+                                        VERIFY_PHONE_NUMBER,
+                                        SupportedLanguage.EN)));
 
-                List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-
+                List<String> receivedEvents =
+                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
-                expectation.withAttribute("extensions.notification-type", VERIFY_PHONE_NUMBER.name());
+                expectation.withAttribute(
+                        "extensions.notification-type", VERIFY_PHONE_NUMBER.name());
                 expectation.withAttribute("extensions.test-user", false);
                 expectation.verify(receivedEvents);
             }
@@ -212,7 +219,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
                 assertThat(
                         response,
-                        hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_PHONE_NUMBER)));
+                        hasBody(
+                                objectMapper.writeValueAsString(
+                                        ErrorResponse.INVALID_PHONE_NUMBER)));
 
                 assertNoNotificationsReceived(notificationsQueue);
                 assertNoTxmaAuditEventsReceived(txmaAuditQueue);

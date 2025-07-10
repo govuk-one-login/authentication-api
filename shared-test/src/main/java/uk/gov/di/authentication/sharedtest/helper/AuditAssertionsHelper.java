@@ -110,10 +110,26 @@ public class AuditAssertionsHelper {
                         .toList();
 
         // Check all expected events have been sent
-        // Check no unexpected events were sent
+        var missingEvents =
+                expectedTxmaEvents.stream()
+                        .filter(event -> !namesOfSentEvents.contains(event))
+                        .toList();
         assertTrue(
-                expectedTxmaEvents.containsAll(namesOfSentEvents)
-                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+                missingEvents.isEmpty(),
+                String.format(
+                        "Missing expected audit events: %s. Expected: %s, Actual: %s",
+                        missingEvents, expectedTxmaEvents, namesOfSentEvents));
+
+        // Check no unexpected events were sent
+        var unexpectedEvents =
+                namesOfSentEvents.stream()
+                        .filter(event -> !expectedTxmaEvents.contains(event))
+                        .toList();
+        assertTrue(
+                unexpectedEvents.isEmpty(),
+                String.format(
+                        "Received unexpected audit events: %s. Expected: %s, Actual: %s",
+                        unexpectedEvents, expectedTxmaEvents, namesOfSentEvents));
 
         // Check all sent events applied business rules, i.e. include a device_information section.
         sentEvents.forEach(
