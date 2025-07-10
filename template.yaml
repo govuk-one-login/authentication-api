@@ -3514,7 +3514,7 @@ Resources:
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref DocAppCredentialTableReadAccessPolicy
+        - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
