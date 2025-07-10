@@ -34,7 +34,6 @@ module "check_email_fraud_block" {
     ENVIRONMENT                   = var.environment
     TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI           = var.internal_sector_uri
-    REDIS_KEY                     = local.redis_key
     LOCKOUT_DURATION              = var.lockout_duration
     LOCKOUT_COUNT_TTL             = var.lockout_count_ttl
     SUPPORT_EMAIL_CHECK_ENABLED   = var.support_email_check_enabled

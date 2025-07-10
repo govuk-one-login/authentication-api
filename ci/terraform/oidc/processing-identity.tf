@@ -60,7 +60,6 @@ module "processing-identity" {
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     ENVIRONMENT                                 = var.environment
     HEADERS_CASE_INSENSITIVE                    = "false"
-    REDIS_KEY                                   = local.redis_key
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled

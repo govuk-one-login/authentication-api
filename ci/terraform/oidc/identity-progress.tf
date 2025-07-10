@@ -31,7 +31,6 @@ module "identity_progress" {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
-    REDIS_KEY                = local.redis_key
     OIDC_API_BASE_URL        = local.api_base_url,
     ORCH_DYNAMO_ARN_PREFIX   = "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-"
   }
