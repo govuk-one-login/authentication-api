@@ -242,3 +242,9 @@ variable "notify_test_destinations" {
   type        = string
   default     = ""
 }
+
+variable "snapstart_enabled" {
+  description = "Whether to enable Lambda SnapStart for the lambda functions in this module. Only non-redis lambda functions will be controlled by this variable."
+  type        = bool
+  default     = false
+}

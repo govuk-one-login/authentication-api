@@ -53,6 +53,8 @@ module "notify_callback" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   account_alias         = local.aws_account_alias
 
+  snapstart = var.snapstart_enabled
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
