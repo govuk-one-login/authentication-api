@@ -26,7 +26,7 @@ module "ipv-capacity" {
   handler_environment_variables = {
     ENVIRONMENT                    = var.environment
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
-    REDIS_KEY                      = local.redis_key
+    REDIS_KEY                      = var.environment == "production" ? local.redis_key : null
     IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id

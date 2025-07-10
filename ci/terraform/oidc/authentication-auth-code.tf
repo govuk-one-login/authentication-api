@@ -39,7 +39,7 @@ module "orch_auth_code" {
     ENVIRONMENT                    = var.environment
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI            = var.internal_sector_uri
-    REDIS_KEY                      = local.redis_key
+    REDIS_KEY                      = var.environment == "production" ? local.redis_key : null
     SUPPORT_REAUTH_SIGNOUT_ENABLED = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler::handleRequest"

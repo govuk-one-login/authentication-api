@@ -31,7 +31,7 @@ module "logout" {
 
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
-    REDIS_KEY                            = local.redis_key
+    REDIS_KEY                            = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT                          = var.environment
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name

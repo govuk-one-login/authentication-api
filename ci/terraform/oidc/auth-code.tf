@@ -29,7 +29,7 @@ module "auth-code" {
 
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
-    REDIS_KEY                = local.redis_key
+    REDIS_KEY                = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
     INTERNAl_SECTOR_URI      = var.internal_sector_uri

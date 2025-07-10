@@ -36,7 +36,7 @@ module "signup" {
   handler_environment_variables = {
     ENVIRONMENT                   = var.environment
     TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
-    REDIS_KEY                     = local.redis_key
+    REDIS_KEY                     = var.environment == "production" ? local.redis_key : null
     TERMS_CONDITIONS_VERSION      = var.terms_and_conditions
     INTERNAl_SECTOR_URI           = var.internal_sector_uri
     USE_STRONGLY_CONSISTENT_READS = var.use_strongly_consistent_reads

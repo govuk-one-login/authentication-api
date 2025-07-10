@@ -36,7 +36,7 @@ module "start" {
     TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
     CUSTOM_DOC_APP_CLAIM_ENABLED            = var.custom_doc_app_claim_enabled
     DOC_APP_DOMAIN                          = var.doc_app_domain
-    REDIS_KEY                               = local.redis_key
+    REDIS_KEY                               = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT                             = var.environment
     HEADERS_CASE_INSENSITIVE                = "false"
     IDENTITY_ENABLED                        = var.ipv_api_enabled

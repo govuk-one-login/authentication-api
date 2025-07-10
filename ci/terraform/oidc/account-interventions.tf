@@ -37,7 +37,7 @@ module "account_interventions" {
     ENVIRONMENT                                 = var.environment
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
-    REDIS_KEY                                   = local.redis_key
+    REDIS_KEY                                   = var.environment == "production" ? local.redis_key : null
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
