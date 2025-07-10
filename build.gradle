@@ -240,7 +240,7 @@ subprojects {
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
-        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.15.0-alpha"),
+        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.17.1-alpha"),
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure",
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
