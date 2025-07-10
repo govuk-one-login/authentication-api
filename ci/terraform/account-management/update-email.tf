@@ -67,5 +67,7 @@ module "update_email" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
+  snapstart = false # uses redis
+
   depends_on = [module.account_management_api_update_email_role]
 }

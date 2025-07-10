@@ -51,6 +51,8 @@ module "mfa-methods-retrieve" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
+  snapstart = var.snapstart_enabled
+
   runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
   lambda_log_alarm_error_rate_threshold = 25
 

@@ -82,6 +82,8 @@ module "login" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   api_key_required                       = true
 
+  snapstart = false # uses redis
+
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret

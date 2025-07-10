@@ -70,4 +70,6 @@ module "account_recovery" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 }
