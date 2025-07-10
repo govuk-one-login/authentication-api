@@ -1,4 +1,5 @@
 common_state_bucket = "di-auth-staging-tfstate"
+snapstart_enabled   = true
 
 # FMS
 am_api_fms_tag_value = "accountmanagementstaging"

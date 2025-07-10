@@ -1,4 +1,5 @@
 common_state_bucket = "di-auth-development-tfstate"
+snapstart_enabled   = true
 
 # URIs
 internal_sector_uri = "https://identity.dev.account.gov.uk"
