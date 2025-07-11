@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -60,12 +61,15 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
@@ -247,6 +251,7 @@ class SendOtpNotificationHandlerTest {
                     .submitAuditEvent(
                             AccountManagementAuditableEvent.AUTH_SEND_OTP,
                             auditContext.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_AUTH,
                             pair("notification-type", VERIFY_EMAIL),
                             pair("test-user", false));
 
@@ -367,12 +372,23 @@ class SendOtpNotificationHandlerTest {
                 .isPhoneAlreadyInUseAsAVerifiedMfa(
                         TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER);
 
-        verify(auditService, only())
+        InOrder inOrder = inOrder(auditService);
+
+        inOrder.verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_SEND_OTP,
                         auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
+                        auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
+                        pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.name()),
+                        pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
 
         verify(cloudwatchMetricsService, only())
                 .incrementCounter(eq("UserSubmittedCredential"), anyMap());
@@ -637,7 +653,7 @@ class SendOtpNotificationHandlerTest {
 
             @Test
             void cannotChangeEmailToOneInUseByAnotherUser() {
-                when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+                when(dynamoService.userExists(TEST_EMAIL_ADDRESS)).thenReturn(true);
 
                 var event = createEmptyEvent();
                 event.setBody(

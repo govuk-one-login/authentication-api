@@ -45,6 +45,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -124,7 +125,8 @@ class UpdatePasswordHandlerTest {
                                 userProfile.getPhoneNumber(),
                                 PERSISTENT_ID,
                                 Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                                new ArrayList<>()));
+                                new ArrayList<>()),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test

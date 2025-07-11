@@ -61,6 +61,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
@@ -257,7 +258,10 @@ class MFAMethodsCreateHandlerTest {
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
-                    .submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_COMPLETED), captor.capture());
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_COMPLETED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -330,7 +334,10 @@ class MFAMethodsCreateHandlerTest {
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
-                    .submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_COMPLETED), captor.capture());
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_COMPLETED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -527,7 +534,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1068));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -568,7 +579,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -607,7 +622,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
 
-            verify(auditService).submitAuditEvent(eq(AUTH_INVALID_CODE_SENT), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_INVALID_CODE_SENT),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
             containsMetadataPair(
                     capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
@@ -641,7 +660,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1069));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -680,7 +703,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1070));
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
@@ -726,7 +753,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
             verifyNoInteractions(sqsClient);
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_ADD_FAILED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(
