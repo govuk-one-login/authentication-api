@@ -38,6 +38,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
@@ -188,7 +189,8 @@ public class MFAMethodsCreateHandler
                                 pair(
                                         AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                         PriorityIdentifier.BACKUP.name().toLowerCase()));
-                auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_INVALID_CODE_SENT, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
                 return Result.failure(ERROR_1020);
             }
         }
@@ -246,7 +248,9 @@ public class MFAMethodsCreateHandler
                 return generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure());
             }
             auditService.submitAuditEvent(
-                    AUTH_MFA_METHOD_ADD_FAILED, maybeAuditContext.getSuccess());
+                    AUTH_MFA_METHOD_ADD_FAILED,
+                    maybeAuditContext.getSuccess(),
+                    AUDIT_EVENT_COMPONENT_ID_HOME);
             return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
         }
 
@@ -262,7 +266,9 @@ public class MFAMethodsCreateHandler
                 return generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure());
             }
             auditService.submitAuditEvent(
-                    AUTH_MFA_METHOD_ADD_FAILED, maybeAuditContext.getSuccess());
+                    AUTH_MFA_METHOD_ADD_FAILED,
+                    maybeAuditContext.getSuccess(),
+                    AUDIT_EVENT_COMPONENT_ID_HOME);
             return generateApiGatewayProxyErrorResponse(500, ERROR_1071);
         }
 
@@ -281,7 +287,8 @@ public class MFAMethodsCreateHandler
             auditContext = auditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
         }
 
-        auditService.submitAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext);
+        auditService.submitAuditEvent(
+                AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
 
         LocaleHelper.SupportedLanguage userLanguage =
                 matchSupportedLanguage(

@@ -43,6 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -135,7 +136,9 @@ class MFAMethodsDeleteHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_DELETE_COMPLETED), auditContextCaptor.capture());
+                            eq(AUTH_MFA_METHOD_DELETE_COMPLETED),
+                            auditContextCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
 
             AuditContext capturedContext = auditContextCaptor.getValue();
 

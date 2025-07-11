@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
@@ -200,7 +201,8 @@ public class MFAMethodsPutHandler
                                                             .name()
                                                             .toLowerCase()));
 
-                    auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
+                    auditService.submitAuditEvent(
+                            AUTH_INVALID_CODE_SENT, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
 
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
                 }
@@ -433,7 +435,8 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure()));
         }
 
-        auditService.submitAuditEvent(auditEvent, maybeAuditContext.getSuccess());
+        auditService.submitAuditEvent(
+                auditEvent, maybeAuditContext.getSuccess(), AUDIT_EVENT_COMPONENT_ID_HOME);
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);

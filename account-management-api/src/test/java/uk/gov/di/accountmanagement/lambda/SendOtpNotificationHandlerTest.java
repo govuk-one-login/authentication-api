@@ -68,6 +68,8 @@ import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
@@ -249,7 +251,7 @@ class SendOtpNotificationHandlerTest {
                     .submitAuditEvent(
                             AccountManagementAuditableEvent.AUTH_SEND_OTP,
                             auditContext.withPhoneNumber(null),
-                            "HOME",
+                            AUDIT_EVENT_COMPONENT_ID_AUTH,
                             pair("notification-type", VERIFY_EMAIL),
                             pair("test-user", false));
 
@@ -376,7 +378,7 @@ class SendOtpNotificationHandlerTest {
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_SEND_OTP,
                         auditContext,
-                        "HOME",
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
 
@@ -384,7 +386,7 @@ class SendOtpNotificationHandlerTest {
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                         auditContext,
-                        "HOME",
+                        AUDIT_EVENT_COMPONENT_ID_HOME,
                         pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.name()),
                         pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
 
