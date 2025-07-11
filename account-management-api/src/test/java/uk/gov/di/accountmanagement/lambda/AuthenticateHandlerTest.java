@@ -6,6 +6,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.*;
@@ -22,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -251,34 +255,18 @@ class AuthenticateHandlerTest {
                         AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
-    @Test
-    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithPasswordReset()
-            throws UnsuccessfulAccountInterventionsResponseException {
-        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
-                .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(USER_PROFILE));
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-
-        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
-                .thenReturn(
-                        new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, false, true)));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+    private static Stream<Arguments> suspendedUserStates() {
+        return Stream.of(
+                Arguments.of(true, false), // password reset only
+                Arguments.of(false, true), // reprove identity only
+                Arguments.of(true, true) // both password reset and reprove identity
+                );
     }
 
-    @Test
-    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithReproveIdentity()
+    @ParameterizedTest
+    @MethodSource("suspendedUserStates")
+    void shouldReturn204IfAisCallEnabledAndUserIsSuspendedWithInterventions(
+            boolean resetPassword, boolean reproveIdentity)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -290,33 +278,8 @@ class AuthenticateHandlerTest {
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
                 .thenReturn(
                         new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, true, false)));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
-    }
-
-    @Test
-    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
-            throws UnsuccessfulAccountInterventionsResponseException {
-        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
-                .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(USER_PROFILE));
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-
-        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
-                .thenReturn(
-                        new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, true, true)));
+                                new Intervention(1L),
+                                new State(false, true, reproveIdentity, resetPassword)));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
