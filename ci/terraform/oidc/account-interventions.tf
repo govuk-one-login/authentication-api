@@ -37,7 +37,6 @@ module "account_interventions" {
     ENVIRONMENT                                 = var.environment
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
-    REDIS_KEY                                   = local.redis_key
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
@@ -78,4 +77,6 @@ module "account_interventions" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 }

@@ -36,7 +36,6 @@ module "start" {
     TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
     CUSTOM_DOC_APP_CLAIM_ENABLED            = var.custom_doc_app_claim_enabled
     DOC_APP_DOMAIN                          = var.doc_app_domain
-    REDIS_KEY                               = local.redis_key
     ENVIRONMENT                             = var.environment
     HEADERS_CASE_INSENSITIVE                = "false"
     IDENTITY_ENABLED                        = var.ipv_api_enabled
@@ -75,6 +74,8 @@ module "start" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

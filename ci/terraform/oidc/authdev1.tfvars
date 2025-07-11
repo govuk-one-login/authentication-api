@@ -1,4 +1,5 @@
 shared_state_bucket = "di-auth-development-tfstate"
+snapstart_enabled   = true
 
 # Feature Flags
 test_clients_enabled                        = true

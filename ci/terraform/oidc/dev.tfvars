@@ -1,4 +1,5 @@
 shared_state_bucket = "di-auth-development-tfstate"
+snapstart_enabled   = true
 
 # FMS
 frontend_api_fms_tag_value = "authfrontenddev"
