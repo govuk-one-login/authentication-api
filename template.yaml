@@ -4777,7 +4777,7 @@ Resources:
     Condition: IsNotIntegration
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-dlq-alarm
-      AlarmDescription: !Sub "${Environment} backchannel logout DLQ has a message.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
+      AlarmDescription: !Sub "${Environment} backchannel logout DLQ has 5 or more messages.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
@@ -4792,7 +4792,7 @@ Resources:
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
-      Threshold: 1
+      Threshold: 5
       ComparisonOperator: GreaterThanThreshold
   #endregion
 
