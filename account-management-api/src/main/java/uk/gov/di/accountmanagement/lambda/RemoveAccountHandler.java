@@ -126,9 +126,9 @@ public class RemoveAccountHandler
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

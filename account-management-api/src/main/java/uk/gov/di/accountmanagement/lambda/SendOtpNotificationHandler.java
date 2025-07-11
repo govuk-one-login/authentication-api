@@ -49,9 +49,9 @@ import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -156,7 +156,8 @@ public class SendOtpNotificationHandler
             return Result.success(sendNotificationRequest);
         } catch (JsonException e) {
             LOG.error("Error parsing sendNotificationRequest", e);
-            return Result.failure(generateApiGatewayProxyErrorResponse(400, ERROR_1001));
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
         }
     }
 
@@ -225,7 +226,7 @@ public class SendOtpNotificationHandler
                 configurationService.getEnvironment());
 
         if (sendNotificationRequest.getNotificationType() == null) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+            return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
         }
 
         SupportedLanguage userLanguage =
@@ -245,7 +246,8 @@ public class SendOtpNotificationHandler
                 LOG.info("NotificationType is VERIFY_EMAIL");
 
                 if (dynamoService.userExists(email)) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+                    return generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.ACCT_WITH_EMAIL_EXISTS);
                 }
 
                 checkEmail(
@@ -304,7 +306,7 @@ public class SendOtpNotificationHandler
                         userLanguage);
             }
             default -> {
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
         }
     }

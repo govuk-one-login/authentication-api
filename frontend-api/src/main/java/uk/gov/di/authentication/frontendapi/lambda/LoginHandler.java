@@ -187,7 +187,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
             auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
         UserProfile userProfile = userProfileMaybe.get();
@@ -226,7 +226,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 FAILURE_REASON.getValue(),
                                 failureReason == null ? "unknown" : failureReason.getValue()));
 
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
             }
         }
 
@@ -254,7 +255,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             configurationService.getMaxPasswordRetries()),
                     pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
 
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
         }
 
         if (!credentialsAreValid(request, userProfile)) {
@@ -352,9 +354,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (retrieveMfaMethods.isFailure()) {
             return switch (retrieveMfaMethods.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1078);
+                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1010);
+                        500, ErrorResponse.ACCT_DOES_NOT_EXIST);
             };
         }
 
@@ -362,7 +364,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var maybeMfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrievedMfaMethods);
         if (maybeMfaMethodResponses.isFailure()) {
             LOG.error(maybeMfaMethodResponses.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
@@ -396,7 +399,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             mfaMethodResponses,
                             isPasswordChangeRequired));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -416,21 +419,21 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1026);
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         }
         if (codeStorageService.isBlockedForEmail(
                 email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1026);
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         }
 
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1027);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         }
         if (deprecatedCodeRequestType != null
                 && codeStorageService.isBlockedForEmail(
@@ -438,7 +441,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1027);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         }
         return Optional.empty();
     }
@@ -493,10 +496,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         updatedIncorrectPasswordCount,
                         auditContext);
             }
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
         }
 
-        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
     }
 
     private boolean isJourneyWhereBlockingApplies(boolean isReauthJourney) {

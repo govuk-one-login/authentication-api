@@ -106,7 +106,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+        assertTrue(response.getBody().contains(ErrorResponse.PW_TOO_COMMON.getMessage()));
     }
 
     @Test
@@ -128,7 +128,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(response, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
     }
 
     private void setUpTest() {

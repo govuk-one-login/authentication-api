@@ -329,7 +329,7 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
+            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
             verify(authSessionService, times(1)).updateSession(any(AuthSessionItem.class));
             verify(auditService)
                     .submitAuditEvent(
@@ -370,7 +370,7 @@ class CheckUserExistsHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
     }
 
@@ -381,7 +381,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(auditService);
     }
 
@@ -393,7 +393,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_FORMAT));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL,
@@ -408,7 +408,7 @@ class CheckUserExistsHandlerTest {
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
     }
 
     private void authSessionExists() {

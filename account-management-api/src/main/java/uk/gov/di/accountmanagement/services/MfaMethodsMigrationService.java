@@ -70,9 +70,11 @@ public class MfaMethodsMigrationService {
 
                 return switch (mfaMigrationFailureReason) {
                     case NO_CREDENTIALS_FOUND_FOR_USER -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
+                            generateApiGatewayProxyErrorResponse(
+                                    404, ErrorResponse.USER_NOT_FOUND));
                     case UNEXPECTED_ERROR_RETRIEVING_METHODS -> Optional.of(
-                            generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064));
+                            generateApiGatewayProxyErrorResponse(
+                                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
                     case ALREADY_MIGRATED -> Optional.empty();
                 };
             } else {

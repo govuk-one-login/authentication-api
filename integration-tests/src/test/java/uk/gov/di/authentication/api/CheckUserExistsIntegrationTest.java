@@ -224,7 +224,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
+        assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_TEMPORARILY_LOCKED));
     }

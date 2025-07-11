@@ -16,17 +16,17 @@ public class PasswordValidator {
     public Optional<ErrorResponse> validate(String password) {
 
         if (password == null || password.isBlank()) {
-            return Optional.of(ErrorResponse.ERROR_1005);
+            return Optional.of(ErrorResponse.PW_EMPTY);
         }
         if (password.length() < 8 || password.length() > 256) {
-            return Optional.of(ErrorResponse.ERROR_1006);
+            return Optional.of(ErrorResponse.INVALID_PW_LENGTH);
         }
         if (!hasAtLeastOneDigitAndOneNonDigit(password)) {
-            return Optional.of(ErrorResponse.ERROR_1007);
+            return Optional.of(ErrorResponse.INVALID_PW_CHARS);
         }
 
         if (commonPasswordsService.isCommonPassword(password)) {
-            return Optional.of(ErrorResponse.ERROR_1040);
+            return Optional.of(ErrorResponse.PW_TOO_COMMON);
         }
 
         return Optional.empty();

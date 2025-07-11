@@ -115,7 +115,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of("principalId", internalSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_OTP)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

@@ -189,7 +189,7 @@ class LoginHandlerReauthenticationRedisTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
         verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);

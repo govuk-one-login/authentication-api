@@ -161,7 +161,7 @@ class UpdatePhoneNumberHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
         verifyNoInteractions(sqsClient);
     }
@@ -175,7 +175,7 @@ class UpdatePhoneNumberHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -191,7 +191,7 @@ class UpdatePhoneNumberHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);

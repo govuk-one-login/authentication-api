@@ -55,10 +55,10 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1015;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.CLIENT_NOT_FOUND;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_MISSING;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -187,7 +187,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         if (!userContext.getAuthSession().validateSession(request.getEmail())) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
 
         if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
@@ -260,15 +260,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 case VERIFY_PHONE_NUMBER:
                     return handlePhoneNumberVerification(input, request, userContext, auditContext);
                 default:
-                    return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                    return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, CLIENT_NOT_FOUND);
         }
     }
 
@@ -279,7 +279,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
         if (request.getPhoneNumber() == null) {
-            return generateApiGatewayProxyResponse(400, ERROR_1011);
+            return generateApiGatewayProxyResponse(400, PHONE_NUMBER_MISSING);
         }
 
         boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
@@ -508,9 +508,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private ErrorResponse getErrorResponseForCodeRequestLimitReached(
             NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1029;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1030;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1046;
+            case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_SENT;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -520,9 +521,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private ErrorResponse getErrorResponseForMaxCodeRequests(NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1031;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1032;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1047;
+            case VERIFY_EMAIL -> ErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -532,9 +534,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private ErrorResponse getErrorResponseForMaxCodeAttempts(NotificationType notificationType) {
         return switch (notificationType) {
-            case VERIFY_EMAIL -> ErrorResponse.ERROR_1033;
-            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1034;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1048;
+            case VERIFY_EMAIL -> ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse
+                    .TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED;
             default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");

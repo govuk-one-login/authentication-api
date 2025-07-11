@@ -585,7 +585,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verifyNoInteractions(auditService);
             verifyNoInteractions(authAppCodeProcessor);
@@ -609,7 +609,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verifyNoInteractions(auditService);
             verifyNoInteractions(authAppCodeProcessor);
@@ -636,7 +636,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             when(mfaMethodsService.getMfaMethods(any()))
                     .thenReturn(
                             Result.success(
@@ -654,7 +654,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             if (journeyType.equals(REAUTHENTICATION)) {
                 verify(codeStorageService, never())
@@ -692,7 +692,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX))
                     .thenReturn(true);
             when(mfaMethodsService.getMfaMethods(any()))
@@ -720,7 +720,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -747,7 +747,7 @@ class VerifyMfaCodeHandlerTest {
                             ? null
                             : AUTH_APP_SECRET;
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
             when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
@@ -767,7 +767,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1043));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -819,7 +819,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             when(mfaMethodsService.getMfaMethods(any()))
                     .thenReturn(
                             Result.success(
@@ -835,7 +835,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             long blockTime = 900L;
             if (List.of(CodeRequestType.MFA_REGISTRATION, CodeRequestType.MFA_ACCOUNT_RECOVERY)
@@ -866,7 +866,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedPrefix)).thenReturn(true);
             when(mfaMethodsService.getMfaMethods(any()))
@@ -884,7 +884,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -907,7 +907,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+                    .thenReturn(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             var codeBlockedPrefix =
                     CODE_BLOCKED_KEY_PREFIX
                             + CodeRequestType.getDeprecatedCodeRequestTypeString(
@@ -922,7 +922,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never()).saveBlockedForEmail(EMAIL, codeBlockedPrefix, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -938,7 +938,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
             when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
 
             if (!List.of(ACCOUNT_RECOVERY, REGISTRATION).contains(journeyType)) {
@@ -961,7 +961,7 @@ class VerifyMfaCodeHandlerTest {
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_CODE_ENTERED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
@@ -1004,7 +1004,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
-                    .thenReturn(Optional.of(ErrorResponse.ERROR_1041));
+                    .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_SECRET));
 
             if (!CodeRequestType.isValidCodeRequestType(
                     CodeRequestType.SupportedCodeType.getFromMfaMethodType(MFAMethodType.AUTH_APP),
@@ -1020,7 +1020,7 @@ class VerifyMfaCodeHandlerTest {
                                     "not-base-32-encoded-secret"));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_AUTH_APP_SECRET));
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -1039,7 +1039,7 @@ class VerifyMfaCodeHandlerTest {
                                     MFAMethodType.AUTH_APP, CODE, REGISTRATION, AUTH_APP_SECRET));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1015));
+            assertThat(result, hasJsonBody(ErrorResponse.CLIENT_NOT_FOUND));
         }
     }
 
@@ -1050,7 +1050,8 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         withReauthTurnedOn();
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+        when(authAppCodeProcessor.validateCode())
+                .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(ttl);
         MockedStatic<NowHelper> mockedNowHelperClass = mockStatic(NowHelper.class);
         mockedNowHelperClass
@@ -1210,7 +1211,7 @@ class VerifyMfaCodeHandlerTest {
                                     expectedFailureReason));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
     }
 

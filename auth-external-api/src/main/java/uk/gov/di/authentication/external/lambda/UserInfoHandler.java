@@ -119,7 +119,7 @@ public class UserInfoHandler
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
         if (optionalAuthSession.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
         authSession = optionalAuthSession.get();
 

@@ -36,7 +36,7 @@ import java.net.MalformedURLException;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.MFA_RESET_JAR_GENERATION_ERROR;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -167,7 +167,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     200, new MfaResetResponse(ipvReverificationRequestURI));
         } catch (Json.JsonException | RuntimeException e) {
             LOG.error("Error building the IPV reverification request.", e);
-            return generateApiGatewayProxyResponse(500, ERROR_1060.getMessage());
+            return generateApiGatewayProxyResponse(
+                    500, MFA_RESET_JAR_GENERATION_ERROR.getMessage());
         }
     }
 }

@@ -204,7 +204,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", testInternalSubject)));
 
             assertEquals(404, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
             assertNoNotificationsReceived(notificationsQueue);
         }
@@ -225,7 +225,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", testInternalSubject)));
 
             assertEquals(404, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1065));
+            assertThat(response, hasJsonBody(ErrorResponse.MFA_METHOD_NOT_FOUND));
 
             assertEquals(2, userStore.getMfaMethod(EMAIL).size());
 
@@ -248,7 +248,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", testInternalSubject)));
 
             assertEquals(409, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1066));
+            assertThat(response, hasJsonBody(ErrorResponse.CANNOT_DELETE_DEFAULT_MFA));
 
             assertEquals(2, userStore.getMfaMethod(EMAIL).size());
 
@@ -271,7 +271,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", testInternalSubject)));
 
             assertEquals(400, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1067));
+            assertThat(response, hasJsonBody(ErrorResponse.CANNOT_DELETE_MFA_FOR_UNMIGRATED_USER));
 
             assertEquals(1, userStore.getMfaMethod(EMAIL).size());
 
@@ -291,7 +291,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", "invalid-principal")));
 
             assertEquals(401, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
 
             assertNoNotificationsReceived(notificationsQueue);
         }
@@ -309,7 +309,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                             Map.ofEntries(entry("principalId", testInternalSubject)));
 
             assertEquals(404, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
             assertNoNotificationsReceived(notificationsQueue);
         }

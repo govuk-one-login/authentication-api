@@ -240,7 +240,9 @@ class AuthAppCodeProcessorTest {
                         MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret),
                 codeRequestType);
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -267,7 +269,9 @@ class AuthAppCodeProcessorTest {
                         mockAccountModifiersService,
                         mockMfaMethodsService);
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
@@ -277,7 +281,9 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
@@ -286,7 +292,9 @@ class AuthAppCodeProcessorTest {
         setUpNoAuthCodeForUser(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1081), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND),
+                authAppCodeProcessor.validateCode());
     }
 
     @Test
@@ -300,7 +308,7 @@ class AuthAppCodeProcessorTest {
 
         assertThat(
                 authAppCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1041)));
+                equalTo(Optional.of(ErrorResponse.INVALID_AUTH_APP_SECRET)));
     }
 
     @ParameterizedTest
@@ -310,7 +318,9 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, "111111", journeyType, authAppSecret));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
@@ -319,7 +329,9 @@ class AuthAppCodeProcessorTest {
         setUpValidAuthCode(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", journeyType, authAppSecret));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     @ParameterizedTest
@@ -329,7 +341,9 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, "999999999999", journeyType, authAppSecret));
 
-        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
+        assertEquals(
+                Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED),
+                authAppCodeProcessor.validateCode());
     }
 
     @Test

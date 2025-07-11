@@ -83,7 +83,9 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         Map.of("principalId", internalCommonSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1024)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.NEW_PW_MATCHES_OLD)));
 
         assertNoNotificationsReceived(notificationsQueue);
 
@@ -108,7 +110,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1040)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.PW_TOO_COMMON)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

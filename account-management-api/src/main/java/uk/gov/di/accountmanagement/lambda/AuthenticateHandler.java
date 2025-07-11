@@ -100,7 +100,7 @@ public class AuthenticateHandler
             if (userProfile.isEmpty()) {
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
             }
             var internalCommonSubjectIdentifier =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -114,7 +114,7 @@ public class AuthenticateHandler
             if (!hasValidCredentials) {
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
             }
 
             if (configurationService.isAccountInterventionServiceCallInAuthenticateEnabled()) {
@@ -130,7 +130,8 @@ public class AuthenticateHandler
                                 AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
                                 auditContext);
                         LOG.info("Users account is suspended.");
-                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1083);
+                        return generateApiGatewayProxyErrorResponse(
+                                403, ErrorResponse.ACCT_SUSPENDED);
                     }
 
                     if (interventions.state().blocked()) {
@@ -138,13 +139,15 @@ public class AuthenticateHandler
                                 AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
                                 auditContext);
                         LOG.info("Users account is blocked.");
-                        return generateApiGatewayProxyErrorResponse(403, ErrorResponse.ERROR_1084);
+                        return generateApiGatewayProxyErrorResponse(
+                                403, ErrorResponse.ACCT_BLOCKED);
                     }
                 } catch (UnsuccessfulAccountInterventionsResponseException e) {
                     auditService.submitAuditEvent(
                             AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                     LOG.info("Request to Account Intervention Service failed.");
-                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1055);
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR);
                 }
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
@@ -155,7 +158,7 @@ public class AuthenticateHandler
         } catch (JsonException e) {
             auditService.submitAuditEvent(
                     AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

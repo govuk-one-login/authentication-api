@@ -82,7 +82,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1042);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
         }
 
         // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -91,7 +91,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         AUTH_APP, codeRequest.getJourneyType());
         if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1042);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
         }
 
         if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
@@ -100,7 +100,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (hasExceededRetryLimit()) {
             LOG.info("Exceeded code retry limit");
-            return Optional.of(ErrorResponse.ERROR_1042);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED);
         }
 
         var authAppSecret =
@@ -110,17 +110,17 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
-            return Optional.of(ErrorResponse.ERROR_1081);
+            return Optional.of(ErrorResponse.AUTH_APP_METHOD_NOT_FOUND);
         }
 
         if (!nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
-            return Optional.of(ErrorResponse.ERROR_1041);
+            return Optional.of(ErrorResponse.INVALID_AUTH_APP_SECRET);
         }
 
         if (!isCodeValid(codeRequest.getCode(), authAppSecret)) {
             LOG.info("Auth code is not valid");
-            return Optional.of(ErrorResponse.ERROR_1043);
+            return Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED);
         }
         LOG.info("Auth code valid. Resetting code request count");
         resetCodeIncorrectEntryCount();

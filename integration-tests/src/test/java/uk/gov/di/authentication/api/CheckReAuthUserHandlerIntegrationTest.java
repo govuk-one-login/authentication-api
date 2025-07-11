@@ -287,7 +287,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                         Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @Test
@@ -327,7 +327,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                         Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     private void registerClient(String sectorIdentifierUri) {

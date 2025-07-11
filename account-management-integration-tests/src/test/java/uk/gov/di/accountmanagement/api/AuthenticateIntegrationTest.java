@@ -89,7 +89,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(403));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1084)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_BLOCKED)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE));
@@ -108,7 +108,8 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(403));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1083)));
+        assertThat(
+                response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_SUSPENDED)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE));

@@ -152,7 +152,7 @@ class RemoveAccountHandlerTest {
         verifyNoInteractions(dynamoDeleteService);
         verifyNoInteractions(auditService);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(String principalId) {

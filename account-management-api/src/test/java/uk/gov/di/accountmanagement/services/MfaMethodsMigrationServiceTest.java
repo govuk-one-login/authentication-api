@@ -131,9 +131,11 @@ class MfaMethodsMigrationServiceTest {
 
         private static Stream<Arguments> fatalMigrationErrorsToHttpStatusAndError() {
             return Stream.of(
-                    Arguments.of(NO_CREDENTIALS_FOUND_FOR_USER, 404, ErrorResponse.ERROR_1056),
+                    Arguments.of(NO_CREDENTIALS_FOUND_FOR_USER, 404, ErrorResponse.USER_NOT_FOUND),
                     Arguments.of(
-                            UNEXPECTED_ERROR_RETRIEVING_METHODS, 500, ErrorResponse.ERROR_1064));
+                            UNEXPECTED_ERROR_RETRIEVING_METHODS,
+                            500,
+                            ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
         }
 
         @ParameterizedTest

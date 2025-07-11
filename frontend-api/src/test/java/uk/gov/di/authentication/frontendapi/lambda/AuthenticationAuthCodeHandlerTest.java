@@ -139,7 +139,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -152,7 +154,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -165,7 +169,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -182,7 +188,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -193,7 +201,9 @@ class AuthenticationAuthCodeHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @Test

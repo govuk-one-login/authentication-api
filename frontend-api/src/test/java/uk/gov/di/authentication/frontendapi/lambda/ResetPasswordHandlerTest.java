@@ -146,7 +146,7 @@ class ResetPasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        doReturn(Optional.of(ErrorResponse.ERROR_1007))
+        doReturn(Optional.of(ErrorResponse.INVALID_PW_CHARS))
                 .when(passwordValidator)
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
@@ -339,7 +339,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
         verifyNoInteractions(accountModifiersService);
     }
@@ -351,7 +351,7 @@ class ResetPasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_CHARS));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
         verifyNoInteractions(accountModifiersService);
@@ -366,7 +366,7 @@ class ResetPasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        assertThat(result, hasJsonBody(ErrorResponse.NEW_PW_MATCHES_OLD));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(sqsClient);
@@ -409,7 +409,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
         verifyNoInteractions(accountModifiersService);

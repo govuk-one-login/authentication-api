@@ -161,7 +161,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(auditService);
         verifyNoInteractions(sqsClient);
     }
@@ -180,7 +180,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
+        assertThat(result, hasJsonBody(ErrorResponse.NEW_PW_MATCHES_OLD));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -195,7 +195,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -203,7 +203,7 @@ class UpdatePasswordHandlerTest {
 
     @Test
     void shouldReturn400WhenPasswordValidationFails() {
-        doReturn(Optional.of(ErrorResponse.ERROR_1006))
+        doReturn(Optional.of(ErrorResponse.INVALID_PW_LENGTH))
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
 
@@ -211,7 +211,7 @@ class UpdatePasswordHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PW_LENGTH));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         verifyNoInteractions(auditService);
     }

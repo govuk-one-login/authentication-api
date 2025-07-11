@@ -135,7 +135,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         try {
             if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getAuthSession().validateSession(request.getEmail())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
             var userIsAlreadyLockedOutOfPasswordReset =
@@ -175,7 +175,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
     }
 
@@ -268,10 +268,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (retrieveMfaMethods.isFailure()) {
             return switch (retrieveMfaMethods.getFailure()) {
                 case UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                        500, ErrorResponse.ERROR_1078);
+                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> {
                     LOG.error("Could not find user profile for reset password request");
-                    yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+                    yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
                 }
             };
         }
@@ -290,7 +290,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var maybeMfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrievedMfaMethods);
         if (maybeMfaMethodResponses.isFailure()) {
             LOG.error(maybeMfaMethodResponses.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
         }
 
         var mfaMethodResponses = maybeMfaMethodResponses.getSuccess();
@@ -305,7 +306,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                     ? getLastDigitsOfPhoneNumber(defaultMfaPhoneNumber)
                                     : null));
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -319,15 +320,15 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            return Optional.of(ErrorResponse.ERROR_1022);
+            return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
         }
         if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {
             LOG.info("Code is blocked for email as user has requested too many OTPs");
-            return Optional.of(ErrorResponse.ERROR_1023);
+            return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
         }
         if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
             LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.ERROR_1039);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
         }
         return Optional.empty();
     }

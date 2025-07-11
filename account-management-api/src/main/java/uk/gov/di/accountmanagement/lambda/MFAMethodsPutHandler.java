@@ -135,7 +135,7 @@ public class MFAMethodsPutHandler
             LOG.error(
                     "Request to update MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
         }
 
         var validRequestOrErrorResponse = validatePutRequest(input);
@@ -202,7 +202,7 @@ public class MFAMethodsPutHandler
 
                     auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
 
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.INVALID_OTP);
                 }
             }
         }
@@ -227,7 +227,8 @@ public class MFAMethodsPutHandler
             LOG.error(
                     "Error converting mfa methods to response; update may still have occurred. Error: {}",
                     methodsAsResponse.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
         var updateTypeIdentifier = updateResult.updateTypeIdentifier();
@@ -264,7 +265,7 @@ public class MFAMethodsPutHandler
         try {
             return generateApiGatewayProxyResponse(200, methodsAsResponse.getSuccess(), true);
         } catch (Json.JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 
@@ -276,11 +277,11 @@ public class MFAMethodsPutHandler
         var response =
                 switch (failureReason) {
                     case CANNOT_CHANGE_TYPE_OF_MFA_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1072);
+                            400, ErrorResponse.CANNOT_CHANGE_MFA_TYPE);
                     case ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.ERROR_1077);
+                            500, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
                     case CANNOT_EDIT_MFA_BACKUP_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1077);
+                            400, ErrorResponse.CANNOT_EDIT_BACKUP_MFA);
                     case UNEXPECTED_ERROR -> {
                         if (updateType != null
                                 && updateType.equals(
@@ -291,17 +292,18 @@ public class MFAMethodsPutHandler
                                     userProfile,
                                     mfaMethodToBeUpdated);
                         }
-                        yield generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1071);
+                        yield generateApiGatewayProxyErrorResponse(
+                                500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
                     }
                     case UNKOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
-                            404, ErrorResponse.ERROR_1065);
+                            404, ErrorResponse.MFA_METHOD_NOT_FOUND);
                     case CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1073);
+                            400, ErrorResponse.CANNOT_CHANGE_DEFAULT_MFA_PRIORITY);
                     case CANNOT_ADD_SECOND_AUTH_APP -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1082);
+                            400, ErrorResponse.CANNOT_ADD_SECOND_AUTH_APP);
                     case REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE -> generateEmptySuccessApiGatewayResponse();
                     case ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER -> generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.ERROR_1074);
+                            400, ErrorResponse.CANNOT_UPDATE_PRIMARY_SMS_TO_BACKUP_NUMBER);
                     case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.INVALID_PHONE_NUMBER);
                 };
@@ -329,13 +331,15 @@ public class MFAMethodsPutHandler
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001));
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         if (mfaIdentifier.isEmpty()) {
             LOG.error("Request does not include mfa identifier");
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001));
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
         var maybeUserProfile =
@@ -344,7 +348,7 @@ public class MFAMethodsPutHandler
         if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
         }
 
         UserProfile userProfile = maybeUserProfile.get();
@@ -357,7 +361,7 @@ public class MFAMethodsPutHandler
                 authenticationService,
                 authorizerParams)) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079));
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
         }
 
         try {
@@ -372,7 +376,8 @@ public class MFAMethodsPutHandler
             return Result.success(putRequest);
         } catch (Json.JsonException e) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001));
+                    generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
     }
 
@@ -490,7 +495,7 @@ public class MFAMethodsPutHandler
             return Result.success(context);
         } catch (Exception e) {
             LOG.error("Error building audit context", e);
-            return Result.failure(ErrorResponse.ERROR_1071);
+            return Result.failure(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
 }

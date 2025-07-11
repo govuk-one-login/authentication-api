@@ -162,7 +162,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of("principalId", internalCommonSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.INVALID_OTP)));
 
         assertNoNotificationsReceived(notificationsQueue);
 
@@ -212,7 +212,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of("principalId", internalCommonSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_WITH_EMAIL_EXISTS)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

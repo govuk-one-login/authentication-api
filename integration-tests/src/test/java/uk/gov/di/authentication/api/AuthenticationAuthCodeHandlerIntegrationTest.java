@@ -111,7 +111,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -129,7 +131,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(sessionId), Map.of());
         assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     private Map<String, String> getHeaders(String sessionId) {

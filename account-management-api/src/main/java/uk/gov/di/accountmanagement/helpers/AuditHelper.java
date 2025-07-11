@@ -23,7 +23,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1071;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -81,7 +81,7 @@ public class AuditHelper {
             return Result.success(context);
         } catch (Exception e) {
             LOG.error("Error building audit context", e);
-            return Result.failure(ERROR_1071);
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
 }

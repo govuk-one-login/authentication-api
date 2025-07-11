@@ -154,7 +154,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
             if (Objects.nonNull(userCredentials.getPassword())) {
                 if (verifyPassword(userCredentials.getPassword(), request.password())) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
+                    return generateApiGatewayProxyErrorResponse(
+                            400, ErrorResponse.NEW_PW_MATCHES_OLD);
                 }
             } else {
                 LOG.info("Resetting password for migrated user");
@@ -245,7 +246,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             auditService.submitAuditEvent(auditableEvent, auditContext);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();

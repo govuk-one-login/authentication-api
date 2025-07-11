@@ -199,7 +199,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -221,7 +221,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
         // In the case where a user is already locked out, we do not emit this event
         // The case where the event is emitted is tested in integration tests
@@ -260,7 +260,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
         // In the case where a user is already locked out, we do not emit this event
         // The case where the event is emitted is tested in integration tests
@@ -302,7 +302,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @Test
@@ -319,7 +319,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @Test
@@ -335,7 +335,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -363,7 +363,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(404, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
         verify(auditService)
                 .submitAuditEvent(

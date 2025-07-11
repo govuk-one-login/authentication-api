@@ -1093,7 +1093,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(codeStorageService);
                 verifyNoInteractions(auditService);
@@ -1112,7 +1112,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
@@ -1132,7 +1132,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
+                assertThat(result, hasJsonBody(ErrorResponse.PHONE_NUMBER_MISSING));
                 verifyNoInteractions(emailSqsClient);
                 verifyNoInteractions(auditService);
             }
@@ -1154,7 +1154,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
+                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1185,7 +1185,8 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
+                assertThat(
+                        result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1221,7 +1222,8 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
+                assertThat(
+                        result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_VERIFICATION_CODES_SENT));
                 verify(codeStorageService)
                         .saveBlockedForEmail(
                                 EMAIL,
@@ -1255,7 +1257,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
+                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_EMAIL_VERIFICATION_CODES));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
@@ -1281,7 +1283,8 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
+                assertThat(
+                        result, hasJsonBody(ErrorResponse.BLOCKED_FOR_EMAIL_CODES_FOR_MFA_RESET));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(
@@ -1308,7 +1311,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
+                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
 
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
@@ -1342,7 +1345,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
+                assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PHONE_VERIFICATION_CODES));
             }
 
             @Test
@@ -1362,7 +1365,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
+                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
@@ -1387,7 +1390,9 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
+                assertThat(
+                        result,
+                        hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(
@@ -1410,7 +1415,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
                 verifyNoInteractions(emailSqsClient);
                 verify(auditService)
                         .submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
@@ -1436,7 +1441,7 @@ class SendNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+                assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED));
             }
         }
     }

@@ -471,7 +471,7 @@ class MFAMethodsPutHandlerTest {
                 Arguments.of(
                         MfaUpdateFailureReason.CANNOT_CHANGE_TYPE_OF_MFA_METHOD,
                         400,
-                        Optional.of(ErrorResponse.ERROR_1072)),
+                        Optional.of(ErrorResponse.CANNOT_CHANGE_MFA_TYPE)),
                 Arguments.of(
                         MfaUpdateFailureReason.REQUEST_TO_UPDATE_MFA_METHOD_WITH_NO_CHANGE,
                         204,
@@ -479,19 +479,19 @@ class MFAMethodsPutHandlerTest {
                 Arguments.of(
                         MfaUpdateFailureReason.UNEXPECTED_ERROR,
                         500,
-                        Optional.of(ErrorResponse.ERROR_1071)),
+                        Optional.of(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR)),
                 Arguments.of(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_PHONE_NUMBER_WITH_BACKUP_NUMBER,
                         400,
-                        Optional.of(ErrorResponse.ERROR_1074)),
+                        Optional.of(ErrorResponse.CANNOT_UPDATE_PRIMARY_SMS_TO_BACKUP_NUMBER)),
                 Arguments.of(
                         MfaUpdateFailureReason.CANNOT_CHANGE_PRIORITY_OF_DEFAULT_METHOD,
                         400,
-                        Optional.of(ErrorResponse.ERROR_1073)),
+                        Optional.of(ErrorResponse.CANNOT_CHANGE_DEFAULT_MFA_PRIORITY)),
                 Arguments.of(
                         MfaUpdateFailureReason.UNKOWN_MFA_IDENTIFIER,
                         404,
-                        Optional.of(ErrorResponse.ERROR_1065)),
+                        Optional.of(ErrorResponse.MFA_METHOD_NOT_FOUND)),
                 Arguments.of(
                         MfaUpdateFailureReason.INVALID_PHONE_NUMBER,
                         400,
@@ -499,7 +499,7 @@ class MFAMethodsPutHandlerTest {
                 Arguments.of(
                         MfaUpdateFailureReason.ATTEMPT_TO_UPDATE_BACKUP_WITH_NO_DEFAULT_METHOD,
                         500,
-                        Optional.of(ErrorResponse.ERROR_1077)));
+                        Optional.of(ErrorResponse.CANNOT_EDIT_BACKUP_MFA)));
     }
 
     @ParameterizedTest
@@ -593,7 +593,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1071));
+        assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -608,7 +608,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -628,7 +628,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -648,7 +648,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -677,7 +677,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -693,7 +693,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(404));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
         verify(sqsClient, never()).send(any());
         verifyNoInteractions(auditService);
@@ -716,7 +716,7 @@ class MFAMethodsPutHandlerTest {
         var result = handler.handleRequest(eventWithUpdateRequest, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
 
         ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
         verify(auditService).submitAuditEvent(eq(AUTH_INVALID_CODE_SENT), captor.capture());

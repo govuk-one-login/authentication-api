@@ -194,15 +194,15 @@ class MFAMethodsDeleteHandlerTest {
                     Arguments.of(
                             MfaDeleteFailureReason.CANNOT_DELETE_DEFAULT_METHOD,
                             409,
-                            ErrorResponse.ERROR_1066),
+                            ErrorResponse.CANNOT_DELETE_DEFAULT_MFA),
                     Arguments.of(
                             MfaDeleteFailureReason.CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER,
                             400,
-                            ErrorResponse.ERROR_1067),
+                            ErrorResponse.CANNOT_DELETE_MFA_FOR_UNMIGRATED_USER),
                     Arguments.of(
                             MfaDeleteFailureReason.MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST,
                             404,
-                            ErrorResponse.ERROR_1065));
+                            ErrorResponse.MFA_METHOD_NOT_FOUND));
         }
 
         @ParameterizedTest
@@ -284,7 +284,7 @@ class MFAMethodsDeleteHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(401));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
 
             verifyNoInteractions(sqsClient);
         }
@@ -298,7 +298,7 @@ class MFAMethodsDeleteHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(404));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
             verifyNoInteractions(sqsClient);
         }

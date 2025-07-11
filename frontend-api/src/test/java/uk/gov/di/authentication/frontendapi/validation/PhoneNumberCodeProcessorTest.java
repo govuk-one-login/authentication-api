@@ -179,7 +179,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1037)));
+                equalTo(Optional.of(ErrorResponse.INVALID_PHONE_CODE_ENTERED)));
     }
 
     @Test
@@ -194,7 +194,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1035)));
+                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
     }
 
     @ParameterizedTest
@@ -229,7 +229,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1034)));
+                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     @Test
@@ -243,7 +243,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1027)));
+                equalTo(Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED)));
     }
 
     @Test
@@ -257,7 +257,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1035)));
+                equalTo(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED)));
     }
 
     @ParameterizedTest
@@ -274,7 +274,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1034)));
+                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -306,7 +306,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1034)));
+                equalTo(Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED)));
     }
 
     @Test

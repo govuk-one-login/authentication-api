@@ -117,7 +117,7 @@ public class StartHandler
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (sessionIdOpt.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
 
         var sessionId = sessionIdOpt.get();
@@ -132,7 +132,8 @@ public class StartHandler
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
         if (clientSessionIdOpt.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.INVALID_CLIENT_SESSION_ID);
         }
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdOpt.get());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdOpt.get());
@@ -141,7 +142,7 @@ public class StartHandler
         try {
             startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         boolean isUserAuthenticatedWithValidProfile;

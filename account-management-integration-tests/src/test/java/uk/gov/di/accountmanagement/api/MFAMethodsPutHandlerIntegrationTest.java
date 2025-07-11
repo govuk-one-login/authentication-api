@@ -477,7 +477,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             Map.of("principalId", testInternalSubject));
 
             assertEquals(400, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1020));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_OTP));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_INVALID_CODE_SENT);
 
@@ -856,7 +856,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             Map.of("principalId", "invalid-internal-subject-id"));
 
             assertEquals(401, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1079));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
 
             assertNoNotificationsReceived(notificationsQueue);
         }
@@ -874,7 +874,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             Map.of("principalId", testInternalSubject));
 
             assertEquals(404, response.getStatusCode());
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1056));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
 
             assertNoNotificationsReceived(notificationsQueue);
         }

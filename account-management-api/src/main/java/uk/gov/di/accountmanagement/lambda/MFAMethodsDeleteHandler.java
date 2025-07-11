@@ -107,7 +107,7 @@ public class MFAMethodsDeleteHandler
             LOG.error(
                     "Request to delete MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE);
         }
 
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
@@ -115,19 +115,19 @@ public class MFAMethodsDeleteHandler
 
         if (publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         if (mfaIdentifier.isEmpty()) {
             LOG.error("Request does not include mfa identifier");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
         var maybeUserProfile =
                 dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
         if (maybeUserProfile.isEmpty()) {
             LOG.error("Unknown public subject ID");
-            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
         }
         UserProfile userProfile = maybeUserProfile.get();
 
@@ -137,7 +137,7 @@ public class MFAMethodsDeleteHandler
                 configurationService.getInternalSectorUri(),
                 dynamoService,
                 authorizerParams)) {
-            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079);
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL);
         }
 
         var deleteResult = mfaMethodsService.deleteMfaMethod(mfaIdentifier, userProfile);
@@ -150,11 +150,11 @@ public class MFAMethodsDeleteHandler
                     failureReason.name());
             return switch (failureReason) {
                 case CANNOT_DELETE_DEFAULT_METHOD -> generateApiGatewayProxyErrorResponse(
-                        409, ErrorResponse.ERROR_1066);
+                        409, ErrorResponse.CANNOT_DELETE_DEFAULT_MFA);
                 case CANNOT_DELETE_MFA_METHOD_FOR_NON_MIGRATED_USER -> generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ERROR_1067);
+                        400, ErrorResponse.CANNOT_DELETE_MFA_FOR_UNMIGRATED_USER);
                 case MFA_METHOD_WITH_IDENTIFIER_DOES_NOT_EXIST -> generateApiGatewayProxyErrorResponse(
-                        404, ErrorResponse.ERROR_1065);
+                        404, ErrorResponse.MFA_METHOD_NOT_FOUND);
             };
         }
 
@@ -236,7 +236,7 @@ public class MFAMethodsDeleteHandler
             return Result.success(context);
         } catch (Exception e) {
             LOG.error("Error building audit context", e);
-            return Result.failure(ErrorResponse.ERROR_1071);
+            return Result.failure(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
 }

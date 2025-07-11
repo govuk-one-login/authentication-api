@@ -149,7 +149,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1036));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
     }
@@ -178,7 +178,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response2, hasStatus(400));
-        assertThat(response2, hasJsonBody(ErrorResponse.ERROR_1036));
+        assertThat(response2, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_INVALID_CODE_SENT));
@@ -204,7 +204,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(false));
@@ -231,7 +231,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -257,7 +257,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
@@ -283,7 +283,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1039));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
@@ -318,7 +318,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
+        assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
@@ -342,7 +342,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1035));
+        assertThat(response, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(null));

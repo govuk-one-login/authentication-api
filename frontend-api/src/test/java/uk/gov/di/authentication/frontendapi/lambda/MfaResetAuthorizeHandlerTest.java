@@ -46,7 +46,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1060;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.MFA_RESET_JAR_GENERATION_ERROR;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -197,7 +197,7 @@ class MfaResetAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         assertThat(response, hasStatus(500));
-        assertThat(response, hasBody(ERROR_1060.getMessage()));
+        assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 
     @Test
@@ -209,6 +209,6 @@ class MfaResetAuthorizeHandlerTest {
         APIGatewayProxyResponseEvent response = handler.handleRequest(TEST_INVOKE_EVENT, context);
 
         assertThat(response, hasStatus(500));
-        assertThat(response, hasBody(ERROR_1060.getMessage()));
+        assertThat(response, hasBody(MFA_RESET_JAR_GENERATION_ERROR.getMessage()));
     }
 }

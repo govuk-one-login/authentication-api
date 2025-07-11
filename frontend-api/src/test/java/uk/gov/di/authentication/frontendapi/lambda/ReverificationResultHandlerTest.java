@@ -52,9 +52,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.IPV_STATE_MISMATCH;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -271,7 +271,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
 
             assertThat(
                     logging.events(),
@@ -315,7 +315,7 @@ class ReverificationResultHandlerTest {
                             USER_CONTEXT);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
 
             assertThat(
                     logging.events(),
@@ -454,7 +454,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1061));
+            assertThat(result, hasJsonBody(IPV_STATE_MISMATCH));
         }
 
         @Test
@@ -471,7 +471,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1061));
+            assertThat(result, hasJsonBody(IPV_STATE_MISMATCH));
         }
     }
 
@@ -494,7 +494,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1058));
+            assertThat(result, hasJsonBody(UNSUCCESSFUL_IPV_TOKEN_RESPONSE));
         }
     }
 
@@ -517,7 +517,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
         }
 
         @ParameterizedTest
@@ -545,7 +545,7 @@ class ReverificationResultHandlerTest {
                             apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ERROR_1059));
+            assertThat(result, hasJsonBody(REVERIFICATION_RESULT_GET_ERROR));
         }
     }
 

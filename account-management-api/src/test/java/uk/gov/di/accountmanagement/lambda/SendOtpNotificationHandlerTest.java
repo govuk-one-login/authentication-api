@@ -71,7 +71,7 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_N
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1004;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_EMAIL_FORMAT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.PERSISTENT_ID_HEADER_NAME;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -518,7 +518,7 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
                 verifyNoInteractions(auditService);
             }
@@ -534,7 +534,7 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ERROR_1004));
+                assertThat(result, hasJsonBody(INVALID_EMAIL_FORMAT));
 
                 verifyNoInteractions(auditService);
             }
@@ -625,7 +625,7 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+                assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
 
                 verify(emailSqsClient, never()).send(anyString());
                 verify(codeStorageService, never())
@@ -648,7 +648,7 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+                assertThat(result, hasJsonBody(ErrorResponse.ACCT_WITH_EMAIL_EXISTS));
                 verifyNoInteractions(auditService);
             }
         }
@@ -724,7 +724,7 @@ class SendOtpNotificationHandlerTest {
                 var result = handler.handleRequest(event, context);
 
                 assertEquals(400, result.getStatusCode());
-                assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+                assertThat(result, hasJsonBody(ErrorResponse.ACCT_WITH_EMAIL_EXISTS));
 
                 verifyNoInteractions(auditService);
             }

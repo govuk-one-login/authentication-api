@@ -43,10 +43,10 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1020;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1071;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1080;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -125,21 +125,22 @@ public class MFAMethodsCreateHandler
                     "Request to create MFA method in {} environment but feature is switched off.",
                     configurationService.getEnvironment());
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1063));
+                    generateApiGatewayProxyErrorResponse(400, ErrorResponse.MM_API_NOT_AVAILABLE));
         }
 
         var subject = input.getPathParameters().get("publicSubjectId");
 
         if (subject == null) {
             LOG.error("Subject missing from request prevents request being handled.");
-            return Result.failure(generateApiGatewayProxyErrorResponse(400, ERROR_1001));
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
         }
 
         Optional<UserProfile> maybeUserProfile =
                 dynamoService.getOptionalUserProfileFromPublicSubject(subject);
         if (maybeUserProfile.isEmpty()) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056));
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
         }
 
         UserProfile userProfile = maybeUserProfile.get();
@@ -152,7 +153,7 @@ public class MFAMethodsCreateHandler
                 dynamoService,
                 authorizerParams)) {
             return Result.failure(
-                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1079));
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
         }
 
         return Result.success(userProfile);
@@ -166,12 +167,12 @@ public class MFAMethodsCreateHandler
             mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
         } catch (Json.JsonException e) {
             LOG.error("Invalid request to create an MFA method: ", e);
-            return Result.failure(ERROR_1001);
+            return Result.failure(REQUEST_MISSING_PARAMS);
         }
 
         if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            LOG.error(ERROR_1080.name());
-            return Result.failure(ERROR_1080);
+            LOG.error(DEFAULT_MFA_ALREADY_EXISTS.name());
+            return Result.failure(DEFAULT_MFA_ALREADY_EXISTS);
         }
 
         if (mfaMethodCreateRequest.mfaMethod().method()
@@ -189,7 +190,7 @@ public class MFAMethodsCreateHandler
                                         AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                         PriorityIdentifier.BACKUP.name().toLowerCase()));
                 auditService.submitAuditEvent(AUTH_INVALID_CODE_SENT, auditContext);
-                return Result.failure(ERROR_1020);
+                return Result.failure(INVALID_OTP);
             }
         }
 
@@ -263,7 +264,7 @@ public class MFAMethodsCreateHandler
             }
             auditService.submitAuditEvent(
                     AUTH_MFA_METHOD_ADD_FAILED, maybeAuditContext.getSuccess());
-            return generateApiGatewayProxyErrorResponse(500, ERROR_1071);
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
         auditContext =
@@ -299,7 +300,7 @@ public class MFAMethodsCreateHandler
             LOG.info("Message successfully added to queue. Generating successful response");
         } catch (Json.JsonException e) {
             LOG.error("Failed to add message to queue: ", e);
-            return generateApiGatewayProxyErrorResponse(500, ERROR_1071);
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
         cloudwatchMetricsService.incrementMfaMethodCounter(
@@ -315,7 +316,7 @@ public class MFAMethodsCreateHandler
                     200, backupMfaMethodAsResponse.getSuccess(), true);
         } catch (Json.JsonException e) {
             LOG.error("Failed to build successful resposne: ", e);
-            return generateApiGatewayProxyErrorResponse(500, ERROR_1071);
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
 
@@ -325,7 +326,7 @@ public class MFAMethodsCreateHandler
 
         if (maybeMfaMethods.isFailure()) {
             LOG.error("No MFA methods found for user");
-            return Result.failure(ERROR_1071);
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
         var mfaMethods = maybeMfaMethods.getSuccess();
@@ -341,7 +342,7 @@ public class MFAMethodsCreateHandler
 
         if (defaultMfaMethod.isEmpty()) {
             LOG.error("No default MFA method found for user");
-            return Result.failure(ERROR_1071);
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
         if (defaultMfaMethod.get().getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
@@ -365,11 +366,11 @@ public class MFAMethodsCreateHandler
             MfaCreateFailureReason failureReason) {
         return switch (failureReason) {
             case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.ERROR_1068);
+                    400, ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED);
             case PHONE_NUMBER_ALREADY_EXISTS -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.ERROR_1069);
+                    400, ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS);
             case AUTH_APP_EXISTS -> generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.ERROR_1070);
+                    400, ErrorResponse.AUTH_APP_EXISTS);
             case INVALID_PHONE_NUMBER -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.INVALID_PHONE_NUMBER);
         };
