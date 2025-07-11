@@ -22,6 +22,10 @@ public class CodeStorageService {
 
     private final RedisConnectionService redisConnectionService;
     private final ConfigurationService configurationService;
+    
+    public RedisConnectionService getRedisConnectionService() {
+        return redisConnectionService;
+    }
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
@@ -171,9 +175,11 @@ public class CodeStorageService {
     }
 
     public boolean isBlockedForEmail(String emailAddress, String prefix) {
-        String value =
-                redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress));
-        LOG.info("block value: {}", value);
+        String hashedEmail = HashHelper.hashSha256String(emailAddress);
+        String key = prefix + hashedEmail;
+        String value = redisConnectionService.getValue(key);
+        LOG.info("Checking block for email: {}, prefix: {}, key: {}, block value: {}", 
+                emailAddress, prefix, key, value);
         return value != null;
     }
 
