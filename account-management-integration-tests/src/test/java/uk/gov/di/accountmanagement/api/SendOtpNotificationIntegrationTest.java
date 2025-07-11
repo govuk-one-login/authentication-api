@@ -25,10 +25,15 @@ import java.util.Optional;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -162,12 +167,24 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                         SupportedLanguage.EN)));
 
                 List<String> receivedEvents =
-                        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-                AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
-                expectation.withAttribute(
+                        assertTxmaAuditEventsReceived(
+                                txmaAuditQueue, List.of(AUTH_SEND_OTP, AUTH_PHONE_CODE_SENT));
+                AuditEventExpectation sendOtpExpectation =
+                        new AuditEventExpectation(AUTH_SEND_OTP.name());
+                sendOtpExpectation.withAttribute(
                         "extensions.notification-type", VERIFY_PHONE_NUMBER.name());
-                expectation.withAttribute("extensions.test-user", false);
-                expectation.verify(receivedEvents);
+                sendOtpExpectation.withAttribute("extensions.test-user", false);
+                sendOtpExpectation.verify(receivedEvents);
+
+                AuditEventExpectation phoneCodeSentExpectation =
+                        new AuditEventExpectation(AUTH_PHONE_CODE_SENT.name());
+                phoneCodeSentExpectation.withAttribute(
+                        "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                        ACCOUNT_MANAGEMENT.name());
+                phoneCodeSentExpectation.withAttribute(
+                        "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                        DEFAULT.name().toLowerCase());
+                phoneCodeSentExpectation.verify(receivedEvents);
             }
         }
 

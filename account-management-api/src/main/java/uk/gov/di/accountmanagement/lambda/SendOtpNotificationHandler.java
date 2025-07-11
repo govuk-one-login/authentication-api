@@ -19,7 +19,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -47,10 +47,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -221,7 +224,7 @@ public class SendOtpNotificationHandler
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
-                JourneyType.ACCOUNT_MANAGEMENT,
+                ACCOUNT_MANAGEMENT,
                 sendNotificationRequest.getNotificationType().name(),
                 configurationService.getEnvironment());
 
@@ -339,7 +342,7 @@ public class SendOtpNotificationHandler
                                         clientSessionId,
                                         persistentSessionId,
                                         IpAddressHelper.extractIpAddress(input),
-                                        JourneyType.ACCOUNT_MANAGEMENT,
+                                        ACCOUNT_MANAGEMENT,
                                         timeOfInitialRequest,
                                         isTestUserRequest)));
                 LOG.info(
@@ -416,8 +419,20 @@ public class SendOtpNotificationHandler
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_SEND_OTP,
                 auditContext,
+                "HOME",
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));
+
+        if (notificationType == NotificationType.VERIFY_PHONE_NUMBER) {
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
+                    auditContext,
+                    "HOME",
+                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name()),
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                            PriorityIdentifier.DEFAULT.name().toLowerCase()));
+        }
 
         LOG.info("Generating successful API response");
         return generateEmptySuccessApiGatewayResponse();
