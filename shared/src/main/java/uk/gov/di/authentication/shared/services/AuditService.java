@@ -75,6 +75,11 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
+        submitAuditEvent(event, auditContext, COMPONENT_ID, metadataPairs);
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event, AuditContext auditContext, String componentId, MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
@@ -89,7 +94,7 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(auditContext.clientId())
-                        .withComponentId(COMPONENT_ID)
+                        .withComponentId(componentId)
                         .withUser(user);
 
         AuditService.MetadataPair[] meta = auditContext.metadata().toArray(new MetadataPair[0]);
