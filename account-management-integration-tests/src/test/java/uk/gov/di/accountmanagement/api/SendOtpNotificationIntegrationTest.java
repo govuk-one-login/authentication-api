@@ -29,9 +29,11 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_TEST_USER;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -94,8 +96,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
-                expectation.withAttribute("extensions.notification-type", VERIFY_EMAIL.name());
-                expectation.withAttribute("extensions.test-user", false);
+                expectation.withAttribute(EXTENSIONS_NOTIFICATION_TYPE, VERIFY_EMAIL.name());
+                expectation.withAttribute(EXTENSIONS_TEST_USER, false);
                 expectation.verify(receivedEvents);
             }
         }
@@ -172,18 +174,16 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 AuditEventExpectation sendOtpExpectation =
                         new AuditEventExpectation(AUTH_SEND_OTP.name());
                 sendOtpExpectation.withAttribute(
-                        "extensions.notification-type", VERIFY_PHONE_NUMBER.name());
-                sendOtpExpectation.withAttribute("extensions.test-user", false);
+                        EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name());
+                sendOtpExpectation.withAttribute(EXTENSIONS_TEST_USER, false);
                 sendOtpExpectation.verify(receivedEvents);
 
                 AuditEventExpectation phoneCodeSentExpectation =
                         new AuditEventExpectation(AUTH_PHONE_CODE_SENT.name());
                 phoneCodeSentExpectation.withAttribute(
-                        "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                        ACCOUNT_MANAGEMENT.name());
+                        EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
                 phoneCodeSentExpectation.withAttribute(
-                        "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                        DEFAULT.name().toLowerCase());
+                        EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
                 phoneCodeSentExpectation.verify(receivedEvents);
             }
         }
