@@ -176,7 +176,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Nested
     class ChangingDefaultMethod {
-
         public static final String DEFAULT_AUTH_APP_RESPONSE_TEMPLATE =
                 """
                 [
@@ -191,7 +190,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     }
                 ]
                 """;
-
         public static final String SMS_RESPONSE_TEMPLATE =
                 """
                 {
@@ -594,14 +592,14 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             addInvalidCodeSentAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
             addInvalidCodeSentAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             eventExpectations.put(AUTH_INVALID_CODE_SENT.name(), addInvalidCodeSentAttributes);
-
             verifyAuditEvents(expectedEvents, eventExpectations);
+
+            assertNoNotificationsReceived(notificationsQueue);
         }
     }
 
     @Nested
     class SwitchingMethods {
-
         private void assertRetrievedMethodHasSameFieldsWithUpdatedPriority(
                 MFAMethod expected, MFAMethod retrieved, PriorityIdentifier expectedPriority) {
             assertAll(
@@ -640,7 +638,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                      }
                  }
                 """;
-
         public static final String SWITCH_REQUEST =
                 """
                 {
@@ -791,7 +788,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Nested
     class UserMigration {
-
         private void createUnMigratedUserWithIntermediateMfaIdentifier(String mfaIdentifier) {
             userStore.setPhoneNumberAndVerificationStatus(
                     TEST_EMAIL, TEST_PHONE_NUMBER, true, true);
@@ -893,7 +889,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Nested
     class Idempotence {
-
         @Test
         void duplicateUpdatesShouldBeIdempotentForUpdatesToDefaultMethod() {
             userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, defaultAuthApp);
@@ -1029,12 +1024,11 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Nested
     class Validations {
-
         @Test
         void shouldReturn401WhenPrincipalIsInvalid() {
             var response =
                     makeRequest(
-                            Optional.empty(),
+                            Optional.of(ChangingBackupMethod.buildUpdateRequestWithOtp()),
                             TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
@@ -1044,7 +1038,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertEquals(401, response.getStatusCode());
             assertThat(response, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
-
             assertNoNotificationsReceived(notificationsQueue);
 
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
@@ -1054,7 +1047,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
             var response =
                     makeRequest(
-                            Optional.empty(),
+                            Optional.of(ChangingBackupMethod.buildUpdateRequestWithOtp()),
                             TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
