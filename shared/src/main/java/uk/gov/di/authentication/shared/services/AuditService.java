@@ -79,7 +79,10 @@ public class AuditService {
     }
 
     public void submitAuditEvent(
-            AuditableEvent event, AuditContext auditContext, String componentId, MetadataPair... metadataPairs) {
+            AuditableEvent event,
+            AuditContext auditContext,
+            String componentId,
+            MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
