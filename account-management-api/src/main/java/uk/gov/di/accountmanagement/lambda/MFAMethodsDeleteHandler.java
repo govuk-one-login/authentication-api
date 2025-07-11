@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -168,7 +169,9 @@ public class MFAMethodsDeleteHandler
         }
 
         auditService.submitAuditEvent(
-                AUTH_MFA_METHOD_DELETE_COMPLETED, auditContextResult.getSuccess());
+                AUTH_MFA_METHOD_DELETE_COMPLETED,
+                auditContextResult.getSuccess(),
+                AUDIT_EVENT_COMPONENT_ID_HOME);
 
         LOG.info("Audit event emitted.");
 

@@ -41,6 +41,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -120,7 +121,8 @@ class UpdatePhoneNumberHandlerTest {
                                 NEW_PHONE_NUMBER,
                                 PERSISTENT_ID,
                                 Optional.of(TXMA_ENCODED_HEADER_VALUE),
-                                new ArrayList<>()));
+                                new ArrayList<>()),
+                        AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 
     @Test

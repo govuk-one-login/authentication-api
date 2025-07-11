@@ -47,6 +47,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -419,7 +421,7 @@ public class SendOtpNotificationHandler
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.AUTH_SEND_OTP,
                 auditContext,
-                "HOME",
+                AUDIT_EVENT_COMPONENT_ID_AUTH,
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));
 
@@ -427,7 +429,7 @@ public class SendOtpNotificationHandler
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                     auditContext,
-                    "HOME",
+                    AUDIT_EVENT_COMPONENT_ID_HOME,
                     pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name()),
                     pair(
                             AUDIT_EVENT_EXTENSIONS_MFA_METHOD,

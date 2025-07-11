@@ -53,6 +53,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -147,6 +148,7 @@ class UpdateEmailHandlerTest {
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                         auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
                         AuditService.MetadataPair.pair(
                                 "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
         assertThat(
@@ -184,6 +186,7 @@ class UpdateEmailHandlerTest {
                     .submitAuditEvent(
                             AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                             auditContext.withSubjectId(INTERNAL_SUBJECT.getValue()),
+                            AUDIT_EVENT_COMPONENT_ID_AUTH,
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                             AuditService.MetadataPair.pair(

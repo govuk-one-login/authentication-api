@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PASSWORD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -186,7 +187,8 @@ public class UpdatePasswordHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             new ArrayList<>());
 
-            auditService.submitAuditEvent(AUTH_UPDATE_PASSWORD, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_UPDATE_PASSWORD, auditContext, AUDIT_EVENT_COMPONENT_ID_AUTH);
 
             return generateEmptySuccessApiGatewayResponse();
 

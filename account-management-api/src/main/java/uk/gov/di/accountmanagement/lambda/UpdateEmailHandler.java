@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -181,6 +182,7 @@ public class UpdateEmailHandler
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                         auditContext.withSubjectId(userProfile.getSubjectID()),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
                         pair("journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                         pair(
                                 "assessment_checked_at_timestamp",
@@ -223,6 +225,7 @@ public class UpdateEmailHandler
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                     auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
+                    AUDIT_EVENT_COMPONENT_ID_AUTH,
                     AuditService.MetadataPair.pair(
                             "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 

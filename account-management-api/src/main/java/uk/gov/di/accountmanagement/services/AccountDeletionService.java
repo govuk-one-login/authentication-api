@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -125,7 +126,10 @@ public class AccountDeletionService {
                             txmaAuditEncoded,
                             new ArrayList<>());
             auditService.submitAuditEvent(
-                    AUTH_DELETE_ACCOUNT, auditContext, pair("account_deletion_reason", reason));
+                    AUTH_DELETE_ACCOUNT,
+                    auditContext,
+                    AUDIT_EVENT_COMPONENT_ID_AUTH,
+                    pair("account_deletion_reason", reason));
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

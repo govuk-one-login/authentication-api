@@ -28,6 +28,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -75,7 +76,7 @@ class AuthenticateHandlerTest {
     private String clientSubjectId;
 
     @BeforeEach
-    public void setUp() throws UnsuccessfulAccountInterventionsResponseException {
+    void setUp() throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(false);
@@ -119,11 +120,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
+    void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
         event.setHeaders(
                 Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -140,7 +142,8 @@ class AuthenticateHandlerTest {
                         auditContext
                                 .withClientSessionId("unknown")
                                 .withSubjectId(clientSubjectId)
-                                .withTxmaAuditEncoded(Optional.empty()));
+                                .withTxmaAuditEncoded(Optional.empty()),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
@@ -157,7 +160,8 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
@@ -172,7 +176,8 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withEmail(AuditService.UNKNOWN));
+                        auditContext.withEmail(AuditService.UNKNOWN),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
@@ -186,11 +191,14 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
 
         verify(auditService)
-                .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn403IfAisCallEnabledAndUserIsBlocked()
+    void shouldReturn403IfAisCallEnabledAndUserIsBlocked()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -212,11 +220,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn403IfIfAisCallEnabledAndUserIsSuspended()
+    void shouldReturn403IfIfAisCallEnabledAndUserIsSuspended()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -238,11 +247,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithPasswordReset()
+    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithPasswordReset()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -263,11 +273,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithReproveIdentity()
+    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithReproveIdentity()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -288,13 +299,13 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void
-            shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
-                    throws UnsuccessfulAccountInterventionsResponseException {
+    void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
+            throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -314,11 +325,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn500IfIfAisCallEnabledTheCallFails()
+    void shouldReturn500IfIfAisCallEnabledTheCallFails()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -340,6 +352,7 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 }

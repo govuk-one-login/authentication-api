@@ -58,6 +58,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
@@ -393,7 +394,10 @@ class MFAMethodsPutHandlerTest {
 
         ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
         verify(auditService)
-                .submitAuditEvent(eq(AUTH_MFA_METHOD_SWITCH_COMPLETED), captor.capture());
+                .submitAuditEvent(
+                        eq(AUTH_MFA_METHOD_SWITCH_COMPLETED),
+                        captor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
         AuditContext capturedObject = captor.getValue();
 
         containsMetadataPair(
@@ -688,7 +692,11 @@ class MFAMethodsPutHandlerTest {
         handler.handleRequest(eventWithUpdateRequest, context);
 
         ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-        verify(auditService).submitAuditEvent(eq(AUTH_MFA_METHOD_SWITCH_FAILED), captor.capture());
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AUTH_MFA_METHOD_SWITCH_FAILED),
+                        captor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
         AuditContext capturedObject = captor.getValue();
 
         containsMetadataPair(
@@ -861,7 +869,11 @@ class MFAMethodsPutHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
 
         ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-        verify(auditService).submitAuditEvent(eq(AUTH_INVALID_CODE_SENT), captor.capture());
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AUTH_INVALID_CODE_SENT),
+                        captor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
         AuditContext capturedObject = captor.getValue();
         containsMetadataPair(
                 capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());

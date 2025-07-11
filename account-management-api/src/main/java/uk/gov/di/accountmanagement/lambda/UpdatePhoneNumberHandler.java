@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.ArrayList;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -164,7 +165,8 @@ public class UpdatePhoneNumberHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             new ArrayList<>());
 
-            auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_UPDATE_PHONE_NUMBER, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();

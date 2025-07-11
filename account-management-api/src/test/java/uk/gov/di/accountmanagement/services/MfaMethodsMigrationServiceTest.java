@@ -47,6 +47,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
@@ -230,7 +231,9 @@ class MfaMethodsMigrationServiceTest {
                     ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED), auditContextCaptor.capture());
+                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
+                            auditContextCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
 
             AuditContext capturedContext = auditContextCaptor.getValue();
 
@@ -268,7 +271,9 @@ class MfaMethodsMigrationServiceTest {
                     ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
                     .submitAuditEvent(
-                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED), auditContextCaptor.capture());
+                            eq(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED),
+                            auditContextCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
 
             AuditContext capturedContext = auditContextCaptor.getValue();
 
