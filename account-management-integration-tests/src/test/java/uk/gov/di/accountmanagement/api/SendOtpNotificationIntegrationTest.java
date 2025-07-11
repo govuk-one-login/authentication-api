@@ -34,8 +34,6 @@ import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSI
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_TEST_USER;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
