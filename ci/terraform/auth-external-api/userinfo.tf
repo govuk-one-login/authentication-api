@@ -4,7 +4,7 @@ module "auth_userinfo_role" {
   role_name   = "auth-ext-userinfo-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     module.auth_ext_txma_audit.access_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -12,11 +12,11 @@ module "auth_userinfo_role" {
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
     aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_auth_session_write_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn
-  ]
+  ])
   extra_tags = {
     Service = "auth-userinfo"
   }

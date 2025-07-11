@@ -4,19 +4,19 @@ module "frontend_api_update_profile_role" {
   role_name   = "frontend-api-update-profile-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn
-  ]
+  ])
   extra_tags = {
     Service = "update-profile"
   }
