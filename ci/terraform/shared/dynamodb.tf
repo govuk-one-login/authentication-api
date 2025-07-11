@@ -759,7 +759,7 @@ resource "aws_dynamodb_resource_policy" "email-check-result" {
 resource "aws_dynamodb_resource_policy" "authentication_attempt_table" {
   count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.authentication_attempt_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document[0].json
 }
 
 resource "aws_dynamodb_resource_policy" "auth_session_table" {
