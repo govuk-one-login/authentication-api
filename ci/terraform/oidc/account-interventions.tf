@@ -63,10 +63,11 @@ module "account_interventions" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_account_interventions_role[count.index].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns

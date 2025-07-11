@@ -57,10 +57,10 @@ module "reverification_result" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.authentication_egress_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.reverification_result_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
