@@ -37,10 +37,10 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHEN
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -96,10 +96,6 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final MFAMethod backupAuthApp =
             MFAMethod.authAppMfaMethod(
                     TEST_CREDENTIAL, true, true, BACKUP, UUID.randomUUID().toString());
-    private static final String EXTENSIONS_MFA_METHOD =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-    public static final String EXTENSIONS_JOURNEY_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 
     @BeforeEach
     void setUp() {

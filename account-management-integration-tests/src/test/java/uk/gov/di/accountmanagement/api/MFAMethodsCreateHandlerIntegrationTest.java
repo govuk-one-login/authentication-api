@@ -44,11 +44,11 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
@@ -66,12 +66,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    public static final String EXTENSIONS_JOURNEY_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-    public static final String EXTENSIONS_MFA_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-    public static final String EXTENSIONS_MFA_METHOD =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+
     private static String testPublicSubject;
     private static String testInternalSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -186,8 +181,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> addCompletedAttributes = new HashMap<>();
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
-            addCompletedAttributes.put(
-                    "extensions." + AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            addCompletedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
