@@ -117,7 +117,9 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Collections.emptyMap());
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1010)));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.ACCT_DOES_NOT_EXIST)));
 
         assertNoNotificationsReceived(notificationsQueue);
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);

@@ -147,7 +147,7 @@ public class UpdatePasswordHandler
 
             if (isNewPasswordSameAsCurrentPassword(
                     currentPassword, updatePasswordRequest.getNewPassword())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.NEW_PW_MATCHES_OLD);
             }
 
             dynamoService.updatePassword(
@@ -191,9 +191,9 @@ public class UpdatePasswordHandler
             return generateEmptySuccessApiGatewayResponse();
 
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException | IllegalArgumentException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 

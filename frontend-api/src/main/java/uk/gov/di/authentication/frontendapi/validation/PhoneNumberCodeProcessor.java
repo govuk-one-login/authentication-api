@@ -115,7 +115,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1034);
+            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
         // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -124,7 +124,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         notificationType.getMfaMethodType(), journeyType);
         if (isCodeBlockedForSession(CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info("Code blocked for session");
-            return Optional.of(ErrorResponse.ERROR_1034);
+            return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
         boolean isTestClient;

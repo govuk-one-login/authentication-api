@@ -26,15 +26,16 @@ class PasswordValidatorTest {
 
     private static Stream<Arguments> invalidPasswords() {
         return Stream.of(
-                Arguments.of("", ErrorResponse.ERROR_1005),
-                Arguments.of(null, ErrorResponse.ERROR_1005),
-                Arguments.of("passw0r", ErrorResponse.ERROR_1006),
-                Arguments.of("passwordpasswordpassword", ErrorResponse.ERROR_1007),
-                Arguments.of("1234598765", ErrorResponse.ERROR_1007),
-                Arguments.of("aZZZZkdfndsf!!@", ErrorResponse.ERROR_1007),
+                Arguments.of("", ErrorResponse.PW_EMPTY),
+                Arguments.of(null, ErrorResponse.PW_EMPTY),
+                Arguments.of("passw0r", ErrorResponse.INVALID_PW_LENGTH),
+                Arguments.of("passwordpasswordpassword", ErrorResponse.INVALID_PW_CHARS),
+                Arguments.of("1234598765", ErrorResponse.INVALID_PW_CHARS),
+                Arguments.of("aZZZZkdfndsf!!@", ErrorResponse.INVALID_PW_CHARS),
                 Arguments.of(
-                        new String(new char[300]).replace("\0", "a1"), ErrorResponse.ERROR_1006),
-                Arguments.of("TestCommonPassword1", ErrorResponse.ERROR_1040));
+                        new String(new char[300]).replace("\0", "a1"),
+                        ErrorResponse.INVALID_PW_LENGTH),
+                Arguments.of("TestCommonPassword1", ErrorResponse.PW_TOO_COMMON));
     }
 
     @ParameterizedTest

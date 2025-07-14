@@ -228,7 +228,7 @@ class UpdateEmailHandlerTest {
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_WITH_EMAIL_EXISTS));
     }
 
     @Test
@@ -244,7 +244,7 @@ class UpdateEmailHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoService);
@@ -259,7 +259,7 @@ class UpdateEmailHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1020));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_OTP));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -274,7 +274,7 @@ class UpdateEmailHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_FORMAT));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
@@ -291,7 +291,7 @@ class UpdateEmailHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);

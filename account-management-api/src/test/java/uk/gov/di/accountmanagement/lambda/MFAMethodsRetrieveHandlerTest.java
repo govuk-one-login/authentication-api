@@ -129,7 +129,7 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1078));
+        assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_MFA_ID_ERROR));
     }
 
     @Test
@@ -151,7 +151,7 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1064));
+        assertThat(result, hasJsonBody(ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
     }
 
     @Test
@@ -164,7 +164,7 @@ class MFAMethodsRetrieveHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1079));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {

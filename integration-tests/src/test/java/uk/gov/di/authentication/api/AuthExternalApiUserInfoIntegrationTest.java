@@ -207,7 +207,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(response, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
     }
 
     @Test

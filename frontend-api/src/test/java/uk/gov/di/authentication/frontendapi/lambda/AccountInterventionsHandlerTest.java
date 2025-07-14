@@ -476,7 +476,8 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        assertThat(
+                result, hasBody(objectMapper.writeValueAsString(ErrorResponse.SESSION_ID_MISSING)));
     }
 
     @Test
@@ -488,7 +489,9 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
     }
 
     @Test
@@ -499,7 +502,9 @@ class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(apiRequestEventWithEmail(), context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
     }
 
     @ParameterizedTest
@@ -638,11 +643,11 @@ class AccountInterventionsHandlerTest {
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {
         return Stream.of(
-                Arguments.of(429, ErrorResponse.ERROR_1051),
-                Arguments.of(500, ErrorResponse.ERROR_1052),
-                Arguments.of(502, ErrorResponse.ERROR_1053),
-                Arguments.of(504, ErrorResponse.ERROR_1054),
-                Arguments.of(404, ErrorResponse.ERROR_1055));
+                Arguments.of(429, ErrorResponse.ACCT_INTERVENTIONS_API_THROTTLED),
+                Arguments.of(500, ErrorResponse.ACCT_INTERVENTIONS_SERVER_ERROR),
+                Arguments.of(502, ErrorResponse.ACCT_INTERVENTIONS_BAD_GATEWAY),
+                Arguments.of(504, ErrorResponse.ACCT_INTERVENTIONS_GATEWAY_TIMEOUT),
+                Arguments.of(404, ErrorResponse.ACCT_INTERVENTIONS_UNEXPECTED_ERROR));
     }
 
     private APIGatewayProxyRequestEvent apiRequestEventWithEmail() {

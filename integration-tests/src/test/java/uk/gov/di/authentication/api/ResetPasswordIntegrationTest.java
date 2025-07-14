@@ -187,7 +187,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 makeRequest(Optional.of(body), constructFrontendHeaders(sessionId), Map.of());
 
         assertThat(response, hasStatus(400));
-        assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+        assertTrue(response.getBody().contains(ErrorResponse.PW_TOO_COMMON.getMessage()));
     }
 
     @Test

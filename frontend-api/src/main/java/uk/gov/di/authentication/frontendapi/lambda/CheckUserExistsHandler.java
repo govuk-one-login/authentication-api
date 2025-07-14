@@ -149,7 +149,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
 
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
             }
 
             AuditableEvent auditableEvent;
@@ -218,7 +219,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
 
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

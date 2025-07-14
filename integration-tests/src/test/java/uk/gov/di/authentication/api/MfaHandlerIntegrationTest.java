@@ -144,7 +144,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -167,7 +167,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1025));
+            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
@@ -307,7 +307,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_NOTIFICATION_TYPE));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
             assertThat(requests, hasSize(0));
@@ -330,7 +330,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Map.of());
 
             assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1025));
+            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_MFA_OTPS_SENT));
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
 
             List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);

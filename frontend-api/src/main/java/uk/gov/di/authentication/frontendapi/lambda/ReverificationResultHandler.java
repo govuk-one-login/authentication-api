@@ -36,9 +36,9 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1061;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.IPV_STATE_MISMATCH;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -113,13 +113,13 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         var idReverificationStateMaybe = idReverificationStateService.get(request.state());
         if (idReverificationStateMaybe.isEmpty()) {
             LOG.error("Cannot match received state to a recorded state");
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
+            return generateApiGatewayProxyErrorResponse(400, IPV_STATE_MISMATCH);
         }
 
         var idReverificationState = idReverificationStateMaybe.get();
         if (!idReverificationState.getClientSessionId().equals(userContext.getClientSessionId())) {
             LOG.error("Received state belongs to a different session");
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1061);
+            return generateApiGatewayProxyErrorResponse(400, IPV_STATE_MISMATCH);
         }
 
         var tokenResponse =
@@ -130,7 +130,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.error(
                     "IPV TokenResponse was not successful: {}",
                     tokenResponse.toErrorResponse().toJSONObject());
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
+            return generateApiGatewayProxyErrorResponse(400, UNSUCCESSFUL_IPV_TOKEN_RESPONSE);
         }
         LOG.info("Successful IPV TokenResponse");
 
@@ -179,13 +179,13 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 LOG.warn(
                         "Invalid re-verification result response from IPV: {}",
                         logFriendlyResponse);
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+                return generateApiGatewayProxyErrorResponse(400, REVERIFICATION_RESULT_GET_ERROR);
             }
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1059);
+            return generateApiGatewayProxyErrorResponse(400, REVERIFICATION_RESULT_GET_ERROR);
         }
     }
 

@@ -88,7 +88,7 @@ class DeleteSyntheticsUserHandlerTest {
 
         verify(authenticationService, never()).removeAccount(EMAIL);
         assertThat(result, hasStatus(404));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
     }
 
     @Test
@@ -101,7 +101,7 @@ class DeleteSyntheticsUserHandlerTest {
 
         verify(authenticationService, never()).removeAccount(EMAIL);
         assertThat(result, hasStatus(404));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
 
         verify(auditService)
                 .submitAuditEvent(

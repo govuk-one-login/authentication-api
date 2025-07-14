@@ -113,7 +113,7 @@ public class UpdatePhoneNumberHandler
                             updatePhoneNumberRequest.getOtp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.INVALID_OTP);
             }
             var userProfile =
                     dynamoService
@@ -169,9 +169,9 @@ public class UpdatePhoneNumberHandler
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException | IllegalArgumentException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
     }
 }

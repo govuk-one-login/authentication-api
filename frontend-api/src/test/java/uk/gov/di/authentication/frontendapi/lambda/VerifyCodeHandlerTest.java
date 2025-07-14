@@ -237,7 +237,7 @@ class VerifyCodeHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(accountModifiersService);
     }
 
@@ -248,7 +248,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyResponseEvent result = makeCallWithCode(body, Optional.empty());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
         verifyNoInteractions(accountModifiersService);
     }
 
@@ -257,7 +257,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, "VERIFY_TEXT");
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(accountModifiersService);
     }
 
@@ -354,7 +354,7 @@ class VerifyCodeHandlerTest {
                 makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_EMAIL_CODE_ENTERED));
         verifyNoInteractions(accountModifiersService);
 
         ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
@@ -465,7 +465,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(codeStorageService, never())
@@ -488,7 +488,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -502,7 +502,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, RESET_PASSWORD_WITH_CODE.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -518,7 +518,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -538,7 +538,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authenticationAttemptsService);
@@ -559,7 +559,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_EMAIL_CODES_FOR_MFA_RESET_ENTERED));
         verify(codeStorageService)
                 .saveBlockedForEmail(EMAIL, codeBlockedKeyPrefix, LOCKOUT_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
@@ -763,7 +763,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
         verifyNoInteractions(accountModifiersService);
 
         ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
@@ -811,9 +811,9 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         if (journeyType != REAUTHENTICATION) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         } else {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
         }
 
         if (codeRequestType != CodeRequestType.MFA_REAUTHENTICATION) {
@@ -855,7 +855,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         EMAIL,
@@ -901,16 +901,16 @@ class VerifyCodeHandlerTest {
         return Stream.of(
                 Arguments.of(
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_PW_RESET_MFA,
-                        ErrorResponse.ERROR_1027),
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
                         CODE_BLOCKED_KEY_PREFIX + "PW_RESET_MFA_" + MFAMethodType.SMS,
-                        ErrorResponse.ERROR_1027),
+                        ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED),
                 Arguments.of(
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_PW_RESET_MFA,
-                        ErrorResponse.ERROR_1026),
+                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS),
                 Arguments.of(
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + "PW_RESET_MFA_" + MFAMethodType.SMS,
-                        ErrorResponse.ERROR_1026));
+                        ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
     }
 
     @ParameterizedTest
@@ -1033,7 +1033,7 @@ class VerifyCodeHandlerTest {
                 .createOrIncrementCount(
                         TEST_SUBJECT_ID, 4070908800L, REAUTHENTICATION, ENTER_MFA_CODE);
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
         mockedNowHelperClass.close();
     }
 
@@ -1106,7 +1106,7 @@ class VerifyCodeHandlerTest {
                                     expectedFailureReason));
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
     }
 

@@ -46,11 +46,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1049;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.EMAIL_HAS_NO_USER_PROFILE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.PHONE_NUMBER_NOT_REGISTERED;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.SESSION_ID_MISSING;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -175,7 +175,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         "Invalid MFA Type '{}' for journey '{}'",
                         NotificationType.MFA_SMS.getMfaMethodType().getValue(),
                         journeyType.getValue());
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+                return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
             }
 
             Optional<ErrorResponse> userHasRequestedTooManyOTPs =
@@ -191,7 +191,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 LOG.warn("Email does not match Email in Request");
                 auditService.submitAuditEvent(AUTH_MFA_MISMATCHED_EMAIL, auditContext);
 
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
+                return generateApiGatewayProxyErrorResponse(400, SESSION_ID_MISSING);
             }
 
             var retrieveMfaMethods = mfaMethodsService.getMfaMethods(email);
@@ -201,17 +201,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 if (failure == USER_DOES_NOT_HAVE_ACCOUNT) {
                     LOG.error(
                             "Error message: Email from session does not have a user profile required, cannot determine if mfa methods are migrated");
-                    return generateApiGatewayProxyErrorResponse(400, ERROR_1049);
+                    return generateApiGatewayProxyErrorResponse(400, EMAIL_HAS_NO_USER_PROFILE);
                 } else if (failure
                         == UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP) {
-                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1078);
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 } else {
                     String message =
                             String.format(
                                     "Unexpected error occurred while retrieving mfa methods: %s",
                                     failure);
                     LOG.error(message);
-                    return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1064);
+                    return generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
                 }
             } else {
                 retrievedMfaMethods = retrieveMfaMethods.getSuccess();
@@ -223,7 +225,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (maybeRequestedSmsMfaMethod.isEmpty()) {
                 auditService.submitAuditEvent(AUTH_MFA_MISSING_PHONE_NUMBER, auditContext);
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
+                return generateApiGatewayProxyErrorResponse(400, PHONE_NUMBER_NOT_REGISTERED);
             }
 
             var requestSmsMfaMethod = maybeRequestedSmsMfaMethod.get();
@@ -291,10 +293,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+            return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
     }
 
@@ -329,7 +331,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             clearCountOfFailedCodeRequests(journeyType, userContext.getAuthSession());
 
-            return Optional.of(ErrorResponse.ERROR_1025);
+            return Optional.of(ErrorResponse.TOO_MANY_MFA_OTPS_SENT);
         }
 
         // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -341,21 +343,21 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1026);
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         }
         if (codeStorageService.isBlockedForEmail(
                 email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1026);
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
         }
 
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1027);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         }
         if (deprecatedCodeRequestType != null
                 && codeStorageService.isBlockedForEmail(
@@ -363,7 +365,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.ERROR_1027);
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
         }
 
         return Optional.empty();

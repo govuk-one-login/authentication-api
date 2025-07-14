@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1071;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -124,7 +124,7 @@ class AuditHelperTest {
                             configurationService, dynamoService, input, userProfile);
 
             assertTrue(result.isFailure());
-            assertEquals(ERROR_1071, result.getFailure());
+            assertEquals(UNEXPECTED_ACCT_MGMT_ERROR, result.getFailure());
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining("Error building audit context")));
