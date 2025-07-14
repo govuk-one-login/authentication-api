@@ -86,7 +86,7 @@ Resources:
             Action:
               - lambda:InvokeFunction
             Resource:
-              - !GetAtt TicfCriFunction.Arn
+              - !GetAtt TicfCriFunctionAliasactive.AliasArn
 
   TicfCriFunctionLogGroup:
     Type: AWS::Logs::LogGroup
