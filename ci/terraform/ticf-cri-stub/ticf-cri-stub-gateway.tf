@@ -1,5 +1,7 @@
 locals {
-  vpc_environment = var.vpc_environment == null ? var.environment : var.vpc_environment
+  new_auth_api_vpc_endpoint = var.new_auth_api_vpc_endpoint_id != "" ? [var.new_auth_api_vpc_endpoint_id] : []
+  vpc_endpoint_ids          = concat(local.new_auth_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
+  vpc_environment           = var.vpc_environment == null ? var.environment : var.vpc_environment
 }
 
 data "aws_vpc" "auth_shared_vpc" {
@@ -42,7 +44,7 @@ resource "aws_api_gateway_rest_api" "ticf_cri_stub" {
 
   endpoint_configuration {
     types            = ["PRIVATE"]
-    vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
+    vpc_endpoint_ids = local.vpc_endpoint_ids
   }
   lifecycle {
     create_before_destroy = true
@@ -79,9 +81,7 @@ data "aws_iam_policy_document" "ticf_cri_stub_policy" {
     condition {
       test     = "StringNotEquals"
       variable = "aws:SourceVpce"
-      values = [
-        data.aws_vpc_endpoint.auth_api_vpc_endpoint.id
-      ]
+      values   = local.vpc_endpoint_ids
     }
   }
 }
@@ -126,7 +126,11 @@ resource "aws_api_gateway_deployment" "ticf_cri_stub_deployment" {
   rest_api_id = aws_api_gateway_rest_api.ticf_cri_stub.id
 
   triggers = {
-    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.ticf_cri_stub.body))
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_rest_api.ticf_cri_stub.body,
+      data.aws_iam_policy_document.ticf_cri_stub_policy.json,
+      local.vpc_endpoint_ids
+    ]))
   }
   lifecycle {
     create_before_destroy = true

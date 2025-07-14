@@ -8,3 +8,6 @@ lambda_min_concurrency = 1
 
 # Account IDs
 auth_new_account_id = "058264536367"
+
+# VPC Endpoints
+new_auth_api_vpc_endpoint_id = "vpce-042c5d3d97d7438d9"
