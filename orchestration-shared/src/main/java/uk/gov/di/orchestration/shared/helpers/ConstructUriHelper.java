@@ -40,7 +40,8 @@ public class ConstructUriHelper {
     private static URI buildURI(
             String baseUri, Optional<String> path, Optional<Map<String, String>> queryParams) {
         try {
-            var baseUriNoTrailingSlash = baseUri.endsWith("/") ? baseUri.substring(0, baseUri.length() - 1) : baseUri;
+            var baseUriNoTrailingSlash =
+                    baseUri.endsWith("/") ? baseUri.substring(0, baseUri.length() - 1) : baseUri;
             var uriBuilder =
                     path.isEmpty()
                             ? new URIBuilder(baseUri)
