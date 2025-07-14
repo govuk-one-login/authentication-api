@@ -21,7 +21,6 @@ module "mfa-methods-delete" {
   endpoint_name = "mfa-methods-delete"
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = local.redis_key
     EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
@@ -54,6 +53,8 @@ module "mfa-methods-delete" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 
   runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
   lambda_log_alarm_error_rate_threshold = 25

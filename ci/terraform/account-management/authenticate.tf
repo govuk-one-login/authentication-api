@@ -25,7 +25,6 @@ module "authenticate" {
     ENVIRONMENT                                               = var.environment
     INTERNAl_SECTOR_URI                                       = var.internal_sector_uri
     TXMA_AUDIT_QUEUE_URL                                      = module.account_management_txma_audit.queue_url
-    REDIS_KEY                                                 = local.redis_key
     ACCOUNT_INTERVENTION_SERVICE_URI                          = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED = var.ais_call_in_authenticate_enabled
   }
@@ -62,6 +61,7 @@ module "authenticate" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
+  snapstart = var.snapstart_enabled
 
   depends_on = [module.account_management_api_authenticate_role]
 }

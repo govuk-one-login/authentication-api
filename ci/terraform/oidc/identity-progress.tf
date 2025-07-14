@@ -31,7 +31,6 @@ module "identity_progress" {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
-    REDIS_KEY                = local.redis_key
     OIDC_API_BASE_URL        = local.api_base_url,
     ORCH_DYNAMO_ARN_PREFIX   = "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-"
   }
@@ -66,6 +65,8 @@ module "identity_progress" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
