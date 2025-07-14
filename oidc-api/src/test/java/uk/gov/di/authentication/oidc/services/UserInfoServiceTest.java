@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
-import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -70,8 +70,7 @@ class UserInfoServiceTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
-    private final DynamoDocAppCriService dynamoDocAppCriService =
-            mock(DynamoDocAppCriService.class);
+    private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -116,7 +115,7 @@ class UserInfoServiceTest {
                         authenticationService,
                         identityService,
                         dynamoClientService,
-                        dynamoDocAppCriService,
+                        dynamoDocAppService,
                         cloudwatchMetricsService,
                         configurationService,
                         userInfoStorageService);
@@ -445,7 +444,7 @@ class UserInfoServiceTest {
                     new DocAppCredential()
                             .withSubjectID(SUBJECT.getValue())
                             .withCredential(List.of(docAppCredentialJWT));
-            when(dynamoDocAppCriService.getDocAppCredential(SUBJECT.getValue()))
+            when(dynamoDocAppService.getDocAppCredential(SUBJECT.getValue()))
                     .thenReturn(Optional.of(docAppCredential));
 
             var accessTokenStore =

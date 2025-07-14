@@ -9,7 +9,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
+import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
@@ -84,7 +84,7 @@ public class UserInfoHandler
                         new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
-                        new DynamoDocAppCriService(configurationService),
+                        new DynamoDocAppService(configurationService),
                         new CloudwatchMetricsService(),
                         configurationService,
                         new AuthenticationUserInfoStorageService(configurationService));
@@ -109,7 +109,7 @@ public class UserInfoHandler
                         new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
-                        new DynamoDocAppCriService(configurationService),
+                        new DynamoDocAppService(configurationService),
                         new CloudwatchMetricsService(),
                         configurationService,
                         new AuthenticationUserInfoStorageService(configurationService));
