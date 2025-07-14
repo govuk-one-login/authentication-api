@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.sharedtest.pact;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -47,7 +46,7 @@ public class LambdaHandlerConfig {
         var pathRegexGroupNames = new LinkedList<String>();
         var pathPattern = new StringBuilder();
         pathPattern.append("^");
-        var pathElems = StringUtils.removeStart(path, "/").split("/");
+        var pathElems = path.startsWith("/") ? path.substring(1).split("/") : path.split("/");
         for (var pathElem : pathElems) {
             pathPattern.append("/");
             var paramMatch = PATH_PARAM_REGEX.matcher(pathElem);
