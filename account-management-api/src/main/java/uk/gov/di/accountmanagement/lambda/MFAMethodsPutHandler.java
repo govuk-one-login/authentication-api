@@ -528,8 +528,8 @@ public class MFAMethodsPutHandler
             }
 
             if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
-                if (putRequest.request.mfaMethod().method()
-                                instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                MfaMethodUpdateRequest.MfaMethod requestedMethod = putRequest.request.mfaMethod();
+                if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
                         && requestSmsMfaDetail.otp() != null) {
                     context =
                             context.withMetadataItem(
@@ -551,11 +551,14 @@ public class MFAMethodsPutHandler
                                 .withMetadataItem(
                                         pair(
                                                 AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                                                mfaMethod.getPriority().toLowerCase()))
+                                                requestedMethod
+                                                        .priorityIdentifier()
+                                                        .name()
+                                                        .toLowerCase()))
                                 .withMetadataItem(
                                         pair(
                                                 AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                                mfaMethod.getMfaMethodType()));
+                                                requestedMethod.method().mfaMethodType()));
             }
 
             return Result.success(context);

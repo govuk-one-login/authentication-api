@@ -442,7 +442,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
             codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
             codeVerifiedAttributes.put(EXTENSIONS_NOTIFICATION_TYPE, MFA_SMS.name());
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
@@ -522,7 +522,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
             codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -561,7 +561,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             codeVerifiedAttributes.put(EXTENSIONS_ACCOUNT_RECOVERY, "false");
             codeVerifiedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
+            codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
