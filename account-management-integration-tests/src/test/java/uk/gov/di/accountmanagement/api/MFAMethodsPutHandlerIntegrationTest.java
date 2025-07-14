@@ -64,11 +64,24 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    public static final String UPDATE_SMS_METHOD_REQUEST_TEMPLATE =
+    public static final String UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE =
             """
             {
               "mfaMethod": {
                 "priorityIdentifier": "DEFAULT",
+                "method": {
+                    "mfaMethodType": "SMS",
+                    "phoneNumber": "%s",
+                    "otp": "%s"
+                }
+              }
+            }
+            """;
+    public static final String UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE =
+            """
+            {
+              "mfaMethod": {
+                "priorityIdentifier": "BACKUP",
                 "method": {
                     "mfaMethodType": "SMS",
                     "phoneNumber": "%s",
@@ -269,7 +282,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var mfaIdentifier = defaultSms.getMfaIdentifier();
             var updatedPhoneNumber = "07900000123";
             var updatedPhoneNumberWithCountryCode = "+447900000123";
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, otp);
 
             var response =
                     makeRequest(
@@ -355,7 +369,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             userStore.setMfaMethodsMigrated(TEST_EMAIL, true);
 
             var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, "+447900000123", otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, "+447900000123", otp);
             var mfaIdentifier = defaultAuthApp.getMfaIdentifier();
 
             var response =
@@ -563,7 +578,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var mfaIdentifier = defaultSms.getMfaIdentifier();
             var updatedPhoneNumber = "07900000123";
             var updateRequest =
-                    format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, updatedPhoneNumber, invalidOtp);
+                    format(
+                            UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE,
+                            updatedPhoneNumber,
+                            invalidOtp);
 
             var response =
                     makeRequest(
@@ -799,7 +817,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var secondPhoneNumber = "+447900000100";
             var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
 
-            var updateRequest = format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, secondPhoneNumber, otp);
+            var updateRequest =
+                    format(UPDATE_DEFAULT_SMS_METHOD_REQUEST_TEMPLATE, secondPhoneNumber, otp);
 
             var response =
                     makeRequest(
@@ -969,7 +988,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             var mfaIdentifierOfBackup = backupSms.getMfaIdentifier();
             var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
             var updateRequest =
-                    format(UPDATE_SMS_METHOD_REQUEST_TEMPLATE, backupSms.getDestination(), otp);
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
 
             var requestPathParams =
                     Map.ofEntries(
