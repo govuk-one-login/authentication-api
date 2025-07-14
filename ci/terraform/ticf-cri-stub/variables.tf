@@ -88,3 +88,9 @@ variable "auth_new_account_id" {
   description = "Account id of the auth new AWS account"
   default     = ""
 }
+
+variable "new_auth_api_vpc_endpoint_id" {
+  description = "The ID of the Execute API Gateway vpc endpoint in the new Auth account"
+  type        = string
+  default     = ""
+}
