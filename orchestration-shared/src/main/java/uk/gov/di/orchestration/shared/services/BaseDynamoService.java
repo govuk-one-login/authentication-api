@@ -97,6 +97,19 @@ public class BaseDynamoService<T> {
                                 .build()));
     }
 
+    public Optional<T> getWithConsistentRead(String partition, String sort) {
+        return Optional.ofNullable(
+                dynamoTable.getItem(
+                        GetItemEnhancedRequest.builder()
+                                .consistentRead(true)
+                                .key(
+                                        Key.builder()
+                                                .partitionValue(partition)
+                                                .sortValue(sort)
+                                                .build())
+                                .build()));
+    }
+
     public List<T> queryIndex(String indexName, String partition) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(partition).build());
