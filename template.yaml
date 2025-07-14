@@ -6440,9 +6440,13 @@ Resources:
       AttributeDefinitions:
         - AttributeName: ClientId
           AttributeType: S
+        - AttributeName: PeriodStartTime
+          AttributeType: S
       KeySchema:
         - AttributeName: ClientId
           KeyType: HASH
+        - AttributeName: PeriodStartTime
+          KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
         SSEEnabled: true
