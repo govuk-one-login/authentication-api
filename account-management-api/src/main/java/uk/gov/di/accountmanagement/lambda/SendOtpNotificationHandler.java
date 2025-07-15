@@ -65,6 +65,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.authentication.shared.helpers.ValidationHelper.validatePhoneNumber;
@@ -199,6 +200,7 @@ public class SendOtpNotificationHandler
 
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) throws JsonException {
+        attachTraceId();
         LOG.info("Request received in SendOtp Lambda");
 
         Map<String, String> headers = input.getHeaders();
