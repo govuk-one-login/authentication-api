@@ -1,6 +1,6 @@
 services:
   aws:
-    image: localstack/localstack:3.1.0@sha256:a47b435f876a100115d1d9f24e19b6b302cc7acb78b91e9258122116283ba462
+    image: localstack/localstack:4.6.0
     restart: no
     environment:
       SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events, logs
@@ -29,7 +29,7 @@ services:
       - di-authentication-api-net
 
   dynamodb:
-    command: "-jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ."
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ."
     restart: no
     working_dir: /home/dynamodblocal
     image: amazon/dynamodb-local:1.22.0
@@ -39,6 +39,61 @@ services:
       timeout: 1m
     ports:
       - 8000:8000
+    networks:
+      - di-authentication-api-net
+
+  authentication-api:
+    image: authentication-api-local:latest
+    container_name: authentication-api-local
+    build:
+      context: .
+      dockerfile: local-running/Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+    environment:
+      AWS_REGION: eu-west-2
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_EMF_ENVIRONMENT: Local # Check
+      AWS_XRAY_CONTEXT_MISSING: IGNORE_ERROR # CHeck
+      DYNAMO_ENDPOINT: http://host.docker.internal:8000
+      ENVIRONMENT: local
+      REDIS_KEY: session
+      LOCALSTACK_ENDPOINT: http://host.docker.internal:45678
+      # Others copied from integration tests
+      AUDIT_SIGNING_KEY_ALIAS: alias/local-audit-payload-signing-key-alias # Unused?
+      OIDC_API_BASE_URL: http://localhost
+      DEFAULT_LOGOUT_URI: http://localhost:3000/signed-out
+      DOMAIN_NAME: localhost
+      DOC_APP_DOMAIN: https://doc-app
+      LOGIN_URI: http://localhost:3000
+      ROOT_RESOURCE_URL: http://localhost
+      RESET_PASSWORD_URL: http://localhost:3000/reset-password?code=
+      SQS_ENDPOINT: http://host.docker.internal:45678
+      STUB_RELYING_PARTY_REDIRECT_URI: https://rp-build.build.stubs.account.gov.uk/
+      TERMS_CONDITIONS_VERSION: 1.0
+      HEADERS_CASE_INSENSITIVE: true
+      IDENTITY_ENABLED: false
+      TRACING_ENABLED: false
+      INTERNAL_SECTOR_URI: https://test.account.gov.uk
+      BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS: "1.0,1.1,1.2,1.3,1.4"
+      SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
+      # Key aliases
+      TOKEN_SIGNING_KEY_ALIAS: alias/local-token-signing-key
+      MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS: alias/local-mfa-reset-storage-token-signing-key
+      IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: alias/local-mfa-reset-jar-signing-key
+      # Queue names
+      TXMA_AUDIT_QUEUE_URL: local-txma-audit-queue
+      EMAIL_QUEUE_URL: local-email-queue
+      PENDING_EMAIL_CHECK_QUEUE_URL: local-pending-email-check-queue
+      EXPERIAN_PHONE_CHECKER_QUEUE_URL: local-experian-phone-checker-queue
+    ports:
+      - 4400:4400
     networks:
       - di-authentication-api-net
 

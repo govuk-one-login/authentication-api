@@ -20,6 +20,7 @@ include 'interventions-api-stub'
 include 'ticf-cri-stub'
 include 'user-permissions'
 include 'deprecation-checker'
+include 'local-running'
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
