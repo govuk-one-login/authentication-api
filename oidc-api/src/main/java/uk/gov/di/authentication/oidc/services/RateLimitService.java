@@ -15,7 +15,7 @@ public class RateLimitService {
     public RateLimitDecision getClientRateLimitDecision(
             ClientRateLimitConfig clientRateLimitConfig) {
         if (clientRateLimitConfig.rateLimit() == null) {
-            return RateLimitDecision.UNDER_LIMIT_NO_ACTION;
+            return RateLimitDecision.NOT_CONFIGURED_NO_ACTION;
         }
 
         if (rateLimitAlgorithm.hasRateLimitExceeded(clientRateLimitConfig)) {
