@@ -169,6 +169,11 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertEquals(expectedResponse, response.getBody());
 
+            // Verify audit event was emitted
+            var receivedEvents =
+                    assertTxmaAuditEventsReceived(
+                            txmaAuditQueue, List.of(AUTH_MFA_METHOD_ADD_COMPLETED));
+
             assertNotificationsReceived(
                     notificationsQueue,
                     List.of(
@@ -180,6 +185,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             // Check audit events
             List<AuditableEvent> expectedEvents =
                     List.of(
+                            AUTH_UPDATE_PHONE_NUMBER,
                             AUTH_CODE_VERIFIED,
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
                             AUTH_MFA_METHOD_ADD_COMPLETED);
@@ -279,7 +285,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(expectedResponse, response.getBody());
 
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER, AUTH_MFA_METHOD_ADD_COMPLETED);
+
+                            List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER, AUTH_MFA_METHOD_ADD_COMPLETED);
 
             Map<String, String> codeVerifiedAttributes = new HashMap<>();
             codeVerifiedAttributes.put(EXTENSIONS_MFA_CODE_ENTERED, otp);
