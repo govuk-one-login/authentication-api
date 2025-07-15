@@ -3350,8 +3350,7 @@ Resources:
         - !Ref InvokeFetchJwksHandlerPolicy
         - !Ref RpPublicKeyCacheTableWriteAccessPolicy
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
-        - !Ref OrchSessionTableReadAndWriteAccessPolicy
-        - !Ref OrchSessionTableDeleteAccessPolicy
+        - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
         - !Ref StateStorageTableWriteAccessPolicy
         - !Ref ClientRateLimitTableReadWriteAccessPolicy
