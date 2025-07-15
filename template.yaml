@@ -174,6 +174,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
+      ipvStubDomain: "ipvstub.oidc.sandpit.account.gov.uk"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -202,6 +203,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
+      ipvStubDomain: "ipvstub.oidc.build.account.gov.uk"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -2578,12 +2580,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://${ipvStubDomain}
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/ipv-callback
@@ -2605,12 +2607,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/authorize
-              - ServiceDomain:
+              - https://${ipvStubDomain}/authorize
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
@@ -2624,12 +2626,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
-              - ServiceDomain:
+              - https://${ipvStubDomain}/.well-known/jwks.json
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
@@ -4313,12 +4315,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://${ipvStubDomain}
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !If
             - IpvExists
@@ -4331,12 +4333,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/ipv-callback
-              - ServiceDomain:
+              - https://${ipvStubDomain}/ipv-callback
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !If
@@ -4350,12 +4352,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/authorize
-              - ServiceDomain:
+              - https://${ipvStubDomain}/authorize
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_BACKEND_URI: !If
             - IpvExists
@@ -4368,12 +4370,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://${ipvStubDomain}
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
@@ -4387,12 +4389,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
-              - ServiceDomain:
+              - https://${ipvStubDomain}/.well-known/jwks.json
+              - ipvStubDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    ipvStubDomain,
                   ]
           SPOT_QUEUE_URL: !If
             - IpvExists
