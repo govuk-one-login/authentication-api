@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.io.IOException;
@@ -31,13 +32,13 @@ public class AccountInterventionsService {
     private ConfigurationService configurationService;
 
     public AccountInterventionsService() {
-        httpClient = HttpClient.newHttpClient();
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
         configurationService = new ConfigurationService();
     }
 
     public AccountInterventionsService(ConfigurationService configService) {
         configurationService = configService;
-        httpClient = HttpClient.newHttpClient();
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
     public AccountInterventionsService(HttpClient client, ConfigurationService configService) {

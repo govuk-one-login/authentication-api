@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import uk.gov.di.authentication.entity.ExternalTICFCRIRequest;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
+import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -41,7 +42,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     public TicfCriHandler() {
         this.configurationService = ConfigurationService.getInstance();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClientHelper.newInstrumentedHttpClient();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
