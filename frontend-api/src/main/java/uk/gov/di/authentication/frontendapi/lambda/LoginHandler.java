@@ -357,6 +357,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
                 case USER_DOES_NOT_HAVE_ACCOUNT -> generateApiGatewayProxyErrorResponse(
                         500, ErrorResponse.ACCT_DOES_NOT_EXIST);
+                case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.INVALID_MFA_METHOD);
             };
         }
 
