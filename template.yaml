@@ -4789,7 +4789,7 @@ Resources:
             Fn::GetAtt:
               - BackChannelLogoutDeadLetterQueue
               - QueueName
-      Statistic: Sum
+      Statistic: Maximum
       Period: 300
       EvaluationPeriods: 1
       Threshold: 5
