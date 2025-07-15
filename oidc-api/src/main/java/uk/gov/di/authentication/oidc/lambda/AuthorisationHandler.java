@@ -31,7 +31,7 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
-import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
+import uk.gov.di.authentication.oidc.entity.SlidingWindowAlgorithm;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
@@ -138,9 +138,6 @@ public class AuthorisationHandler
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
-    // ATO-1778: This is a hardcoded No-op algorithm.
-    // We will replace this with a proper implementation in future work
-    private final RateLimitAlgorithm noOpRateLimitAlgorithm = (ignored) -> false;
     private final RateLimitService rateLimitService;
 
     public AuthorisationHandler(
@@ -207,7 +204,8 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
-        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
+        var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
+        this.rateLimitService = new RateLimitService(slidingWindowAlgorithm);
     }
 
     public AuthorisationHandler(
@@ -238,7 +236,8 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
-        this.rateLimitService = new RateLimitService(noOpRateLimitAlgorithm);
+        this.rateLimitService =
+                new RateLimitService(new SlidingWindowAlgorithm(configurationService));
     }
 
     public AuthorisationHandler() {
