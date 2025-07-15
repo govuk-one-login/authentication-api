@@ -61,6 +61,14 @@ Resources:
           LoggingLevel: INFO
           MetricsEnabled: true
       TracingEnabled: true
+      Tags:
+        FMSRegionalPolicy: "false"
+        CustomPolicy:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+            frontendApiFMSTagValue,
+          ]
 
   AuthInternalApiKey:
     Type: AWS::ApiGateway::ApiKey
