@@ -272,10 +272,7 @@ public class MFAMethodsPutHandler
 
             var maybeAuditEventsStatus =
                     sendSuccessAuditEvents(
-                            updateTypeIdentifier,
-                            input,
-                            putRequest,
-                            successfulUpdateMethods);
+                            updateTypeIdentifier, input, putRequest, successfulUpdateMethods);
 
             if (maybeAuditEventsStatus.isFailure()) {
                 return maybeAuditEventsStatus.getFailure();
@@ -499,7 +496,7 @@ public class MFAMethodsPutHandler
     private Result<APIGatewayProxyResponseEvent, Void> sendSuccessAuditEvents(
             MFAMethodUpdateIdentifier updateTypeIdentifier,
             APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
+            ValidPutRequest putRequest,
             List<MFAMethod> updatedMfaMethods) {
         var postUpdateDefaultMfaMethod =
                 updatedMfaMethods.stream()
@@ -509,9 +506,9 @@ public class MFAMethodsPutHandler
 
         return switch (updateTypeIdentifier) {
             case SWITCHED_MFA_METHODS -> handleSwitchedMfaMethodsAuditEvents(
-                    input, userProfile, updatedMfaMethods);
+                    input, putRequest, updatedMfaMethods);
             case CHANGED_SMS -> sendAuditEvent(
-                    AUTH_UPDATE_PHONE_NUMBER, input, userProfile, postUpdateDefaultMfaMethod);
+                    AUTH_UPDATE_PHONE_NUMBER, input, putRequest, postUpdateDefaultMfaMethod);
             case CHANGED_DEFAULT_MFA -> {
                 var isDefaultMfaMethodSMS =
                         postUpdateDefaultMfaMethod
@@ -521,7 +518,7 @@ public class MFAMethodsPutHandler
                     yield sendAuditEvent(
                             AUTH_UPDATE_PHONE_NUMBER,
                             input,
-                            userProfile,
+                            putRequest,
                             postUpdateDefaultMfaMethod);
                 }
 
@@ -533,7 +530,7 @@ public class MFAMethodsPutHandler
 
     private Result<APIGatewayProxyResponseEvent, Void> handleSwitchedMfaMethodsAuditEvents(
             APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
+            ValidPutRequest putRequest,
             List<MFAMethod> updatedMfaMethods) {
         var postUpdateDefaultMfaMethod =
                 updatedMfaMethods.stream()
@@ -545,7 +542,7 @@ public class MFAMethodsPutHandler
                 sendAuditEvent(
                         AUTH_MFA_METHOD_SWITCH_COMPLETED,
                         input,
-                        userProfile,
+                        putRequest,
                         postUpdateDefaultMfaMethod);
 
         if (maybeCompletedAuditEvent.isFailure()) {
@@ -563,7 +560,7 @@ public class MFAMethodsPutHandler
 
         for (var smsMfaMethod : allSmsMfaMethods) {
             var maybeUpdatedPhoneNumberAuditEvent =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, input, userProfile, smsMfaMethod);
+                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, input, putRequest, smsMfaMethod);
 
             if (maybeUpdatedPhoneNumberAuditEvent.isFailure()) {
                 return maybeUpdatedPhoneNumberAuditEvent;
