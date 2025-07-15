@@ -176,7 +176,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_API_KEY            = var.notify_api_key
       NOTIFY_URL                = var.notify_url
       NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations
-      SMOKETEST_SMS_BUCKET_NAME = contains(["authdev1", "build", "staging"], var.environment) ? "${var.environment}-smoke-new-test-sms-codes" : local.sms_bucket_name
+      SMOKETEST_SMS_BUCKET_NAME = contains(["dev", "build", "staging"], var.environment) ? "${var.environment}-smoke-new-test-sms-codes" : local.sms_bucket_name
       JAVA_TOOL_OPTIONS         = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       ENVIRONMENT               = var.environment
     })
