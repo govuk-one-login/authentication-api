@@ -414,7 +414,7 @@ public class MFAMethodsCreateHandler
         try {
             var initialMetadataPairs =
                     new AuditService.MetadataPair[] {
-                            pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue())
+                        pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.getValue())
                     };
 
             var context =
@@ -502,7 +502,7 @@ public class MFAMethodsCreateHandler
 
             if (auditEvent.equals(AUTH_CODE_VERIFIED)) {
                 if (mfaMethodCreateRequest.mfaMethod().method()
-                        instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                                instanceof RequestSmsMfaDetail requestSmsMfaDetail
                         && requestSmsMfaDetail.otp() != null) {
                     context =
                             context.withMetadataItem(
@@ -546,7 +546,8 @@ public class MFAMethodsCreateHandler
         }
 
         try {
-            auditService.submitAuditEvent(auditEvent, maybeAuditContext.getSuccess());
+            auditService.submitAuditEvent(
+                    auditEvent, maybeAuditContext.getSuccess(), AUDIT_EVENT_COMPONENT_ID_HOME);
         } catch (Exception e) {
             LOG.error("Error submitting audit event", e);
             return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
@@ -554,6 +555,7 @@ public class MFAMethodsCreateHandler
 
         return Result.success(null);
     }
+
     private MfaMethodCreateRequest readMfaMethodCreateRequest(APIGatewayProxyRequestEvent input)
             throws Json.JsonException {
 

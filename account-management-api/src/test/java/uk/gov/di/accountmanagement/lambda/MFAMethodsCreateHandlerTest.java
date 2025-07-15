@@ -406,7 +406,11 @@ class MFAMethodsCreateHandlerTest {
             handler.handleRequest(event, context);
 
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService).submitAuditEvent(eq(AUTH_CODE_VERIFIED), captor.capture());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_CODE_VERIFIED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
             AuditContext capturedObject = captor.getValue();
 
             containsMetadataPair(capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, TEST_OTP);
@@ -803,6 +807,13 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR));
             verifyNoInteractions(sqsClient);
             ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_CODE_VERIFIED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
             verify(auditService)
                     .submitAuditEvent(
                             eq(AUTH_MFA_METHOD_ADD_FAILED),
