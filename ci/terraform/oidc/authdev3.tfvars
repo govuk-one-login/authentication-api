@@ -24,7 +24,7 @@ ipv_auth_authorize_client_id    = "authTestClient"
 ipv_audience                    = "https://ipvstub.signin.authdev3.dev.account.gov.uk"
 evcs_audience                   = "https://credential-store.authdev3.dev.account.gov.uk"
 auth_issuer_claim_for_evcs      = "https://signin.authdev3.dev.account.gov.uk"
-
+internal_sector_uri             = "https://identity.authdev3.dev.account.gov.uk"
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -60,8 +60,6 @@ reauth_enter_password_count_ttl           = 120
 reauth_enter_auth_app_code_count_ttl      = 120
 reauth_enter_sms_code_count_ttl           = 120
 
-orch_account_id = "816047645251"
-is_orch_stubbed = true
 
 orch_frontend_api_gateway_integration_enabled = false
 
@@ -74,7 +72,7 @@ use_strongly_consistent_reads = true
 # disaling OIDC temporarly
 oidc_cloudfront_enabled = false
 
-/*
+
 orch_openid_configuration_enabled    = true
 orch_doc_app_callback_enabled        = true
 orch_token_enabled                   = true
@@ -98,4 +96,3 @@ orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:8160
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4"
 
 cmk_for_back_channel_logout_enabled = true
-*/
