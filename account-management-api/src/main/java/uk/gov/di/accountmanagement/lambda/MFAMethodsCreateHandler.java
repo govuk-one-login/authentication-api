@@ -293,7 +293,8 @@ public class MFAMethodsCreateHandler
         }
 
         Result<ErrorResponse, AuditContext> auditContextResult =
-                buildAuditContext(AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
+                buildAuditContext(
+                        AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);
 
         if (auditContextResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(401, auditContextResult.getFailure());
