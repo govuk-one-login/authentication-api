@@ -3354,6 +3354,7 @@ Resources:
         - !Ref OrchSessionTableDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
         - !Ref StateStorageTableWriteAccessPolicy
+        - !Ref ClientRateLimitTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6461,6 +6462,32 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRateLimitTable
+  #endregion
+  #region ClientRateLimitTable policies
+  ClientRateLimitTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientRateLimitTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt ClientRateLimitTable.Arn
+          - Sid: AllowClientRateLimitTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt ClientRateLimitTable.Arn
+          - Sid: AllowClientRateLimitTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt ClientRateLimitTableEncryptionKey.Arn
   #endregion
   #region StateStorage policies
   StateStorageTableReadAccessPolicy:
