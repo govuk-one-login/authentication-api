@@ -669,7 +669,6 @@ public class MFAMethodsPutHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             List.of(initialMetadataPairs));
 
-
             if (!auditEvent.equals(AUTH_UPDATE_PHONE_NUMBER)) {
                 context =
                         context.withMetadataItem(

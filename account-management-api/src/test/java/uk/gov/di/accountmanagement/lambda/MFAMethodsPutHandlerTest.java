@@ -444,7 +444,6 @@ class MFAMethodsPutHandlerTest {
 
     private static Stream<MFAMethodUpdateIdentifier> phoneNumberUpdateTypeIdentifiers() {
         return Stream.of(
-                MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS,
                 MFAMethodUpdateIdentifier.CHANGED_SMS,
                 MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA);
     }
@@ -495,11 +494,11 @@ class MFAMethodsPutHandlerTest {
         containsMetadataPair(
                 capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
         containsMetadataPair(
-                capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, defaultMfaMethod.getPriority());
+                capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, defaultMfaMethod.getPriority().toLowerCase());
     }
 
     @Test
-    void shouldRaiseUpdatePhoneNumberAuditEventsForAllSmsMfaMethodsWhenSwitchSuccessful() {
+    void shouldRaiseOnlySwitchCompletedAuditEventWhenSwitchingBetweenSmsMethodsSuccessful() {
         var firstPhoneNumber = "111111111";
         var secondPhoneNumber = "222222222";
 
@@ -541,32 +540,23 @@ class MFAMethodsPutHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-        verify(auditService, times(2))
-                .submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), captor.capture());
-        List<AuditContext> capturedObjects = captor.getAllValues();
-
-        // One event for the default MFA method (SMS)
-
+        // Verify only AUTH_MFA_METHOD_SWITCH_COMPLETED event is emitted
+        ArgumentCaptor<AuditContext> switchCompletedCaptor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(eq(AUTH_MFA_METHOD_SWITCH_COMPLETED), switchCompletedCaptor.capture());
+        AuditContext switchCompletedContext = switchCompletedCaptor.getValue();
+        
         containsMetadataPair(
-                capturedObjects.get(0),
+                switchCompletedContext,
                 AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
                 ACCOUNT_MANAGEMENT.name());
         containsMetadataPair(
-                capturedObjects.get(0),
-                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                defaultMfaMethod.getPriority());
+                switchCompletedContext,
+                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                defaultMfaMethod.getMfaMethodType());
 
-        // One event for the backup MFA method (SMS)
-
-        containsMetadataPair(
-                capturedObjects.get(1),
-                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
-                ACCOUNT_MANAGEMENT.name());
-        containsMetadataPair(
-                capturedObjects.get(1),
-                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
-                backupMfaMethod.getPriority());
+        // Verify no AUTH_UPDATE_PHONE_NUMBER events are emitted when switching between SMS methods
+        verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(AuditContext.class));
     }
 
     @Test
