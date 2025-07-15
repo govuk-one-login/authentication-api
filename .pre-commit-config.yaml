@@ -1,5 +1,5 @@
 default_language_version:
-  golang: 1.23.6
+  golang: 1.24.5
 exclude: |
   (?x)^(
       .*/test/.*/.*\.approved.json
@@ -56,7 +56,7 @@ repos:
           - terraform
         language: golang
         additional_dependencies:
-          - github.com/terraform-linters/tflint@v0.55.0
+          - github.com/terraform-linters/tflint@v0.58.0
         entry: scripts/tflint.py
         args:
           - --minimum-failure-severity=warning
