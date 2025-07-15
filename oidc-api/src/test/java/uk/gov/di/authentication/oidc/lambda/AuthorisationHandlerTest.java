@@ -52,7 +52,7 @@ import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
-import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
@@ -2669,7 +2669,7 @@ class AuthorisationHandlerTest {
         @BeforeEach
         void setup() {
             when(configService.isRpRateLimitingEnabled()).thenReturn(true);
-            when(rateLimitService.getClientRateLimitDecision(any(ClientRequestInfo.class)))
+            when(rateLimitService.getClientRateLimitDecision(any(ClientRateLimitConfig.class)))
                     .thenReturn(RateLimitDecision.UNDER_LIMIT_NO_ACTION);
             clientRegistry = generateClientRegistry().withRateLimit(400);
             when(clientService.getClient(anyString())).thenReturn(Optional.of(clientRegistry));

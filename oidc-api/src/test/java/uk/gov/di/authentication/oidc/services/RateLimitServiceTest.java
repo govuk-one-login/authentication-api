@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
@@ -26,7 +26,7 @@ class RateLimitServiceTest {
         var rateLimitService = new RateLimitService(alwaysReturnToRpAction);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRequestInfo(Constants.TEST_CLIENT_ID, null));
+                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, null));
         assertFalse(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.NONE, rateLimitDecision.getAction());
     }
@@ -38,7 +38,7 @@ class RateLimitServiceTest {
         var rateLimitService = new RateLimitService(algorithm);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRequestInfo(Constants.TEST_CLIENT_ID, 400));
+                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, 400));
         assertEquals(outcome, rateLimitDecision);
     }
 
