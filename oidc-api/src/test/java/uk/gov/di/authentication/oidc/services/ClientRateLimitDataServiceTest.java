@@ -90,10 +90,7 @@ class ClientRateLimitDataServiceTest {
 
     private SlidingWindowData withValidClientRateLimitData() {
         var existingSlidingWindowData =
-                new SlidingWindowData()
-                        .withClientId(TEST_CLIENT_ID)
-                        .withPeriodStartTime(TEST_PERIOD_START)
-                        .withTimeToLive(VALID_TTL);
+                new SlidingWindowData(TEST_CLIENT_ID, TEST_PERIOD_START).withTimeToLive(VALID_TTL);
         when(table.getItem(RATE_LIMIT_DATA_GET_REQUEST)).thenReturn(existingSlidingWindowData);
         return existingSlidingWindowData;
     }

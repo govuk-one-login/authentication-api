@@ -25,6 +25,11 @@ public class SlidingWindowData {
 
     public SlidingWindowData() {}
 
+    public SlidingWindowData(String clientId, LocalDateTime periodStartTime) {
+        this.clientId = clientId;
+        this.periodStartTime = periodStartTime;
+    }
+
     public SlidingWindowData(
             String clientId, LocalDateTime periodStartTime, Long requestCount, long timeToLive) {
         this.clientId = clientId;
