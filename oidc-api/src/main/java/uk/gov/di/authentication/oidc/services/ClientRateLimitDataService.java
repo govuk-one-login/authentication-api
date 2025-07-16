@@ -71,6 +71,46 @@ public class ClientRateLimitDataService extends BaseDynamoService<SlidingWindowD
         return Optional.empty();
     }
 
+    /**
+     * This method makes a DynamoDB UpdateItem call. This can result in one of 2 things:
+     *
+     * <ol>
+     *   <li>If no data exists for the given clientId and periodStartTime, then a new entry will be
+     *       created with a request count of 1
+     *   <li>If data does exist for the given clientId and periodStartTime, then the {@link
+     *       SlidingWindowData#getRequestCount() request count} will be incremented by 1.
+     * </ol>
+     *
+     * <p>The incrementing is handled by using an atomic counter. More information can be found
+     * below.
+     *
+     * <p>If an error occurs when trying to perform the update, it will be silently ignored. This is
+     * to ensure we don't over-increment, as this could lead to a client being rate limited before
+     * they reach their actual rate limit.
+     *
+     * @param clientId The client ID
+     * @param periodStartTime The period start time
+     * @see <a
+     *     href="https://aws.amazon.com/blogs/database/implement-resource-counters-with-amazon-dynamodb/">Information
+     *     on atomic counters</a>
+     */
+    public void increment(String clientId, LocalDateTime periodStartTime) {
+        try {
+            var clientRateLimitData =
+                    new SlidingWindowData(clientId, periodStartTime)
+                            .withTimeToLive(
+                                    nowClock.nowPlus(TIME_TO_LIVE, ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond());
+            update(clientRateLimitData);
+        } catch (Exception e) {
+            LOG.info(
+                    "Could not increment request count for client {}. Reason: {}",
+                    clientId,
+                    e.getMessage());
+        }
+    }
+
     private void logAndThrowRateLimitException(String message, String clientId, Exception e) {
         LOG.error("{}. Client ID: {}. Error message: {}", message, clientId, e.getMessage());
         throw new ClientRateLimitDataException(message);
