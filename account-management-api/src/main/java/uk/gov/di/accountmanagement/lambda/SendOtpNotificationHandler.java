@@ -430,7 +430,9 @@ public class SendOtpNotificationHandler
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                     auditContext,
                     AUDIT_EVENT_COMPONENT_ID_HOME,
-                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT.name()),
+                    pair(
+                            AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                            JourneyType.ACCOUNT_MANAGEMENT.name()),
                     pair(
                             AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                             PriorityIdentifier.DEFAULT.name().toLowerCase()));

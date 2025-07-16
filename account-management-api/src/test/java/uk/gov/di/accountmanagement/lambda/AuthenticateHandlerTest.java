@@ -112,7 +112,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfLoginIsSuccessful() {
+    void shouldReturn204IfLoginIsSuccessful() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
@@ -151,7 +151,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn401IfUserHasInvalidCredentials() {
+    void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -169,7 +169,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -185,7 +185,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserDoesNotHaveAnAccount() {
+    void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
