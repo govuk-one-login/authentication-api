@@ -19,6 +19,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
@@ -56,7 +57,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
-import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -226,7 +226,7 @@ public class SendOtpNotificationHandler
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
-                ACCOUNT_MANAGEMENT,
+                JourneyType.ACCOUNT_MANAGEMENT,
                 sendNotificationRequest.getNotificationType().name(),
                 configurationService.getEnvironment());
 
@@ -344,7 +344,7 @@ public class SendOtpNotificationHandler
                                         clientSessionId,
                                         persistentSessionId,
                                         IpAddressHelper.extractIpAddress(input),
-                                        ACCOUNT_MANAGEMENT,
+                                        JourneyType.ACCOUNT_MANAGEMENT,
                                         timeOfInitialRequest,
                                         isTestUserRequest)));
                 LOG.info(
@@ -430,7 +430,7 @@ public class SendOtpNotificationHandler
                     AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
                     auditContext,
                     AUDIT_EVENT_COMPONENT_ID_HOME,
-                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name()),
+                    pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.ACCOUNT_MANAGEMENT.name()),
                     pair(
                             AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                             PriorityIdentifier.DEFAULT.name().toLowerCase()));
