@@ -16,14 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class RateLimitServiceTest {
 
-    private static final RateLimitAlgorithm noActionAlgorithm =
-            (client) -> RateLimitDecision.UNDER_LIMIT_NO_ACTION;
-    private static final RateLimitAlgorithm alwaysReturnToRpAction =
-            (client) -> RateLimitDecision.OVER_LIMIT_RETURN_TO_RP;
+    private static final RateLimitAlgorithm neverExceededAlgorithm = (client) -> false;
+    private static final RateLimitAlgorithm alwaysExceededAlgorithm = (client) -> true;
 
     @Test
     void itReturnsNoActionDecisionWhenTheClientHasNoRateLimit() {
-        var rateLimitService = new RateLimitService(alwaysReturnToRpAction);
+        var rateLimitService = new RateLimitService(alwaysExceededAlgorithm);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
                         new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, null));
@@ -44,7 +42,7 @@ class RateLimitServiceTest {
 
     private static Stream<Arguments> rateLimitAlgosAndOutcomes() {
         return Stream.of(
-                Arguments.of(noActionAlgorithm, RateLimitDecision.UNDER_LIMIT_NO_ACTION),
-                Arguments.of(alwaysReturnToRpAction, RateLimitDecision.OVER_LIMIT_RETURN_TO_RP));
+                Arguments.of(neverExceededAlgorithm, RateLimitDecision.UNDER_LIMIT_NO_ACTION),
+                Arguments.of(alwaysExceededAlgorithm, RateLimitDecision.OVER_LIMIT_RETURN_TO_RP));
     }
 }
