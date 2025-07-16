@@ -26,6 +26,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
+            configurations.open_telemetry,
             "org.apache.httpcomponents.core5:httpcore5:5.3.4"
 
     testImplementation configurations.tests,
