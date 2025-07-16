@@ -19,9 +19,11 @@ flowchart TD
     ValidatePutRequest -->|Success| CheckDefaultMethod{Is Default Method?}
     
     CheckDefaultMethod -->|Yes| MigrateMFA[Migrate MFA if required]
-    MigrateMFA -->|Migration error| End6([Error from migration])
+    MigrateMFA -->|User not migrated| EmitMigrationAttempted[/Emit AUTH_MFA_METHOD_MIGRATION_ATTEMPTED\]
+    EmitMigrationAttempted -->|Migration error| End6([Error from migration])
+    EmitMigrationAttempted -->|Migration success| GetMfaMethod[Get MFA Method]
     
-    MigrateMFA -->|Success/Not required| GetMfaMethod[Get MFA Method]
+    MigrateMFA -->|Already migrated| GetMfaMethod
     CheckDefaultMethod -->|No| GetMfaMethod
     
     GetMfaMethod -->|Fail: Unknown MFA ID| End7([404 Error: MFA_METHOD_NOT_FOUND])
@@ -64,6 +66,7 @@ flowchart TD
     style Start fill:#4CAF50,stroke:#388E3C,color:white
     style EmitInvalidCode fill:#9370DB,stroke:#7B68EE,color:white
     style EmitCodeVerified fill:#9370DB,stroke:#7B68EE,color:white
+    style EmitMigrationAttempted fill:#9370DB,stroke:#7B68EE,color:white
     style EmitSwitchFailed fill:#9370DB,stroke:#7B68EE,color:white
     style EmitSwitchCompleted fill:#9370DB,stroke:#7B68EE,color:white
     style End1 fill:#FF5252,stroke:#D32F2F,color:white
@@ -105,9 +108,8 @@ flowchart TD
 
 #### Non-Migrated User Updates Method
 - **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
-  - Includes metadata: JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED=true
-  - Includes metadata: HAD_PARTIAL=true, MFA_TYPE=SMS
-  - Includes metadata: PHONE_NUMBER_COUNTRY_CODE=44 (for SMS methods)
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=(SMS or AUTH_APP), JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED=true
+  - Includes metadata: PHONE_NUMBER_COUNTRY_CODE=(country code) (for SMS methods)
 - **AUTH_CODE_VERIFIED**: Emitted after successful validation
   - Includes metadata: ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
   - Includes metadata: MFA_METHOD=default, MFA_TYPE=(method type)
@@ -124,3 +126,8 @@ flowchart TD
   - Includes metadata: MFA_METHOD=(priority), MFA_TYPE=(method type)
 - **AUTH_MFA_METHOD_SWITCH_FAILED**: Emitted when switching methods fails
   - Only emitted for SWITCHED_MFA_METHODS update type with UNEXPECTED_ERROR failure
+
+#### Migration Failure (Non-Migrated User)
+- **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=(SMS or AUTH_APP), JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED=false
+  - Includes metadata: PHONE_NUMBER_COUNTRY_CODE=(country code) (for SMS methods)

@@ -30,9 +30,12 @@ flowchart TD
     EmitCodeVerified -->|Fail| End9([500 Error])
     
     EmitCodeVerified -->|Success| MigrateMFA[Migrate MFA if required]
-    MigrateMFA -->|Migration error| End10([Error from migration])
+    MigrateMFA -->|User not migrated| EmitMigrationAttempted[/Emit AUTH_MFA_METHOD_MIGRATION_ATTEMPTED\]
+    EmitMigrationAttempted -->|Migration error| End10([Error from migration])
+    EmitMigrationAttempted -->|Migration success| AddBackupMFA[Add Backup MFA]
     
-    MigrateMFA -->|Success/Not required| AddBackupMFA[Add Backup MFA]
+    MigrateMFA -->|Already migrated| AddBackupMFA
+    
     AddBackupMFA -->|Fail| UpdateAuditContext[Update Audit Context for Failure]
     UpdateAuditContext -->|Fail| End11([500 Error])
     UpdateAuditContext -->|Success| EmitAddFailed[/Emit AUTH_MFA_METHOD_ADD_FAILED\]
@@ -59,6 +62,7 @@ flowchart TD
     style Start fill:#4CAF50,stroke:#388E3C,color:white
     style EmitInvalidCode fill:#9370DB,stroke:#7B68EE,color:white
     style EmitCodeVerified fill:#9370DB,stroke:#7B68EE,color:white
+    style EmitMigrationAttempted fill:#9370DB,stroke:#7B68EE,color:white
     style EmitAddFailed fill:#9370DB,stroke:#7B68EE,color:white
     style EmitAddFailedResponse fill:#9370DB,stroke:#7B68EE,color:white
     style EmitAddCompleted fill:#9370DB,stroke:#7B68EE,color:white
@@ -93,7 +97,8 @@ flowchart TD
   - Includes metadata: MFA_CODE_ENTERED, NOTIFICATION_TYPE=MFA_SMS, ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
   - Includes metadata: MFA_METHOD=backup, MFA_TYPE=SMS
 - **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
-  - Includes metadata: JOURNEY_TYPE=ACCOUNT_MANAGEMENT
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=SMS, JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED
+  - Includes phone number country code in audit context
 - **AUTH_MFA_METHOD_ADD_COMPLETED**: Emitted after MFA method is successfully added
   - Includes metadata: MFA_TYPE=SMS, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
   - Includes phone number in audit context
@@ -110,7 +115,7 @@ flowchart TD
   - Includes metadata: ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
   - Includes metadata: MFA_METHOD=backup, MFA_TYPE=AUTH_APP
 - **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
-  - Includes metadata: JOURNEY_TYPE=ACCOUNT_MANAGEMENT
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=AUTH_APP, JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED
 - **AUTH_MFA_METHOD_ADD_COMPLETED**: Emitted after MFA method is successfully added
   - Includes metadata: MFA_TYPE=AUTH_APP, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
 
@@ -132,6 +137,13 @@ flowchart TD
 - **AUTH_INVALID_CODE_SENT**: Emitted when an invalid OTP code is provided
   - Includes metadata: MFA_METHOD=backup, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
 
+#### Migration Failure (Non-Migrated User)
+- **AUTH_CODE_VERIFIED**: Emitted after successful validation
+  - Includes metadata: ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
+  - Includes metadata: MFA_METHOD=backup, MFA_TYPE=(SMS or AUTH_APP)
+- **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=(SMS or AUTH_APP), JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED=false
+
 #### Auth App Already Exists (Migrated User)
 - **AUTH_CODE_VERIFIED**: Emitted after successful validation
   - Includes metadata: ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
@@ -144,6 +156,6 @@ flowchart TD
   - Includes metadata: ACCOUNT_RECOVERY=false, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
   - Includes metadata: MFA_METHOD=backup, MFA_TYPE=AUTH_APP
 - **AUTH_MFA_METHOD_MIGRATION_ATTEMPTED**: Emitted during MFA method migration
-  - Includes metadata: JOURNEY_TYPE=ACCOUNT_MANAGEMENT
+  - Includes metadata: HAD_PARTIAL, MFA_TYPE=AUTH_APP, JOURNEY_TYPE=ACCOUNT_MANAGEMENT, MIGRATION_SUCCEEDED
 - **AUTH_MFA_METHOD_ADD_FAILED**: Emitted when adding backup Auth App method fails
   - Includes metadata: MFA_TYPE=AUTH_APP, MFA_METHOD=default, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
