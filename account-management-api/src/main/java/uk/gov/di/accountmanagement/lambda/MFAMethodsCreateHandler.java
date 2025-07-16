@@ -324,21 +324,6 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
-        auditContext =
-                auditContext.withMetadataItem(
-                        pair(
-                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                                mfaMethodCreateRequest
-                                        .mfaMethod()
-                                        .method()
-                                        .mfaMethodType()
-                                        .toString()));
-
-        if (mfaMethodCreateRequest.mfaMethod().method()
-                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-            auditContext = auditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
-        }
-
         auditEventStatus =
                 sendAuditEvent(
                         AUTH_MFA_METHOD_ADD_COMPLETED, input, userProfile, mfaMethodCreateRequest);

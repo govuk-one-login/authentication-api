@@ -47,6 +47,7 @@ public class AuditHelper {
 
     private static final Logger LOG = LogManager.getLogger(AuditHelper.class);
     public static final String TXMA_ENCODED_HEADER_NAME = "txma-audit-encoded";
+    public static final String ERROR_BUILDING_AUDIT_CONTEXT = "Error building audit context";
 
     private AuditHelper() {}
 
@@ -96,7 +97,7 @@ public class AuditHelper {
 
             return Result.success(context);
         } catch (Exception e) {
-            LOG.error("Error building audit context", e);
+            LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
@@ -140,13 +141,12 @@ public class AuditHelper {
 
             return Result.success(context);
         } catch (Exception e) {
-            logger.error("Error building audit context", e);
+            logger.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }
 
     public static Result<ErrorResponse, AuditContext> buildAuditContextForMfaMethod(
-            AccountManagementAuditableEvent auditEvent,
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile,
             MFAMethod mfaMethod,
@@ -188,7 +188,7 @@ public class AuditHelper {
 
             return Result.success(context);
         } catch (Exception e) {
-            logger.error("Error building audit context", e);
+            logger.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
             return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
         }
     }

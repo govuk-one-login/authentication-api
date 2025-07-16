@@ -189,12 +189,6 @@ public class MFAMethodsDeleteHandler
     private Result<ErrorResponse, AuditContext> buildAuditContext(
             APIGatewayProxyRequestEvent input, UserProfile userProfile, MFAMethod mfaMethod) {
         return AuditHelper.buildAuditContextForMfaMethod(
-                AUTH_MFA_METHOD_DELETE_COMPLETED,
-                input,
-                userProfile,
-                mfaMethod,
-                configurationService,
-                dynamoService,
-                LOG);
+                input, userProfile, mfaMethod, configurationService, dynamoService, LOG);
     }
 }
