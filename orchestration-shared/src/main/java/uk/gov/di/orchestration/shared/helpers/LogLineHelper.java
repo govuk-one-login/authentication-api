@@ -1,10 +1,12 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import io.opentelemetry.api.trace.Span;
 import org.apache.logging.log4j.ThreadContext;
 
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.ORCH_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.TRACE_ID;
 
 public class LogLineHelper {
 
@@ -18,7 +20,8 @@ public class LogLineHelper {
         PERSISTENT_SESSION_ID("persistentSessionId", true),
         AWS_REQUEST_ID("awsRequestId", false),
         CLIENT_ID("clientId", true),
-        CLIENT_NAME("clientName", false);
+        CLIENT_NAME("clientName", false),
+        TRACE_ID("traceId", false);
 
         private final String logFieldName;
         private boolean isBase64;
@@ -61,5 +64,14 @@ public class LogLineHelper {
 
     public static void attachOrchSessionIdToLogs(String orchSessionId) {
         attachLogFieldToLogs(ORCH_SESSION_ID, orchSessionId);
+    }
+
+    public static void attachTraceId() {
+        // Adapted from
+        // https://docs.dynatrace.com/docs/analyze-explore-automate/logs/lma-log-enrichment#retrieve-span-and-trace-ids
+        var spanContext = Span.current().getSpanContext();
+        if (spanContext.isValid()) {
+            attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
+        }
     }
 }

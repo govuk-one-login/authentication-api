@@ -14,6 +14,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
 
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
+
 public class FetchJwksHandler implements RequestHandler<Map<String, String>, String> {
 
     private final JwksService jwksService;
@@ -35,6 +37,7 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
 
     @Override
     public String handleRequest(Map<String, String> event, Context context) {
+        attachTraceId();
         String url = event.get("url");
         String keyId = event.get("keyId");
         final String errorResponse = "error";

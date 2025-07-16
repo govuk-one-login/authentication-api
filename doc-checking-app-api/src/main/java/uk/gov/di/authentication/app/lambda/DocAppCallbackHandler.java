@@ -61,6 +61,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class DocAppCallbackHandler
@@ -175,6 +176,7 @@ public class DocAppCallbackHandler
 
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         LOG.info("Request received to DocAppCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {

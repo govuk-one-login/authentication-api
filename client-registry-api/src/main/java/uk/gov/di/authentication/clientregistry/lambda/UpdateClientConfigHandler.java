@@ -30,6 +30,7 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 
 public class UpdateClientConfigHandler
@@ -70,6 +71,7 @@ public class UpdateClientConfigHandler
 
     public APIGatewayProxyResponseEvent updateClientRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         String ipAddress = IpAddressHelper.extractIpAddress(input);
 
         var user = TxmaAuditUser.user().withIpAddress(ipAddress);

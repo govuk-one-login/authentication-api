@@ -20,6 +20,7 @@ import static uk.gov.di.authentication.oidc.validators.GlobalLogoutValidator.val
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
     private static final Logger LOG = LogManager.getLogger(GlobalLogoutHandler.class);
@@ -40,6 +41,7 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
     @Override
     public Object handleRequest(SQSEvent sqsEvent, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), () -> processEvents(sqsEvent));
