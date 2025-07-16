@@ -18,6 +18,9 @@ public class RateLimitService {
             return RateLimitDecision.UNDER_LIMIT_NO_ACTION;
         }
 
-        return rateLimitAlgorithm.getClientRateLimitDecision(clientRateLimitConfig);
+        if (rateLimitAlgorithm.hasRateLimitExceeded(clientRateLimitConfig)) {
+            return RateLimitDecision.OVER_LIMIT_RETURN_TO_RP;
+        }
+        return RateLimitDecision.UNDER_LIMIT_NO_ACTION;
     }
 }
