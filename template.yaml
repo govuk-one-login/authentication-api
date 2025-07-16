@@ -2146,6 +2146,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
+        - !Ref TxmaQueueSendPermissionPolicy
         - !If [
             IsDevOrBuild,
             !Ref GlobalLogoutTestQueueConsumePolicy,
