@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class MfaResetJarJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -46,6 +47,7 @@ public class MfaResetJarJwkHandler
     }
 
     public APIGatewayProxyResponseEvent mfaResetJarJwkHandler() {
+        attachTraceId();
         LOG.info(
                 "Request for Auth reverification request JAR signature verification key received.");
         try {

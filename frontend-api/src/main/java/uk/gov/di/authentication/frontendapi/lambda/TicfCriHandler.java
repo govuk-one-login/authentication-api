@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Void> {
 
@@ -51,6 +52,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     @Override
     public Void handleRequest(InternalTICFCRIRequest input, Context context) {
+        attachTraceId();
         LOG.debug("received request to TICF CRI Handler");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
