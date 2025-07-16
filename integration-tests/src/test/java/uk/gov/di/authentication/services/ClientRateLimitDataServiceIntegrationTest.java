@@ -30,8 +30,7 @@ class ClientRateLimitDataServiceIntegrationTest {
         var expectedRateLimitData =
                 new SlidingWindowData()
                         .withClientId(TEST_CLIENT_ID)
-                        .withPeriodStartTime(TEST_PERIOD_START_TIME)
-                        .withRequestCount(123L);
+                        .withPeriodStartTime(TEST_PERIOD_START_TIME);
         clientRateLimitExtension.storeData(expectedRateLimitData);
 
         var actualRateLimitData =
@@ -40,6 +39,6 @@ class ClientRateLimitDataServiceIntegrationTest {
                         .orElseThrow();
         assertEquals(TEST_CLIENT_ID, actualRateLimitData.getClientId());
         assertEquals(TEST_PERIOD_START_TIME, actualRateLimitData.getPeriodStartTime());
-        assertEquals(123L, actualRateLimitData.getRequestCount());
+        assertEquals(1L, actualRateLimitData.getRequestCount());
     }
 }
