@@ -2,12 +2,16 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.GlobalLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 
 import java.util.List;
 import java.util.Optional;
+
+import static uk.gov.di.orchestration.shared.domain.GlobalLogoutAuditableEvent.GLOBAL_LOG_OUT_SUCCESS;
 
 public class GlobalLogoutService {
 
@@ -16,29 +20,34 @@ public class GlobalLogoutService {
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService dynamoClientService;
     private final BackChannelLogoutService backChannelLogoutService;
+    private final AuditService auditService;
 
     public GlobalLogoutService(ConfigurationService configurationService) {
         this(
                 new OrchSessionService(configurationService),
                 new OrchClientSessionService(configurationService),
                 new DynamoClientService(configurationService),
-                new BackChannelLogoutService(configurationService));
+                new BackChannelLogoutService(configurationService),
+                new AuditService(configurationService));
     }
 
     public GlobalLogoutService(
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
             DynamoClientService dynamoClientService,
-            BackChannelLogoutService backChannelLogoutService) {
+            BackChannelLogoutService backChannelLogoutService,
+            AuditService auditService) {
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.backChannelLogoutService = backChannelLogoutService;
+        this.auditService = auditService;
     }
 
-    public void logoutAllSessions(String internalCommonSubjectId) {
+    public void logoutAllSessions(GlobalLogoutMessage message) {
         var allSessions =
-                orchSessionService.getSessionsFromInternalCommonSubjectId(internalCommonSubjectId);
+                orchSessionService.getSessionsFromInternalCommonSubjectId(
+                        message.internalCommonSubjectId());
         if (allSessions.isEmpty()) {
             LOG.info("No sessions found for internal common subject ID");
             return;
@@ -55,6 +64,16 @@ public class GlobalLogoutService {
                         .mapToLong(List::size)
                         .sum());
         destroySessionRequests.forEach(this::destroySessions);
+
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(message.internalCommonSubjectId())
+                        .withSessionId(message.sessionId())
+                        .withGovukSigninJourneyId(message.clientSessionId())
+                        .withPersistentSessionId(message.persistentSessionId())
+                        .withIpAddress(message.ipAddress());
+
+        auditService.submitAuditEvent(GLOBAL_LOG_OUT_SUCCESS, message.clientId(), user);
     }
 
     private void destroySessions(DestroySessionsRequest request) {
