@@ -72,6 +72,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -273,6 +274,8 @@ class MFAMethodsCreateHandlerTest {
                     capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             containsMetadataPair(
                     capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.name());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
         }
 
         @Test

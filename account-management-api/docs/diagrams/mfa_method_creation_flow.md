@@ -20,6 +20,9 @@ flowchart TD
     ValidateRequest -->|Fail: Invalid JSON| End6([400 Error])
     ValidateRequest -->|Fail: Default MFA exists| End7([400 Error])
     
+    ValidateRequest -->|Fail: Invalid Phone Number| EmitAddFailedPhone[/Emit AUTH_MFA_METHOD_ADD_FAILED\]
+    EmitAddFailedPhone --> End19([400 Error: INVALID_PHONE_NUMBER])
+    
     ValidateRequest -->|Fail: Invalid OTP| EmitInvalidCode[/Emit AUTH_INVALID_CODE_SENT\]
     EmitInvalidCode --> End8([400 Error])
     
@@ -59,6 +62,7 @@ flowchart TD
     style EmitAddFailed fill:#9370DB,stroke:#7B68EE,color:white
     style EmitAddFailedResponse fill:#9370DB,stroke:#7B68EE,color:white
     style EmitAddCompleted fill:#9370DB,stroke:#7B68EE,color:white
+    style EmitAddFailedPhone fill:#9370DB,stroke:#7B68EE,color:white
     style End1 fill:#FF5252,stroke:#D32F2F,color:white
     style End2 fill:#FF5252,stroke:#D32F2F,color:white
     style End3 fill:#FF5252,stroke:#D32F2F,color:white
@@ -77,6 +81,7 @@ flowchart TD
     style End16 fill:#FF5252,stroke:#D32F2F,color:white
     style End17 fill:#FF5252,stroke:#D32F2F,color:white
     style End18 fill:#4CAF50,stroke:#388E3C,color:white
+    style End19 fill:#FF5252,stroke:#D32F2F,color:white
 ```
 
 ## Audit Events by User Journey
@@ -117,6 +122,11 @@ flowchart TD
   - Includes metadata: MFA_TYPE=AUTH_APP, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
 
 ### Failed Journeys
+
+#### Invalid Phone Number (SMS Method Only)
+- **AUTH_MFA_METHOD_ADD_FAILED**: Emitted when an invalid phone number is provided
+  - Includes metadata: MFA_METHOD=default, JOURNEY_TYPE=ACCOUNT_MANAGEMENT
+  - Includes metadata: MFA_TYPE=(from default method)
 
 #### Invalid OTP (SMS Method Only)
 - **AUTH_INVALID_CODE_SENT**: Emitted when an invalid OTP code is provided

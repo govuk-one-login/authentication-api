@@ -30,7 +30,9 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -50,12 +52,14 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.AuthSessionItem.ATTRIBUTE_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
@@ -193,6 +197,46 @@ public class MFAMethodsCreateHandler
 
         if (mfaMethodCreateRequest.mfaMethod().method()
                 instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+
+            var invalidPhoneNumber =
+                    ValidationHelper.validatePhoneNumber(
+                            requestSmsMfaDetail.phoneNumber(), PRODUCTION.name(), false);
+
+            if (invalidPhoneNumber.isPresent()) {
+                auditContext =
+                        auditContext.withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        PriorityIdentifier.DEFAULT.name().toLowerCase()));
+
+                var maybeMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
+
+                if (maybeMfaMethods.isSuccess()) {
+                    var mfaMethods = maybeMfaMethods.getSuccess();
+                    var defaultMfaMethod =
+                            mfaMethods.stream()
+                                    .filter(
+                                            method ->
+                                                    method.getPriority()
+                                                            .equalsIgnoreCase(
+                                                                    PriorityIdentifier.DEFAULT
+                                                                            .name()))
+                                    .findFirst();
+
+                    if (defaultMfaMethod.isPresent()) {
+                        auditContext =
+                                auditContext.withMetadataItem(
+                                        pair(
+                                                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                                defaultMfaMethod.get().getMfaMethodType()));
+                    }
+                }
+
+                auditService.submitAuditEvent(
+                        AUTH_MFA_METHOD_ADD_FAILED, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+                return Result.failure(invalidPhoneNumber.get());
+            }
+
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
                             userProfile.getEmail(),
@@ -497,6 +541,12 @@ public class MFAMethodsCreateHandler
                 if (mfaMethodCreateRequest.mfaMethod().method()
                         instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
                     context = context.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
+                    context =
+                            context.withMetadataItem(
+                                    pair(
+                                            AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                                            PhoneNumberHelper.getCountry(
+                                                    requestSmsMfaDetail.phoneNumber())));
                 }
             }
 
