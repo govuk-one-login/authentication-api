@@ -27,9 +27,9 @@ public class AccountInterventionsService {
     private static final Logger LOG = LogManager.getLogger(AccountInterventionsService.class);
     private final Json objectMapper = SerializationService.getInstance();
 
-    private static HttpClient httpClient;
+    private final HttpClient httpClient;
 
-    private ConfigurationService configurationService;
+    private final ConfigurationService configurationService;
 
     public AccountInterventionsService() {
         httpClient = HttpClientHelper.newInstrumentedHttpClient();
@@ -57,7 +57,7 @@ public class AccountInterventionsService {
         return parseResponse(response);
     }
 
-    private HttpResponse sendAccountInterventionsRequest(String internalPairwiseId)
+    private HttpResponse<String> sendAccountInterventionsRequest(String internalPairwiseId)
             throws UnsuccessfulAccountInterventionsResponseException {
         var accountInterventionsEndpoint =
                 configurationService.getAccountInterventionServiceURI().toString();
@@ -83,11 +83,11 @@ public class AccountInterventionsService {
         }
     }
 
-    private AccountInterventionsInboundResponse parseResponse(HttpResponse response)
+    private AccountInterventionsInboundResponse parseResponse(HttpResponse<String> response)
             throws UnsuccessfulAccountInterventionsResponseException {
         try {
             return objectMapper.readValue(
-                    response.body().toString(), AccountInterventionsInboundResponse.class, true);
+                    response.body(), AccountInterventionsInboundResponse.class, true);
         } catch (Json.JsonException | JsonParseException e) {
             throw parseException(e);
         }
