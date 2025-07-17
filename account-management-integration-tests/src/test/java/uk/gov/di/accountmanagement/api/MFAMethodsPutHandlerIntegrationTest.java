@@ -36,6 +36,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
@@ -246,7 +247,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     CHANGED_AUTHENTICATOR_APP,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -256,6 +258,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
@@ -502,7 +510,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     CHANGED_DEFAULT_MFA,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -512,6 +521,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             codeVerifiedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
             codeVerifiedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_CODE_VERIFIED.name(), codeVerifiedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
@@ -1026,9 +1041,15 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     class Validations {
         @Test
         void shouldReturn401WhenPrincipalIsInvalid() {
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var updateRequest =
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
             var response =
                     makeRequest(
-                            Optional.of(ChangingBackupMethod.buildUpdateRequestWithOtp()),
+                            Optional.of(updateRequest),
                             TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(
@@ -1045,9 +1066,15 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         @Test
         void shouldReturn404WhenUserProfileIsNotFoundForPublicSubject() {
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+            var updateRequest =
+                    format(
+                            UPDATE_BACKUP_SMS_METHOD_REQUEST_TEMPLATE,
+                            backupSms.getDestination(),
+                            otp);
             var response =
                     makeRequest(
-                            Optional.of(ChangingBackupMethod.buildUpdateRequestWithOtp()),
+                            Optional.of(updateRequest),
                             TEST_HEADERS,
                             Collections.emptyMap(),
                             Map.ofEntries(

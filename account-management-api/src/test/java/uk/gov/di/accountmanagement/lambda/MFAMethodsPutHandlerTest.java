@@ -201,7 +201,12 @@ class MFAMethodsPutHandlerTest {
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
-        verify(mfaMethodsService).updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest);
+        verify(mfaMethodsService)
+                .updateMfaMethod(
+                        eq(EMAIL),
+                        eq(DEFAULT_SMS_METHOD),
+                        eq(List.of(DEFAULT_SMS_METHOD)),
+                        eq(updateRequest));
     }
 
     @Test
@@ -276,7 +281,12 @@ class MFAMethodsPutHandlerTest {
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(nonMigratedEmail, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
-        verify(mfaMethodsService).updateMfaMethod(nonMigratedEmail, MFA_IDENTIFIER, updateRequest);
+        verify(mfaMethodsService)
+                .updateMfaMethod(
+                        eq(nonMigratedEmail),
+                        eq(DEFAULT_SMS_METHOD),
+                        eq(List.of(DEFAULT_SMS_METHOD)),
+                        eq(updateRequest));
         verify(mfaMethodsMigrationService)
                 .migrateMfaCredentialsForUserIfRequired(any(), any(), any(), any());
     }
@@ -359,7 +369,12 @@ class MFAMethodsPutHandlerTest {
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
-        verify(mfaMethodsService).updateMfaMethod(EMAIL, MFA_IDENTIFIER, updateRequest);
+        verify(mfaMethodsService)
+                .updateMfaMethod(
+                        eq(EMAIL),
+                        eq(DEFAULT_SMS_METHOD),
+                        eq(List.of(DEFAULT_SMS_METHOD)),
+                        eq(updateRequest));
     }
 
     @CsvSource({"500", "404", "200"})
@@ -1079,7 +1094,12 @@ class MFAMethodsPutHandlerTest {
         var switchedMfaMethod =
                 MFAMethod.authAppMfaMethod(
                         "test-credential", true, true, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
-        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), eq(MFA_IDENTIFIER), any()))
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(any(), any(), any(), any()))
                 .thenReturn(
                         Result.success(
                                 new MFAMethodsService.MfaUpdateResponse(
@@ -1091,7 +1111,9 @@ class MFAMethodsPutHandlerTest {
         assertEquals(200, result.getStatusCode());
 
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
-        verify(mfaMethodsService).updateMfaMethod(eq(EMAIL), eq(MFA_IDENTIFIER), any());
+        verify(mfaMethodsService)
+                .updateMfaMethod(
+                        eq(EMAIL), eq(DEFAULT_SMS_METHOD), eq(List.of(DEFAULT_SMS_METHOD)), any());
         verify(sqsClient).send(any());
     }
 

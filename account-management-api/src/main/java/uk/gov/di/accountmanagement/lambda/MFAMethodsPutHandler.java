@@ -18,6 +18,7 @@ import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -45,6 +46,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
@@ -203,15 +205,6 @@ public class MFAMethodsPutHandler
                             requestSmsMfaDetail.otp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
-                var maybeAuditContext =
-                        AuditHelper.buildAuditContext(
-                                configurationService, dynamoService, input, putRequest.userProfile);
-
-                if (maybeAuditContext.isFailure()) {
-                    return generateApiGatewayProxyErrorResponse(
-                            401, maybeAuditContext.getFailure());
-                }
-
                 var maybeAuditEventStatus =
                         sendAuditEvent(
                                 AUTH_INVALID_CODE_SENT,
@@ -262,7 +255,7 @@ public class MFAMethodsPutHandler
 
         if (methodsAsResponse.isFailure()) {
             LOG.error(
-                    "Cannot retrieve updated method detaisl to build response; update may still have occurred. Error: {}",
+                    "Cannot retrieve updated method details to build response; update may still have occurred. Error: {}",
                     methodsAsResponse.getFailure());
             return generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
