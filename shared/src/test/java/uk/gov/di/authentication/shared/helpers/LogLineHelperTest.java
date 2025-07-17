@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SPAN_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.TRACE_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -71,10 +70,9 @@ class LogLineHelperTest {
     }
 
     @Test
-    void shouldNotLogSpanAndTraceIdIfUnavailable() {
+    void shouldNotLogTraceIdIfUnavailable() {
         attachTraceId();
 
-        assertFalse(ThreadContext.containsKey(SPAN_ID.getLogFieldName()));
         assertFalse(ThreadContext.containsKey(TRACE_ID.getLogFieldName()));
     }
 
@@ -92,8 +90,6 @@ class LogLineHelperTest {
         try (Scope ignored = context.makeCurrent()) {
             attachTraceId();
 
-            assertTrue(ThreadContext.containsKey(SPAN_ID.getLogFieldName()));
-            assertEquals(spanContext.getSpanId(), ThreadContext.get(SPAN_ID.getLogFieldName()));
             assertTrue(ThreadContext.containsKey(TRACE_ID.getLogFieldName()));
             assertEquals(spanContext.getTraceId(), ThreadContext.get(TRACE_ID.getLogFieldName()));
         }

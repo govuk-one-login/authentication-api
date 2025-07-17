@@ -5,7 +5,6 @@ import org.apache.logging.log4j.ThreadContext;
 
 import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SPAN_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.TRACE_ID;
 
 public class LogLineHelper {
@@ -21,7 +20,6 @@ public class LogLineHelper {
         CLIENT_ID("clientId", true),
         CLIENT_NAME("clientName", false),
         JOURNEY_TYPE("journeyType", false),
-        SPAN_ID("spanId", false),
         TRACE_ID("traceId", false);
 
         private final String logFieldName;
@@ -62,7 +60,6 @@ public class LogLineHelper {
         var spanContext = Span.current().getSpanContext();
         if (spanContext.isValid()) {
             attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
-            attachLogFieldToLogs(SPAN_ID, spanContext.getSpanId());
         }
     }
 }
