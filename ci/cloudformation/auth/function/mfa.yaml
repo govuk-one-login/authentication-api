@@ -80,8 +80,8 @@ Resources:
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref DynamoUserReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
