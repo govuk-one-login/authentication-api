@@ -15,7 +15,8 @@ module "frontend_api_mfa_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn,
-    aws_iam_policy.dynamo_auth_session_write_policy.arn
+    aws_iam_policy.dynamo_auth_session_write_policy.arn,
+    aws_iam_policy.dynamo_user_write_access_policy.arn
   ]
   extra_tags = {
     Service = "mfa"
