@@ -656,6 +656,51 @@ class MFAMethodsCreateHandlerTest {
         }
 
         @Test
+        void shouldReturn400WhenPhoneNumberValidationFails() {
+            var invalidPhoneNumber = "invalid-phone-number";
+            var event =
+                    generateApiGatewayEvent(
+                            PriorityIdentifier.BACKUP,
+                            new RequestSmsMfaDetail(invalidPhoneNumber, TEST_OTP),
+                            TEST_INTERNAL_SUBJECT);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                    .thenReturn(Optional.of(userProfile));
+
+            var defaultMfa =
+                    MFAMethod.authAppMfaMethod(
+                            "cred", true, true, PriorityIdentifier.DEFAULT, TEST_AUTH_APP_ID);
+
+            when(mfaMethodsService.getMfaMethods(TEST_EMAIL))
+                    .thenReturn(Result.success(List.of(defaultMfa)));
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+
+            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_MFA_METHOD_ADD_FAILED),
+                            captor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
+            AuditContext capturedObject = captor.getValue();
+            containsMetadataPair(
+                    capturedObject,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    PriorityIdentifier.DEFAULT.name().toLowerCase());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.AUTH_APP.name());
+
+            // Verify that getMfaMethods was called but addBackupMfa was not
+            verify(mfaMethodsService).getMfaMethods(TEST_EMAIL);
+            verify(mfaMethodsService, org.mockito.Mockito.never()).addBackupMfa(any(), any());
+        }
+
+        @Test
         void shouldReturn400WhenOTPIsInvalid() {
             var event =
                     generateApiGatewayEvent(

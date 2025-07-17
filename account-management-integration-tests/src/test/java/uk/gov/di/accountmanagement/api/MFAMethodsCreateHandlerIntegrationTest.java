@@ -716,6 +716,47 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Test
+        @DisplayName("Should return 400 when phone number is invalid")
+        void shouldReturn400ErrorResponseWhenPhoneNumberIsInvalid() {
+            setupMigratedUserWithMfaMethod(defaultPriorityAuthApp);
+            String invalidPhoneNumber = "invalid-phone-number";
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            BACKUP,
+                                            new RequestSmsMfaDetail(invalidPhoneNumber, otp))),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when phone number is invalid");
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+
+            // Check audit events
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_FAILED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> addFailedAttributes = new HashMap<>();
+            addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
+        }
+
+        @Test
         void shouldReturn401WhenPrincipalIsInvalid() {
             var response =
                     makeRequest(
