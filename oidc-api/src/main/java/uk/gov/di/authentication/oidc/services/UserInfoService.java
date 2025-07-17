@@ -8,7 +8,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
@@ -35,7 +35,7 @@ public class UserInfoService {
     private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoClientService dynamoClientService;
-    private final DynamoDocAppService dynamoDocAppService;
+    private final DynamoDocAppCriService dynamoDocAppCriService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -45,14 +45,14 @@ public class UserInfoService {
             AuthenticationService authenticationService,
             DynamoIdentityService identityService,
             DynamoClientService dynamoClientService,
-            DynamoDocAppService dynamoDocAppService,
+            DynamoDocAppCriService dynamoDocAppCriService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             AuthenticationUserInfoStorageService userInfoStorageService) {
         this.authenticationService = authenticationService;
         this.identityService = identityService;
         this.dynamoClientService = dynamoClientService;
-        this.dynamoDocAppService = dynamoDocAppService;
+        this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.userInfoStorageService = userInfoStorageService;
@@ -188,7 +188,7 @@ public class UserInfoService {
 
     private UserInfo populateDocAppUserInfo(AccessTokenInfo accessTokenInfo, UserInfo userInfo) {
         LOG.info("Populating DocAppUserInfo");
-        return dynamoDocAppService
+        return dynamoDocAppCriService
                 .getDocAppCredential(accessTokenInfo.getSubject())
                 .map(
                         docAppCredential -> {
