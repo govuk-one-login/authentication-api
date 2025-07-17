@@ -97,11 +97,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
 
         var emailUserIsSignedInWith = userContext.getAuthSession().getEmailAddress();
+        var internalPairwiseId = userContext.getAuthSession().getInternalCommonSubjectId();
 
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        AuditService.UNKNOWN,
+                        internalPairwiseId,
                         emailUserIsSignedInWith,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
