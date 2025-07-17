@@ -6434,29 +6434,6 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
 
-  ClientRateLimitTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub ${Environment}-Client-Rate-Limit
-      AttributeDefinitions:
-        - AttributeName: ClientId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: ClientId
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-      SSESpecification:
-        SSEEnabled: true
-        KMSMasterKeyId: !GetAtt ClientRateLimitTableEncryptionKey.Arn
-        SSEType: KMS
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-      Tags:
-        - Key: Name
-          Value: ClientRateLimitTable
   #endregion
   #region StateStorage policies
   StateStorageTableReadAccessPolicy:
