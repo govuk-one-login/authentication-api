@@ -103,11 +103,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
 
         var emailUserIsSignedInWith = userContext.getAuthSession().getEmailAddress();
+        var internalPairwiseId = userContext.getAuthSession().getInternalCommonSubjectId();
 
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        AuditService.UNKNOWN,
+                        internalPairwiseId,
                         emailUserIsSignedInWith,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
@@ -122,17 +123,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             return maybeUserProfileOfUserSuppliedEmail
                     .flatMap(
                             userProfile -> {
-                                var updatedAuditContext =
-                                        auditContext.withUserId(userProfile.getSubjectID());
-
                                 throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
-                                        userProfile, updatedAuditContext, request.rpPairwiseId());
+                                        userProfile, auditContext, request.rpPairwiseId());
 
                                 return verifyReAuthentication(
                                         userProfile,
                                         userContext,
                                         request.rpPairwiseId(),
-                                        updatedAuditContext,
+                                        auditContext,
                                         pairwiseIdMetadataPair);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
