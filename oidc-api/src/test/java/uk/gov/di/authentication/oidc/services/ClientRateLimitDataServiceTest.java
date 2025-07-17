@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.TEST_CLIENT_ID;
 
@@ -47,22 +46,6 @@ class ClientRateLimitDataServiceTest {
     void setup() {
         clientRateLimitDataService =
                 new ClientRateLimitDataService(dynamoDbClient, table, configurationService);
-    }
-
-    @Test
-    void shouldStoreClientRateLimitData() {
-        var clientRateLimitData = withValidClientRateLimitData();
-        clientRateLimitDataService.storeData(clientRateLimitData);
-        verify(table).putItem(clientRateLimitData);
-    }
-
-    @Test
-    void shouldThrowWhenFailingToStoreRateLimitData() {
-        withFailedPut();
-        var slidingWindowData = new SlidingWindowData();
-        assertThrows(
-                ClientRateLimitDataException.class,
-                () -> clientRateLimitDataService.storeData(slidingWindowData));
     }
 
     @Test
@@ -93,12 +76,6 @@ class ClientRateLimitDataServiceTest {
                 new SlidingWindowData(TEST_CLIENT_ID, TEST_PERIOD_START).withTimeToLive(VALID_TTL);
         when(table.getItem(RATE_LIMIT_DATA_GET_REQUEST)).thenReturn(existingSlidingWindowData);
         return existingSlidingWindowData;
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(SlidingWindowData.class));
     }
 
     private void withFailedGet() {

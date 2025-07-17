@@ -47,20 +47,6 @@ public class ClientRateLimitDataService extends BaseDynamoService<SlidingWindowD
         this.nowClock = new NowHelper.NowClock(clock);
     }
 
-    public void storeData(SlidingWindowData slidingWindowData) {
-        var item =
-                slidingWindowData.withTimeToLive(
-                        nowClock.nowPlus(TIME_TO_LIVE, ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond());
-        try {
-            put(item);
-        } catch (Exception e) {
-            logAndThrowRateLimitException(
-                    "Failed to add client rate limit item", slidingWindowData.getClientId(), e);
-        }
-    }
-
     public Optional<SlidingWindowData> getData(String clientId, LocalDateTime periodStartTime) {
         try {
             return getWithConsistentRead(clientId, periodStartTime.toString())
