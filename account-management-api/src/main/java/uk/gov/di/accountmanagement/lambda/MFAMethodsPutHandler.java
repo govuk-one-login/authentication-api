@@ -66,7 +66,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 
@@ -418,7 +417,7 @@ public class MFAMethodsPutHandler
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
         Map<String, String> headers = input.getHeaders();
         String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
-        attachSessionIdToLogs(sessionId);
+        uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs(sessionId);
     }
 
     private NotificationType mapEmailNotificationIdentifierToType(
@@ -472,7 +471,13 @@ public class MFAMethodsPutHandler
                     generateApiGatewayProxyErrorResponse(500, maybeAuditContext.getFailure()));
         }
 
-        auditService.submitAuditEvent(auditEvent, maybeAuditContext.getSuccess());
+        var result =
+                AuditHelper.sendAuditEvent(
+                        auditEvent, maybeAuditContext.getSuccess(), auditService, LOG);
+
+        if (result.isFailure()) {
+            return Result.failure(generateApiGatewayProxyErrorResponse(500, result.getFailure()));
+        }
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
         return Result.success(null);

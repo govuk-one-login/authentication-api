@@ -19,7 +19,8 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     AUTH_MFA_METHOD_SWITCH_FAILED,
     AUTH_MFA_METHOD_SWITCH_COMPLETED,
     AUTH_CODE_VERIFIED,
-    AUTH_INVALID_CODE_SENT;
+    AUTH_INVALID_CODE_SENT,
+    AUTH_PHONE_CODE_SENT;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

@@ -28,10 +28,11 @@ import static java.util.Map.entry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.accountmanagement.api.MFAMethodsCreateHandlerIntegrationTest.EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.accountmanagement.api.MFAMethodsCreateHandlerIntegrationTest.EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_DELETE_COMPLETED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_REMOVED;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
@@ -147,7 +148,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             // Only add phone number country code for SMS methods
             if (backupMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
                 expectation.withAttribute(EXTENSIONS_MFA_TYPE, SMS);
-                expectation.withAttribute("extensions.phone_number_country_code", "44");
+                expectation.withAttribute(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
             } else if (backupMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
                 expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP);
             }

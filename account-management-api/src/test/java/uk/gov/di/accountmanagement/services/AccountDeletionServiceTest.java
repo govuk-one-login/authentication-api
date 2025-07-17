@@ -40,6 +40,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -82,7 +83,7 @@ class AccountDeletionServiceTest {
             new CaptureLoggingExtension(AccountDeletionService.class);
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any())).thenReturn(new byte[0xaa]);
     }
@@ -225,6 +226,7 @@ class AccountDeletionServiceTest {
                                                 && Objects.equals(
                                                         auditContext.persistentSessionId(),
                                                         TEST_PERSISTENT_SESSION_ID)),
+                        eq(AUDIT_EVENT_COMPONENT_ID_AUTH),
                         eq(pair("account_deletion_reason", reason)));
     }
 

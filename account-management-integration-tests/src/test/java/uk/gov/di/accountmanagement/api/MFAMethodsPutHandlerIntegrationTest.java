@@ -40,17 +40,17 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHEN
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.SWITCHED_MFA_METHODS;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
@@ -111,22 +111,12 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final String TEST_PHONE_NUMBER = "+447700900000";
     private static final String TEST_PHONE_NUMBER_TWO = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
-    public static final String EXTENSIONS_JOURNEY_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-    public static final String EXTENSIONS_MFA_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-    public static final String EXTENSIONS_MFA_METHOD =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
     public static final String EXTENSIONS_ACCOUNT_RECOVERY =
             "extensions." + AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-    public static final String EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
     public static final String EXTENSIONS_MIGRATION_SUCCEEDED =
             "extensions." + AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED;
     public static final String EXTENSIONS_HAD_PARTIAL =
             "extensions." + AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
-    public static final String EXTENSIONS_NOTIFICATION_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
     public static final String EXTENSIONS_MFA_CODE_ENTERED =
             "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
     private static String testPublicSubject;

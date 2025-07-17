@@ -45,14 +45,14 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_NOTIFICATION_TYPE;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -71,18 +71,10 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER_TWO_WITH_COUNTRY_CODE = "+447700900111";
     private static final String TEST_CREDENTIAL = "ZZ11BB22CC33DD44EE55FF66GG77HH88II99JJ00";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    public static final String EXTENSIONS_JOURNEY_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-    public static final String EXTENSIONS_MFA_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
-    public static final String EXTENSIONS_MFA_METHOD =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
     public static final String EXTENSIONS_MFA_CODE_ENTERED =
             "extensions." + AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
     public static final String EXTENSIONS_ACCOUNT_RECOVERY =
             "extensions." + AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
-    public static final String EXTENSIONS_NOTIFICATION_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
     private static String testPublicSubject;
     private static String testInternalSubject;
     private static final MFAMethod defaultPrioritySms =
@@ -209,8 +201,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> addCompletedAttributes = new HashMap<>();
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, SMS.name());
-            addCompletedAttributes.put(
-                    "extensions." + AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+            addCompletedAttributes.put(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
@@ -722,6 +713,47 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     response.getStatusCode(),
                     "Expected error response when adding SMS MFA with same phone number");
             assertThat(response, hasJsonBody(ErrorResponse.SMS_MFA_WITH_NUMBER_EXISTS));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when phone number is invalid")
+        void shouldReturn400ErrorResponseWhenPhoneNumberIsInvalid() {
+            setupMigratedUserWithMfaMethod(defaultPriorityAuthApp);
+            String invalidPhoneNumber = "invalid-phone-number";
+            var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 9000);
+
+            Map<String, String> headers = new HashMap<>();
+            headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    constructRequestBody(
+                                            BACKUP,
+                                            new RequestSmsMfaDetail(invalidPhoneNumber, otp))),
+                            headers,
+                            Collections.emptyMap(),
+                            Map.of("publicSubjectId", testPublicSubject),
+                            Map.of("principalId", testInternalSubject));
+
+            assertEquals(
+                    400,
+                    response.getStatusCode(),
+                    "Expected error response when phone number is invalid");
+            assertThat(response, hasJsonBody(ErrorResponse.INVALID_PHONE_NUMBER));
+
+            // Check audit events
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_ADD_FAILED);
+
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+
+            Map<String, String> addFailedAttributes = new HashMap<>();
+            addFailedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            addFailedAttributes.put(EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
+            addFailedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            eventExpectations.put(AUTH_MFA_METHOD_ADD_FAILED.name(), addFailedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test

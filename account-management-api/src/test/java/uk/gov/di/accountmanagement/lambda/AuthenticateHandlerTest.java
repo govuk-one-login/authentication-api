@@ -6,6 +6,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.*;
@@ -22,12 +25,14 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -75,7 +80,7 @@ class AuthenticateHandlerTest {
     private String clientSubjectId;
 
     @BeforeEach
-    public void setUp() throws UnsuccessfulAccountInterventionsResponseException {
+    void setUp() throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(false);
@@ -107,7 +112,7 @@ class AuthenticateHandlerTest {
     }
 
     @Test
-    public void shouldReturn204IfLoginIsSuccessful() {
+    void shouldReturn204IfLoginIsSuccessful() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
@@ -119,11 +124,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
+    void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
         event.setHeaders(
                 Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -140,11 +146,12 @@ class AuthenticateHandlerTest {
                         auditContext
                                 .withClientSessionId("unknown")
                                 .withSubjectId(clientSubjectId)
-                                .withTxmaAuditEncoded(Optional.empty()));
+                                .withTxmaAuditEncoded(Optional.empty()),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn401IfUserHasInvalidCredentials() {
+    void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
@@ -157,11 +164,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn400IfAnyRequestParametersAreMissing() {
+    void shouldReturn400IfAnyRequestParametersAreMissing() {
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -172,11 +180,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withEmail(AuditService.UNKNOWN));
+                        auditContext.withEmail(AuditService.UNKNOWN),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn400IfUserDoesNotHaveAnAccount() {
+    void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
@@ -186,11 +195,14 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
 
         verify(auditService)
-                .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext,
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn403IfAisCallEnabledAndUserIsBlocked()
+    void shouldReturn403IfAisCallEnabledAndUserIsBlocked()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -212,11 +224,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn403IfIfAisCallEnabledAndUserIsSuspended()
+    void shouldReturn403IfIfAisCallEnabledAndUserIsSuspended()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -238,11 +251,22 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_INTERVENTION_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
-    @Test
-    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithPasswordReset()
+    private static Stream<Arguments> suspendedUserStates() {
+        return Stream.of(
+                Arguments.of(true, false), // password reset only
+                Arguments.of(false, true), // reprove identity only
+                Arguments.of(true, true) // both password reset and reprove identity
+                );
+    }
+
+    @ParameterizedTest
+    @MethodSource("suspendedUserStates")
+    void shouldReturn204IfAisCallEnabledAndUserIsSuspendedWithInterventions(
+            boolean resetPassword, boolean reproveIdentity)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -254,7 +278,8 @@ class AuthenticateHandlerTest {
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
                 .thenReturn(
                         new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, false, true)));
+                                new Intervention(1L),
+                                new State(false, true, reproveIdentity, resetPassword)));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -263,62 +288,12 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 
     @Test
-    public void shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithReproveIdentity()
-            throws UnsuccessfulAccountInterventionsResponseException {
-        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
-                .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(USER_PROFILE));
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-
-        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
-                .thenReturn(
-                        new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, true, false)));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
-    }
-
-    @Test
-    public void
-            shouldReturn204IfIfAisCallEnabledAndUserIsSuspendedWithResetPasswordAndReproveIdentity()
-                    throws UnsuccessfulAccountInterventionsResponseException {
-        when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
-                .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(USER_PROFILE));
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-
-        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(clientSubjectId))
-                .thenReturn(
-                        new AccountInterventionsInboundResponse(
-                                new Intervention(1L), new State(false, true, true, true)));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withSubjectId(clientSubjectId));
-    }
-
-    @Test
-    public void shouldReturn500IfIfAisCallEnabledTheCallFails()
+    void shouldReturn500IfIfAisCallEnabledTheCallFails()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallInAuthenticateEnabled())
                 .thenReturn(true);
@@ -340,6 +315,7 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        auditContext.withSubjectId(clientSubjectId));
+                        auditContext.withSubjectId(clientSubjectId),
+                        AUDIT_EVENT_COMPONENT_ID_AUTH);
     }
 }

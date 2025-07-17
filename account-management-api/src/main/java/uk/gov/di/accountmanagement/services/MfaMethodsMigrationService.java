@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaMigrationFailureReason;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_HAD_PARTIAL;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
@@ -134,6 +135,8 @@ public class MfaMethodsMigrationService {
                         pair(AUDIT_EVENT_EXTENSIONS_MIGRATION_SUCCEEDED, migrationSucceeded));
 
         auditService.submitAuditEvent(
-                AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, auditContext);
+                AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                auditContext,
+                AUDIT_EVENT_COMPONENT_ID_HOME);
     }
 }
