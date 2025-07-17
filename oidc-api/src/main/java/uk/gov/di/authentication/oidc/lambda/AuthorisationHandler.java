@@ -200,12 +200,14 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = cloudwatchMetricService;
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
         var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
-        this.rateLimitService = new RateLimitService(slidingWindowAlgorithm);
+        this.rateLimitService =
+                new RateLimitService(slidingWindowAlgorithm, cloudwatchMetricService);
     }
 
     public AuthorisationHandler(
@@ -230,14 +232,16 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         jwksService,
                         stateStorageService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
+        this.cloudwatchMetricsService = cloudwatchMetricService;
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
         this.rateLimitService =
-                new RateLimitService(new SlidingWindowAlgorithm(configurationService));
+                new RateLimitService(
+                        new SlidingWindowAlgorithm(configurationService), cloudwatchMetricService);
     }
 
     public AuthorisationHandler() {
