@@ -8,17 +8,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 class ApiResponseTest {
 
     @Test
-    void okCatchesExceptionAndReturnsAccessDenied() {
+    void okReturnsAsExpected() {
+        var response = ApiResponse.ok("test");
 
-        var response =
-                ApiResponse.ok(
-                        () -> {
-                            throw new RuntimeException();
-                        });
-
-        assertThat(response.getStatusCode(), is(400));
-        assertThat(
-                response.getBody(),
-                is("{\"error_description\":\"Invalid request\",\"error\":\"invalid_request\"}"));
+        assertThat(response.getStatusCode(), is(200));
+        assertThat(response.getBody(), is("\"test\""));
     }
 }

@@ -47,8 +47,7 @@ public class TrustMarkHandler
     }
 
     public APIGatewayProxyResponseEvent trustmarkRequestHandler() {
-
-        return ApiResponse.ok(this::createTrustMarkResponse);
+        return ApiResponse.ok(createTrustMarkResponse());
     }
 
     private TrustMarkResponse createTrustMarkResponse() {

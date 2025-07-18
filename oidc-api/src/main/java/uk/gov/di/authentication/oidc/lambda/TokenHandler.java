@@ -31,6 +31,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
+import uk.gov.di.orchestration.shared.helpers.ApiResponse;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -57,6 +58,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_GRANT_CODE;
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
@@ -183,8 +185,7 @@ public class TokenHandler
             tokenAuthenticationValidator = getTokenAuthenticationMethod(requestBody);
         } catch (TokenAuthUnsupportedMethodException e) {
             LOG.warn("Unsupported token authentication method used");
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
         ClientRegistry clientRegistry;
@@ -192,8 +193,7 @@ public class TokenHandler
             clientRegistry = getClientRegistry(tokenAuthenticationValidator, input);
         } catch (TokenAuthInvalidException e) {
             LOG.warn("Unable to validate token auth method", e);
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
         if (refreshTokenRequest(requestBody)) {
@@ -222,16 +222,14 @@ public class TokenHandler
 
         if (authCodeExchangeDataMaybe.isEmpty()) {
             LOG.warn("Could not retrieve session data from code");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
 
         AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
 
         if (!Objects.equals(authCodeExchangeData.getClientId(), clientRegistry.getClientID())) {
             LOG.warn("Client ID from auth code does not match client ID from request body");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
         updateAttachedLogFieldToLogs(
@@ -241,8 +239,7 @@ public class TokenHandler
         var orchClientSessionOpt = orchClientSessionService.getClientSession(clientSessionId);
         if (orchClientSessionOpt.isEmpty()) {
             LOG.warn("No orch client session found for auth code client session id");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         var orchClientSession = orchClientSessionOpt.get();
         AuthenticationRequest authRequest;
@@ -256,8 +253,7 @@ public class TokenHandler
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
                             orchClientSession.getAuthRequestParams(), e));
         } catch (InvalidRedirectUriException e) {
-            return generateApiGatewayProxyResponse(
-                    400, e.getErrorObject().toJSONObject().toJSONString());
+            return ApiResponse.badRequest(e.getErrorObject());
         }
 
         if (configurationService.isPkceEnabled()) {
@@ -265,7 +261,8 @@ public class TokenHandler
                     Optional.ofNullable(authRequest.getCodeChallenge()),
                     Optional.ofNullable(requestBody.get("code_verifier")))) {
                 LOG.warn("PKCE validation failed, returning invalid_grant error");
-                return generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse();
+                return ApiResponse.badRequest(
+                        new ErrorObject(INVALID_GRANT_CODE, "PKCE code verification failed"));
             }
         }
 
@@ -289,7 +286,7 @@ public class TokenHandler
         cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+        return ApiResponse.ok(tokenResponse);
     }
 
     private static boolean isPKCEValid(
@@ -332,8 +329,7 @@ public class TokenHandler
                 "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
                 invalidRequestParamError.getCode(),
                 invalidRequestParamError.getDescription());
-        return generateApiGatewayProxyResponse(
-                400, invalidRequestParamError.toJSONObject().toJSONString());
+        return ApiResponse.badRequest(invalidRequestParamError);
     }
 
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
@@ -344,8 +340,7 @@ public class TokenHandler
         boolean refreshTokenSignatureValid =
                 tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_GRANT);
         }
         Subject rpPairwiseSubject;
         List<String> scopes;
@@ -357,13 +352,13 @@ public class TokenHandler
             jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
         boolean areScopesValid =
                 tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
         if (!areScopesValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+            return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
 
         String redisKey = REFRESH_TOKEN_PREFIX + jti;
@@ -374,11 +369,13 @@ public class TokenHandler
             tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
         } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
             LOG.warn("Refresh token not found with given key");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
         if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
             LOG.warn("Refresh token store does not contain Refresh token in request");
-            return generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse();
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
 
         OIDCTokenResponse tokenResponse =
@@ -390,7 +387,7 @@ public class TokenHandler
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
                         signingAlgorithm);
         LOG.info("Generating successful RefreshToken response");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+        return ApiResponse.ok(tokenResponse);
     }
 
     private TokenClientAuthValidator getTokenAuthenticationMethod(Map<String, String> requestBody)
@@ -524,24 +521,5 @@ public class TokenHandler
                                             authCodeExchangeData.getAuthTime()));
         }
         return tokenResponse;
-    }
-
-    private APIGatewayProxyResponseEvent
-            generateInvalidGrantCodeRefreshTokenApiGatewayProxyResponse() {
-        return generateInvalidGrantCodeApiGatewayProxyResponse("Invalid Refresh token");
-    }
-
-    private APIGatewayProxyResponseEvent
-            generateInvalidGrantPKCEVerificationCodeApiGatewayProxyResponse() {
-        return generateInvalidGrantCodeApiGatewayProxyResponse("PKCE code verification failed");
-    }
-
-    private APIGatewayProxyResponseEvent generateInvalidGrantCodeApiGatewayProxyResponse(
-            String description) {
-        return generateApiGatewayProxyResponse(
-                400,
-                new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, description)
-                        .toJSONObject()
-                        .toJSONString());
     }
 }
