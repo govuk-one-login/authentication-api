@@ -120,11 +120,12 @@ Resources:
         - !Ref RedisParametersAccessPolicy
       VpcConfig:
         SecurityGroupIds:
+          - !Ref HttpsEgressSecurityGroup
           - !Ref LambdaSecurityGroup
         SubnetIds:
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
 
   MfaResetAuthorizeFunctionPermission:
     Type: AWS::Lambda::Permission
