@@ -8,6 +8,24 @@ import uk.gov.di.authentication.userpermissions.entity.RecordError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 public interface UserPermissions {
+    public Result<DecisionError, Decision> canUserSubmitEmailAddress(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordIncorrectEmailAddressReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<DecisionError, Decision> canUserSubmitPassword(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordIncorrectPasswordReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordCorrectPasswordReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordPasswordReset(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
     public Result<DecisionError, Decision> canUserVerifyMfaOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
