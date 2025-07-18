@@ -1,5 +1,5 @@
 package uk.gov.di.authentication.userpermissions.entity;
 
-public enum RecordError {
+public enum TrackingError {
     UNKNOWN
 }

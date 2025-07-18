@@ -4,55 +4,64 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
-import uk.gov.di.authentication.userpermissions.entity.RecordError;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 public interface UserPermissions {
-    public Result<DecisionError, Decision> canUserSubmitEmailAddress(
+    public Result<DecisionError, Decision> canReceiveEmailAddress(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordIncorrectEmailAddressReceived(
+    public Result<TrackingError, Void> incorrectEmailAddressReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<DecisionError, Decision> canUserSendEmailOtpNotification(
+    public Result<DecisionError, Decision> canSendEmailOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordEmailOtpNotificationSent(
+    public Result<TrackingError, Void> sentEmailOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<DecisionError, Decision> canUserVerifyEmailOtp(
+    public Result<DecisionError, Decision> canVerifyEmailOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordIncorrectEmailOtpReceived(
+    public Result<TrackingError, Void> incorrectEmailOtpReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordCorrectEmailOtpReceived(
+    public Result<TrackingError, Void> correctEmailOtpReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<DecisionError, Decision> canUserSubmitPassword(
+    public Result<DecisionError, Decision> canSubmitPassword(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordIncorrectPasswordReceived(
+    public Result<TrackingError, Void> incorrectPasswordReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordCorrectPasswordReceived(
+    public Result<TrackingError, Void> correctPasswordReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordPasswordReset(
+    public Result<TrackingError, Void> passwordReset(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<DecisionError, Decision> canUserSendMfaOtpNotification(
+    public Result<DecisionError, Decision> canSendSmsOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordUserSentMfaOtp(
+    public Result<TrackingError, Void> sentSmsOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<DecisionError, Decision> canUserVerifyMfaOtp(
+    public Result<DecisionError, Decision> canVerifySmsOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordIncorrectMfaOtpReceived(
+    public Result<TrackingError, Void> incorrectSmsOtpReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
-    public Result<RecordError, Void> recordCorrectMfaOtpReceived(
+    public Result<TrackingError, Void> correctSmsOtpReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<DecisionError, Decision> canVerifyAuthAppOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<TrackingError, Void> incorrectAuthAppOtpReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 }

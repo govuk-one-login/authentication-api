@@ -10,7 +10,7 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
-public class ExampleMfaVerificationHandler {
+public class ExampleSmsVerificationHandler {
     private static final String EXPECTED_OTP = "372615";
 
     private UserPermissions userPermissions;
@@ -26,7 +26,7 @@ public class ExampleMfaVerificationHandler {
                         .withAuthSessionItem(new AuthSessionItem())
                         .build();
 
-        var checkResult = userPermissions.canUserVerifyMfaOtp(journeyType, userPermissionContext);
+        var checkResult = userPermissions.canVerifySmsOtp(journeyType, userPermissionContext);
         if (checkResult.isFailure()) {
             return (format("500: %s", checkResult.getFailure().name()));
         }
@@ -44,7 +44,7 @@ public class ExampleMfaVerificationHandler {
         }
 
         if (!submittedOtp.equals(EXPECTED_OTP)) {
-            userPermissions.recordIncorrectMfaOtpReceived(journeyType, userPermissionContext);
+            userPermissions.incorrectSmsOtpReceived(journeyType, userPermissionContext);
             return ("400: Incorrect OTP received");
         }
 
@@ -53,7 +53,7 @@ public class ExampleMfaVerificationHandler {
                 AuditContext.emptyAuditContext()
                         .withMetadataItem(pair("attempts", decision.attemptCount() + 1)));
 
-        userPermissions.recordCorrectMfaOtpReceived(journeyType, userPermissionContext);
+        userPermissions.correctSmsOtpReceived(journeyType, userPermissionContext);
         return ("200: Success");
     }
 
