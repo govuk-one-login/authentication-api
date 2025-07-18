@@ -14,6 +14,15 @@ public interface UserPermissions {
     public Result<RecordError, Void> recordIncorrectEmailAddressReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
+    public Result<DecisionError, Decision> canUserVerifyEmailOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordIncorrectEmailOtpReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordCorrectEmailOtpReceived(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
     public Result<DecisionError, Decision> canUserSubmitPassword(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
