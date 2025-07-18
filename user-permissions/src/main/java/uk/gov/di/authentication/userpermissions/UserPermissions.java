@@ -14,6 +14,12 @@ public interface UserPermissions {
     public Result<RecordError, Void> recordIncorrectEmailAddressReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
+    public Result<DecisionError, Decision> canUserSendEmailOtpNotification(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordEmailOtpNotificationSent(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
     public Result<DecisionError, Decision> canUserVerifyEmailOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
@@ -33,6 +39,12 @@ public interface UserPermissions {
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     public Result<RecordError, Void> recordPasswordReset(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<DecisionError, Decision> canUserSendMfaOtpNotification(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    public Result<RecordError, Void> recordUserSentMfaOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     public Result<DecisionError, Decision> canUserVerifyMfaOtp(
