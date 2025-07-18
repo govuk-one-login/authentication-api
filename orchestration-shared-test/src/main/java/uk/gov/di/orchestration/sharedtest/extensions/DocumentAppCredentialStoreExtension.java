@@ -88,12 +88,7 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     }
 
     public void addCredential(String subjectId, List<String> credentials) {
-        dynamoDocAppService.addDocAppCredential(subjectId, credentials);
         dynamoDocAppCriService.addDocAppCredential(subjectId, credentials);
-    }
-
-    public Optional<DocAppCredential> getCredential(String subjectId) {
-        return dynamoDocAppService.getDocAppCredential(subjectId);
     }
 
     public Optional<DocAppCredential> getOrchCredential(String subjectId) {

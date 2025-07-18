@@ -153,7 +153,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         AUTH_CODE_ISSUED));
 
-        var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
+        var docAppCredential =
+                documentAppCredentialStore.getOrchCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
 
@@ -189,7 +190,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         AUTH_CODE_ISSUED));
 
-        var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
+        var docAppCredential =
+                documentAppCredentialStore.getOrchCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
 

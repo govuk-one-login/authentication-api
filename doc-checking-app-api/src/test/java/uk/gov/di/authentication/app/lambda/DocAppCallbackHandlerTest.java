@@ -29,7 +29,6 @@ import org.mockito.Mockito;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
@@ -90,7 +89,6 @@ class DocAppCallbackHandlerTest {
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final DynamoDocAppCriService dynamoDocAppCriService =
             mock(DynamoDocAppCriService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
@@ -156,7 +154,6 @@ class DocAppCallbackHandlerTest {
                         tokenService,
                         orchClientSessionService,
                         auditService,
-                        dynamoDocAppService,
                         dynamoDocAppCriService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
@@ -216,9 +213,6 @@ class DocAppCallbackHandlerTest {
                         pair("nonce", NONCE.getValue()));
 
         verifyNoMoreInteractions(auditService);
-        verify(dynamoDocAppService)
-                .addDocAppCredential(
-                        PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
         verify(dynamoDocAppCriService)
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
@@ -243,7 +237,7 @@ class DocAppCallbackHandlerTest {
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
 
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
@@ -264,7 +258,7 @@ class DocAppCallbackHandlerTest {
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
 
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
@@ -285,7 +279,7 @@ class DocAppCallbackHandlerTest {
                 equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
 
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
@@ -329,7 +323,7 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(tokenService);
         verifyAuditServiceEvent(
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",
@@ -378,7 +372,7 @@ class DocAppCallbackHandlerTest {
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",
@@ -434,7 +428,7 @@ class DocAppCallbackHandlerTest {
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",
@@ -541,7 +535,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
 
         assertAuthorisationCodeGeneratedAndSaved();
     }
@@ -586,7 +580,7 @@ class DocAppCallbackHandlerTest {
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(dynamoDocAppCriService);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",
