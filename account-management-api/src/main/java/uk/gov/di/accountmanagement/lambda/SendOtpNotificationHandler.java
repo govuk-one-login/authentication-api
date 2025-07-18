@@ -57,6 +57,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.NEW_PHONE_NUMBER_ALREADY_IN_USE;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -226,7 +227,7 @@ public class SendOtpNotificationHandler
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 cloudwatchMetricsService,
-                JourneyType.ACCOUNT_MANAGEMENT,
+                ACCOUNT_MANAGEMENT,
                 sendNotificationRequest.getNotificationType().name(),
                 configurationService.getEnvironment());
 
@@ -344,7 +345,7 @@ public class SendOtpNotificationHandler
                                         clientSessionId,
                                         persistentSessionId,
                                         IpAddressHelper.extractIpAddress(input),
-                                        JourneyType.ACCOUNT_MANAGEMENT,
+                                        ACCOUNT_MANAGEMENT,
                                         timeOfInitialRequest,
                                         isTestUserRequest)));
                 LOG.info(

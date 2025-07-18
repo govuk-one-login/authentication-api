@@ -173,6 +173,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(
                                 txmaAuditQueue, List.of(AUTH_SEND_OTP, AUTH_PHONE_CODE_SENT));
+
                 AuditEventExpectation sendOtpExpectation =
                         new AuditEventExpectation(AUTH_SEND_OTP.name());
                 sendOtpExpectation.withAttribute(
