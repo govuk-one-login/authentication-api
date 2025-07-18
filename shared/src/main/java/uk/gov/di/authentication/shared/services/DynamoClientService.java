@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.emailMatchesAllowlist;
 
 public class DynamoClientService implements ClientService {
@@ -30,7 +31,7 @@ public class DynamoClientService implements ClientService {
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
-        warmUp();
+        warmUp(dynamoClientRegistryTable);
     }
 
     public DynamoClientService(
@@ -130,9 +131,5 @@ public class DynamoClientService implements ClientService {
                 .filter(Predicate.not(List::isEmpty))
                 .map(list -> emailMatchesAllowlist(emailAddress, list))
                 .orElse(false);
-    }
-
-    private void warmUp() {
-        dynamoClientRegistryTable.describeTable();
     }
 }
