@@ -207,9 +207,7 @@ public class StartHandler
                     reauthenticateHeader,
                     reauthenticate);
 
-            Optional<String> maybeInternalSubjectId =
-                    userContext.getUserProfile().map(UserProfile::getSubjectID);
-            Optional<String> maybeInternalCommonSubjectIdentifier =
+            Optional<String> maybeInternalSubject =
                     Optional.ofNullable(authSession.getInternalCommonSubjectId());
 
             var clientSessionId =
@@ -218,7 +216,6 @@ public class StartHandler
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
             var txmaAuditHeader = getTxmaAuditEncodedHeader(input);
-            String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
             String phoneNumber = AuditService.UNKNOWN;
 
             var auditContext =
@@ -226,7 +223,7 @@ public class StartHandler
                             authSession.getClientId(),
                             clientSessionId,
                             sessionId,
-                            internalCommonSubjectIdentifierForAuditEvent,
+                            maybeInternalSubject.orElse(AuditService.UNKNOWN),
                             userContext
                                     .getUserProfile()
                                     .map(UserProfile::getEmail)
@@ -245,7 +242,7 @@ public class StartHandler
             if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
                 isBlockedForReauth =
                         checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
-                                maybeInternalSubjectId, auditContext, startRequest);
+                                maybeInternalSubject, auditContext, startRequest);
             }
 
             var userStartInfo =
@@ -261,19 +258,10 @@ public class StartHandler
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
-            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
-            if (userStartInfo.isAuthenticated()) {
-                auditContext =
-                        auditContext.withSubjectId(
-                                maybeInternalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN));
-                internalSubjectIdForAuditEvent =
-                        maybeInternalSubjectId.orElse(AuditService.UNKNOWN);
-            }
-
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                     auditContext,
-                    pair("internalSubjectId", internalSubjectIdForAuditEvent));
+                    pair("internalSubjectId", maybeInternalSubject.orElse(AuditService.UNKNOWN)));
 
             return generateApiGatewayProxyResponse(200, startResponse);
 
