@@ -345,23 +345,6 @@ public class AuthorisationHandler
             }
         }
 
-        if (configurationService.isRpRateLimitingEnabled()) {
-            var rateLimitDecision =
-                    rateLimitService.getClientRateLimitDecision(
-                            ClientRateLimitConfig.fromClientRegistry(client));
-
-            if (rateLimitDecision.hasExceededRateLimit()) {
-                switch (rateLimitDecision.getAction()) {
-                    case RETURN_TO_RP -> {
-                        // ATO-1783: return an oAuth Error here to say unavailable
-                    }
-                    case NONE -> {
-                        // continue
-                    }
-                }
-            }
-        }
-
         try {
             if (authRequest.getRequestObject() == null) {
                 LOG.info("Validating request query params");
@@ -389,6 +372,23 @@ public class AuthorisationHandler
                     new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
                     authRequest.getClientID().getValue(),
                     user);
+        }
+
+        if (configurationService.isRpRateLimitingEnabled()) {
+            var rateLimitDecision =
+                    rateLimitService.getClientRateLimitDecision(
+                            ClientRateLimitConfig.fromClientRegistry(client));
+
+            if (rateLimitDecision.hasExceededRateLimit()) {
+                switch (rateLimitDecision.getAction()) {
+                    case RETURN_TO_RP -> {
+                        // ATO-1783: return an oAuth Error here to say unavailable
+                    }
+                    case NONE -> {
+                        // continue
+                    }
+                }
+            }
         }
 
         if (authRequestError.isPresent()) {
