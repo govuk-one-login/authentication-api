@@ -114,10 +114,10 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoIdReverificationStateWriteAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
+        - !Ref IPVPublicEncryptionKeyParameterPolicy
         - !Ref IPVReverificationRequestSigningKeyPolicy
         - !Ref MfaResetTokenKmsSigningPolicy
         - !Ref RedisParametersAccessPolicy
-      # aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

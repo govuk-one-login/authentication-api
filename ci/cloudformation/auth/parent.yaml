@@ -1794,6 +1794,29 @@ Resources:
                     experianPhoneCheckQueueEncryptionKey,
                   ]
 
+  IPVPublicEncryptionKeyParameterPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Path: !Sub
+        - /${Env}/lambda-parameters/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetIpvPublicParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: !Sub
+              - arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Env}-ipv-public-encryption-key
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
   IPVReverificationRequestSigningKeyPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
