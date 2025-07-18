@@ -4,11 +4,11 @@ module "frontend_api_start_role" {
   role_name   = "frontend-api-start-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn,
@@ -18,7 +18,7 @@ module "frontend_api_start_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn
-  ]
+  ])
   extra_tags = {
     Service = "start"
   }
@@ -36,7 +36,7 @@ module "start" {
     TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
     CUSTOM_DOC_APP_CLAIM_ENABLED            = var.custom_doc_app_claim_enabled
     DOC_APP_DOMAIN                          = var.doc_app_domain
-    REDIS_KEY                               = local.redis_key
+    REDIS_KEY                               = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT                             = var.environment
     HEADERS_CASE_INSENSITIVE                = "false"
     IDENTITY_ENABLED                        = var.ipv_api_enabled
@@ -60,10 +60,10 @@ module "start" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_start_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns

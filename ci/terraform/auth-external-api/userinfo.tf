@@ -4,7 +4,7 @@ module "auth_userinfo_role" {
   role_name   = "auth-ext-userinfo-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     module.auth_ext_txma_audit.access_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -12,11 +12,11 @@ module "auth_userinfo_role" {
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
     aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_auth_session_write_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn
-  ]
+  ])
   extra_tags = {
     Service = "auth-userinfo"
   }
@@ -33,7 +33,7 @@ module "auth_userinfo" {
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
-    REDIS_KEY            = local.redis_key
+    REDIS_KEY            = var.environment == "production" ? local.redis_key : null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
@@ -55,10 +55,10 @@ module "auth_userinfo" {
   lambda_zip_file_version = aws_s3_object.auth_ext_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.auth_userinfo_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
