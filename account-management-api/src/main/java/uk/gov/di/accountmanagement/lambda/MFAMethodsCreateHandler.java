@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
@@ -318,7 +319,10 @@ public class MFAMethodsCreateHandler
                     addCompletedAuditContext.withPhoneNumber(requestSmsMfaDetail.phoneNumber());
         }
 
-        auditService.submitAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext);
+        auditService.submitAuditEvent(
+                AUTH_MFA_METHOD_ADD_COMPLETED,
+                addCompletedAuditContext,
+                AUDIT_EVENT_COMPONENT_ID_HOME);
 
         if (auditEventStatus.isFailure()) {
             LOG.error(auditEventStatus.getFailure());
@@ -336,7 +340,10 @@ public class MFAMethodsCreateHandler
                                             .name()
                                             .toLowerCase()));
 
-            auditService.submitAuditEvent(AUTH_UPDATE_PHONE_NUMBER, updatePhoneNumberAuditContext);
+            auditService.submitAuditEvent(
+                    AUTH_UPDATE_PHONE_NUMBER,
+                    updatePhoneNumberAuditContext,
+                    AUDIT_EVENT_COMPONENT_ID_HOME);
         }
 
         LocaleHelper.SupportedLanguage userLanguage =
