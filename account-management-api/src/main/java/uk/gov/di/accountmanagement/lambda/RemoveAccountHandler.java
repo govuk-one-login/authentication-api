@@ -35,6 +35,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class RemoveAccountHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -102,6 +103,7 @@ public class RemoveAccountHandler
             String sessionId =
                     RequestHeaderHelper.getHeaderValueOrElse(
                             input.getHeaders(), SESSION_ID_HEADER, "");
+            attachTraceId();
             attachSessionIdToLogs(sessionId);
             LOG.info("RemoveAccountHandler received request");
             RemoveAccountRequest removeAccountRequest =

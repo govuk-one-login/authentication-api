@@ -5,6 +5,7 @@
                 <KeyValuePair key="notification-id" value="$${ctx:notificationId:-unknown}"/>
                 <KeyValuePair key="unique-notification-reference" value="$${ctx:uniqueNotificationReference:-unknown}"/>
                 <KeyValuePair key="govuk_signin_journey_id" value="$${ctx:journeyId:-unknown}"/>
+                <KeyValuePair key="trace-id" value="$${ctx:traceId:-}"/>
             </JsonLayout>
         </Lambda>
     </Appenders>

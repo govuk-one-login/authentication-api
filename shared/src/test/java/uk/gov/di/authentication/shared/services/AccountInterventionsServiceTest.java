@@ -39,7 +39,7 @@ class AccountInterventionsServiceTest {
     private static final String FIELD_REPROVE_IDENTITY = "reproveIdentity";
     private static final String FIELD_RESET_PASSWORD = "resetPassword";
 
-    @Mock private HttpResponse mockResponse;
+    @Mock private HttpResponse<String> mockResponse;
     @Mock private HttpClient httpClient;
     @Mock private ConfigurationService configurationService;
 
@@ -75,7 +75,7 @@ class AccountInterventionsServiceTest {
                         }
                         """;
 
-        when(httpClient.send(any(), any())).thenReturn(mockResponse);
+        when(httpClient.<String>send(any(), any())).thenReturn(mockResponse);
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockResponse.body()).thenReturn(accountInterventionsResponse);
 
@@ -87,7 +87,7 @@ class AccountInterventionsServiceTest {
 
     @Test
     void testSendAccountInterventionsOutboundRequestHttpError() throws Exception {
-        when(httpClient.send(any(), any())).thenReturn(mockResponse);
+        when(httpClient.<String>send(any(), any())).thenReturn(mockResponse);
         when(mockResponse.statusCode()).thenReturn(500);
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
@@ -149,9 +149,9 @@ class AccountInterventionsServiceTest {
             incompleteResponseContent.put(FIELD_INTERVENTION, interventionJson);
         if (!isNull(stateJson)) incompleteResponseContent.put(FIELD_STATE, stateJson);
 
-        when(httpClient.send(any(), any())).thenReturn(mockResponse);
+        when(httpClient.<String>send(any(), any())).thenReturn(mockResponse);
         when(mockResponse.statusCode()).thenReturn(200);
-        when(mockResponse.body()).thenReturn(incompleteResponseContent);
+        when(mockResponse.body()).thenReturn(incompleteResponseContent.toJSONString());
 
         if (shouldSucceed) {
             assertDoesNotThrow(() -> service.sendAccountInterventionsOutboundRequest("123456"));

@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.io.IOException;
@@ -26,18 +27,18 @@ public class AccountInterventionsService {
     private static final Logger LOG = LogManager.getLogger(AccountInterventionsService.class);
     private final Json objectMapper = SerializationService.getInstance();
 
-    private static HttpClient httpClient;
+    private final HttpClient httpClient;
 
-    private ConfigurationService configurationService;
+    private final ConfigurationService configurationService;
 
     public AccountInterventionsService() {
-        httpClient = HttpClient.newHttpClient();
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
         configurationService = new ConfigurationService();
     }
 
     public AccountInterventionsService(ConfigurationService configService) {
         configurationService = configService;
-        httpClient = HttpClient.newHttpClient();
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
     public AccountInterventionsService(HttpClient client, ConfigurationService configService) {
@@ -56,7 +57,7 @@ public class AccountInterventionsService {
         return parseResponse(response);
     }
 
-    private HttpResponse sendAccountInterventionsRequest(String internalPairwiseId)
+    private HttpResponse<String> sendAccountInterventionsRequest(String internalPairwiseId)
             throws UnsuccessfulAccountInterventionsResponseException {
         var accountInterventionsEndpoint =
                 configurationService.getAccountInterventionServiceURI().toString();
@@ -82,11 +83,11 @@ public class AccountInterventionsService {
         }
     }
 
-    private AccountInterventionsInboundResponse parseResponse(HttpResponse response)
+    private AccountInterventionsInboundResponse parseResponse(HttpResponse<String> response)
             throws UnsuccessfulAccountInterventionsResponseException {
         try {
             return objectMapper.readValue(
-                    response.body().toString(), AccountInterventionsInboundResponse.class, true);
+                    response.body(), AccountInterventionsInboundResponse.class, true);
         } catch (Json.JsonException | JsonParseException e) {
             throw parseException(e);
         }

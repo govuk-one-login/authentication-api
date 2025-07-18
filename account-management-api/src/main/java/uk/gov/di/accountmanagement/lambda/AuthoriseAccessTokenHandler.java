@@ -27,6 +27,7 @@ import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.AuthPolicy.PolicyDocument.getAllowAllPolicy;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
@@ -65,6 +66,7 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input) {
+        attachTraceId();
         LOG.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();

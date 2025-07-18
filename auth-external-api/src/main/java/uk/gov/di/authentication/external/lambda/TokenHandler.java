@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableE
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -102,6 +103,7 @@ public class TokenHandler
     }
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
+        attachTraceId();
         LOG.info("Request received to the TokenHandler");
 
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(input.getBody());

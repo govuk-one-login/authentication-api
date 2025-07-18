@@ -26,7 +26,9 @@ dependencies {
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
-            implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
+            configurations.open_telemetry
+
+    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

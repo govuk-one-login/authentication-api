@@ -34,6 +34,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -80,6 +81,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public Void notificationRequestHandler(SQSEvent event, Context context) {
+        attachTraceId();
 
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());

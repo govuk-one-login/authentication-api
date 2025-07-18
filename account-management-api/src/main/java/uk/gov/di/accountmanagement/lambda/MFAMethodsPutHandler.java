@@ -66,6 +66,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 
@@ -417,7 +419,8 @@ public class MFAMethodsPutHandler
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
         Map<String, String> headers = input.getHeaders();
         String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
-        uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs(sessionId);
+        attachTraceId();
+        attachSessionIdToLogs(sessionId);
     }
 
     private NotificationType mapEmailNotificationIdentifierToType(
