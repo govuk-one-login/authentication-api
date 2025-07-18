@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
@@ -16,17 +16,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class RateLimitServiceTest {
 
-    private static final RateLimitAlgorithm noActionAlgorithm =
-            (client) -> RateLimitDecision.UNDER_LIMIT_NO_ACTION;
-    private static final RateLimitAlgorithm alwaysReturnToRpAction =
-            (client) -> RateLimitDecision.OVER_LIMIT_RETURN_TO_RP;
+    private static final RateLimitAlgorithm neverExceededAlgorithm = (client) -> false;
+    private static final RateLimitAlgorithm alwaysExceededAlgorithm = (client) -> true;
 
     @Test
     void itReturnsNoActionDecisionWhenTheClientHasNoRateLimit() {
-        var rateLimitService = new RateLimitService(alwaysReturnToRpAction);
+        var rateLimitService = new RateLimitService(alwaysExceededAlgorithm);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRequestInfo(Constants.TEST_CLIENT_ID, null));
+                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, null));
         assertFalse(rateLimitDecision.hasExceededRateLimit());
         assertEquals(RateLimitDecision.RateLimitAction.NONE, rateLimitDecision.getAction());
     }
@@ -38,13 +36,13 @@ class RateLimitServiceTest {
         var rateLimitService = new RateLimitService(algorithm);
         var rateLimitDecision =
                 rateLimitService.getClientRateLimitDecision(
-                        new ClientRequestInfo(Constants.TEST_CLIENT_ID, 400));
+                        new ClientRateLimitConfig(Constants.TEST_CLIENT_ID, 400));
         assertEquals(outcome, rateLimitDecision);
     }
 
     private static Stream<Arguments> rateLimitAlgosAndOutcomes() {
         return Stream.of(
-                Arguments.of(noActionAlgorithm, RateLimitDecision.UNDER_LIMIT_NO_ACTION),
-                Arguments.of(alwaysReturnToRpAction, RateLimitDecision.OVER_LIMIT_RETURN_TO_RP));
+                Arguments.of(neverExceededAlgorithm, RateLimitDecision.UNDER_LIMIT_NO_ACTION),
+                Arguments.of(alwaysExceededAlgorithm, RateLimitDecision.OVER_LIMIT_RETURN_TO_RP));
     }
 }

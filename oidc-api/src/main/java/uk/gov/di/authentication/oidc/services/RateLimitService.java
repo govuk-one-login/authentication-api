@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
-import uk.gov.di.authentication.oidc.entity.ClientRequestInfo;
+import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitAlgorithm;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
 
@@ -12,11 +12,15 @@ public class RateLimitService {
         this.rateLimitAlgorithm = rateLimitAlgorithm;
     }
 
-    public RateLimitDecision getClientRateLimitDecision(ClientRequestInfo clientRequestInfo) {
-        if (clientRequestInfo.rateLimit() == null) {
-            return RateLimitDecision.UNDER_LIMIT_NO_ACTION;
+    public RateLimitDecision getClientRateLimitDecision(
+            ClientRateLimitConfig clientRateLimitConfig) {
+        if (clientRateLimitConfig.rateLimit() == null) {
+            return RateLimitDecision.NOT_CONFIGURED_NO_ACTION;
         }
 
-        return rateLimitAlgorithm.getClientRateLimitDecision(clientRequestInfo);
+        if (rateLimitAlgorithm.hasRateLimitExceeded(clientRateLimitConfig)) {
+            return RateLimitDecision.OVER_LIMIT_RETURN_TO_RP;
+        }
+        return RateLimitDecision.UNDER_LIMIT_NO_ACTION;
     }
 }
