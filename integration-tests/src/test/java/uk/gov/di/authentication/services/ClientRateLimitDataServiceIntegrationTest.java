@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.oidc.entity.SlidingWindowData;
 import uk.gov.di.orchestration.sharedtest.extensions.ClientRateLimitExtension;
 
 import java.time.Clock;
@@ -17,29 +17,37 @@ class ClientRateLimitDataServiceIntegrationTest {
             LocalDateTime.parse("2025-09-14T11:50:00");
 
     @RegisterExtension
-    protected static final ClientRateLimitExtension clientRateLimitExtension =
+    protected static final ClientRateLimitExtension rateLimitDataExtension =
             new ClientRateLimitExtension();
 
     @BeforeEach
     void setup() {
-        clientRateLimitExtension.setClock(Clock.systemUTC());
+        rateLimitDataExtension.setClock(Clock.systemUTC());
     }
 
-    @Test
-    void shouldStoreAndRetrieveRateLimitData() {
-        var expectedRateLimitData =
-                new SlidingWindowData()
-                        .withClientId(TEST_CLIENT_ID)
-                        .withPeriodStartTime(TEST_PERIOD_START_TIME)
-                        .withRequestCount(123L);
-        clientRateLimitExtension.storeData(expectedRateLimitData);
+    @Nested
+    class SlidingWindowAlgorithm {
+        @Test
+        void shouldCreateRateLimitDataWhenIncrementingIfNoDataExisted() {
+            rateLimitDataExtension.increment(TEST_CLIENT_ID, TEST_PERIOD_START_TIME);
 
-        var actualRateLimitData =
-                clientRateLimitExtension
-                        .getData(TEST_CLIENT_ID, TEST_PERIOD_START_TIME)
-                        .orElseThrow();
-        assertEquals(TEST_CLIENT_ID, actualRateLimitData.getClientId());
-        assertEquals(TEST_PERIOD_START_TIME, actualRateLimitData.getPeriodStartTime());
-        assertEquals(123L, actualRateLimitData.getRequestCount());
+            var actualRateLimitData =
+                    rateLimitDataExtension
+                            .getData(TEST_CLIENT_ID, TEST_PERIOD_START_TIME)
+                            .orElseThrow();
+            assertEquals(1L, actualRateLimitData.getRequestCount());
+        }
+
+        @Test
+        void shouldUpdateRateLimitDataWhenIncrementingIfDataExists() {
+            rateLimitDataExtension.increment(TEST_CLIENT_ID, TEST_PERIOD_START_TIME);
+            rateLimitDataExtension.increment(TEST_CLIENT_ID, TEST_PERIOD_START_TIME);
+
+            var actualRateLimitData =
+                    rateLimitDataExtension
+                            .getData(TEST_CLIENT_ID, TEST_PERIOD_START_TIME)
+                            .orElseThrow();
+            assertEquals(2L, actualRateLimitData.getRequestCount());
+        }
     }
 }

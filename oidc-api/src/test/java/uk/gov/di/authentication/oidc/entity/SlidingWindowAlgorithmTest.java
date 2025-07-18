@@ -85,9 +85,7 @@ class SlidingWindowAlgorithmTest {
         when(rateLimitDataService.getData(TEST_CLIENT_ID, period))
                 .thenReturn(
                         Optional.of(
-                                new SlidingWindowData()
-                                        .withClientId(TEST_CLIENT_ID)
-                                        .withPeriodStartTime(period)
+                                new SlidingWindowData(TEST_CLIENT_ID, period)
                                         .withRequestCount(requestCount)));
     }
 

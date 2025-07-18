@@ -79,12 +79,12 @@ public class ClientRateLimitExtension extends DynamoExtension implements AfterEa
         dynamoDB.createTable(request);
     }
 
-    public void storeData(SlidingWindowData clientRateLimitData) {
-        clientRateLimitDataService.storeData(clientRateLimitData);
-    }
-
     public Optional<SlidingWindowData> getData(String clientId, LocalDateTime periodStartTime) {
         return clientRateLimitDataService.getData(clientId, periodStartTime);
+    }
+
+    public void increment(String clientId, LocalDateTime periodStartTime) {
+        clientRateLimitDataService.increment(clientId, periodStartTime);
     }
 
     public void setClock(Clock clock) {

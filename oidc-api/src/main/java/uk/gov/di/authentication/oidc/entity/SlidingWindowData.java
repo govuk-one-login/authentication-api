@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.entity;
 
+import software.amazon.awssdk.enhanced.dynamodb.extensions.annotations.DynamoDbAtomicCounter;
 import software.amazon.awssdk.enhanced.dynamodb.internal.converter.attribute.LocalDateTimeAttributeConverter;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
@@ -23,6 +24,11 @@ public class SlidingWindowData {
     private long timeToLive;
 
     public SlidingWindowData() {}
+
+    public SlidingWindowData(String clientId, LocalDateTime periodStartTime) {
+        this.clientId = clientId;
+        this.periodStartTime = periodStartTime;
+    }
 
     public SlidingWindowData(
             String clientId, LocalDateTime periodStartTime, Long requestCount, long timeToLive) {
@@ -63,7 +69,7 @@ public class SlidingWindowData {
         return this;
     }
 
-    @DynamoDbAttribute(ATTRIBUTE_REQUEST_COUNT)
+    @DynamoDbAtomicCounter(startValue = 1L)
     public Long getRequestCount() {
         return requestCount;
     }
