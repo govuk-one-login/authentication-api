@@ -3,6 +3,7 @@ package uk.gov.di.authentication.userpermissions.example;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.userpermissions.UserActions;
 import uk.gov.di.authentication.userpermissions.UserPermissions;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
@@ -14,6 +15,7 @@ public class ExampleSmsVerificationHandler {
     private static final String EXPECTED_OTP = "372615";
 
     private UserPermissions userPermissions;
+    private UserActions userActions;
 
     public String handle(String submittedOtp) {
         JourneyType journeyType = JourneyType.SIGN_IN;
@@ -44,7 +46,7 @@ public class ExampleSmsVerificationHandler {
         }
 
         if (!submittedOtp.equals(EXPECTED_OTP)) {
-            userPermissions.incorrectSmsOtpReceived(journeyType, userPermissionContext);
+            userActions.incorrectSmsOtpReceived(journeyType, userPermissionContext);
             return ("400: Incorrect OTP received");
         }
 
@@ -53,7 +55,7 @@ public class ExampleSmsVerificationHandler {
                 AuditContext.emptyAuditContext()
                         .withMetadataItem(pair("attempts", decision.attemptCount() + 1)));
 
-        userPermissions.correctSmsOtpReceived(journeyType, userPermissionContext);
+        userActions.correctSmsOtpReceived(journeyType, userPermissionContext);
         return ("200: Success");
     }
 
