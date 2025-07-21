@@ -552,24 +552,6 @@ public class MFAMethodsPutHandler
             return maybeCompletedAuditEvent;
         }
 
-        var allSmsMfaMethods =
-                updatedMfaMethods.stream()
-                        .filter(
-                                mfaMethod ->
-                                        MFAMethodType.SMS
-                                                .getValue()
-                                                .equals(mfaMethod.getMfaMethodType()))
-                        .toList();
-
-        for (var smsMfaMethod : allSmsMfaMethods) {
-            var maybeUpdatedPhoneNumberAuditEvent =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, input, putRequest, smsMfaMethod);
-
-            if (maybeUpdatedPhoneNumberAuditEvent.isFailure()) {
-                return maybeUpdatedPhoneNumberAuditEvent;
-            }
-        }
-
         return Result.success(null);
     }
 

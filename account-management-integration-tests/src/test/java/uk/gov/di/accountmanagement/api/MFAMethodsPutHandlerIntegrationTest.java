@@ -721,11 +721,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents =
-                    List.of(
-                            AUTH_UPDATE_PHONE_NUMBER,
-                            AUTH_UPDATE_PHONE_NUMBER,
-                            AUTH_MFA_METHOD_SWITCH_COMPLETED);
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -794,8 +790,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     SWITCHED_MFA_METHODS,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_UPDATE_PHONE_NUMBER, AUTH_MFA_METHOD_SWITCH_COMPLETED);
+            List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
