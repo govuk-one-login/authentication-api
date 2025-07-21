@@ -15,7 +15,6 @@ import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
 import java.net.URL;
 import java.util.Base64;
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -104,8 +103,8 @@ class JwksServiceTest {
             when(testKey1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
             when(testKey1.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
             mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(testKey1));
+                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
+                    .thenReturn(testKey1);
 
             assertEquals(testKey1, jwksService.getIpvJwk());
         }
