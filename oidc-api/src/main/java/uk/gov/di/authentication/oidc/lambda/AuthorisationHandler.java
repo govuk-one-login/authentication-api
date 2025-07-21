@@ -346,17 +346,6 @@ public class AuthorisationHandler
             }
         }
 
-        if (!client.isActive()) {
-            LOG.error("Client configured as not active in Client Registry");
-            return generateErrorResponse(
-                    authRequest.getRedirectionURI(),
-                    authRequest.getState(),
-                    authRequest.getResponseMode(),
-                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
-                    authRequest.getClientID().getValue(),
-                    user);
-        }
-
         if (configurationService.isRpRateLimitingEnabled()) {
             var rateLimitDecision =
                     rateLimitService.getClientRateLimitDecision(
@@ -390,6 +379,17 @@ public class AuthorisationHandler
         } catch (JwksException e) {
             return generateApiGatewayProxyResponse(
                     SERVER_ERROR.getHTTPStatusCode(), SERVER_ERROR.getDescription());
+        }
+
+        if (!client.isActive()) {
+            LOG.error("Client configured as not active in Client Registry");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
+                    authRequest.getClientID().getValue(),
+                    user);
         }
 
         if (authRequestError.isPresent()) {
