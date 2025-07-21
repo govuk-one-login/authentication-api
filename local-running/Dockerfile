@@ -2,7 +2,7 @@ FROM amazoncorretto:17 AS build
 
 WORKDIR /app
 
-RUN yum update && yum install -y findutils tar
+RUN yum update -y && yum install -y findutils tar
 
 COPY gradle ./gradle
 COPY gradlew ./

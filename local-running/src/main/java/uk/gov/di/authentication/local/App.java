@@ -5,14 +5,17 @@ import uk.gov.di.authentication.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.authentication.local.initialisers.KmsInitialiser;
 import uk.gov.di.authentication.local.initialisers.ParameterInitialiser;
 import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
-import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.AccountModifiers;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CommonPassword;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+
+import java.util.List;
 
 import static java.lang.String.valueOf;
 
@@ -40,12 +43,22 @@ public class App {
         var dynamoInitialiser = new DynamoDbInitialiser();
         dynamoInitialiser.createTable("local-user-credentials", UserCredentials.class);
         dynamoInitialiser.createTable("local-user-profile", UserProfile.class);
-        dynamoInitialiser.createTable("local-client-registry", ClientRegistry.class);
+        dynamoInitialiser.createTableWithRecords("local-client-registry", ClientRegistry.class,
+                List.of(new ClientRegistry()
+                        .withClientID("test-client-id")
+                        .withClientName("test-client-name")
+                        .withRedirectUrls(List.of("http://localhost/redirect"))
+                        .withScopes(List.of("openid", "email"))
+                        .withPublicKey("placeholder-key")
+                        .withServiceType(ServiceType.MANDATORY.name())
+                        .withSubjectType("public")
+                        .withClientType(ClientType.WEB.name())
+                        .withIdentityVerificationSupported(true)));
         dynamoInitialiser.createTable("local-auth-session", AuthSessionItem.class);
         dynamoInitialiser.createTable("local-account-modifiers", AccountModifiers.class);
         dynamoInitialiser.createTable("local-common-passwords", CommonPassword.class);
         dynamoInitialiser.createTable("local-auth-code-store", AuthCodeStore.class);
-        dynamoInitialiser.createTable("local-access-token-store", AccessTokenStore.class);
+//        dynamoInitialiser.createTable("local-access-token-store", AccessTokenStore.class); // THis is redis!
         // Could/should we handle DynamoDB the same way? Might make sense
 
         new LocalAuthApi();
