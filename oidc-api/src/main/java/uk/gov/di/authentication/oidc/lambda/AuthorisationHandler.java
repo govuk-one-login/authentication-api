@@ -382,7 +382,12 @@ public class AuthorisationHandler
             if (rateLimitDecision.hasExceededRateLimit()) {
                 switch (rateLimitDecision.getAction()) {
                     case RETURN_TO_RP -> {
-                        // ATO-1783: return an oAuth Error here to say unavailable
+                        authRequestError =
+                                Optional.of(
+                                        new AuthRequestError(
+                                                OAuth2Error.TEMPORARILY_UNAVAILABLE,
+                                                authRequest.getRedirectionURI(),
+                                                authRequest.getState()));
                     }
                     case NONE -> {
                         // continue

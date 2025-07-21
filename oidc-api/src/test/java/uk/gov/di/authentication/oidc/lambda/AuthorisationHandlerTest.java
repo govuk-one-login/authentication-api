@@ -267,6 +267,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
         when(configService.isIdentityEnabled()).thenReturn(true);
+        when(configService.isRpRateLimitingEnabled()).thenReturn(false);
         when(authFrontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(authFrontend.authorizeURI(Optional.empty(), Optional.empty()))
@@ -2363,6 +2364,23 @@ class AuthorisationHandlerTest {
                             withMessage(
                                     "JAR required for client but request does not contain Request Object"),
                             withMessage("Redirecting")));
+        }
+
+        @Test
+        void shouldRedirectToRPWhenClientIsRateLimited() {
+            when(configService.isRpRateLimitingEnabled()).thenReturn(true);
+            when(rateLimitService.getClientRateLimitDecision(any(ClientRateLimitConfig.class)))
+                    .thenReturn(RateLimitDecision.OVER_LIMIT_RETURN_TO_RP);
+
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "https://localhost:8080?error=temporarily_unavailable&error_description=The+authorization+server+is+temporarily+unavailable&state="
+                            + STATE.getValue(),
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
         }
 
         private static Stream<ErrorObject> expectedErrorObjects() {
