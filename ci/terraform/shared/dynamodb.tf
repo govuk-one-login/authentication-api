@@ -776,7 +776,7 @@ resource "aws_dynamodb_resource_policy" "id_reverification_state" {
 
 
 locals {
-  allowed_env                = ["staging", "build", "dev", "authdev1", "authdev2", "sandpit"]
+  allowed_env                = ["staging", "build", "dev", "authdev1", "authdev2", "authdev3", "sandpit"]
   allow_cross_account_access = contains(local.allowed_env, var.environment)
 }
 
