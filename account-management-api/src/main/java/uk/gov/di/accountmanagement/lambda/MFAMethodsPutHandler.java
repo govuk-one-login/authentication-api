@@ -18,12 +18,14 @@ import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -44,10 +46,12 @@ import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -172,8 +176,6 @@ public class MFAMethodsPutHandler
                             input,
                             putRequest.request.mfaMethod().method());
 
-            putRequest.request.mfaMethod();
-
             if (maybeMigrationErrorResponse.isPresent()) {
                 return maybeMigrationErrorResponse.get();
             }
@@ -203,15 +205,6 @@ public class MFAMethodsPutHandler
                             requestSmsMfaDetail.otp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
-                var maybeAuditContext =
-                        AuditHelper.buildAuditContext(
-                                configurationService, dynamoService, input, putRequest.userProfile);
-
-                if (maybeAuditContext.isFailure()) {
-                    return generateApiGatewayProxyErrorResponse(
-                            401, maybeAuditContext.getFailure());
-                }
-
                 var maybeAuditEventStatus =
                         sendAuditEvent(
                                 AUTH_INVALID_CODE_SENT,
@@ -249,6 +242,12 @@ public class MFAMethodsPutHandler
             return handleUpdateMfaFailureReason(maybeUpdateResult.getFailure(), input, putRequest);
         }
 
+        var auditResult = emitAuditEventForAuthAppUpdate(putRequest, input);
+
+        if (auditResult.isFailure()) {
+            return auditResult.getFailure();
+        }
+
         var updateResult = maybeUpdateResult.getSuccess();
 
         var successfulUpdateMethods = updateResult.mfaMethods();
@@ -256,7 +255,7 @@ public class MFAMethodsPutHandler
 
         if (methodsAsResponse.isFailure()) {
             LOG.error(
-                    "Error converting mfa methods to response; update may still have occurred. Error: {}",
+                    "Cannot retrieve updated method details to build response; update may still have occurred. Error: {}",
                     methodsAsResponse.getFailure());
             return generateApiGatewayProxyErrorResponse(
                     500, ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR);
@@ -288,6 +287,7 @@ public class MFAMethodsPutHandler
                     return maybeAuditEventStatus.getFailure();
                 }
             }
+
         } else {
             LOG.warn(
                     "Update operation completed successfully. Email notification could not be sent due to missing or invalid notification ID in service response.");
@@ -361,46 +361,90 @@ public class MFAMethodsPutHandler
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
 
-        if (publicSubjectId.isEmpty()) {
+        if (publicSubjectId == null || publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
-        if (mfaIdentifier.isEmpty()) {
+        if (mfaIdentifier == null || mfaIdentifier.isEmpty()) {
             LOG.error("Request does not include mfa identifier");
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(
                             400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
 
-        var maybeUserProfile =
-                authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
-
-        if (maybeUserProfile.isEmpty()) {
-            LOG.error("Unknown public subject ID");
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
-        }
-
-        UserProfile userProfile = maybeUserProfile.get();
-
-        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-
-        if (PrincipalValidationHelper.principalIsInvalid(
-                userProfile,
-                configurationService.getInternalSectorUri(),
-                authenticationService,
-                authorizerParams)) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
-        }
-
+        // Validate request body first before database lookups
         try {
             var mfaMethodUpdateRequest =
                     serialisationService.readValue(
                             input.getBody(), MfaMethodUpdateRequest.class, true);
+
+            // Validate priority identifier
+            var priorityIdentifier = mfaMethodUpdateRequest.mfaMethod().priorityIdentifier();
+            if (priorityIdentifier == null
+                    || (!PriorityIdentifier.DEFAULT.equals(priorityIdentifier)
+                            && !PriorityIdentifier.BACKUP.equals(priorityIdentifier))) {
+                LOG.error("Invalid priority identifier");
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(
+                                400, ErrorResponse.REQUEST_MISSING_PARAMS));
+            }
+
+            // Validate MFA method details (method can be null for switching scenarios)
+            var mfaDetail = mfaMethodUpdateRequest.mfaMethod().method();
+            if (mfaDetail != null) {
+                if (mfaDetail instanceof RequestSmsMfaDetail smsMfaDetail) {
+                    if (smsMfaDetail.mfaMethodType() == null
+                            || !MFAMethodType.SMS.equals(smsMfaDetail.mfaMethodType())
+                            || smsMfaDetail.phoneNumber() == null
+                            || smsMfaDetail.phoneNumber().trim().isEmpty()
+                            || smsMfaDetail.otp() == null
+                            || smsMfaDetail.otp().trim().isEmpty()) {
+                        LOG.error("Invalid SMS MFA request fields");
+                        return Result.failure(
+                                generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.REQUEST_MISSING_PARAMS));
+                    }
+                } else if (mfaDetail instanceof RequestAuthAppMfaDetail authAppDetail) {
+                    if (authAppDetail.credential() == null
+                            || authAppDetail.credential().trim().isEmpty()) {
+                        LOG.error("Invalid AUTH_APP MFA request fields");
+                        return Result.failure(
+                                generateApiGatewayProxyErrorResponse(
+                                        400, ErrorResponse.REQUEST_MISSING_PARAMS));
+                    }
+                } else {
+                    LOG.error("Invalid MFA method type");
+                    return Result.failure(
+                            generateApiGatewayProxyErrorResponse(
+                                    400, ErrorResponse.REQUEST_MISSING_PARAMS));
+                }
+            }
+
+            // Only after request validation, check user profile and principal
+            var maybeUserProfile =
+                    authenticationService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+
+            if (maybeUserProfile.isEmpty()) {
+                LOG.error("Unknown public subject ID");
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
+            }
+
+            UserProfile userProfile = maybeUserProfile.get();
+
+            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+
+            if (PrincipalValidationHelper.principalIsInvalid(
+                    userProfile,
+                    configurationService.getInternalSectorUri(),
+                    authenticationService,
+                    authorizerParams)) {
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
+            }
 
             var putRequest =
                     new ValidPutRequest(
@@ -480,6 +524,39 @@ public class MFAMethodsPutHandler
         }
 
         LOG.info("Successfully submitted audit event: {}", auditEvent.name());
+        return Result.success(null);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> emitAuditEventForAuthAppUpdate(
+            ValidPutRequest putRequest, APIGatewayProxyRequestEvent input) {
+        if (!(putRequest.request.mfaMethod().method() instanceof RequestAuthAppMfaDetail)) {
+            return Result.success(null);
+        }
+
+        var maybeAuditContext =
+                AuditHelper.buildAuditContext(
+                        configurationService, dynamoService, input, putRequest.userProfile);
+
+        if (maybeAuditContext.isFailure()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(401, maybeAuditContext.getFailure()));
+        }
+
+        var auditContext =
+                maybeAuditContext
+                        .getSuccess()
+                        .withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                        PriorityIdentifier.DEFAULT.name().toLowerCase()))
+                        .withMetadataItem(
+                                pair(
+                                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                                        JourneyType.ACCOUNT_MANAGEMENT.getValue()));
+
+        auditService.submitAuditEvent(
+                AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, AUDIT_EVENT_COMPONENT_ID_HOME);
+
         return Result.success(null);
     }
 
