@@ -68,8 +68,8 @@ Resources:
         - !Ref DynamoAuthenticationAttemptReadWriteDeletePolicy
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref DynamoUserReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
