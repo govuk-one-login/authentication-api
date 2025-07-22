@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -33,6 +34,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
@@ -93,6 +95,8 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
+
+import javax.swing.*;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -2714,7 +2718,8 @@ class AuthorisationHandlerTest {
     @Nested
     class ApprovalsTests {
         @Test
-        void shouldSendAuthTheClaimsRequiredWhenIdentityRequested() {
+        void shouldSendAuthTheClaimsRequiredWhenIdentityRequested()
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
             withExistingSession();
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
@@ -2747,13 +2752,18 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService)
                     .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
 
-            JsonApprovals.verifyAsJson(jwtClaimSetCaptor.getValue().toJSONObject());
+            var jwtClaimsSet = jwtClaimSetCaptor.getValue();
+            var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
+
+            JsonApprovals.verifyAsJson(
+                    reformattedClaimSet.toJSONObject(), GsonBuilder::serializeNulls);
             assertThat(response, hasStatus(302));
             assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
         }
 
         @Test
-        void shouldSendAuthTheRequiredClaimsWhenAuthOnly() {
+        void shouldSendAuthTheRequiredClaimsWhenAuthOnly()
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
             withExistingSession();
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
@@ -2786,9 +2796,28 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService)
                     .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
 
-            JsonApprovals.verifyAsJson(jwtClaimSetCaptor.getValue().toJSONObject());
+            var jwtClaimsSet = jwtClaimSetCaptor.getValue();
+            var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
+
+            JsonApprovals.verifyAsJson(
+                    reformattedClaimSet.toJSONObject(), GsonBuilder::serializeNulls);
             assertThat(response, hasStatus(302));
             assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+        }
+
+        private JWTClaimsSet reformatUserInfoClaimsToJsonObject(JWTClaimsSet jwtClaimsSet)
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
+            // We pass Auth the "claim" field as a JSON string - however the serialization
+            // of a JSON object into a string does not preserve key ordering. This means
+            // that each run of the approvals test can reorder the string which is produced
+            // which would mean this tests fails consistently for no reason.
+            // To fix this we can reformat the "claim" field to contain a JSON
+            // object instead which we have in other approvals tests
+            var userInfoStringClaim = jwtClaimsSet.getStringClaim("claim");
+            var userInfoClaimRequest = OIDCClaimsRequest.parse((userInfoStringClaim));
+            var reformattedClaimSet = new JWTClaimsSet.Builder(jwtClaimsSet);
+            reformattedClaimSet.claim("claim", userInfoClaimRequest.toJSONObject());
+            return reformattedClaimSet.build();
         }
     }
 

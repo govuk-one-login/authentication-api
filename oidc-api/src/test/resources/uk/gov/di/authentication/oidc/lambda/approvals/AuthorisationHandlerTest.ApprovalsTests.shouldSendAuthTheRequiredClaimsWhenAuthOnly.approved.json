@@ -5,7 +5,16 @@
   "client_id": "test-orch-client-id",
   "cookie_consent_shared": false,
   "scope": "email openid profile",
-  "claim": "{\"userinfo\":{\"email_verified\":null,\"local_account_id\":null,\"uplift_required\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
+  "claim": {
+    "userinfo": {
+      "email_verified": null,
+      "local_account_id": null,
+      "uplift_required": null,
+      "verified_mfa_method_type": null,
+      "email": null,
+      "achieved_credential_strength": null
+    }
+  },
   "state": "state",
   "exp": 1630534380,
   "iat": 1630534200,
