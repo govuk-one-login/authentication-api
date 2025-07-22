@@ -137,6 +137,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -236,7 +237,7 @@ class AuthorisationHandlerTest {
 
     private OrchSessionItem orchSession;
     private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
-    private static final State STATE = new State();
+    private static final State STATE = new State("rp-state");
     private static final Nonce NONCE = new Nonce();
     private static final Subject SUBJECT = new Subject();
     private static final String SERIALIZED_SIGNED_ID_TOKEN =
@@ -2737,20 +2738,28 @@ class AuthorisationHandlerTest {
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            APIGatewayProxyResponseEvent response;
 
-            var response =
-                    runWithIds(
-                            () ->
-                                    handler.handleRequest(
-                                            withRequestEvent(
-                                                    buildRequestParams(
-                                                            Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
-                                            context),
-                            List.of(
-                                    NEW_CLIENT_SESSION_ID,
-                                    NEW_SESSION_ID,
-                                    NEW_BROWSER_SESSION_ID,
-                                    "test-jti"));
+            try (var ignored =
+                    mockConstruction(
+                            State.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("state");
+                            })) {
+                response =
+                        runWithIds(
+                                () ->
+                                        handler.handleRequest(
+                                                withRequestEvent(
+                                                        buildRequestParams(
+                                                                Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
+                                                context),
+                                List.of(
+                                        NEW_CLIENT_SESSION_ID,
+                                        NEW_SESSION_ID,
+                                        NEW_BROWSER_SESSION_ID,
+                                        "test-jti"));
+            }
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
             var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
@@ -2769,20 +2778,28 @@ class AuthorisationHandlerTest {
             var authRequestParams =
                     generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            APIGatewayProxyResponseEvent response;
 
-            var response =
-                    runWithIds(
-                            () ->
-                                    handler.handleRequest(
-                                            withRequestEvent(
-                                                    buildRequestParams(
-                                                            Map.of("vtr", "[\"Cl.Cm\"]"))),
-                                            context),
-                            List.of(
-                                    NEW_CLIENT_SESSION_ID,
-                                    NEW_SESSION_ID,
-                                    NEW_BROWSER_SESSION_ID,
-                                    "test-jti"));
+            try (var ignored =
+                    mockConstruction(
+                            State.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("state");
+                            })) {
+                response =
+                        runWithIds(
+                                () ->
+                                        handler.handleRequest(
+                                                withRequestEvent(
+                                                        buildRequestParams(
+                                                                Map.of("vtr", "[\"Cl.Cm\"]"))),
+                                                context),
+                                List.of(
+                                        NEW_CLIENT_SESSION_ID,
+                                        NEW_SESSION_ID,
+                                        NEW_BROWSER_SESSION_ID,
+                                        "test-jti"));
+            }
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
             var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);

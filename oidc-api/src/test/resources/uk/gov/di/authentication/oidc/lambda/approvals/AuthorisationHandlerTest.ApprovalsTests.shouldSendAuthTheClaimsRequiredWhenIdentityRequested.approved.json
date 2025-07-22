@@ -5,8 +5,8 @@
   "client_id": "test-orch-client-id",
   "cookie_consent_shared": false,
   "scope": "email openid profile",
-  "claim": "{\"userinfo\":{\"email_verified\":null,\"salt\":null,\"local_account_id\":null,\"uplift_required\":null,\"phone_number\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
-  "state": "PQr_Lh6pp-ACxwLqeIy6yM5_k4azGDlZ0MVyXDlf0Ks",
+  "claim": "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"uplift_required\":null,\"phone_number\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
+  "state": "state",
   "requested_level_of_confidence": "P2",
   "exp": 1630534380,
   "iat": 1630534200,
@@ -24,6 +24,6 @@
   "aud": "https://example.com",
   "service_type": "MANDATORY",
   "nbf": 1630534200,
-  "rp_state": "3N0lcN7GOP7bztWO5TNpNSg3RihlJ6SSpoHVX7DjWKI",
+  "rp_state": "state",
   "is_identity_verification_required": true
 }
