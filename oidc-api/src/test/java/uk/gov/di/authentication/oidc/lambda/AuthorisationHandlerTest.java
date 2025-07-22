@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -33,11 +34,13 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.core.LogEvent;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -93,11 +96,16 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
+import javax.swing.*;
+
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.text.ParseException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -109,6 +117,7 @@ import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static java.lang.String.format;
+import static java.time.Clock.fixed;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -131,6 +140,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -216,6 +226,9 @@ class AuthorisationHandlerTest {
     private static final String RP_SERVICE_TYPE = "MANDATORY";
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
+    private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
+    private static final Clock fixedClock = fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
+    private static final NowHelper.NowClock fixedNowClock = new NowHelper.NowClock(fixedClock);
 
     static {
         try {
@@ -227,7 +240,7 @@ class AuthorisationHandlerTest {
 
     private OrchSessionItem orchSession;
     private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
-    private static final State STATE = new State();
+    private static final State STATE = new State("rp-state");
     private static final Nonce NONCE = new Nonce();
     private static final Subject SUBJECT = new Subject();
     private static final String SERIALIZED_SIGNED_ID_TOKEN =
@@ -254,7 +267,7 @@ class AuthorisationHandlerTest {
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(AuthorisationHandler.class);
 
-    private final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+    private final long timeNow = fixedNowClock.now().toInstant().getEpochSecond();
 
     @BeforeEach
     public void setUp() {
@@ -299,7 +312,8 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService,
-                        rateLimitService);
+                        rateLimitService,
+                        fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC")));
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
@@ -2483,7 +2497,7 @@ class AuthorisationHandlerTest {
         }
 
         private static Stream<Arguments> authTimeAndMaxAgeParams() {
-            var recentAuthTime = NowHelper.now().toInstant().getEpochSecond() - 1;
+            var recentAuthTime = fixedNowClock.now().toInstant().getEpochSecond() - 1;
             return Stream.of(
                     arguments(recentAuthTime, "0", true),
                     arguments(12345L, "1800", true),
@@ -2698,6 +2712,112 @@ class AuthorisationHandlerTest {
                                                             .equals(
                                                                     clientRegistry
                                                                             .getRateLimit())));
+        }
+    }
+
+    @Nested
+    class ApprovalsTests {
+        @Test
+        void shouldSendAuthTheClaimsRequiredWhenIdentityRequested()
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
+            withExistingSession();
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            APIGatewayProxyResponseEvent response;
+
+            try (var ignored =
+                    mockConstruction(
+                            State.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("state");
+                            })) {
+                response =
+                        runWithIds(
+                                () ->
+                                        handler.handleRequest(
+                                                withRequestEvent(
+                                                        buildRequestParams(
+                                                                Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
+                                                context),
+                                List.of(
+                                        NEW_CLIENT_SESSION_ID,
+                                        NEW_SESSION_ID,
+                                        NEW_BROWSER_SESSION_ID,
+                                        "test-jti"));
+            }
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+            var jwtClaimsSet = jwtClaimSetCaptor.getValue();
+            var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
+
+            JsonApprovals.verifyJson(
+                    reformattedClaimSet.toString(), true, GsonBuilder::serializeNulls);
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+        }
+
+        @Test
+        void shouldSendAuthTheRequiredClaimsWhenAuthOnly()
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
+            withExistingSession();
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+            APIGatewayProxyResponseEvent response;
+
+            try (var ignored =
+                    mockConstruction(
+                            State.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("state");
+                            })) {
+                response =
+                        runWithIds(
+                                () ->
+                                        handler.handleRequest(
+                                                withRequestEvent(
+                                                        buildRequestParams(
+                                                                Map.of("vtr", "[\"Cl.Cm\"]"))),
+                                                context),
+                                List.of(
+                                        NEW_CLIENT_SESSION_ID,
+                                        NEW_SESSION_ID,
+                                        NEW_BROWSER_SESSION_ID,
+                                        "test-jti"));
+            }
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+            var jwtClaimsSet = jwtClaimSetCaptor.getValue();
+            var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
+
+            JsonApprovals.verifyJson(
+                    reformattedClaimSet.toString(), true, GsonBuilder::serializeNulls);
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+        }
+
+        private JWTClaimsSet reformatUserInfoClaimsToJsonObject(JWTClaimsSet jwtClaimsSet)
+                throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
+            // We pass Auth the "claim" field as a JSON string - however the serialization
+            // of a JSON object into a string does not preserve key ordering. This means
+            // that each run of the approvals test can reorder the string which is produced
+            // which would mean this tests fails consistently for no reason.
+            // To fix this we can reformat the "claim" field to contain a JSON
+            // object instead which we have in other approvals tests
+            var userInfoStringClaim = jwtClaimsSet.getStringClaim("claim");
+            var userInfoClaimRequest = OIDCClaimsRequest.parse((userInfoStringClaim));
+            var reformattedClaimSet = new JWTClaimsSet.Builder(jwtClaimsSet);
+            reformattedClaimSet.claim("claim", userInfoClaimRequest.toJSONObject());
+            return reformattedClaimSet.build();
         }
     }
 
