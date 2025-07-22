@@ -38,6 +38,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.core.LogEvent;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -2698,6 +2699,71 @@ class AuthorisationHandlerTest {
                                                             .equals(
                                                                     clientRegistry
                                                                             .getRateLimit())));
+        }
+    }
+
+    @Nested
+    class ApprovalsTests {
+        @Test
+        void shouldSendAuthTheClaimsRequiredWhenIdentityRequested() {
+            withExistingSession();
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters();
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+
+            var response =
+                    runWithIds(
+                            () ->
+                                    handler.handleRequest(
+                                            withRequestEvent(
+                                                    buildRequestParams(
+                                                            Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
+                                            context),
+                            List.of(
+                                    NEW_CLIENT_SESSION_ID,
+                                    NEW_SESSION_ID,
+                                    NEW_BROWSER_SESSION_ID,
+                                    "test-jti"));
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+            JsonApprovals.verifyAsJson(jwtClaimSetCaptor.getValue().toJSONObject());
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+        }
+
+        @Test
+        void shouldSendAuthTheRequiredClaimsWhenAuthOnly() {
+            withExistingSession();
+            var authRequestParams =
+                    generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters();
+            when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
+
+            var response =
+                    runWithIds(
+                            () ->
+                                    handler.handleRequest(
+                                            withRequestEvent(
+                                                    buildRequestParams(
+                                                            Map.of("vtr", "[\"Cl.Cm\"]"))),
+                                            context),
+                            List.of(
+                                    NEW_CLIENT_SESSION_ID,
+                                    NEW_SESSION_ID,
+                                    NEW_BROWSER_SESSION_ID,
+                                    "test-jti"));
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+            JsonApprovals.verifyAsJson(jwtClaimSetCaptor.getValue().toJSONObject());
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
         }
     }
 
