@@ -8,6 +8,7 @@
                 <KeyValuePair key="client-session-id" value="$${ctx:clientSessionId:-}"/>
                 <KeyValuePair key="client-id" value="$${ctx:clientId:-}"/>
                 <KeyValuePair key="aws-request-id" value="$${ctx:awsRequestId:-}"/>
+                <KeyValuePair key="trace-id" value="$${ctx:traceId:-}"/>
             </JsonLayout>
         </Lambda>
     </Appenders>

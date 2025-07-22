@@ -3,6 +3,7 @@
         <Lambda name="Lambda">
             <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
                 <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
+                <KeyValuePair key="trace-id" value="$${ctx:traceId:-}"/>
             </JsonLayout>
         </Lambda>
     </Appenders>
