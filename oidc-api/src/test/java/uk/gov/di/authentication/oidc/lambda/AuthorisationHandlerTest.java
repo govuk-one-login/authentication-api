@@ -2755,8 +2755,8 @@ class AuthorisationHandlerTest {
             var jwtClaimsSet = jwtClaimSetCaptor.getValue();
             var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
 
-            JsonApprovals.verifyAsJson(
-                    reformattedClaimSet.toJSONObject(), GsonBuilder::serializeNulls);
+            JsonApprovals.verifyJson(
+                    reformattedClaimSet.toString(), true, GsonBuilder::serializeNulls);
             assertThat(response, hasStatus(302));
             assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
         }
@@ -2799,8 +2799,8 @@ class AuthorisationHandlerTest {
             var jwtClaimsSet = jwtClaimSetCaptor.getValue();
             var reformattedClaimSet = reformatUserInfoClaimsToJsonObject(jwtClaimsSet);
 
-            JsonApprovals.verifyAsJson(
-                    reformattedClaimSet.toJSONObject(), GsonBuilder::serializeNulls);
+            JsonApprovals.verifyJson(
+                    reformattedClaimSet.toString(), true, GsonBuilder::serializeNulls);
             assertThat(response, hasStatus(302));
             assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
         }
