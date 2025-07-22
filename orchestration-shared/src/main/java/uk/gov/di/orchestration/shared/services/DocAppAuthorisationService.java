@@ -36,6 +36,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
@@ -49,10 +50,24 @@ public class DocAppAuthorisationService {
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
     private final StateStorageService stateStorageService;
+    private final NowHelper.NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public static final String STATE_PARAM = "state";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
+
+    public DocAppAuthorisationService(
+            ConfigurationService configurationService,
+            KmsConnectionService kmsConnectionService,
+            JwksService jwksService,
+            StateStorageService stateStorageService,
+            Clock clock) {
+        this.configurationService = configurationService;
+        this.kmsConnectionService = kmsConnectionService;
+        this.jwksService = jwksService;
+        this.stateStorageService = stateStorageService;
+        this.nowClock = new NowHelper.NowClock(clock);
+    }
 
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
@@ -63,6 +78,7 @@ public class DocAppAuthorisationService {
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
         this.stateStorageService = stateStorageService;
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -145,8 +161,8 @@ public class DocAppAuthorisationService {
         var jwtID = IdGenerator.generate();
         var expiryDate =
                 clientRegistry.isTestClient()
-                        ? NowHelper.nowPlus(5, ChronoUnit.DAYS)
-                        : NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+                        ? nowClock.nowPlus(5, ChronoUnit.DAYS)
+                        : nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var audience =
                 configurationService.isDocAppNewAudClaimEnabled()
                         ? configurationService.getDocAppAudClaim()
@@ -157,8 +173,8 @@ public class DocAppAuthorisationService {
                         .audience(audience.getValue())
                         .expirationTime(expiryDate)
                         .subject(subjectValue)
-                        .issueTime(NowHelper.now())
-                        .notBeforeTime(NowHelper.now())
+                        .issueTime(nowClock.now())
+                        .notBeforeTime(nowClock.now())
                         .jwtID(jwtID)
                         .claim(STATE_PARAM, state.getValue())
                         .claim(
