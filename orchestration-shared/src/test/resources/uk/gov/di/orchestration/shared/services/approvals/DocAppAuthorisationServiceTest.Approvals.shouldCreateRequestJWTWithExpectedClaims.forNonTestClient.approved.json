@@ -5,10 +5,10 @@
   "nbf": 1630534200,
   "iss": "doc-app-client-id",
   "response_type": "code",
-  "state": "CrlRz6L2AXAoqQYUlzcWvd0ddTNt4gfFA004IH4mHTk",
+  "state": "state",
   "redirect_uri": "http://localhost/oidc/doc-app/callback",
   "exp": 1630534380,
   "iat": 1630534200,
-  "jti": "tn5wGgfPKs2-vPPJmldj2Qux_2g",
+  "jti": "jti",
   "client_id": "doc-app-client-id"
 }

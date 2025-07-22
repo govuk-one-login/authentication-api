@@ -6,10 +6,10 @@
   "govuk_signin_journey_id": "client-session-id",
   "aud": "http://localhost/doc-app/authorize",
   "nbf": 1630534200,
-  "state": "TvxHKexSygc0hgPrcfbYeZYKlD44fe2vcGxO9FHDIHk",
+  "state": "state",
   "redirect_uri": "http://localhost/oidc/doc-app/callback",
   "test_client": true,
   "exp": 1630966200,
   "iat": 1630534200,
-  "jti": "QTCMLX-HbHujB-CiJlk00LJvClI"
+  "jti": "jti"
 }
