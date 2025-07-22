@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -34,6 +36,7 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.StateItem;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
@@ -292,16 +295,22 @@ class DocAppAuthorisationServiceTest {
         void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
                 throws JOSEException, ParseException, MalformedURLException {
             setupSigning();
-            var state = new State();
+            var state = new State("state");
             var pairwise = new Subject("pairwise-identifier");
             when(clientRegistry.isTestClient()).thenReturn(isTestClient);
             when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
 
-            var encryptedJWT =
-                    authorisationService.constructRequestJWT(
-                            state, pairwise.getValue(), clientRegistry, "client-session-id");
+            EncryptedJWT requestJWT;
 
-            var signedJWTResponse = decryptJWT(encryptedJWT);
+            try (MockedStatic<IdGenerator> mockIdGenerator =
+                    Mockito.mockStatic(IdGenerator.class)) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("jti");
+                requestJWT =
+                        authorisationService.constructRequestJWT(
+                                state, pairwise.getValue(), clientRegistry, "client-session-id");
+            }
+
+            var signedJWTResponse = decryptJWT(requestJWT);
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
