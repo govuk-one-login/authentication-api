@@ -99,6 +99,9 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.text.ParseException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -110,6 +113,7 @@ import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static java.lang.String.format;
+import static java.time.Clock.fixed;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -217,6 +221,9 @@ class AuthorisationHandlerTest {
     private static final String RP_SERVICE_TYPE = "MANDATORY";
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
+    private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
+    private static final Clock fixedClock = fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
+    private static final NowHelper.NowClock fixedNowClock = new NowHelper.NowClock(fixedClock);
 
     static {
         try {
@@ -255,7 +262,7 @@ class AuthorisationHandlerTest {
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(AuthorisationHandler.class);
 
-    private final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+    private final long timeNow = fixedNowClock.now().toInstant().getEpochSecond();
 
     @BeforeEach
     public void setUp() {
@@ -300,7 +307,8 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService,
-                        rateLimitService);
+                        rateLimitService,
+                        fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC")));
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
@@ -2484,7 +2492,7 @@ class AuthorisationHandlerTest {
         }
 
         private static Stream<Arguments> authTimeAndMaxAgeParams() {
-            var recentAuthTime = NowHelper.now().toInstant().getEpochSecond() - 1;
+            var recentAuthTime = fixedNowClock.now().toInstant().getEpochSecond() - 1;
             return Stream.of(
                     arguments(recentAuthTime, "0", true),
                     arguments(12345L, "1800", true),
