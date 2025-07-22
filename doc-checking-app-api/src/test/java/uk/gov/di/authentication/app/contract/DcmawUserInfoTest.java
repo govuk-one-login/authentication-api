@@ -92,7 +92,7 @@ public class DcmawUserInfoTest {
 
     @Test
     @PactTestFor(
-            providerName = "DcmawUserInfoProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "validRequestReturnsValidUserInfo",
             pactVersion = PactSpecVersion.V3)
     void getDocAppUserInfoSuccessResponse(MockServer mockServer)
@@ -130,7 +130,7 @@ public class DcmawUserInfoTest {
 
     @Test
     @PactTestFor(
-            providerName = "DcmawUserInfoProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "invalidAccessTokenReturnsError",
             pactVersion = PactSpecVersion.V3)
     void getDocAppUserInfoInvalidAccessTokenErrorResponse(MockServer mockServer) {

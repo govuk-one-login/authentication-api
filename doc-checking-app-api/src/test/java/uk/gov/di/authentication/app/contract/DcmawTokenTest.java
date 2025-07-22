@@ -122,7 +122,7 @@ public class DcmawTokenTest {
 
     @Test
     @PactTestFor(
-            providerName = "DcmawCriTokenProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "validRequestReturnsValidAccessToken",
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenSuccessResponse(MockServer mockServer) {
@@ -188,7 +188,7 @@ public class DcmawTokenTest {
 
     @Test
     @PactTestFor(
-            providerName = "DcmawCriTokenProvider",
+            providerName = "DcmawCriProvider",
             pactMethod = "invalidAuthCodeReturnsInvalidRequest",
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenErrorResponse(MockServer mockServer) {
