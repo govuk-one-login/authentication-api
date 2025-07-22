@@ -60,8 +60,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class MFAMethodsCreateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

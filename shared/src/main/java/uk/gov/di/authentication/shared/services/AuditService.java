@@ -60,9 +60,13 @@ public class AuditService {
     }
 
     private static void addExtensionSectionToAuditEvent(
-            TxmaAuditUser user, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
+            TxmaAuditUser user,
+            TxmaAuditEvent txmaAuditEvent,
+            AuditableEvent event,
+            MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
                 .filter(not(MetadataPair::isRestricted))
+                .filter(pair -> !isExcludedMetadata(event, pair))
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.key(), pair.value()));
 
         Optional.ofNullable(user.getPhone())
@@ -71,6 +75,11 @@ public class AuditService {
                 .ifPresent(
                         country ->
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
+    }
+
+    private static boolean isExcludedMetadata(AuditableEvent event, MetadataPair pair) {
+        // Exclude mfa-type from AUTH_UPDATE_PHONE_NUMBER events
+        return event.toString().equals("AUTH_UPDATE_PHONE_NUMBER") && pair.key().equals("mfa-type");
     }
 
     public void submitAuditEvent(
@@ -102,12 +111,12 @@ public class AuditService {
 
         AuditService.MetadataPair[] meta = auditContext.metadata().toArray(new MetadataPair[0]);
 
-        addExtensionSectionToAuditEvent(user, txmaAuditEvent, meta);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, event, meta);
         addRestrictedSectionToAuditEvent(auditContext.txmaAuditEncoded(), txmaAuditEvent, meta);
 
         addRestrictedSectionToAuditEvent(
                 auditContext.txmaAuditEncoded(), txmaAuditEvent, metadataPairs);
-        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, event, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
