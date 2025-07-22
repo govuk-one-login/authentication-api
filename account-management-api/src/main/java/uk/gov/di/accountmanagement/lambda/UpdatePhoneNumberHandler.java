@@ -44,6 +44,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -99,6 +100,7 @@ public class UpdatePhoneNumberHandler
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdatePhoneNumberHandler received request");
         SupportedLanguage userLanguage =

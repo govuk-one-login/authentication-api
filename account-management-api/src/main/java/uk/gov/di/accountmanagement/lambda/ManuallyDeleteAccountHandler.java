@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class ManuallyDeleteAccountHandler implements RequestHandler<String, String> {
     private final AuthenticationService authenticationService;
@@ -61,6 +62,7 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
     @Override
     public String handleRequest(String rawUserEmail, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         var userEmail = rawUserEmail.toLowerCase().trim();
         var userProfile =

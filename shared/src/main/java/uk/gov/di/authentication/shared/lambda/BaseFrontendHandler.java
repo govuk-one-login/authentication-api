@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
@@ -115,6 +116,7 @@ public abstract class BaseFrontendHandler<T>
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
 
         String clientSessionId =
                 getHeaderValueFromHeaders(

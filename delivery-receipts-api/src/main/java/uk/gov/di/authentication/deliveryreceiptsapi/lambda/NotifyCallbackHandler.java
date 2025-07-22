@@ -32,6 +32,7 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -88,6 +89,7 @@ public class NotifyCallbackHandler
 
     public APIGatewayProxyResponseEvent notifyCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachTraceId();
         LOG.info("Received request");
         validateBearerToken(input.getHeaders());
         NotifyDeliveryReceipt deliveryReceipt;

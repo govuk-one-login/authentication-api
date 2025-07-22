@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import uk.gov.di.authentication.entity.ExternalTICFCRIRequest;
 import uk.gov.di.authentication.entity.InternalTICFCRIRequest;
+import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Void> {
 
@@ -41,7 +43,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     public TicfCriHandler() {
         this.configurationService = ConfigurationService.getInstance();
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClientHelper.newInstrumentedHttpClient();
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
@@ -50,6 +52,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
 
     @Override
     public Void handleRequest(InternalTICFCRIRequest input, Context context) {
+        attachTraceId();
         LOG.debug("received request to TICF CRI Handler");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {

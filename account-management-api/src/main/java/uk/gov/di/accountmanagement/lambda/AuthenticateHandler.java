@@ -29,6 +29,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -76,6 +77,7 @@ public class AuthenticateHandler
             APIGatewayProxyRequestEvent input, Context context) {
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("Request received to the AuthenticateHandler");
 

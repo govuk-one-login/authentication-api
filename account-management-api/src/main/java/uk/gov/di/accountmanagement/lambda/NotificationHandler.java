@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASS
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -90,6 +91,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     public void notificationRequestHandler(SQSEvent event) {
+        attachTraceId();
         for (SQSMessage msg : event.getRecords()) {
             processMessage(msg);
         }

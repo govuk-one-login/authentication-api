@@ -36,6 +36,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
@@ -94,6 +95,7 @@ public class UserInfoHandler
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(APIGatewayProxyRequestEvent input) {
         ThreadContext.clearMap();
+        attachTraceId();
         LOG.info("Request received to the UserInfoHandler");
         Map<String, String> headers = input.getHeaders();
 
