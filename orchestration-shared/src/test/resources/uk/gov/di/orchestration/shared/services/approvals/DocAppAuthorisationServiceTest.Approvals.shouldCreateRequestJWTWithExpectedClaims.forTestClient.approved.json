@@ -1,0 +1,15 @@
+{
+  "sub": "pairwise-identifier",
+  "iss": "doc-app-client-id",
+  "response_type": "code",
+  "client_id": "doc-app-client-id",
+  "govuk_signin_journey_id": "client-session-id",
+  "aud": "http://localhost/doc-app/authorize",
+  "nbf": 1630534200,
+  "state": "TvxHKexSygc0hgPrcfbYeZYKlD44fe2vcGxO9FHDIHk",
+  "redirect_uri": "http://localhost/oidc/doc-app/callback",
+  "test_client": true,
+  "exp": 1630966200,
+  "iat": 1630534200,
+  "jti": "QTCMLX-HbHujB-CiJlk00LJvClI"
+}

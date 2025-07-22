@@ -20,7 +20,9 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -280,6 +282,31 @@ class DocAppAuthorisationServiceTest {
                             .getExpirationTime()
                             .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
+        }
+    }
+
+    @Nested
+    class Approvals {
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
+                throws JOSEException, ParseException, MalformedURLException {
+            setupSigning();
+            var state = new State();
+            var pairwise = new Subject("pairwise-identifier");
+            when(clientRegistry.isTestClient()).thenReturn(isTestClient);
+            when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+
+            var encryptedJWT =
+                    authorisationService.constructRequestJWT(
+                            state, pairwise.getValue(), clientRegistry, "client-session-id");
+
+            var signedJWTResponse = decryptJWT(encryptedJWT);
+
+            JsonApprovals.verifyAsJson(
+                    signedJWTResponse.getJWTClaimsSet().toJSONObject(),
+                    org.approvaltests.Approvals.NAMES.withParameters(
+                            isTestClient ? "forTestClient" : "forNonTestClient"));
         }
     }
 
