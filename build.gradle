@@ -71,6 +71,10 @@ subprojects {
                 classpath('commons-beanutils:commons-beanutils:[1.11.0,)') {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
+
+                classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
+                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                }
             }
         }
     }
@@ -158,6 +162,10 @@ subprojects {
                 add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
+
+                add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
+                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                }
             }
         }
 
@@ -166,7 +174,7 @@ subprojects {
                 "org.apache.commons:commons-collections4:4.5.0",
                 "commons-net:commons-net:3.11.1",
                 "commons-io:commons-io:2.20.0",
-                "org.apache.commons:commons-lang3:3.17.0"
+                "org.apache.commons:commons-lang3:3.18.0"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.81"
 
