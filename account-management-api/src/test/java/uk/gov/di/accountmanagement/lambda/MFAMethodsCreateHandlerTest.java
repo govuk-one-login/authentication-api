@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -55,7 +56,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -65,6 +68,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
@@ -262,20 +266,82 @@ class MFAMethodsCreateHandlerTest {
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
 
-            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
-            verify(auditService)
+            InOrder inOrder = inOrder(auditService);
+
+            ArgumentCaptor<AuditContext> auditContextCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_CODE_VERIFIED),
+                            auditContextCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
+            AuditContext capturedCodeVerifiedContext = auditContextCaptor.getValue();
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                    ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.SMS.name());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    PriorityIdentifier.BACKUP.name().toLowerCase());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext, AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+            containsMetadataPair(
+                    capturedCodeVerifiedContext, AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, TEST_OTP);
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                    MFA_SMS.name());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                    "44");
+
+            ArgumentCaptor<AuditContext> addCompletedCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
+            inOrder.verify(auditService)
                     .submitAuditEvent(
                             eq(AUTH_MFA_METHOD_ADD_COMPLETED),
-                            captor.capture(),
+                            addCompletedCaptor.capture(),
                             eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-            AuditContext capturedObject = captor.getValue();
 
+            AuditContext capturedAddCompletedContext = addCompletedCaptor.getValue();
             containsMetadataPair(
-                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+                    capturedAddCompletedContext,
+                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                    ACCOUNT_MANAGEMENT.name());
             containsMetadataPair(
-                    capturedObject, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.name());
+                    capturedAddCompletedContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.SMS.name());
             containsMetadataPair(
-                    capturedObject, AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
+                    capturedAddCompletedContext,
+                    AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE,
+                    "44");
+
+            ArgumentCaptor<AuditContext> updatePhoneCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_UPDATE_PHONE_NUMBER),
+                            updatePhoneCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
+            AuditContext capturedUpdatePhoneContext = updatePhoneCaptor.getValue();
+            containsMetadataPair(
+                    capturedUpdatePhoneContext,
+                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                    ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedUpdatePhoneContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    backupMfa.getPriority().toLowerCase());
         }
 
         @Test
@@ -340,20 +406,53 @@ class MFAMethodsCreateHandlerTest {
                                             NotificationType.BACKUP_METHOD_ADDED,
                                             LocaleHelper.SupportedLanguage.EN)));
 
-            ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+            verify(auditService, never())
+                    .submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
+
+            InOrder inOrder = inOrder(auditService);
+
+            ArgumentCaptor<AuditContext> auditContextCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_CODE_VERIFIED),
+                            auditContextCaptor.capture(),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
+            AuditContext capturedCodeVerifiedContext = auditContextCaptor.getValue();
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                    ACCOUNT_MANAGEMENT.name());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                    MFAMethodType.AUTH_APP.name());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext,
+                    AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                    PriorityIdentifier.BACKUP.name().toLowerCase());
+            containsMetadataPair(
+                    capturedCodeVerifiedContext, AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, "false");
+
+            ArgumentCaptor<AuditContext> addCompletedCaptor =
+                    ArgumentCaptor.forClass(AuditContext.class);
             verify(auditService)
                     .submitAuditEvent(
                             eq(AUTH_MFA_METHOD_ADD_COMPLETED),
-                            captor.capture(),
+                            addCompletedCaptor.capture(),
                             eq(AUDIT_EVENT_COMPONENT_ID_HOME));
-            AuditContext capturedObject = captor.getValue();
 
+            AuditContext capturedAddCompletedContext = addCompletedCaptor.getValue();
             containsMetadataPair(
-                    capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+                    capturedAddCompletedContext,
+                    AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                    ACCOUNT_MANAGEMENT.name());
             containsMetadataPair(
-                    capturedObject,
+                    capturedAddCompletedContext,
                     AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
-                    MFAMethodType.AUTH_APP.toString());
+                    MFAMethodType.AUTH_APP.name());
         }
 
         @Test

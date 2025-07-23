@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
+import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -63,6 +64,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
@@ -439,6 +441,186 @@ class MFAMethodsPutHandlerTest {
                 defaultMfaMethod.getMfaMethodType());
     }
 
+    private static Stream<MFAMethodUpdateIdentifier> phoneNumberUpdateTypeIdentifiers() {
+        return Stream.of(
+                MFAMethodUpdateIdentifier.CHANGED_SMS,
+                MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA);
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberUpdateTypeIdentifiers")
+    void shouldRaiseUpdatePhoneNumberAuditEvent(MFAMethodUpdateIdentifier updateTypeIdentifier) {
+        var phoneNumber = "123456789";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestSmsMfaDetail(phoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(phoneNumber, TEST_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var defaultMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, phoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        var backupMfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        "auth-app-credential-1",
+                        true,
+                        true,
+                        PriorityIdentifier.BACKUP,
+                        "auth-app-identifier-1");
+        var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
+
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        defaultMfaMethod, postUpdateMfaMethods)));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        postUpdateMfaMethods, updateTypeIdentifier)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AUTH_UPDATE_PHONE_NUMBER),
+                        captor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+        AuditContext capturedObject = captor.getValue();
+
+        containsMetadataPair(
+                capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+        containsMetadataPair(
+                capturedObject,
+                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                defaultMfaMethod.getPriority().toLowerCase());
+    }
+
+    @Test
+    void shouldRaiseOnlySwitchCompletedAuditEventWhenSwitchingBetweenSmsMethodsSuccessful() {
+        var firstPhoneNumber = "111111111";
+        var secondPhoneNumber = "222222222";
+
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT,
+                        new RequestSmsMfaDetail(firstPhoneNumber, TEST_OTP));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateSmsRequest(firstPhoneNumber, TEST_OTP));
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(true);
+
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+
+        var defaultMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, firstPhoneNumber, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        var backupMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        secondPhoneNumber,
+                        PriorityIdentifier.BACKUP,
+                        "sms-identifier-2");
+
+        var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
+
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        postUpdateMfaMethods,
+                                        MFAMethodUpdateIdentifier.SWITCHED_MFA_METHODS)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        ArgumentCaptor<AuditContext> switchCompletedCaptor =
+                ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AUTH_MFA_METHOD_SWITCH_COMPLETED),
+                        switchCompletedCaptor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+        AuditContext switchCompletedContext = switchCompletedCaptor.getValue();
+
+        containsMetadataPair(
+                switchCompletedContext,
+                AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE,
+                ACCOUNT_MANAGEMENT.name());
+        containsMetadataPair(
+                switchCompletedContext,
+                AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                defaultMfaMethod.getMfaMethodType());
+
+        verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
+    }
+
+    @Test
+    void shouldNotRaiseUpdatePhoneNumberAuditEventWhenChangedDefaultAuthAppMfa() {
+        var credential = "some credential";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
+
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+
+        var defaultMfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        "auth-app-credential-1",
+                        true,
+                        true,
+                        PriorityIdentifier.DEFAULT,
+                        MFA_IDENTIFIER);
+        var backupMfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true, true, "123456789", PriorityIdentifier.BACKUP, "sms-identifier-1");
+        var postUpdateMfaMethods = List.of(defaultMfaMethod, backupMfaMethod);
+
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        postUpdateMfaMethods,
+                                        MFAMethodUpdateIdentifier.CHANGED_DEFAULT_MFA)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        verify(auditService, never()).submitAuditEvent(eq(AUTH_UPDATE_PHONE_NUMBER), any(), any());
+    }
+
     @Test
     void shouldRaiseAuthCodeVerifiedAuditEvent() {
         var updateRequest =
@@ -618,6 +800,15 @@ class MFAMethodsPutHandlerTest {
             verify(sqsClient, never()).send(any());
         }
 
+        if (migrationFailureReason == MfaMigrationFailureReason.ALREADY_MIGRATED) {
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_UPDATE_PHONE_NUMBER),
+                            any(AuditContext.class),
+                            eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+        } else {
+            verifyNoInteractions(auditService);
+        }
         verify(auditService, never())
                 .submitAuditEvent(
                         not(eq(AUTH_CODE_VERIFIED)), any(), any(AuditService.MetadataPair[].class));
@@ -869,21 +1060,126 @@ class MFAMethodsPutHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldReturn400WhenPriorityIdentifierIsNull() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": null,
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "123456789",
-                "otp": "123456"
-            }
-          }
-        }
-        """;
+    private static Stream<Arguments> invalidRequestBodies() {
+        return Stream.of(
+                // Invalid priority identifier
+                Arguments.of(
+                        "Priority identifier is null",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": null,
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "123456789",
+                        "otp": "123456"
+                    }
+                  }
+                }
+                """),
+                Arguments.of(
+                        "Priority identifier is invalid",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "INVALID",
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "123456789",
+                        "otp": "123456"
+                    }
+                  }
+                }
+                """),
+                // SMS validation
+                Arguments.of(
+                        "SMS request has empty phone number",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "",
+                        "otp": "123456"
+                    }
+                  }
+                }
+                """),
+                Arguments.of(
+                        "SMS request has empty OTP",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "123456789",
+                        "otp": ""
+                    }
+                  }
+                }
+                """),
+                Arguments.of(
+                        "SMS request has whitespace-only phone number",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "   ",
+                        "otp": "123456"
+                    }
+                  }
+                }
+                """),
+                Arguments.of(
+                        "SMS request has whitespace-only OTP",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "SMS",
+                        "phoneNumber": "123456789",
+                        "otp": "   "
+                    }
+                  }
+                }
+                """),
+                // Auth app validation
+                Arguments.of(
+                        "Auth app request has empty credential",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "AUTH_APP",
+                        "credential": ""
+                    }
+                  }
+                }
+                """),
+                Arguments.of(
+                        "Auth app request has whitespace-only credential",
+                        """
+                {
+                  "mfaMethod": {
+                    "priorityIdentifier": "DEFAULT",
+                    "method": {
+                        "mfaMethodType": "AUTH_APP",
+                        "credential": "   "
+                    }
+                  }
+                }
+                """));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidRequestBodies")
+    void shouldReturn400WhenRequestBodyIsInvalid(String testName, String requestBody) {
         var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
 
         var result = handler.handleRequest(event, context);
@@ -896,187 +1192,7 @@ class MFAMethodsPutHandlerTest {
     }
 
     @Test
-    void shouldReturn400WhenPriorityIdentifierIsInvalid() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "INVALID",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "123456789",
-                "otp": "123456"
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenSmsRequestHasEmptyPhoneNumber() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "",
-                "otp": "123456"
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenSmsRequestHasEmptyOtp() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "123456789",
-                "otp": ""
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenSmsRequestHasWhitespaceOnlyPhoneNumber() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "   ",
-                "otp": "123456"
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenSmsRequestHasWhitespaceOnlyOtp() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "SMS",
-                "phoneNumber": "123456789",
-                "otp": "   "
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenAuthAppRequestHasEmptyCredential() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "AUTH_APP",
-                "credential": ""
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400WhenAuthAppRequestHasWhitespaceOnlyCredential() {
-        var requestBody =
-                """
-        {
-          "mfaMethod": {
-            "priorityIdentifier": "DEFAULT",
-            "method": {
-                "mfaMethodType": "AUTH_APP",
-                "credential": "   "
-            }
-          }
-        }
-        """;
-        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT).withBody(requestBody);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-
-        verify(sqsClient, never()).send(any());
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn200WhenValidRequestWithNullMethodForSwitching() throws Json.JsonException {
+    void shouldReturn200WhenValidRequestWithNullMethodForSwitching() {
         var requestBody =
                 """
         {

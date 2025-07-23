@@ -36,6 +36,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_AUTHENTICATOR_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
@@ -342,7 +343,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     PHONE_NUMBER_UPDATED,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -430,7 +432,8 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                     CHANGED_DEFAULT_MFA,
                                     LocaleHelper.SupportedLanguage.EN)));
 
-            List<AuditableEvent> expectedEvents = List.of(AUTH_CODE_VERIFIED);
+            List<AuditableEvent> expectedEvents =
+                    List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -876,7 +879,10 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     () -> assertEquals(secondPhoneNumber, retrievedMethod.getDestination()));
 
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_MFA_METHOD_MIGRATION_ATTEMPTED, AUTH_CODE_VERIFIED);
+                    List.of(
+                            AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
+                            AUTH_CODE_VERIFIED,
+                            AUTH_UPDATE_PHONE_NUMBER);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
