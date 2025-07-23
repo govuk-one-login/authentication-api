@@ -227,7 +227,7 @@ subprojects {
                 "org.junit.platform:junit-platform-launcher",
                 "org.mockito:mockito-core:5.18.0",
                 "org.awaitility:awaitility:4.3.0",
-                "com.approvaltests:approvaltests:24.21.1",
+                "com.approvaltests:approvaltests:25.0.16",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
 
