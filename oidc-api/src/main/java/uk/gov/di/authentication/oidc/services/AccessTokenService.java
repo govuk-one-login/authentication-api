@@ -65,6 +65,10 @@ public class AccessTokenService {
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
 
+            LOG.info(
+                    "Successfully processed UserInfo request with JWT ID of {}",
+                    signedJWT.getJWTClaimsSet().getJWTID());
+
             var currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
