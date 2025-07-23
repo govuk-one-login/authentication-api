@@ -20,7 +20,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canReceiveEmailAddress(
+    Result<DecisionError, Decision> canReceiveEmailAddress(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -30,7 +30,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canSendEmailOtpNotification(
+    Result<DecisionError, Decision> canSendEmailOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -40,7 +40,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canVerifyEmailOtp(
+    Result<DecisionError, Decision> canVerifyEmailOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -50,7 +50,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canReceivePassword(
+    Result<DecisionError, Decision> canReceivePassword(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -60,7 +60,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canSendSmsOtpNotification(
+    Result<DecisionError, Decision> canSendSmsOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -70,7 +70,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canVerifySmsOtp(
+    Result<DecisionError, Decision> canVerifySmsOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -80,7 +80,7 @@ public interface UserPermissions {
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    public Result<DecisionError, Decision> canVerifyAuthAppOtp(
+    Result<DecisionError, Decision> canVerifyAuthAppOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
@@ -93,7 +93,7 @@ public interface UserPermissions {
      * @return A Result containing either a Decision or a DecisionError
      */
     @Experimental("Could be an alternative to canReceivePassword")
-    public default Result<DecisionError, Decision> canLogin(
+    default Result<DecisionError, Decision> canLogin(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return canReceiveEmailAddress(journeyType, userPermissionContext);
     }
