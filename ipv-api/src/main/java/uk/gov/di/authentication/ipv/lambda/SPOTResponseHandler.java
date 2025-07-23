@@ -27,6 +27,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
@@ -56,6 +57,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
         for (SQSMessage msg : event.getRecords()) {
             try {
                 ThreadContext.clearMap();
+                attachTraceId();
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
                 var logIds = spotResponse.getLogIds();
 

@@ -24,6 +24,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeadersOpt;
 
 public abstract class BaseOrchestrationFrontendHandler
@@ -65,6 +66,7 @@ public abstract class BaseOrchestrationFrontendHandler
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         var sessionIdOpt =
                 getHeaderValueFromHeadersOpt(
                         input.getHeaders(),

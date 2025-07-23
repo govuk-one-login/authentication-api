@@ -5,11 +5,13 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ObjectMessage;
 import uk.gov.di.authentication.oidc.exceptions.HttpRequestTimeoutException;
 import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
+import uk.gov.di.orchestration.shared.helpers.HttpClientHelper;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpTimeoutException;
@@ -17,21 +19,23 @@ import java.time.Duration;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static java.net.http.HttpClient.newHttpClient;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 
 public class HttpRequestService {
 
     private static final Logger LOG = LogManager.getLogger(HttpRequestService.class);
     private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
-    private ConfigurationService configurationService;
+    private final ConfigurationService configurationService;
+    private final HttpClient httpClient;
 
     public HttpRequestService() {
         configurationService = new ConfigurationService();
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
     public HttpRequestService(ConfigurationService configService) {
         configurationService = configService;
+        httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
     public void post(URI uri, String body) {
@@ -47,7 +51,7 @@ public class HttpRequestService {
                         .build();
 
         try {
-            var response = newHttpClient().send(request, BodyHandlers.discarding());
+            var response = httpClient.send(request, BodyHandlers.discarding());
 
             var statusCode = Integer.toString(response.statusCode());
 

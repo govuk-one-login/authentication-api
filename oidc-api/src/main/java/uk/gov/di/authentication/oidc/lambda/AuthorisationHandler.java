@@ -115,6 +115,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -251,6 +252,7 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
+        attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
