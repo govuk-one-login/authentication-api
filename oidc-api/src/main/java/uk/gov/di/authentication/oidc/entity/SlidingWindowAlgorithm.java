@@ -77,8 +77,9 @@ public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
                     (int) previousCountInWindow + currentCount,
                     rateLimit);
             return true;
+        } else {
+            rateLimitDataService.increment(clientId, currentPeriod);
         }
-        // TODO: Increment count if not over limit yet (ATO-1816)
         return false;
     }
 
