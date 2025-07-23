@@ -99,6 +99,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED");
     }
 
+    public boolean isEnhancedCrossBrowserHandlingEnabled() {
+        return getFlagOrFalse("USE_ENHANCED_CROSS_BROWSER_HANDLING");
+    }
+
     public boolean abortOnAccountInterventionsErrorResponse() {
         return getFlagOrFalse("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR");
     }
