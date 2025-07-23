@@ -25,6 +25,7 @@ The `UserPermissions` interface defines methods to check if a user is permitted 
 - `canVerifyAuthAppOtp` - Check if a user can verify an authenticator app OTP
 
 Each method returns a `Result<DecisionError, Decision>` which can be either:
+
 - A `Decision.Permitted` with an attempt count
 - A `Decision.TemporarilyLockedOut` with a reason, attempt count, and lockout duration
 

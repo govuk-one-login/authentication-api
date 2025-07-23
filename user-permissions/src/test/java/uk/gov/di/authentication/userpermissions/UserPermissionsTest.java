@@ -56,7 +56,7 @@ class UserPermissionsTest {
         }
 
         @Override
-        public Result<DecisionError, Decision> canSubmitPassword(
+        public Result<DecisionError, Decision> canReceivePassword(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
         }
@@ -77,6 +77,12 @@ class UserPermissionsTest {
         public Result<DecisionError, Decision> canVerifyAuthAppOtp(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
+        }
+
+        @Override
+        public Result<DecisionError, Decision> canLogin(
+                JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            return canReceivePassword(journeyType, userPermissionContext);
         }
     }
 }
