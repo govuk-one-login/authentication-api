@@ -5,7 +5,7 @@ internal_sector_uri = "https://identity.build.account.gov.uk"
 
 # Sizing
 redis_node_size        = "cache.t2.small"
-lambda_min_concurrency = 3
+lambda_min_concurrency = 1
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
