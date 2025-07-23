@@ -18,7 +18,6 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
-import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
@@ -73,7 +72,6 @@ public class DocAppCallbackHandler
     private final DocAppCriService tokenService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
-    private final DynamoDocAppService dynamoDocAppService;
     private final DynamoDocAppCriService dynamoDocAppCriService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
@@ -93,7 +91,6 @@ public class DocAppCallbackHandler
             DocAppCriService tokenService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
-            DynamoDocAppService dynamoDocAppService,
             DynamoDocAppCriService dynamoDocAppCriService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -106,7 +103,6 @@ public class DocAppCallbackHandler
         this.tokenService = tokenService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
-        this.dynamoDocAppService = dynamoDocAppService;
         this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -130,7 +126,6 @@ public class DocAppCallbackHandler
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
@@ -155,7 +150,6 @@ public class DocAppCallbackHandler
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
@@ -291,8 +285,6 @@ public class DocAppCallbackHandler
                         clientId,
                         user);
                 LOG.info("Adding DocAppCredential to dynamo");
-                dynamoDocAppService.addDocAppCredential(
-                        orchClientSession.getDocAppSubjectId(), credential);
                 dynamoDocAppCriService.addDocAppCredential(
                         orchClientSession.getDocAppSubjectId(), credential);
 
