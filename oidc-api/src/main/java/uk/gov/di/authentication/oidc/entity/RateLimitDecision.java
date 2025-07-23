@@ -8,6 +8,8 @@ public class RateLimitDecision {
         // Future Rate Limit Actions
     }
 
+    public static final RateLimitDecision NOT_CONFIGURED_NO_ACTION =
+            new RateLimitDecision(false, RateLimitAction.NONE);
     public static final RateLimitDecision UNDER_LIMIT_NO_ACTION =
             new RateLimitDecision(false, RateLimitAction.NONE);
     public static final RateLimitDecision OVER_LIMIT_RETURN_TO_RP =
