@@ -78,11 +78,5 @@ class UserPermissionsTest {
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
         }
-
-        @Override
-        public Result<DecisionError, Decision> canLogin(
-                JourneyType journeyType, UserPermissionContext userPermissionContext) {
-            return canReceivePassword(journeyType, userPermissionContext);
-        }
     }
 }

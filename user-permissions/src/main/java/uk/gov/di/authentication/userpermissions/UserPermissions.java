@@ -93,6 +93,8 @@ public interface UserPermissions {
      * @return A Result containing either a Decision or a DecisionError
      */
     @Experimental("Could be an alternative to canReceivePassword")
-    public Result<DecisionError, Decision> canLogin(
-            JourneyType journeyType, UserPermissionContext userPermissionContext);
+    public default Result<DecisionError, Decision> canLogin(
+            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        return canReceiveEmailAddress(journeyType, userPermissionContext);
+    }
 }
