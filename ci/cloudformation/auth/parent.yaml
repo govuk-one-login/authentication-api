@@ -321,20 +321,43 @@ Mappings:
       testClientsEnabled: true
       useStronglyConsistentReads: true
     integration:
+      accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:761723964695:key/c87c5099-d8b5-422b-bd85-fb4559168838
+      authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/f7ca754b-80bb-4f60-a3e5-3963d6827f47
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5917a6e9-13c3-4276-946b-487a0e6411f9
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/9372359d-fb44-4182-8977-7254654dcd1a
+      clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       cloudwatchLogRetentionInDays: 30
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
       customDocAppClaimEnabled: true
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       docAppDomain: https://api.review-b.integration.account.gov.uk
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      emailAcctCreationOtpCodeTtlDuration: 3600
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
       EnableSnapStart: "No"
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
       frontendBaseUrl: https://signin.integration.account.gov.uk
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
+      lockoutCountTtl: 900
+      lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
+      otpCodeTtlDuration: 900
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
+      reauthEnterEmailCountTtl: 3600
+      reducedLockoutDuration: 900
+      supportReauthSignoutEnabled: true
+      termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       useStronglyConsistentReads: false
     production:
       cloudwatchLogRetentionInDays: 30

@@ -609,7 +609,9 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
 }
 
 locals {
-  authorized_account_ids = local.allow_cross_account_access ? [var.auth_new_account_id, var.orchestration_account_id] : [var.orchestration_account_id]
+  restricted_environments    = ["production"]
+  allow_cross_account_access = !contains(local.restricted_environments, var.environment)
+  authorized_account_ids     = local.allow_cross_account_access ? [var.auth_new_account_id, var.orchestration_account_id] : [var.orchestration_account_id]
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
@@ -773,13 +775,6 @@ resource "aws_dynamodb_resource_policy" "id_reverification_state" {
   resource_arn = aws_dynamodb_table.id_reverification_state.arn
   policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
 }
-
-
-locals {
-  allowed_env                = ["staging", "build", "dev", "authdev1", "authdev2", "authdev3", "sandpit"]
-  allow_cross_account_access = contains(local.allowed_env, var.environment)
-}
-
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
