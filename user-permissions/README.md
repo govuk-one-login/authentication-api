@@ -26,8 +26,10 @@ The `UserPermissions` interface defines methods to check if a user is permitted 
 
 Each method returns a `Result<DecisionError, Decision>` which can be either:
 
-- A `Decision.Permitted` with an attempt count
-- A `Decision.TemporarilyLockedOut` with a reason, attempt count, and lockout duration
+- Success: Contains a `Decision` object which is one of:
+  - `Decision.Permitted(attemptCount)` - User is allowed to proceed
+  - `Decision.TemporarilyLockedOut(forbiddenReason, attemptCount, lockedUntil)` - User is temporarily locked out
+- Failure: Contains a `DecisionError` (e.g., `DecisionError.UNKNOWN`) indicating why the permission check failed
 
 ### UserActions Interface
 
