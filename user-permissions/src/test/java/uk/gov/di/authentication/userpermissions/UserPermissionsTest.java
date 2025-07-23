@@ -35,6 +35,20 @@ class UserPermissionsTest {
         assertEquals(0, result.getSuccess().attemptCount());
     }
 
+    @Test
+    void shouldTestCanStartJourneyMethod() {
+        // Given
+        UserPermissions userPermissions = new TestUserPermissions();
+
+        // When
+        Result<DecisionError, Decision> result =
+                userPermissions.canStartJourney(JOURNEY_TYPE, CONTEXT);
+
+        // Then
+        assertTrue(result.isSuccess());
+        assertEquals(0, result.getSuccess().attemptCount());
+    }
+
     /** Simple implementation of UserPermissions for testing purposes. */
     private static class TestUserPermissions implements UserPermissions {
         @Override
@@ -75,6 +89,12 @@ class UserPermissionsTest {
 
         @Override
         public Result<DecisionError, Decision> canVerifyAuthAppOtp(
+                JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            return Result.success(new Decision.Permitted(0));
+        }
+
+        @Override
+        public Result<DecisionError, Decision> canStartJourney(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
         }

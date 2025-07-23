@@ -97,4 +97,14 @@ public interface UserPermissions {
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return canReceiveEmailAddress(journeyType, userPermissionContext);
     }
+
+    /**
+     * Checks if a user is permitted to start an authentication journey.
+     *
+     * @param journeyType The type of authentication journey
+     * @param userPermissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canStartJourney(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
 }
