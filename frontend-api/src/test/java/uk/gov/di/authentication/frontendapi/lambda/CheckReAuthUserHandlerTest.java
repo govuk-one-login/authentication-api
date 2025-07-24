@@ -375,6 +375,35 @@ class CheckReAuthUserHandlerTest {
                         pair("user_id_for_user_supplied_email", differentSubjectId, true));
     }
 
+    @Test
+    void
+            shouldUseTheRpPairwiseIdWhenThereIsAnErrorAndThereIsNoUserProfileForTheEmailUsedToSignIn() {
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
+                .thenReturn(Optional.empty());
+
+        setupExistingEnterEmailAttemptsCountForIdentifier(1, TEST_RP_PAIRWISE_ID);
+
+        when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN)).thenReturn(null);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
+                        userContext);
+
+        assertEquals(404, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", 1),
+                        pair("user_supplied_email", EMAIL_USED_TO_SIGN_IN, true));
+    }
+
     private void setupExistingEnterEmailAttemptsCountForIdentifier(int count, String identifier) {
         when(authenticationAttemptsService.getCount(
                         identifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
