@@ -20,7 +20,7 @@ data "aws_iam_policy_document" "pending_email_check_queue_subscription_policy_do
   }
 
   dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    for_each = var.environment != "production" ? ["1"] : []
     content {
       sid    = "AllowSenderWriteAccessToPendingEmailCheckQueue"
       effect = "Allow"

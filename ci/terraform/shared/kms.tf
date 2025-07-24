@@ -360,7 +360,7 @@ data "aws_iam_policy_document" "cross_account_doc_app_auth_signing_key_policy" {
   }
 
   dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    for_each = var.environment != "production" ? ["1"] : []
     content {
       sid    = "AllowAuthAccessToKmsDocAppSigningKey-${var.environment}"
       effect = "Allow"
@@ -635,7 +635,7 @@ data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy
   }
 
   dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    for_each = var.environment != "production" ? ["1"] : []
     content {
       sid    = "Allow Auth access to dynamo table encryption key"
       effect = "Allow"
@@ -734,7 +734,7 @@ data "aws_iam_policy_document" "pending_email_check_queue_encryption_key_access_
   }
 
   dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    for_each = var.environment != "production" ? ["1"] : []
     content {
       sid    = "Allow Auth access to dynamo table encryption key"
       effect = "Allow"
@@ -826,7 +826,7 @@ data "aws_iam_policy_document" "auth_dynamo_table_encryption_key_access_policy" 
   }
 
   dynamic "statement" {
-    for_each = var.environment != "production" && var.environment != "integration" ? ["1"] : []
+    for_each = var.environment != "production" ? ["1"] : []
     content {
       sid    = "Allow Auth access to dynamo table encryption key"
       effect = "Allow"

@@ -8,6 +8,9 @@ shared_state_bucket                  = "digital-identity-dev-tfstate"
 # FMS
 frontend_api_fms_tag_value = "authfrontendint"
 
+# Auth new strategic account
+auth_new_account_id = "211125600642"
+
 # App-specific
 internal_sector_uri                     = "https://identity.integration.account.gov.uk"
 test_clients_enabled                    = false
