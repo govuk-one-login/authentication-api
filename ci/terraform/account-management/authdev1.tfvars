@@ -11,3 +11,6 @@ openapi_spec_filename = "openapi_v2.yaml"
 
 # URIs
 internal_sector_uri = "https://identity.authdev1.sandpit.account.gov.uk"
+
+# Performance Tuning
+snapstart_enabled = true

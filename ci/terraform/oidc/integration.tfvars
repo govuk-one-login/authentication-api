@@ -144,3 +144,5 @@ performance_tuning = {
   }
 }
 lambda_min_concurrency = 1
+
+snapstart_enabled = true

@@ -133,3 +133,5 @@ performance_tuning = {
 }
 lambda_min_concurrency        = 1
 use_strongly_consistent_reads = true
+
+snapstart_enabled = true
