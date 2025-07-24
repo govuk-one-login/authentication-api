@@ -72,7 +72,7 @@ module "authenticate" {
 
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_management_api_authenticate_role_interim.arn
+  lambda_role_arn                        = module.account_management_api_authenticate_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -83,5 +83,5 @@ module "authenticate" {
   dynatrace_secret      = local.dynatrace_secret
 
 
-  depends_on = [module.account_management_api_authenticate_role_interim]
+  depends_on = [module.account_management_api_authenticate_role]
 }
