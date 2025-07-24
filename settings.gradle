@@ -19,6 +19,7 @@ include 'auth-external-api'
 include 'interventions-api-stub'
 include 'ticf-cri-stub'
 include 'user-permissions'
+include 'deprecation-checker'
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
