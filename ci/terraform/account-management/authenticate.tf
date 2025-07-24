@@ -10,6 +10,7 @@ module "account_management_api_authenticate_role" {
     aws_iam_policy.parameter_policy.arn,
     module.account_management_txma_audit.access_policy_arn
   ]
+  use_foreach_for_policies = true
   extra_tags = {
     Service = "authenticate"
   }
