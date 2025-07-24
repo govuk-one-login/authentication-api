@@ -95,6 +95,58 @@ public class NoSessionOrchestrationService {
         }
     }
 
+    public Optional<NoSessionEntity> generateEntityForMismatchInClientSessionId(
+            Map<String, String> queryStringParameters, String clientSessionIdFromCookie)
+            throws NoSessionException {
+        if (!isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
+            // ATO-1856: Handle other cases
+            return Optional.empty();
+        }
+
+        var clientSessionIdFromState =
+                getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
+                        .orElseThrow(
+                                () ->
+                                        new NoSessionException(
+                                                "Could not find ClientSessionID from state param"));
+
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdFromState);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdFromState);
+
+        if (clientSessionIdFromCookie.equals(clientSessionIdFromState)) {
+            LOG.info("No mismatch between state derived and cookie derived client session IDs");
+            return Optional.empty();
+        }
+
+        LOG.warn(
+                "Client session ID from cookie does not match value from state, using state derived value to return error to RP. Cookie: {}, State: {}",
+                clientSessionIdFromCookie,
+                clientSessionIdFromState);
+
+        var orchClientSession =
+                orchClientSessionService
+                        .getClientSession(clientSessionIdFromState)
+                        .orElseThrow(
+                                () ->
+                                        new NoSessionException(
+                                                "No client session found with given client sessionId"));
+
+        try {
+            attachLogFieldToLogs(CLIENT_NAME, orchClientSession.getClientName());
+            attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(orchClientSession));
+        } catch (Exception e) {
+            LOG.warn("Failed to attach client details to logs");
+        }
+
+        var errorObject =
+                new ErrorObject(
+                        OAuth2Error.ACCESS_DENIED_CODE,
+                        "Access denied for security reasons, a new authentication request may be successful");
+
+        return Optional.of(
+                new NoSessionEntity(clientSessionIdFromState, errorObject, orchClientSession));
+    }
+
     @NotNull
     private static String clientIdFromClientSession(OrchClientSessionItem clientSession) {
         return clientSession.getAuthRequestParams().get("client_id").stream()
