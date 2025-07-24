@@ -4,18 +4,18 @@ module "ipv_processing_identity_role_2" {
   role_name   = "ipv-processing-identity-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn
-  ]
+    local.user_credentials_encryption_policy_arn]
+  )
   extra_tags = {
     Service = "processing-identity"
   }
@@ -29,13 +29,13 @@ module "ipv_processing_identity_role_with_orch_session_table_read_write_delete_a
   role_name   = "ipv-processing-identity-role-with-orch-session-combined-access"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
@@ -45,7 +45,7 @@ module "ipv_processing_identity_role_with_orch_session_table_read_write_delete_a
     aws_iam_policy.dynamo_orch_client_session_encryption_key_cross_account_decrypt_policy[0].arn,
     aws_iam_policy.dynamo_orch_client_session_cross_account_read_and_delete_access_policy[0].arn,
     aws_iam_policy.dynamo_orch_identity_credentials_cross_account_read_access_policy[0].arn
-  ]
+  ])
 }
 
 module "processing-identity" {
@@ -59,8 +59,7 @@ module "processing-identity" {
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     ENVIRONMENT                                 = var.environment
-    HEADERS_CASE_INSENSITIVE                    = "false"
-    REDIS_KEY                                   = local.redis_key
+    REDIS_KEY                                   = var.environment == "production" ? local.redis_key : null
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
@@ -88,10 +87,10 @@ module "processing-identity" {
   lambda_zip_file_version = aws_s3_object.ipv_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role_2.arn : module.ipv_processing_identity_role_with_orch_session_table_read_write_delete_access_2[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns

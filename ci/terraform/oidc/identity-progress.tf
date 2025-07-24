@@ -6,7 +6,7 @@ module "identity_progress_role_2" {
 
   policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     module.oidc_txma_audit.access_policy_arn,
     ], var.is_orch_stubbed ? [] : [
     aws_iam_policy.dynamo_orch_session_cross_account_read_access_policy[0].arn,
@@ -31,7 +31,7 @@ module "identity_progress" {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
-    REDIS_KEY                = local.redis_key
+    REDIS_KEY                = var.environment == "production" ? local.redis_key : null
     OIDC_API_BASE_URL        = local.api_base_url,
     ORCH_DYNAMO_ARN_PREFIX   = "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-"
   }
@@ -51,10 +51,11 @@ module "identity_progress" {
   lambda_zip_file_version = aws_s3_object.ipv_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.identity_progress_role_2.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns

@@ -11,7 +11,7 @@ module "frontend_api_account_interventions_role" {
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
+    ], var.environment == "production" ? [aws_iam_policy.redis_parameter_policy.arn] : [], [
     module.oidc_txma_audit.access_policy_arn,
     ], local.deploy_ticf_cri_count == 1 ? [
     aws_iam_policy.ticf_cri_lambda_invocation_policy[0].arn,
@@ -37,7 +37,7 @@ module "account_interventions" {
     ENVIRONMENT                                 = var.environment
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
-    REDIS_KEY                                   = local.redis_key
+    REDIS_KEY                                   = var.environment == "production" ? local.redis_key : null
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
@@ -63,10 +63,11 @@ module "account_interventions" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+
+  security_group_ids = concat([
     local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-  ]
+  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_account_interventions_role[count.index].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns

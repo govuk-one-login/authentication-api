@@ -19,7 +19,7 @@ module "mfa-methods-retrieve" {
   endpoint_name = "mfa-methods-retrieve"
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = local.redis_key
+    REDIS_KEY                         = var.environment == "production" ? local.redis_key : null
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
     MFA_METHOD_MANAGEMENT_API_ENABLED = var.mfa_method_management_api_enabled
@@ -36,10 +36,10 @@ module "mfa-methods-retrieve" {
   lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = [
+  security_group_ids = concat([
     local.allow_aws_service_access_security_group_id,
-    aws_security_group.allow_access_to_am_redis.id,
-  ]
+  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_mfa_methods_retrieve_role.arn
