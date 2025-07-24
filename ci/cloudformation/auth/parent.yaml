@@ -331,6 +331,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 30
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
       customDocAppClaimEnabled: true
+      dataStoreAccountId: 761723964695
       docAppDomain: https://api.review-b.integration.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 3600
@@ -343,7 +344,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
+      lambdaMaxConcurrency: 10
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
