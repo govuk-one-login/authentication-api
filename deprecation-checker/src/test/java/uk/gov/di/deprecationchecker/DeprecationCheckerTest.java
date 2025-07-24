@@ -6,11 +6,14 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,8 +23,11 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 class DeprecationCheckerTest {
@@ -97,6 +103,69 @@ class DeprecationCheckerTest {
                 assertTrue(config.enums.isEmpty());
             } finally {
                 System.setProperty("user.dir", originalDir);
+            }
+        }
+    }
+
+    @Nested
+    class PerformCheck {
+        @Test
+        void shouldReturnEmptyListWhenBaseBranchNotFound() throws Exception {
+            var config = new DeprecationChecker.Config("nonexistent-branch", Set.of());
+
+            var violations = DeprecationChecker.performCheck(config);
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldCallCheckEnumRemovalsAndReturnViolations() throws Exception {
+            var config = new DeprecationChecker.Config("origin/main", Set.of());
+
+            try (MockedStatic<DeprecationChecker> mockStatic =
+                            mockStatic(DeprecationChecker.class, Mockito.CALLS_REAL_METHODS);
+                    MockedConstruction<FileRepositoryBuilder> mockRepoBuilder =
+                            mockConstruction(
+                                    FileRepositoryBuilder.class,
+                                    (mock, context) -> {
+                                        Repository mockRepo = mock(Repository.class);
+                                        ObjectId mockCommitId =
+                                                ObjectId.fromString(
+                                                        "1234567890123456789012345678901234567890");
+                                        when(mock.setWorkTree(any())).thenReturn(mock);
+                                        when(mock.readEnvironment()).thenReturn(mock);
+                                        when(mock.findGitDir()).thenReturn(mock);
+                                        when(mock.build()).thenReturn(mockRepo);
+                                        when(mockRepo.resolve("origin/main"))
+                                                .thenReturn(mockCommitId);
+                                    })) {
+
+                mockStatic
+                        .when(DeprecationChecker::getAllJavaFiles)
+                        .thenReturn(java.util.List.of("TestEnum.java"));
+                mockStatic
+                        .when(
+                                () ->
+                                        DeprecationChecker.getCommitedFileContent(
+                                                any(), any(), eq("TestEnum.java")))
+                        .thenReturn("old content");
+                mockStatic
+                        .when(() -> DeprecationChecker.getWorkspaceFileContent("TestEnum.java"))
+                        .thenReturn("new content");
+                mockStatic
+                        .when(
+                                () ->
+                                        DeprecationChecker.checkEnumRemovals(
+                                                "TestEnum.java",
+                                                "old content",
+                                                "new content",
+                                                Set.of()))
+                        .thenReturn(java.util.List.of("violation found"));
+
+                var violations = DeprecationChecker.performCheck(config);
+
+                assertEquals(1, violations.size());
+                assertEquals("violation found", violations.get(0));
             }
         }
     }

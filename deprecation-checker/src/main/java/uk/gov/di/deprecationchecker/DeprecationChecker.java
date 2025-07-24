@@ -8,11 +8,14 @@ import com.github.javaparser.ast.nodeTypes.NodeWithName;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,7 +29,18 @@ public class DeprecationChecker {
 
     public static void main(String[] args) {
         try {
-            loadConfig();
+            Config config = loadConfig();
+            List<String> violations = performCheck(config);
+
+            if (!violations.isEmpty()) {
+                var message =
+                        "Deprecation policy violations found (these must be marked as @Deprecated in {} before removing):\n -"
+                                + String.join("\n -", violations);
+                LOG.error(message, config.baseBranch);
+                System.exit(1);
+            }
+
+            LOG.info("No deprecation policy violations found.");
         } catch (Exception e) {
             LOG.error("Error during deprecation check", e);
             System.exit(1);
@@ -49,6 +63,38 @@ public class DeprecationChecker {
         Set<String> enums = configJson.enums != null ? Set.copyOf(configJson.enums) : Set.of();
 
         return new Config(baseBranch, enums);
+    }
+
+    static List<String> performCheck(Config config) throws IOException {
+        Repository repository =
+                new FileRepositoryBuilder()
+                        .setWorkTree(new File("."))
+                        .readEnvironment()
+                        .findGitDir()
+                        .build();
+
+        try (Git git = new Git(repository)) {
+            ObjectId mainId = repository.resolve(config.baseBranch);
+            if (mainId == null) {
+                mainId = repository.resolve("refs/remotes/origin/" + config.baseBranch);
+            }
+            if (mainId == null) {
+                return new ArrayList<>();
+            }
+
+            List<String> allJavaFiles = getAllJavaFiles();
+            List<String> violations = new ArrayList<>();
+
+            for (String filePath : allJavaFiles) {
+                String oldContent = getCommitedFileContent(repository, mainId, filePath);
+                String newContent = getWorkspaceFileContent(filePath);
+
+                violations.addAll(
+                        checkEnumRemovals(filePath, oldContent, newContent, config.enums));
+            }
+
+            return violations;
+        }
     }
 
     static List<String> getAllJavaFiles() throws IOException {
