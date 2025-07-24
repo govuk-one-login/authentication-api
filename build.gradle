@@ -27,6 +27,7 @@ ext {
         aws_lambda_events_version: "3.16.0",
         gson: "2.13.1",
         jetbrains_annotations: "26.0.2",
+        jgit: "6.10.1.202505221210-r",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.3.1",
         junit: "5.12.2",
@@ -103,6 +104,7 @@ subprojects {
         gson
         hamcrest
         jetbrains_annotations
+        jgit
         kms
         lambda
         lambda_tests
@@ -192,6 +194,8 @@ subprojects {
         hamcrest "org.hamcrest:hamcrest:3.0"
 
         jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
+
+        jgit "org.eclipse.jgit:org.eclipse.jgit:${dependencyVersions.jgit}"
 
         kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
 

@@ -1,15 +1,27 @@
 package uk.gov.di.deprecationchecker;
 
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.treewalk.TreeWalk;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedConstruction;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 
 class DeprecationCheckerTest {
 
@@ -84,6 +96,133 @@ class DeprecationCheckerTest {
                 assertTrue(config.enums.isEmpty());
             } finally {
                 System.setProperty("user.dir", originalDir);
+            }
+        }
+    }
+
+    @Nested
+    class GetAllJavaFiles {
+        @Test
+        void shouldFindJavaFiles(@TempDir Path tempDir) throws IOException {
+            String originalDir = System.getProperty("user.dir");
+            try {
+                System.setProperty("user.dir", tempDir.toString());
+                Files.writeString(tempDir.resolve("Test.java"), "class Test {}");
+                Files.createDirectories(tempDir.resolve("src"));
+                Files.writeString(tempDir.resolve("src/Main.java"), "class Main {}");
+                Files.writeString(tempDir.resolve("README.md"), "# README");
+
+                var javaFiles = DeprecationChecker.getAllJavaFiles();
+
+                assertEquals(2, javaFiles.size());
+                assertTrue(javaFiles.contains("Test.java"));
+                assertTrue(javaFiles.contains("src/Main.java"));
+            } finally {
+                System.setProperty("user.dir", originalDir);
+            }
+        }
+
+        @Test
+        void shouldExcludeBuildDirectories(@TempDir Path tempDir) throws IOException {
+            String originalDir = System.getProperty("user.dir");
+            try {
+                System.setProperty("user.dir", tempDir.toString());
+                Files.createDirectories(tempDir.resolve("build"));
+                Files.writeString(tempDir.resolve("build/Generated.java"), "class Generated {}");
+                Files.createDirectories(tempDir.resolve("target"));
+                Files.writeString(tempDir.resolve("target/Compiled.java"), "class Compiled {}");
+                Files.createDirectories(tempDir.resolve(".gradle"));
+                Files.writeString(tempDir.resolve(".gradle/Cache.java"), "class Cache {}");
+                Files.writeString(tempDir.resolve("Valid.java"), "class Valid {}");
+
+                var javaFiles = DeprecationChecker.getAllJavaFiles();
+
+                assertEquals(1, javaFiles.size());
+                assertTrue(javaFiles.contains("Valid.java"));
+            } finally {
+                System.setProperty("user.dir", originalDir);
+            }
+        }
+    }
+
+    @Nested
+    class GetWorkspaceFileContent {
+        @Test
+        void shouldReadFileContent(@TempDir Path tempDir) throws IOException {
+            Path testFile = tempDir.resolve("test.java");
+            Files.writeString(testFile, "public class Test {}");
+
+            String content = DeprecationChecker.getWorkspaceFileContent(testFile.toString());
+
+            assertEquals("public class Test {}", content);
+        }
+    }
+
+    @Nested
+    class GetCommitedFileContent {
+        @Test
+        void shouldReturnFileContentFromCommit() throws Exception {
+            Repository mockRepo = mock(Repository.class);
+            ObjectId mockCommitId = ObjectId.fromString("1234567890123456789012345678901234567890");
+            RevCommit mockCommit = mock(RevCommit.class);
+            RevTree mockTree = mock(RevTree.class);
+            ObjectId mockFileId = ObjectId.fromString("fedcba0987654321098765432109876543210987");
+            ObjectLoader mockLoader = mock(ObjectLoader.class);
+
+            when(mockCommit.getTree()).thenReturn(mockTree);
+            when(mockLoader.getBytes())
+                    .thenReturn("class Test {}".getBytes(StandardCharsets.UTF_8));
+            when(mockRepo.open(mockFileId)).thenReturn(mockLoader);
+
+            try (MockedConstruction<RevWalk> mockRevWalkConstruction =
+                            mockConstruction(
+                                    RevWalk.class,
+                                    (mock, context) -> {
+                                        when(mock.parseCommit(mockCommitId)).thenReturn(mockCommit);
+                                    });
+                    MockedConstruction<TreeWalk> mockTreeWalkConstruction =
+                            mockConstruction(
+                                    TreeWalk.class,
+                                    (mock, context) -> {
+                                        when(mock.next()).thenReturn(true);
+                                        when(mock.getObjectId(0)).thenReturn(mockFileId);
+                                    })) {
+
+                String content =
+                        DeprecationChecker.getCommitedFileContent(
+                                mockRepo, mockCommitId, "test.java");
+
+                assertEquals("class Test {}", content);
+            }
+        }
+
+        @Test
+        void shouldReturnEmptyWhenFileNotFound() {
+            Repository mockRepo = mock(Repository.class);
+            ObjectId mockCommitId = ObjectId.fromString("1234567890123456789012345678901234567890");
+            RevCommit mockCommit = mock(RevCommit.class);
+            RevTree mockTree = mock(RevTree.class);
+
+            when(mockCommit.getTree()).thenReturn(mockTree);
+
+            try (MockedConstruction<RevWalk> mockRevWalkConstruction =
+                            mockConstruction(
+                                    RevWalk.class,
+                                    (mock, context) -> {
+                                        when(mock.parseCommit(mockCommitId)).thenReturn(mockCommit);
+                                    });
+                    MockedConstruction<TreeWalk> mockTreeWalkConstruction =
+                            mockConstruction(
+                                    TreeWalk.class,
+                                    (mock, context) -> {
+                                        when(mock.next()).thenReturn(false);
+                                    })) {
+
+                String content =
+                        DeprecationChecker.getCommitedFileContent(
+                                mockRepo, mockCommitId, "nonexistent.java");
+
+                assertEquals("", content);
             }
         }
     }
