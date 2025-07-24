@@ -1,0 +1,28 @@
+plugins {
+    id "application"
+    id 'java'
+}
+
+group "uk.gov.di.authentication.local"
+version "unspecified"
+
+dependencies {
+    implementation "io.javalin:javalin:6.6.0",
+            configurations.lambda,
+            configurations.dynamodb,
+            project(":shared"),
+            project(":auth-external-api"),
+            project(":frontend-api")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+application {
+    mainClass = "uk.gov.di.authentication.local.App"
+//    applicationDefaultJvmArgs = [
+//            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002"
+//    ]
+}
