@@ -1,5 +1,10 @@
 package uk.gov.di.deprecationchecker;
 
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
+import com.github.javaparser.ast.nodeTypes.NodeWithName;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DeprecationChecker {
 
@@ -82,6 +88,77 @@ public class DeprecationChecker {
             LOG.error("Warning: Could not read file {} from commit: {}", path, e.getMessage());
             return "";
         }
+    }
+
+    static List<String> checkEnumRemovals(
+            String filePath, String oldContent, String newContent, Set<String> targetEnums) {
+        List<String> violations = new ArrayList<>();
+
+        try {
+            JavaParser parser = new JavaParser();
+            Optional<CompilationUnit> oldUnit = parser.parse(oldContent).getResult();
+            Optional<CompilationUnit> newUnit = parser.parse(newContent).getResult();
+
+            if (oldUnit.isEmpty() || newUnit.isEmpty()) {
+                return violations;
+            }
+
+            String packageName =
+                    oldUnit.get()
+                            .getPackageDeclaration()
+                            .map(NodeWithName::getNameAsString)
+                            .orElse("");
+
+            List<EnumDeclaration> oldEnums = oldUnit.get().findAll(EnumDeclaration.class);
+            List<EnumDeclaration> newEnums = newUnit.get().findAll(EnumDeclaration.class);
+
+            for (EnumDeclaration oldEnum : oldEnums) {
+                String fullEnumName = packageName + "." + oldEnum.getNameAsString();
+
+                if (!targetEnums.isEmpty() && !targetEnums.contains(fullEnumName)) {
+                    continue;
+                }
+
+                Optional<EnumDeclaration> newEnum =
+                        newEnums.stream()
+                                .filter(e -> e.getNameAsString().equals(oldEnum.getNameAsString()))
+                                .findFirst();
+
+                if (newEnum.isPresent()) {
+                    Set<String> oldConstants =
+                            oldEnum.getEntries().stream()
+                                    .map(EnumConstantDeclaration::getNameAsString)
+                                    .collect(Collectors.toSet());
+                    Set<String> newConstants =
+                            newEnum.get().getEntries().stream()
+                                    .map(EnumConstantDeclaration::getNameAsString)
+                                    .collect(Collectors.toSet());
+
+                    oldConstants.removeAll(newConstants);
+                    for (String removed : oldConstants) {
+                        Optional<EnumConstantDeclaration> oldConstant =
+                                oldEnum.getEntries().stream()
+                                        .filter(e -> e.getNameAsString().equals(removed))
+                                        .findFirst();
+                        if (oldConstant.isPresent() && !isDeprecated(oldConstant.get())) {
+                            violations.add(
+                                    String.format(
+                                            "  %s: Enum constant '%s' in enum '%s' was removed without being @Deprecated first",
+                                            filePath, removed, oldEnum.getNameAsString()));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Warning: Could not parse {}: {}", filePath, e.getMessage());
+        }
+
+        return violations;
+    }
+
+    static boolean isDeprecated(EnumConstantDeclaration constant) {
+        return constant.getAnnotations().stream()
+                .anyMatch(annotation -> annotation.getNameAsString().equals("Deprecated"));
     }
 
     static class Config {
