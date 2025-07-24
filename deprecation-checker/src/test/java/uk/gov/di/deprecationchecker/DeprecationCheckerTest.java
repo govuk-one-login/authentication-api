@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -224,6 +225,160 @@ class DeprecationCheckerTest {
 
                 assertEquals("", content);
             }
+        }
+    }
+
+    @Nested
+    class CheckEnumRemovals {
+        @Test
+        void shouldAllowRemovalOfDeprecatedEnumConstant() {
+            String oldContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A,
+                    @Deprecated
+                    CONSTANT_B
+                }
+                """;
+
+            String newContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A
+                }
+                """;
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java",
+                            oldContent,
+                            newContent,
+                            Set.of("com.example.TestEnum"));
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldDetectViolationWhenRemovingNonDeprecatedConstant() {
+            String oldContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A,
+                    CONSTANT_B
+                }
+                """;
+
+            String newContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A
+                }
+                """;
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java",
+                            oldContent,
+                            newContent,
+                            Set.of("com.example.TestEnum"));
+
+            assertEquals(1, violations.size());
+            assertTrue(violations.get(0).contains("CONSTANT_B"));
+        }
+
+        @Test
+        void shouldReturnEmptyWhenOldContentUnparseable() {
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java", "invalid java", "public enum Test {}", Set.of());
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldReturnEmptyWhenNewContentUnparseable() {
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java", "public enum Test {}", "invalid java", Set.of());
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldSkipEnumNotInTargetSet() {
+            String oldContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A,
+                    CONSTANT_B
+                }
+                """;
+
+            String newContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A
+                }
+                """;
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java",
+                            oldContent,
+                            newContent,
+                            Set.of("com.example.OtherEnum"));
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldHandleEnumRemovedEntirely() {
+            String oldContent =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A
+                }
+                """;
+
+            String newContent = "package com.example;";
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals(
+                            "TestEnum.java",
+                            oldContent,
+                            newContent,
+                            Set.of("com.example.TestEnum"));
+
+            assertTrue(violations.isEmpty());
+        }
+    }
+
+    @Nested
+    class IsDeprecated {
+        @Test
+        void shouldDetectDeprecatedAnnotation() {
+            String javaCode =
+                    """
+                public enum TestEnum {
+                    @Deprecated
+                    DEPRECATED_CONSTANT
+                }
+                """;
+
+            com.github.javaparser.JavaParser parser = new com.github.javaparser.JavaParser();
+            var unit = parser.parse(javaCode).getResult().orElseThrow();
+            var enumDecl =
+                    unit.findAll(com.github.javaparser.ast.body.EnumDeclaration.class).get(0);
+            var constant = enumDecl.getEntries().get(0);
+
+            assertTrue(DeprecationChecker.isDeprecated(constant));
         }
     }
 }

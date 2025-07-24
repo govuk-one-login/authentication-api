@@ -5,6 +5,7 @@ plugins {
 }
 
 dependencies {
+    implementation configurations.java_parser
     implementation configurations.jgit
     implementation configurations.gson
     implementation configurations.logging_runtime
