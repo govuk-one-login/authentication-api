@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+    id 'application'
+    id "jacoco"
+}
+
+dependencies {
+    testImplementation configurations.tests
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+application {
+    mainClass = 'DeprecationChecker'
+}
+
+task checkDeprecations(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'uk.gov.di.deprecationchecker.DeprecationChecker'
+    workingDir = project.rootDir
+    ignoreExitValue = false
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
+}
