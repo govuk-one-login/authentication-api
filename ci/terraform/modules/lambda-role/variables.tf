@@ -22,9 +22,3 @@ variable "vpc_arn" {
   default = ""
   type    = string
 }
-
-variable "use_foreach_for_policies" {
-  type        = bool
-  default     = false
-  description = "If true, use for_each to attach policies to the role, otherwise use count. This is for migrating from count to for_each."
-}

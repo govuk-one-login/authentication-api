@@ -10,26 +10,6 @@ module "account_management_api_authenticate_role" {
     aws_iam_policy.parameter_policy.arn,
     module.account_management_txma_audit.access_policy_arn
   ]
-  use_foreach_for_policies = true
-  extra_tags = {
-    Service = "authenticate"
-  }
-}
-
-module "account_management_api_authenticate_role_interim" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "account-management-api-authenticate-role-foreach"
-  vpc_arn     = local.vpc_arn
-
-  policies_to_attach = [
-    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.parameter_policy.arn,
-    module.account_management_txma_audit.access_policy_arn
-  ]
-  # This is to allow for migration from count to for_each in the role policy attachment
-  use_foreach_for_policies = true
   extra_tags = {
     Service = "authenticate"
   }

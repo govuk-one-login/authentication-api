@@ -24,22 +24,8 @@ data "aws_iam_policy_document" "lambda_can_assume_role" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "provided_policies_count" {
-  count      = var.use_foreach_for_policies ? 0 : length(var.policies_to_attach)
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = var.policies_to_attach[count.index]
-
-  depends_on = [
-    aws_iam_role.lambda_role
-  ]
-}
-moved {
-  from = aws_iam_role_policy_attachment.provided_policies
-  to   = aws_iam_role_policy_attachment.provided_policies_count
-}
-
 resource "aws_iam_role_policy_attachment" "provided_policies" {
-  for_each = var.use_foreach_for_policies ? toset(var.policies_to_attach) : []
+  for_each = toset(var.policies_to_attach)
 
   role       = aws_iam_role.lambda_role.name
   policy_arn = each.value
