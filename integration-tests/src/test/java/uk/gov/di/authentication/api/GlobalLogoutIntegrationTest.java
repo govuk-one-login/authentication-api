@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -123,16 +124,17 @@ public class GlobalLogoutIntegrationTest extends IntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(GLOBAL_LOG_OUT_SUCCESS));
     }
 
-    private static GlobalLogoutMessage createGlobalLogoutMessage(
+    private static Map<String, String> createGlobalLogoutMessage(
             String internalCommonSubjectId, String sessionId, String clientSessionId) {
-        return new GlobalLogoutMessage(
-                "test-client-id",
-                "test-event-id",
-                sessionId,
-                clientSessionId,
-                internalCommonSubjectId,
-                "psid",
-                "test-ip-address");
+        return Map.ofEntries(
+                Map.entry("event_name", "HOME_GLOBAL_LOGOUT_REQUESTED"),
+                Map.entry("client_id", "oidc-client-id"),
+                Map.entry("session_id", sessionId),
+                Map.entry("client_session_id", clientSessionId),
+                Map.entry("internal_common_subject_identifier", internalCommonSubjectId),
+                Map.entry("persistent_session_id", "42S9P4onAcnMnBho-aWW7SJnwEA--1701090539559"),
+                Map.entry("ip_address", "123.123.123.123"),
+                Map.entry("event_id", "test-event-id"));
     }
 
     private void withSessions(OrchSessionItem... orchSessionItems) {
