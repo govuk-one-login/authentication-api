@@ -5,6 +5,9 @@ plugins {
 }
 
 dependencies {
+    implementation configurations.gson
+    implementation configurations.logging_runtime
+
     testImplementation configurations.tests
     testRuntimeOnly configurations.test_runtime
 }
