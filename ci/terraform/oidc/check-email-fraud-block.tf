@@ -34,7 +34,6 @@ module "check_email_fraud_block" {
     ENVIRONMENT                   = var.environment
     TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI           = var.internal_sector_uri
-    REDIS_KEY                     = var.environment == "production" ? local.redis_key : null
     LOCKOUT_DURATION              = var.lockout_duration
     LOCKOUT_COUNT_TTL             = var.lockout_count_ttl
     SUPPORT_EMAIL_CHECK_ENABLED   = var.support_email_check_enabled
@@ -57,9 +56,9 @@ module "check_email_fraud_block" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_check_email_fraud_block_role[0].arn

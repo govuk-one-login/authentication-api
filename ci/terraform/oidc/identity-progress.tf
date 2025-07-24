@@ -31,7 +31,6 @@ module "identity_progress" {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = "false"
-    REDIS_KEY                = var.environment == "production" ? local.redis_key : null
     OIDC_API_BASE_URL        = local.api_base_url,
     ORCH_DYNAMO_ARN_PREFIX   = "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-"
   }
@@ -52,9 +51,9 @@ module "identity_progress" {
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.identity_progress_role_2.arn

@@ -30,7 +30,6 @@ module "reverification_result" {
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL                          = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                           = var.internal_sector_uri
-    REDIS_KEY                                     = var.environment == "production" ? local.redis_key : null
     IPV_AUDIENCE                                  = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI                = var.ipv_auth_authorize_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_auth_authorize_client_id
@@ -57,9 +56,9 @@ module "reverification_result" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_egress_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.reverification_result_role.arn

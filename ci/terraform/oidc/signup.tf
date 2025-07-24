@@ -36,7 +36,6 @@ module "signup" {
   handler_environment_variables = {
     ENVIRONMENT                   = var.environment
     TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
-    REDIS_KEY                     = var.environment == "production" ? local.redis_key : null
     TERMS_CONDITIONS_VERSION      = var.terms_and_conditions
     INTERNAl_SECTOR_URI           = var.internal_sector_uri
     USE_STRONGLY_CONSISTENT_READS = var.use_strongly_consistent_reads
@@ -57,9 +56,9 @@ module "signup" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_signup_role.arn
