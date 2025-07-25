@@ -1,0 +1,224 @@
+package uk.gov.di.deprecationchecker;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.EnumConstantDeclaration;
+import com.github.javaparser.ast.body.EnumDeclaration;
+import com.github.javaparser.ast.nodeTypes.NodeWithName;
+import com.google.gson.Gson;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class DeprecationChecker {
+
+    private static final Logger LOG = LogManager.getLogger(DeprecationChecker.class);
+
+    public static void main(String[] args) {
+        try {
+            Config config = loadConfig();
+            List<String> violations = performCheck(config);
+
+            if (!violations.isEmpty()) {
+                var message =
+                        "Deprecation policy violations found (these must be marked as @Deprecated in {} before removing):\n -"
+                                + String.join("\n -", violations);
+                LOG.error(message, config.baseBranch);
+                System.exit(1);
+            }
+
+            LOG.info("No deprecation policy violations found.");
+        } catch (Exception e) {
+            LOG.error("Error during deprecation check", e);
+            System.exit(1);
+        }
+    }
+
+    static Config loadConfig() throws IOException {
+        var configPath = Paths.get(System.getProperty("user.dir"), "deprecation-config.json");
+
+        if (!Files.exists(configPath)) {
+            LOG.info("No config file found, using defaults");
+            return new Config("origin/main", Set.of());
+        }
+
+        String json = Files.readString(configPath);
+        com.google.gson.Gson gson = new Gson();
+        ConfigJson configJson = gson.fromJson(json, ConfigJson.class);
+
+        String baseBranch = configJson.baseBranch != null ? configJson.baseBranch : "origin/main";
+        Set<String> enums = configJson.enums != null ? Set.copyOf(configJson.enums) : Set.of();
+
+        return new Config(baseBranch, enums);
+    }
+
+    static List<String> performCheck(Config config) throws IOException {
+        Repository repository =
+                new FileRepositoryBuilder()
+                        .setWorkTree(new File("."))
+                        .readEnvironment()
+                        .findGitDir()
+                        .build();
+
+        try (Git git = new Git(repository)) {
+            ObjectId mainId = repository.resolve(config.baseBranch);
+            if (mainId == null) {
+                mainId = repository.resolve("refs/remotes/origin/" + config.baseBranch);
+            }
+            if (mainId == null) {
+                return new ArrayList<>();
+            }
+
+            List<String> allJavaFiles = getAllJavaFiles();
+            List<String> violations = new ArrayList<>();
+
+            for (String filePath : allJavaFiles) {
+                String oldContent = getCommitedFileContent(repository, mainId, filePath);
+                String newContent = getWorkspaceFileContent(filePath);
+
+                violations.addAll(
+                        checkEnumRemovals(filePath, oldContent, newContent, config.enums));
+            }
+
+            return violations;
+        }
+    }
+
+    static List<String> getAllJavaFiles() throws IOException {
+        List<String> javaFiles = new ArrayList<>();
+        var workDir = Paths.get(System.getProperty("user.dir"));
+        try (var paths = Files.walk(workDir)) {
+            paths.filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.toString().contains("/build/"))
+                    .filter(path -> !path.toString().contains("/target/"))
+                    .filter(path -> !path.toString().contains("/.gradle/"))
+                    .map(path -> workDir.relativize(path).toString())
+                    .forEach(javaFiles::add);
+        }
+        return javaFiles;
+    }
+
+    static String getWorkspaceFileContent(String path) throws IOException {
+        return Files.readString(Paths.get(path));
+    }
+
+    static String getCommitedFileContent(Repository repository, ObjectId commitId, String path) {
+        try (RevWalk walk = new RevWalk(repository)) {
+            RevCommit commit = walk.parseCommit(commitId);
+            try (org.eclipse.jgit.treewalk.TreeWalk treeWalk =
+                    new org.eclipse.jgit.treewalk.TreeWalk(repository)) {
+                treeWalk.addTree(commit.getTree());
+                treeWalk.setRecursive(true);
+                treeWalk.setFilter(org.eclipse.jgit.treewalk.filter.PathFilter.create(path));
+
+                if (treeWalk.next()) {
+                    ObjectId fileId = treeWalk.getObjectId(0);
+                    return new String(repository.open(fileId).getBytes(), StandardCharsets.UTF_8);
+                }
+                return "";
+            }
+        } catch (Exception e) {
+            LOG.error("Warning: Could not read file {} from commit: {}", path, e.getMessage());
+            return "";
+        }
+    }
+
+    static List<String> checkEnumRemovals(
+            String filePath, String oldContent, String newContent, Set<String> targetEnums) {
+        List<String> violations = new ArrayList<>();
+
+        try {
+            JavaParser parser = new JavaParser();
+            Optional<CompilationUnit> oldUnit = parser.parse(oldContent).getResult();
+            Optional<CompilationUnit> newUnit = parser.parse(newContent).getResult();
+
+            if (oldUnit.isEmpty() || newUnit.isEmpty()) {
+                return violations;
+            }
+
+            String packageName =
+                    oldUnit.get()
+                            .getPackageDeclaration()
+                            .map(NodeWithName::getNameAsString)
+                            .orElse("");
+
+            List<EnumDeclaration> oldEnums = oldUnit.get().findAll(EnumDeclaration.class);
+            List<EnumDeclaration> newEnums = newUnit.get().findAll(EnumDeclaration.class);
+
+            for (EnumDeclaration oldEnum : oldEnums) {
+                String fullEnumName = packageName + "." + oldEnum.getNameAsString();
+
+                if (!targetEnums.isEmpty() && !targetEnums.contains(fullEnumName)) {
+                    continue;
+                }
+
+                Optional<EnumDeclaration> newEnum =
+                        newEnums.stream()
+                                .filter(e -> e.getNameAsString().equals(oldEnum.getNameAsString()))
+                                .findFirst();
+
+                if (newEnum.isPresent()) {
+                    Set<String> oldConstants =
+                            oldEnum.getEntries().stream()
+                                    .map(EnumConstantDeclaration::getNameAsString)
+                                    .collect(Collectors.toSet());
+                    Set<String> newConstants =
+                            newEnum.get().getEntries().stream()
+                                    .map(EnumConstantDeclaration::getNameAsString)
+                                    .collect(Collectors.toSet());
+
+                    oldConstants.removeAll(newConstants);
+                    for (String removed : oldConstants) {
+                        Optional<EnumConstantDeclaration> oldConstant =
+                                oldEnum.getEntries().stream()
+                                        .filter(e -> e.getNameAsString().equals(removed))
+                                        .findFirst();
+                        if (oldConstant.isPresent() && !isDeprecated(oldConstant.get())) {
+                            violations.add(
+                                    String.format(
+                                            "  %s: Enum constant '%s' in enum '%s' was removed without being @Deprecated first",
+                                            filePath, removed, oldEnum.getNameAsString()));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOG.error("Warning: Could not parse {}: {}", filePath, e.getMessage());
+        }
+
+        return violations;
+    }
+
+    static boolean isDeprecated(EnumConstantDeclaration constant) {
+        return constant.getAnnotations().stream()
+                .anyMatch(annotation -> annotation.getNameAsString().equals("Deprecated"));
+    }
+
+    static class Config {
+        final String baseBranch;
+        final Set<String> enums;
+
+        Config(String baseBranch, Set<String> enums) {
+            this.baseBranch = baseBranch;
+            this.enums = enums;
+        }
+    }
+
+    private static class ConfigJson {
+        String baseBranch;
+        java.util.List<String> enums;
+    }
+}
