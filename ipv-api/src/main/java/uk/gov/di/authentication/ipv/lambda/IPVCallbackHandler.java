@@ -235,6 +235,31 @@ public class IPVCallbackHandler
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
 
+            if (configurationService.isEnhancedCrossBrowserHandlingEnabled()) {
+                var mismatchedEntity =
+                        noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                                input.getQueryStringParameters(), clientSessionId);
+
+                if (mismatchedEntity.isPresent()) {
+
+                    var authRequestFromStateDerivedRP =
+                            AuthenticationRequest.parse(
+                                    mismatchedEntity
+                                            .get()
+                                            .getClientSession()
+                                            .getAuthRequestParams());
+                    attachLogFieldToLogs(
+                            CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
+
+                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                            authRequestFromStateDerivedRP,
+                            mismatchedEntity.get().getErrorObject(),
+                            false,
+                            mismatchedEntity.get().getClientSessionId(),
+                            AuditService.UNKNOWN);
+                }
+            }
+
             var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);

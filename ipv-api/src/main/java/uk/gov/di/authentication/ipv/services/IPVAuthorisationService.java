@@ -82,38 +82,38 @@ public class IPVAuthorisationService {
     }
 
     public Optional<IpvCallbackValidationError> validateResponse(
-            Map<String, String> headers, String sessionId) {
-        if (headers == null || headers.isEmpty()) {
+            Map<String, String> queryParams, String sessionId) {
+        if (queryParams == null || queryParams.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");
             return Optional.of(
                     new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
-        if (headers.containsKey("error")) {
+        if (queryParams.containsKey("error")) {
 
-            if (SESSION_INVALIDATED_ERROR_CODE.equals(headers.get("error"))) {
+            if (SESSION_INVALIDATED_ERROR_CODE.equals(queryParams.get("error"))) {
                 LOG.warn("Session invalidated response from IPV");
                 return Optional.of(
-                        new IpvCallbackValidationError(headers.get("error"), null, true));
+                        new IpvCallbackValidationError(queryParams.get("error"), null, true));
             }
 
             LOG.warn("Error response found in IPV Authorisation response");
-            return Optional.of(new IpvCallbackValidationError(headers.get("error"), null));
+            return Optional.of(new IpvCallbackValidationError(queryParams.get("error"), null));
         }
-        if (!headers.containsKey("state") || headers.get("state").isEmpty()) {
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
             LOG.warn("No state param in IPV Authorisation response");
             return Optional.of(
                     new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
         }
-        if (!isStateValid(sessionId, headers.get("state"))) {
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
             return Optional.of(
                     new IpvCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid state param present in Authorisation response"));
         }
-        if (!headers.containsKey("code") || headers.get("code").isEmpty()) {
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
             LOG.warn("No code param in IPV Authorisation response");
             return Optional.of(
                     new IpvCallbackValidationError(
