@@ -150,12 +150,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
             return;
         }
 
+        var reference =
+                String.format(
+                        "%s/%s",
+                        request.getUniqueNotificationReference(), request.getClientSessionId());
+
         try {
             var personalisation = getPersonalisation(request);
-            var reference =
-                    String.format(
-                            "%s/%s",
-                            request.getUniqueNotificationReference(), request.getClientSessionId());
 
             if (request.getNotificationType().isEmail()) {
                 notificationService.sendEmail(
@@ -174,8 +175,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                     request.getNotificationType(), request.getCode(), request.getDestination());
         } catch (NotificationClientException e) {
             LOG.error(
-                    "Error sending with Notify using NotificationType: {}",
-                    request.getNotificationType());
+                    "Error sending with Notify using NotificationType: {}, reference: {}",
+                    request.getNotificationType(),
+                    reference);
 
             if (isPhoneNotification(request.getNotificationType())) {
                 String countryCode =
@@ -183,15 +185,15 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                                 .orElse("unable to parse country");
                 throw new RuntimeException(
                         String.format(
-                                "Error sending Notify SMS with NotificationType: %s and country code: %s",
-                                request.getNotificationType(), countryCode),
+                                "Error sending Notify SMS with NotificationType: %s and country code: %s, reference: %s",
+                                request.getNotificationType(), countryCode, reference),
                         e);
             }
 
             throw new RuntimeException(
                     String.format(
-                            "Error sending Notify email with NotificationType: %s",
-                            request.getNotificationType()),
+                            "Error sending Notify email with NotificationType: %s, reference: %s",
+                            request.getNotificationType(), reference),
                     e);
         }
     }
