@@ -17,19 +17,19 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class UserPermissionsDeciderTest {
+class PermissionDecisionManagerTest {
 
     private static final String TEST_EMAIL = "test@example.com";
     private static final String TEST_SUBJECT_ID = "subject123";
     private static final String TEST_RP_PAIRWISE_ID = "rp123";
 
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private UserPermissionsDecider userPermissionsDecider;
+    private PermissionDecisionManager permissionDecisionManager;
     private UserPermissionContext userPermissionContext;
 
     @BeforeEach
     void setUp() {
-        userPermissionsDecider = new UserPermissionsDecider(codeStorageService);
+        permissionDecisionManager = new PermissionDecisionManager(codeStorageService);
         userPermissionContext =
                 UserPermissionContext.builder()
                         .withEmailAddress(TEST_EMAIL)
@@ -52,7 +52,7 @@ class UserPermissionsDeciderTest {
 
             // When
             var result =
-                    userPermissionsDecider.canReceivePassword(
+                    permissionDecisionManager.canReceivePassword(
                             JourneyType.SIGN_IN, userPermissionContext);
 
             // Then
@@ -72,7 +72,7 @@ class UserPermissionsDeciderTest {
 
             // When
             var result =
-                    userPermissionsDecider.canReceivePassword(
+                    permissionDecisionManager.canReceivePassword(
                             JourneyType.SIGN_IN, userPermissionContext);
 
             // Then

@@ -10,11 +10,11 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
 
-public class UserPermissionsDecider implements UserPermissions {
+public class PermissionDecisionManager implements UserPermissions {
 
     private final CodeStorageService codeStorageService;
 
-    public UserPermissionsDecider(CodeStorageService codeStorageService) {
+    public PermissionDecisionManager(CodeStorageService codeStorageService) {
         this.codeStorageService = codeStorageService;
     }
 
