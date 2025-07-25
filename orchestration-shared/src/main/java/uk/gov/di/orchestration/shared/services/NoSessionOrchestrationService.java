@@ -98,9 +98,9 @@ public class NoSessionOrchestrationService {
     public Optional<NoSessionEntity> generateEntityForMismatchInClientSessionId(
             Map<String, String> queryStringParameters, String clientSessionIdFromCookie)
             throws NoSessionException {
-        if (!isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
-            // ATO-1856: Handle other cases
-            return Optional.empty();
+        if (!isStatePresentInQueryParams(queryStringParameters)) {
+            LOG.warn("No state value in query params");
+            throw new NoSessionException("No state provided in the query params");
         }
 
         var clientSessionIdFromState =
@@ -172,6 +172,12 @@ public class NoSessionOrchestrationService {
         return Objects.nonNull(queryStringParameters)
                 && queryStringParameters.containsKey("error")
                 && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
+                && queryStringParameters.containsKey("state")
+                && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
+    }
+
+    private boolean isStatePresentInQueryParams(Map<String, String> queryStringParameters) {
+        return Objects.nonNull(queryStringParameters)
                 && queryStringParameters.containsKey("state")
                 && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
     }
