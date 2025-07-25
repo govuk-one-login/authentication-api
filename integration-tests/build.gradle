@@ -34,6 +34,7 @@ dependencies {
     implementation project(":interventions-api-stub"), noXray
     implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray
+    implementation project(":user-permissions"), noXray
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
     testImplementation("uk.org.webcompere:system-stubs-jupiter:2.1.8")

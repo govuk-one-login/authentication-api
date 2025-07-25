@@ -4,7 +4,10 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
+
+import java.util.List;
 
 /**
  * Interface defining permission checks for user authentication actions.
@@ -107,4 +110,16 @@ public interface UserPermissions {
      */
     Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    /**
+     * Gets active authenticator app lockouts for the user. Note: This method only provides details
+     * of AUTH_APP lockouts, not SMS lockouts.
+     *
+     * @param userPermissionContext The user's permission context
+     * @return A Result containing either a list of active lockout information or a DecisionError
+     */
+    default Result<DecisionError, List<LockoutInformation>> getActiveAuthAppLockouts(
+            UserPermissionContext userPermissionContext) {
+        return Result.success(List.of());
+    }
 }

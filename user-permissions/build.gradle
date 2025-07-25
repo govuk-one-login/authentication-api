@@ -8,6 +8,7 @@ version "unspecified"
 
 dependencies {
     implementation project(":shared")
+    implementation configurations.gson
 
     testImplementation configurations.tests
     testRuntimeOnly configurations.test_runtime

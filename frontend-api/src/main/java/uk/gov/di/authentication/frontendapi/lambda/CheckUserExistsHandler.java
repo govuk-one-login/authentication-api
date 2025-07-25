@@ -7,15 +7,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -30,9 +29,11 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
@@ -47,7 +48,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
+
+    // ************ NEEDS REMOVING
+
     private final CodeStorageService codeStorageService;
+    private final PermissionDecisionManager pdm;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -55,7 +60,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -64,6 +70,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSessionService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
+        this.pdm = permissionDecisionManager;
     }
 
     public CheckUserExistsHandler() {
@@ -74,6 +81,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.pdm = new PermissionDecisionManager(codeStorageService);
     }
 
     public CheckUserExistsHandler(
@@ -81,6 +89,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.pdm = new PermissionDecisionManager(codeStorageService);
     }
 
     @Override
@@ -117,7 +126,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             persistentSessionId);
 
             if (errorResponse.isPresent()) {
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -135,9 +143,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
-            if (codeStorageService.isBlockedForEmail(
-                    emailAddress,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
+            UserPermissionContext userPermissionContext =
+                    new UserPermissionContext(null, null, emailAddress, null);
+
+            var decisionResult =
+                    pdm.canReceivePassword(JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            if (decisionResult.isFailure()) {
+                LOG.info("No decision made: {}", decisionResult.getFailure());
+                var error =
+                        DecisionErrorAntiCorruption.toErrorResponse(decisionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(400, error);
+            }
+
+            if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
                 LOG.info("User account is locked");
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 authSessionService.updateSession(userContext.getAuthSession());
@@ -187,23 +206,18 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            var lockoutInformation =
-                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(
-                                    journeyType -> {
-                                        var ttl =
-                                                codeStorageService.getMfaCodeBlockTimeToLive(
-                                                        emailAddress,
-                                                        MFAMethodType.AUTH_APP,
-                                                        journeyType);
-                                        return new LockoutInformation(
-                                                "codeBlock",
-                                                MFAMethodType.AUTH_APP,
-                                                ttl,
-                                                journeyType);
-                                    })
-                            .filter(info -> info.lockTTL() > 0)
-                            .toList();
+            // ***** WHY ONLY FOR AUTH_APP?  ****** \\
+
+            var lockoutInformation = pdm.getActiveAuthAppLockouts(userPermissionContext);
+
+            if (lockoutInformation.isFailure()) {
+                var error =
+                        DecisionErrorAntiCorruption.toErrorResponse(
+                                lockoutInformation.getFailure());
+                return generateApiGatewayProxyErrorResponse(400, error);
+            }
+
+            var newLockoutList = lockoutInformation.getSuccess();
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
@@ -211,7 +225,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            lockoutInformation);
+                            newLockoutList);
+
             authSessionService.updateSession(authSession);
 
             LOG.info("Successfully processed request");
