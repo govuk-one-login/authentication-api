@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.helpers;
 
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jose.jwk.KeyUse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +11,6 @@ import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -38,8 +36,8 @@ class JwkCacheEntryTest {
     void shouldCacheKeyOnCreation() {
         try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
             mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1));
+                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
+                    .thenReturn(TEST_KEY_1);
 
             var cacheEntry = createCacheWithNoExpiration();
             assertEquals(TEST_KEY_1, cacheEntry.getKey());
@@ -50,49 +48,11 @@ class JwkCacheEntryTest {
     void shouldStoreNullKeyIfNoKeysFoundAtUrl() {
         try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
             mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of());
+                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
+                    .thenReturn(null);
 
             var cacheEntry = createCacheWithNoExpiration();
             assertNull(cacheEntry.getKey());
-        }
-    }
-
-    @Test
-    void shouldCacheFirstKeyIfMultipleKeysArePresent() {
-        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
-            mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
-
-            var cacheEntry = createCacheWithNoExpiration();
-            assertEquals(TEST_KEY_1, cacheEntry.getKey());
-        }
-    }
-
-    @Test
-    void shouldIgnoreFirstKeyIfKeyHasDifferentUse() {
-        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
-            when(TEST_KEY_1.getKeyUse()).thenReturn(KeyUse.SIGNATURE);
-            mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
-
-            var cacheEntry = createCacheWithNoExpiration();
-            assertEquals(TEST_KEY_2, cacheEntry.getKey());
-        }
-    }
-
-    @Test
-    void shouldIgnoreFirstKeyIfKeyHasDifferentAlg() {
-        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
-            when(TEST_KEY_1.getAlgorithm()).thenReturn(JWEAlgorithm.ECDH_1PU);
-            mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
-
-            var cacheEntry = createCacheWithNoExpiration();
-            assertEquals(TEST_KEY_2, cacheEntry.getKey());
         }
     }
 
@@ -101,9 +61,9 @@ class JwkCacheEntryTest {
         try (var mockJwksUtils = mockStatic(JwksUtils.class);
                 var mockNowHelper = mockStatic(NowHelper.class)) {
             mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1))
-                    .thenReturn(List.of(TEST_KEY_2));
+                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
+                    .thenReturn(TEST_KEY_1)
+                    .thenReturn(TEST_KEY_2);
             mockNowHelper
                     .when(() -> NowHelper.nowPlus(300, ChronoUnit.SECONDS))
                     .thenReturn(
@@ -124,9 +84,9 @@ class JwkCacheEntryTest {
         try (var mockJwksUtils = mockStatic(JwksUtils.class);
                 var mockNowHelper = mockStatic(NowHelper.class)) {
             mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1))
-                    .thenReturn(List.of(TEST_KEY_2));
+                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
+                    .thenReturn(TEST_KEY_1)
+                    .thenReturn(TEST_KEY_2);
             mockNowHelper
                     .when(() -> NowHelper.nowPlus(300, ChronoUnit.SECONDS))
                     .thenReturn(Date.from(Instant.parse("2025-01-20T09:05:00Z")));
@@ -135,22 +95,6 @@ class JwkCacheEntryTest {
                     .thenReturn(Date.from(Instant.parse("2025-01-20T09:03:00Z")));
 
             var cacheEntry = createCacheWithExpiration(300);
-            assertEquals(TEST_KEY_1, cacheEntry.getKey());
-        }
-    }
-
-    @Test
-    void shouldGetEncryptionKeyByKeyTypeIfKeyAlgIsNotPresent() {
-        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
-            when(TEST_KEY_1.getAlgorithm()).thenReturn(null);
-            when(TEST_KEY_1.getKeyType()).thenReturn(KeyType.RSA);
-            when(TEST_KEY_2.getAlgorithm()).thenReturn(null);
-            when(TEST_KEY_2.getKeyType()).thenReturn(KeyType.RSA);
-            mockJwksUtils
-                    .when(() -> JwksUtils.retrieveJwksFromUrl(testJwksUrl))
-                    .thenReturn(List.of(TEST_KEY_1, TEST_KEY_2));
-
-            var cacheEntry = JwkCacheEntry.forEncryptionKeys(testJwksUrl, Integer.MAX_VALUE);
             assertEquals(TEST_KEY_1, cacheEntry.getKey());
         }
     }
@@ -164,7 +108,6 @@ class JwkCacheEntryTest {
     }
 
     private JwkCacheEntry createCacheWithExpiration(KeyUse keyUse, int expiration) {
-        return JwkCacheEntry.forKeyUse(
-                testJwksUrl, expiration, keyUse, JWEAlgorithm.RSA_OAEP_256, KeyType.RSA);
+        return JwkCacheEntry.forKeyUse(testJwksUrl, expiration, keyUse);
     }
 }
