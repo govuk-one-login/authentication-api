@@ -28,7 +28,7 @@ import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
 import static uk.gov.di.authentication.local.handlers.ApiGatewayLambdaHandler.handlerFor;
 
 public class LocalAuthApi {
-    private static final int DEFAULT_PORT = 4400;
+    private static final int DEFAULT_PORT = 4402;
 
     public LocalAuthApi() {
         var app = Javalin.create();

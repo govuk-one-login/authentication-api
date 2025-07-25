@@ -25,7 +25,7 @@ WORKDIR /app
 
 COPY --from=build /app/untarred/local-running .
 
-ENV PORT 4400
+ENV PORT 4402
 EXPOSE $PORT
 
 ENTRYPOINT ["./bin/local-running"]
