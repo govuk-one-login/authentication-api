@@ -201,14 +201,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String userSuppliedEmail,
             Optional<UserProfile> userProfileOfSuppliedEmail) {
 
-        String uniqueUserIdentifier;
+        String uniqueUserIdentifier = rpPairwiseId;
         Optional<String> additionalIdentifier = Optional.empty();
         if (emailUserIsSignedInWith != null) {
             var userProfile = authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
-            uniqueUserIdentifier = userProfile.getSubjectID();
-            additionalIdentifier = Optional.of(rpPairwiseId);
-        } else {
-            uniqueUserIdentifier = rpPairwiseId;
+
+            if (userProfile != null) {
+                uniqueUserIdentifier = userProfile.getSubjectID();
+                additionalIdentifier = Optional.of(rpPairwiseId);
+            }
         }
 
         authenticationAttemptsService.createOrIncrementCount(
