@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
@@ -96,7 +97,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 assertNull(checkUserExistsResponse.phoneNumberLastThree());
             }
 
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CHECK_USER_KNOWN_EMAIL));
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
         }
 
         @Test
@@ -129,7 +130,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(lockoutInformation.get(0).journeyType(), is(JourneyType.SIGN_IN));
             assertThat(lockoutInformation.get(0).mfaMethodType(), is(MFAMethodType.AUTH_APP));
 
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CHECK_USER_KNOWN_EMAIL));
+            assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
         }
 
         @Test
@@ -155,37 +156,31 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertFalse(checkUserExistsResponse.doesUserExist());
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
 
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue, List.of(AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
+            assertExpectedAuditEvents(AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL);
         }
     }
 
-    @Nested
-    @DisplayName("Error cases")
-    class ErrorCases {
+    @Test
+    @DisplayName("User cannot check account when temporarily locked")
+    void userCannotCheckAccountWhenTemporarilyLocked() {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        redis.blockMfaCodesForEmail(
+                TEST_EMAIL_2,
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
 
-        @Test
-        @DisplayName("User cannot check account when temporarily locked")
-        void userCannotCheckAccountWhenTemporarilyLocked() {
-            var sessionId = IdGenerator.generate();
-            authSessionStore.addSession(sessionId);
-            redis.blockMfaCodesForEmail(
-                    TEST_EMAIL_2,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
+        var headers = new HashMap<String, String>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
-            var headers = new HashMap<String, String>();
-            headers.put("Session-Id", sessionId);
-            headers.put("X-API-Key", FRONTEND_API_KEY);
-            headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        var request = new CheckUserExistsRequest(TEST_EMAIL_2);
+        var response = makeRequest(Optional.of(request), headers, Map.of());
 
-            var request = new CheckUserExistsRequest(TEST_EMAIL_2);
-            var response = makeRequest(Optional.of(request), headers, Map.of());
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
 
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
-
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_TEMPORARILY_LOCKED));
-        }
+        assertExpectedAuditEvents(AUTH_ACCOUNT_TEMPORARILY_LOCKED);
     }
 
     private String setupUserAndSession(String emailAddress, MFAMethodType mfaMethodType) {
@@ -216,5 +211,9 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 REDIRECT_URI,
                 "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
+    }
+
+    private void assertExpectedAuditEvents(FrontendAuditableEvent... events) {
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(events));
     }
 }
