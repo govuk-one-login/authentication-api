@@ -344,7 +344,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 3
+      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
       lockoutCountTtl: 900
       lockoutDuration: 7200
@@ -371,7 +371,7 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 3
+      lambdaMinConcurrency: 0
       lambdaMaxConcurrency: 10
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
