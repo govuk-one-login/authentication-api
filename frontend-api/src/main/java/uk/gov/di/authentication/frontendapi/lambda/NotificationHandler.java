@@ -162,8 +162,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     request.getNotificationType(), request.getCode(), request.getDestination());
         } catch (NotificationClientException e) {
             LOG.error(
-                    "Error sending with Notify using NotificationType: {}",
-                    request.getNotificationType());
+                    "Error sending with Notify using NotificationType: {}, reference: {}",
+                    request.getNotificationType(),
+                    request.getUniqueNotificationReference());
 
             if (isPhoneNotification(request.getNotificationType())) {
                 String countryCode =
