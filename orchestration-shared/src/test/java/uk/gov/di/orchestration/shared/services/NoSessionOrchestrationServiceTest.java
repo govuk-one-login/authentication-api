@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -226,6 +227,58 @@ class NoSessionOrchestrationServiceTest {
     class MismatchInClientSessionIdHandling {
 
         @Test
+        void itShouldThrowNoSessionExceptionIfAccessDeniedErrorWithNoState() {
+            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
+                    .thenReturn(CLIENT_SESSION_ID);
+            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(generateOrchClientSession()));
+
+            Map<String, String> queryParams = new HashMap<>();
+            queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+            queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
+
+            assertThrows(
+                    NoSessionException.class,
+                    () ->
+                            noSessionOrchestrationService
+                                    .generateEntityForMismatchInClientSessionId(
+                                            queryParams, CLIENT_SESSION_ID));
+        }
+
+        @Test
+        void itShouldReturnANoSessionEntityIfThereIsMismatchInCSIDFromSuccessfulIPVCallback()
+                throws NoSessionException, ParseException {
+            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
+                    .thenReturn(CLIENT_SESSION_ID);
+            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(generateOrchClientSession()));
+
+            Map<String, String> queryParams = new HashMap<>();
+            queryParams.put("state", STATE.getValue());
+            queryParams.put("code", new AuthorizationCode().getValue());
+
+            var noSessionEntity =
+                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            queryParams, IdGenerator.generate());
+
+            assertTrue(noSessionEntity.isPresent());
+            assertThat(
+                    noSessionEntity.get().getErrorObject().getCode(),
+                    equalTo(OAuth2Error.ACCESS_DENIED_CODE));
+            assertThat(
+                    noSessionEntity.get().getErrorObject().getDescription(),
+                    equalTo(
+                            "Access denied for security reasons, a new authentication request may be successful"));
+            assertThat(noSessionEntity.get().getClientSessionId(), equalTo(CLIENT_SESSION_ID));
+
+            var authenticationRequest =
+                    AuthenticationRequest.parse(
+                            noSessionEntity.get().getClientSession().getAuthRequestParams());
+            assertThat(authenticationRequest.getClientID(), equalTo(CLIENT_ID));
+            assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        }
+
+        @Test
         void itShouldGenerateANoSessionEntityWhenCSIDCookieDoesNotMatchStateValue()
                 throws NoSessionException, ParseException {
             when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
@@ -271,41 +324,6 @@ class NoSessionOrchestrationServiceTest {
             queryParams.put("state", STATE.getValue());
             queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
             queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-            var noSessionEntity =
-                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            queryParams, CLIENT_SESSION_ID);
-
-            assertTrue(noSessionEntity.isEmpty());
-        }
-
-        @Test
-        void itShouldReturnEmptyIfNotAccessDeniedError() throws NoSessionException {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
-            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(Optional.of(generateOrchClientSession()));
-
-            Map<String, String> queryParams = new HashMap<>();
-            queryParams.put("state", STATE.getValue());
-            queryParams.put("error", OAuth2Error.INVALID_CLIENT_CODE);
-            var noSessionEntity =
-                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            queryParams, CLIENT_SESSION_ID);
-
-            assertTrue(noSessionEntity.isEmpty());
-        }
-
-        @Test
-        void itShouldReturnEmptyIfAccessDeniedErrorWithNoState() throws NoSessionException {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
-            when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                    .thenReturn(Optional.of(generateOrchClientSession()));
-
-            Map<String, String> queryParams = new HashMap<>();
-            queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
-            queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-
             var noSessionEntity =
                     noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
                             queryParams, CLIENT_SESSION_ID);
