@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -47,6 +48,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
+
+    // ************ NEEDS REMOVING
+
     private final CodeStorageService codeStorageService;
     private final PermissionDecisionManager pdm;
 
@@ -56,7 +60,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -65,7 +70,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authSessionService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
-        this.pdm = new PermissionDecisionManager(codeStorageService);
+        this.pdm = permissionDecisionManager;
     }
 
     public CheckUserExistsHandler() {
@@ -121,7 +126,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             persistentSessionId);
 
             if (errorResponse.isPresent()) {
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -146,9 +150,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     pdm.canReceivePassword(JourneyType.PASSWORD_RESET, userPermissionContext);
 
             if (decisionResult.isFailure()) {
-                LOG.info("Permission denied: {}", decisionResult.getFailure());
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+                LOG.info("No decision made: {}", decisionResult.getFailure());
+                var error =
+                        DecisionErrorAntiCorruption.toErrorResponse(decisionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(400, error);
             }
 
             if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
@@ -206,8 +211,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var lockoutInformation = pdm.getActiveAuthAppLockouts(userPermissionContext);
 
             if (lockoutInformation.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+                var error =
+                        DecisionErrorAntiCorruption.toErrorResponse(
+                                lockoutInformation.getFailure());
+                return generateApiGatewayProxyErrorResponse(400, error);
             }
 
             var newLockoutList = lockoutInformation.getSuccess();
