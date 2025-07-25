@@ -1172,6 +1172,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                     LevelOfConfidence.HMRC200.getValue()))
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
@@ -1343,6 +1346,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration, redisConnectionService);
             txmaAuditQueue.clear();
@@ -1924,6 +1930,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withPkceEnforced(true)
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration, redisConnectionService);
             txmaAuditQueue.clear();
@@ -2174,6 +2183,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                 LevelOfConfidence.HMRC200.getValue()))
                 .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                .withPublicKey(
+                        Base64.getMimeEncoder()
+                                .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                 .saveToDynamo();
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();

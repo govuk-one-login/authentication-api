@@ -4,25 +4,18 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 
-import static java.util.Objects.isNull;
-
 public class KeyPairHelper {
 
     private KeyPairHelper() {}
 
-    private static KeyPair cachedKeyPair = null;
-
-    public static final KeyPair GENERATE_RSA_KEY_PAIR() {
-        if (isNull(KeyPairHelper.cachedKeyPair)) {
-            KeyPairGenerator kpg;
-            try {
-                kpg = KeyPairGenerator.getInstance("RSA");
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException();
-            }
-            kpg.initialize(2048);
-            KeyPairHelper.cachedKeyPair = kpg.generateKeyPair();
+    public static KeyPair GENERATE_RSA_KEY_PAIR() {
+        KeyPairGenerator kpg;
+        try {
+            kpg = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException();
         }
-        return KeyPairHelper.cachedKeyPair;
+        kpg.initialize(2048);
+        return kpg.generateKeyPair();
     }
 }
