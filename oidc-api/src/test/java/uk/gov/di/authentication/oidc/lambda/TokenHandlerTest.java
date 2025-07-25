@@ -71,8 +71,8 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -1687,7 +1687,7 @@ public class TokenHandlerTest {
     }
 
     private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

@@ -12,7 +12,7 @@ import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
@@ -37,7 +37,7 @@ class TokenClientAuthValidatorFactoryTest {
                 new PrivateKeyJWT(
                         claimsSet,
                         JWSAlgorithm.RS256,
-                        KeyPairHelper.generateRsaKeyPair().getPrivate(),
+                        KeyPairUtils.generateRsaKeyPair().getPrivate(),
                         null,
                         null);
 

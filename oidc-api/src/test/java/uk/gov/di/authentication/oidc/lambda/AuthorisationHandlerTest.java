@@ -89,9 +89,9 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -214,7 +214,7 @@ class AuthorisationHandlerTest {
     private static final Boolean IS_ONE_LOGIN = false;
     private static final Boolean IS_COOKIE_CONSENT_SHARED = false;
     private static final String RP_SERVICE_TYPE = "MANDATORY";
-    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
+    private static final KeyPair RSA_KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
     private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
 
     static {

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.text.ParseException;
@@ -46,7 +46,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldConvertRequestObjectToAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -72,7 +72,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenVTRClaimIsPresent() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 getClaimsSetBuilder(scope)
@@ -111,7 +111,7 @@ class RequestObjectToAuthRequestHelperTest {
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresentAsString()
             throws JOSEException, ParseException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -143,7 +143,7 @@ class RequestObjectToAuthRequestHelperTest {
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresentAsJson()
             throws JOSEException, ParseException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 JWTClaimsSet.parse(
@@ -203,7 +203,7 @@ class RequestObjectToAuthRequestHelperTest {
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenUILocalesClaimIsPresent()
             throws JOSEException, LangTagException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var uiLocales = "cy";
         var jwtClaimsSet = getClaimsSetBuilder(scope).claim("ui_locales", uiLocales).build();
@@ -232,7 +232,7 @@ class RequestObjectToAuthRequestHelperTest {
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenMaxAgeClaimPresentAsString()
             throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).claim("max_age", "123").build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -260,7 +260,7 @@ class RequestObjectToAuthRequestHelperTest {
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenMaxAgeClaimPresentAsInteger()
             throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).claim("max_age", 123).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -287,7 +287,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenLoginHintClaimPresent() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).claim("login_hint", "test@email.com").build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
@@ -317,7 +317,7 @@ class RequestObjectToAuthRequestHelperTest {
         var codeChallenge = "aCodeChallenge";
         var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
 
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 getClaimsSetBuilder(scope)
@@ -355,7 +355,7 @@ class RequestObjectToAuthRequestHelperTest {
         var codeChallenge = "aCodeChallenge";
         var codeChallengeMethod = CodeChallengeMethod.S256;
 
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 getClaimsSetBuilder(scope)
@@ -410,7 +410,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldRetrieveRpSidFromRequestObject() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var rpSid = "test-rp-sid";
         var jwtClaimsSet = getClaimsSetBuilder(scope).claim("rp_sid", rpSid).build();
@@ -439,7 +439,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldSuccessfullyParseAnAuthOnlyRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.generateRsaKeyPair();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 getClaimsSetBuilder(scope)

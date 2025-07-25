@@ -22,7 +22,7 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -51,7 +51,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
     private OidcAPI oidcAPI = mock(OidcAPI.class);
     private static final URI OIDC_TOKEN_URL = URI.create("https://example.com/token");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
+    private static final KeyPair RSA_KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
     private PrivateKeyJwtClientAuthValidator privateKeyJwtClientAuthValidator;
 
     @BeforeEach

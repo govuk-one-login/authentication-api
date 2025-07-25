@@ -1,12 +1,12 @@
-package uk.gov.di.orchestration.sharedtest.helper;
+package uk.gov.di.orchestration.sharedtest.utils;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 
-public class KeyPairHelper {
+public class KeyPairUtils {
 
-    private KeyPairHelper() {}
+    private KeyPairUtils() {}
 
     public static KeyPair generateRsaKeyPair() {
         KeyPairGenerator kpg;

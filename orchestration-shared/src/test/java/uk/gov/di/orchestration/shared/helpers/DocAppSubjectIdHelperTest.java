@@ -16,7 +16,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.util.List;
@@ -107,7 +107,7 @@ class DocAppSubjectIdHelperTest {
         }
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
-        var signer = new RSASSASigner(KeyPairHelper.generateRsaKeyPair().getPrivate());
+        var signer = new RSASSASigner(KeyPairUtils.generateRsaKeyPair().getPrivate());
         signedJWT.sign(signer);
         var authRequest =
                 new AuthenticationRequest.Builder(

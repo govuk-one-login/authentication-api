@@ -38,7 +38,7 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -88,7 +88,7 @@ class RequestObjectAuthorizeValidatorTest {
     @BeforeEach
     void setup() {
         when(oidcApi.authorizeURI()).thenReturn(OIDC_BASE_AUTHORIZE_URI);
-        keyPair = KeyPairHelper.generateRsaKeyPair();
+        keyPair = KeyPairUtils.generateRsaKeyPair();
         validator =
                 new RequestObjectAuthorizeValidator(
                         configurationService,
