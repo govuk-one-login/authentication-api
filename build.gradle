@@ -169,7 +169,7 @@ subprojects {
             }
         }
 
-        apache "commons-codec:commons-codec:1.18.0",
+        apache "commons-codec:commons-codec:1.19.0",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.5.0",
                 "commons-net:commons-net:3.11.1",
