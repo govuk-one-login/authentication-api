@@ -42,29 +42,6 @@ data "aws_iam_policy_document" "common_passwords_encryption_key_policy_document"
   }
 }
 
-resource "aws_iam_policy" "doc_app_credential_encryption_key_kms_policy" {
-  name        = "${var.environment}-doc-app-credential-table-encryption-key-kms-policy"
-  path        = "/"
-  description = "IAM policy for managing KMS encryption of the doc app credential table"
-
-  policy = data.aws_iam_policy_document.doc_app_credential_encryption_key_policy_document.json
-}
-
-data "aws_iam_policy_document" "doc_app_credential_encryption_key_policy_document" {
-  statement {
-    sid    = "AllowAccessToDocAppCredentialTableKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:*",
-    ]
-    resources = [
-      aws_kms_key.doc_app_credential_table_encryption_key.arn
-    ]
-  }
-}
-
-
 resource "aws_iam_policy" "client_registry_encryption_key_kms_policy" {
   name        = "${var.environment}-client-registry-table-encryption-key-kms-policy"
   path        = "/"

@@ -202,10 +202,6 @@ output "client_registry_encryption_policy_arn" {
 }
 
 
-output "doc_app_credential_encryption_policy_arn" {
-  value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
-}
-
 output "doc_app_credential_encryption_key_arn" {
   value = aws_kms_key.doc_app_credential_table_encryption_key.arn
 }
