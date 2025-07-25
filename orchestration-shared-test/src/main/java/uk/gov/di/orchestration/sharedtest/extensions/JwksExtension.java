@@ -5,22 +5,22 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
-public class DocAppJwksExtension extends HttpStubExtension implements BeforeAllCallback {
+public class JwksExtension extends HttpStubExtension implements BeforeAllCallback {
 
-    public DocAppJwksExtension(int port) {
+    public JwksExtension(int port) {
         super(port);
     }
 
-    public DocAppJwksExtension() {
+    public JwksExtension() {
         super();
     }
 
     public void init(JWKSet jwkSet) {
-        register(
-                "/.well-known/jwks.json",
-                200,
-                "application/json",
-                jwkSet.toPublicJWKSet().toString());
+        init("/.well-known/jwks.json", jwkSet);
+    }
+
+    public void init(String path, JWKSet jwkSet) {
+        register(path, 200, "application/json", jwkSet.toPublicJWKSet().toString());
     }
 
     @Override
