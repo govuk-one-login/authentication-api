@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isOldPersistentSessionCookieWithoutTimestamp;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
@@ -35,25 +36,17 @@ public class CookieHelper {
 
     public static Optional<HttpCookie> getHttpCookieFromMultiValueResponseHeaders(
             Map<String, List<String>> headers, String cookieName) {
-        String cookie =
-                Stream.of(RESPONSE_COOKIE_HEADER, RESPONSE_COOKIE_HEADER.toLowerCase())
-                        .filter(headers.keySet()::contains)
-                        .findFirst()
-                        .orElse(null);
-        if (cookie == null) {
-            return Optional.empty();
-        }
-        return headers.get(cookie).stream()
-                .filter(
-                        t ->
-                                getHttpCookieFromHeaders(
-                                                Map.of(RESPONSE_COOKIE_HEADER, t),
-                                                cookieName,
-                                                RESPONSE_COOKIE_HEADER)
-                                        .isPresent())
+
+        var cookieHeader =
+                headers.containsKey(RESPONSE_COOKIE_HEADER)
+                        ? headers.get(RESPONSE_COOKIE_HEADER)
+                        : headers.getOrDefault(RESPONSE_COOKIE_HEADER.toLowerCase(), emptyList());
+
+        return cookieHeader.stream()
                 .map(CookieHelper::parseStringToHttpCookie)
-                .findFirst()
-                .orElse(Optional.empty());
+                .flatMap(Optional::stream)
+                .filter(cookie -> cookieName.equals(cookie.getName()))
+                .findFirst();
     }
 
     public static Optional<HttpCookie> getHttpCookieFromHeaders(
