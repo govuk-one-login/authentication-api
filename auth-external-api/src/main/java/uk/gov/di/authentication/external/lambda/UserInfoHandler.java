@@ -88,7 +88,7 @@ public class UserInfoHandler
                     "auth-external-api::" + getClass().getSimpleName(),
                     () -> userInfoRequestHandler(input));
         } catch (Exception e) {
-            LOG.error("Unexpected exception: {}", e.getMessage());
+            LOG.error("Unexpected exception", e);
             return generateApiGatewayProxyResponse(500, "server_error");
         }
     }
