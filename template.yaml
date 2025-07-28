@@ -7562,6 +7562,32 @@ Resources:
             Period: 600
             Stat: Sum
             Unit: Count
+
+  DocAppHandbackPagerDutyAlarm:
+    Condition: IsProduction
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref PagerDutyEvents
+      OKActions:
+        - !Ref PagerDutyEvents
+      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} Doc app callback handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmName: !Sub ${Environment}-pagerduty-doc-app-handback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 50
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          MetricStat:
+            Metric:
+              MetricName: !Sub ${Environment}-doc-app-callback-count
+              Namespace: LambdaErrorsNamespace
+            Period: 600
+            Stat: Sum
+            Unit: Count
   #endregion
 
 Outputs:
