@@ -30,6 +30,7 @@ import static uk.gov.di.authentication.local.handlers.ApiGatewayLambdaHandler.ha
 public class LocalAuthApi {
     private static final int DEFAULT_PORT = 4402;
 
+    // These path mappings must match those in the infrastructure-as-code configuration
     public LocalAuthApi() {
         var app = Javalin.create();
 
