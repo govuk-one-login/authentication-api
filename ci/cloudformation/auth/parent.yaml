@@ -340,7 +340,7 @@ Mappings:
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
-      frontendBaseUrl: https://signin.integration.account.gov.uk
+      frontendBaseUrl: https://apitest.signin.integration.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
@@ -350,6 +350,7 @@ Mappings:
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
