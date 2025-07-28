@@ -5,7 +5,7 @@
   "client_id": "test-orch-client-id",
   "cookie_consent_shared": false,
   "scope": "email openid profile",
-  "claim": "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"uplift_required\":null,\"phone_number\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
+  "claim": "{\"userinfo\":{\"email_verified\":null,\"salt\":null,\"local_account_id\":null,\"uplift_required\":null,\"phone_number\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
   "state": "state",
   "requested_level_of_confidence": "P2",
   "exp": 1630534380,

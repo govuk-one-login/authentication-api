@@ -86,6 +86,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1108,6 +1109,7 @@ public class AuthorisationHandler
 
         var claimSetEntries =
                 claimsSet.stream()
+                        .sorted(Comparator.naturalOrder())
                         .map(claim -> new ClaimsSetRequest.Entry(claim.getValue()))
                         .toList();
 
