@@ -4,6 +4,8 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
@@ -18,7 +20,14 @@ public class PermissionDecisionManager implements UserPermissions {
 
     private final CodeStorageService codeStorageService;
 
+    public PermissionDecisionManager() {
+        var configurationService = ConfigurationService.getInstance();
+        var redis = new RedisConnectionService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    }
+
     public PermissionDecisionManager(CodeStorageService codeStorageService) {
+        var configurationService = ConfigurationService.getInstance();
         this.codeStorageService = codeStorageService;
     }
 

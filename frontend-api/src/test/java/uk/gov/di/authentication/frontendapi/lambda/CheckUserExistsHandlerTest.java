@@ -145,7 +145,6 @@ class CheckUserExistsHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        codeStorageService,
                         permissionDecisionManager);
         reset(authenticationService);
         reset(permissionDecisionManager);

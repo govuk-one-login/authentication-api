@@ -57,9 +57,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        handler =
-                new CheckUserExistsHandler(
-                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new CheckUserExistsHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -181,6 +179,76 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
 
         assertExpectedAuditEvents(AUTH_ACCOUNT_TEMPORARILY_LOCKED);
+    }
+
+    @Test
+    @DisplayName("Existing user cannot check account when password locked")
+    void existingUserCannotCheckAccountWhenPasswordLocked() {
+        var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.SMS);
+        var clientSessionId = IdGenerator.generate();
+        redis.blockMfaCodesForEmail(
+                TEST_EMAIL_1,
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
+
+        var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+
+        assertExpectedAuditEvents(AUTH_ACCOUNT_TEMPORARILY_LOCKED);
+    }
+
+    @Test
+    @DisplayName("User with both password and auth app lockouts returns password lockout")
+    void userWithMultipleLockoutTypesReturnsPasswordLockout() {
+        var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.AUTH_APP);
+        var clientSessionId = IdGenerator.generate();
+
+        // Block both password and auth app
+        redis.blockMfaCodesForEmail(
+                TEST_EMAIL_1,
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
+        redis.blockMfaCodesForEmail(TEST_EMAIL_1, CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+
+        var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+
+        assertExpectedAuditEvents(AUTH_ACCOUNT_TEMPORARILY_LOCKED);
+    }
+
+    @Test
+    @DisplayName("User with no active lockouts returns empty lockout information")
+    void userWithNoActiveLockoutsReturnsEmptyLockoutInformation() throws JsonException {
+        var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.AUTH_APP);
+        var clientSessionId = IdGenerator.generate();
+
+        var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        CheckUserExistsResponse checkUserExistsResponse =
+                objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+        assertThat(checkUserExistsResponse.lockoutInformation().size(), equalTo(0));
+
+        assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
     }
 
     private String setupUserAndSession(String emailAddress, MFAMethodType mfaMethodType) {

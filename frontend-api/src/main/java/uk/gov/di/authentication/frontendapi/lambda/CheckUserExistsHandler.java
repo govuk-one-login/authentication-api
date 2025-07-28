@@ -25,9 +25,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -48,11 +46,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
-
-    // ************ NEEDS REMOVING
-
-    private final CodeStorageService codeStorageService;
-    private final PermissionDecisionManager pdm;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -60,7 +54,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService,
             PermissionDecisionManager permissionDecisionManager) {
         super(
                 CheckUserExistsRequest.class,
@@ -69,8 +62,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
-        this.codeStorageService = codeStorageService;
-        this.pdm = permissionDecisionManager;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public CheckUserExistsHandler() {
@@ -80,16 +72,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService);
-        this.pdm = new PermissionDecisionManager(codeStorageService);
-    }
-
-    public CheckUserExistsHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckUserExistsRequest.class, configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.pdm = new PermissionDecisionManager(codeStorageService);
+        this.permissionDecisionManager = new PermissionDecisionManager();
     }
 
     @Override
@@ -146,8 +129,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             UserPermissionContext userPermissionContext =
                     new UserPermissionContext(null, null, emailAddress, null);
 
+            // WHY ONLY PASSWORD_RESET?
+
             var decisionResult =
-                    pdm.canReceivePassword(JourneyType.PASSWORD_RESET, userPermissionContext);
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
 
             if (decisionResult.isFailure()) {
                 LOG.info("No decision made: {}", decisionResult.getFailure());
@@ -208,7 +194,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             // ***** WHY ONLY FOR AUTH_APP?  ****** \\
 
-            var lockoutInformation = pdm.getActiveAuthAppLockouts(userPermissionContext);
+            var lockoutInformation =
+                    permissionDecisionManager.getActiveAuthAppLockouts(userPermissionContext);
 
             if (lockoutInformation.isFailure()) {
                 var error =
