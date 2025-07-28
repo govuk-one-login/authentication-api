@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.local.initialisers;
 
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
 import software.amazon.awssdk.services.kms.model.CreateKeyRequest;
@@ -10,9 +8,6 @@ import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.NotFoundException;
 
-import java.net.URI;
-
-import static java.text.MessageFormat.format;
 import static software.amazon.awssdk.services.kms.model.KeyUsageType.ENCRYPT_DECRYPT;
 import static software.amazon.awssdk.services.kms.model.KeyUsageType.SIGN_VERIFY;
 
@@ -20,21 +15,19 @@ public class KmsInitialiser {
     private final KmsClient kmsClient;
 
     public KmsInitialiser() {
-        this.kmsClient = KmsClient.builder()
-            .endpointOverride(URI.create(System.getenv("LOCALSTACK_ENDPOINT")))
-            .region(Region.of(System.getenv("AWS_REGION")))
-            .credentialsProvider(DefaultCredentialsProvider.create())
-            .build();
+        this.kmsClient =
+                KmsClient.builder()
+                        .endpointOverride(InitialiserConfig.LOCALSTACK_ENDPOINT)
+                        .region(InitialiserConfig.REGION)
+                        .build();
     }
 
-    public void createKey(String aliasSuffix, KeyUsageType keyUsageType) {
-        var keyAlias = format("alias/local-{0}", aliasSuffix);
-
-        if (!keyExists(keyAlias)) {
+    public void createKey(String alias, KeyUsageType keyUsageType) {
+        if (!keyExists(alias)) {
             if (keyUsageType.equals(ENCRYPT_DECRYPT)) {
-                createEncryptionKey(keyAlias);
+                createEncryptionKey(alias);
             } else {
-                createTokenSigningKey(keyAlias);
+                createTokenSigningKey(alias);
             }
         }
     }

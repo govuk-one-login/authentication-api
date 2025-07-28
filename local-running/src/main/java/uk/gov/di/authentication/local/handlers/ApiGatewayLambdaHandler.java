@@ -14,23 +14,25 @@ public class ApiGatewayLambdaHandler {
     private static final Logger LOG = LogManager.getLogger(ApiGatewayLambdaHandler.class);
     private static final LocalLambdaContext LAMBDA_CONTEXT = new LocalLambdaContext();
 
-    private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> lambdaHandler;
+    private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>
+            lambdaHandler;
 
     public static Handler handlerFor(
-            RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> lambdaHandler
-    ) {
+            RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>
+                    lambdaHandler) {
         return new ApiGatewayLambdaHandler(lambdaHandler)::handle;
     }
 
     public ApiGatewayLambdaHandler(
-            RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> lambdaHandler
-    ) {
+            RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>
+                    lambdaHandler) {
         this.lambdaHandler = lambdaHandler;
     }
 
     public void handle(Context ctx) {
         try {
-            APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent = new APIGatewayProxyRequestEvent();
+            APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent =
+                    new APIGatewayProxyRequestEvent();
             apiGatewayProxyRequestEvent.setBody(ctx.body());
             apiGatewayProxyRequestEvent.setHeaders(ctx.headerMap());
             apiGatewayProxyRequestEvent.setPath(ctx.path());
