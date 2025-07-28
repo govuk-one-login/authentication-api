@@ -32,14 +32,14 @@ public class KmsConnectionService {
             this.kmsClient =
                     KmsClient.builder()
                             .endpointOverride(URI.create(localstackEndpointUri.get()))
-                            .credentialsProvider(DefaultCredentialsProvider.create())
+                            .credentialsProvider(DefaultCredentialsProvider.builder().build())
                             .region(Region.of(awsRegion))
                             .build();
         } else {
             this.kmsClient =
                     KmsClient.builder()
                             .region(Region.of(awsRegion))
-                            .credentialsProvider(DefaultCredentialsProvider.create())
+                            .credentialsProvider(DefaultCredentialsProvider.builder().build())
                             .build();
         }
         warmUp(tokenSigningKeyId);

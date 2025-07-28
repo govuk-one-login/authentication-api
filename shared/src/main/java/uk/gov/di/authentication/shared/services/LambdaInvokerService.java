@@ -25,7 +25,7 @@ public class LambdaInvokerService implements LambdaInvoker {
     public LambdaInvokerService(ConfigurationService configurationService) {
         this.lambdaClient =
                 LambdaClient.builder()
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .region(Region.of(configurationService.getAwsRegion()))
                         .build();
     }

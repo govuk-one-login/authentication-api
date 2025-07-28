@@ -13,7 +13,7 @@ public class DynamoClientHelper {
     public static DynamoDbClient createDynamoClient(ConfigurationService configurationService) {
         var dynamoDbClientBuilder =
                 DynamoDbClient.builder()
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .region(Region.of(configurationService.getAwsRegion()));
         configurationService
                 .getDynamoEndpointUri()
