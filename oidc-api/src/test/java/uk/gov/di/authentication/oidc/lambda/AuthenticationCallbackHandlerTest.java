@@ -67,8 +67,8 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -135,8 +135,8 @@ class AuthenticationCallbackHandlerTest {
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
-    private static final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private static final CrossBrowserOrchestrationService CROSS_BROWSER_ORCHESTRATION_SERVICE =
+            mock(CrossBrowserOrchestrationService.class);
     private static final LogoutService logoutService = mock(LogoutService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
@@ -220,7 +220,7 @@ class AuthenticationCallbackHandlerTest {
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
         reset(authorizationService);
-        reset(noSessionOrchestrationService);
+        reset(CROSS_BROWSER_ORCHESTRATION_SERVICE);
 
         clearInvocations(orchAuthCodeService);
 
@@ -257,7 +257,7 @@ class AuthenticationCallbackHandlerTest {
                         accountInterventionService,
                         logoutService,
                         authFrontend,
-                        noSessionOrchestrationService);
+                        CROSS_BROWSER_ORCHESTRATION_SERVICE);
         orchSession.resetClientSessions();
     }
 
@@ -383,7 +383,8 @@ class AuthenticationCallbackHandlerTest {
         event.setQueryStringParameters(queryParameters);
         event.setHeaders(Collections.emptyMap());
 
-        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
+        when(CROSS_BROWSER_ORCHESTRATION_SERVICE.generateNoSessionOrchestrationEntity(
+                        queryParameters))
                 .thenReturn(
                         new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
@@ -424,7 +425,7 @@ class AuthenticationCallbackHandlerTest {
         doThrow(
                         new NoSessionException(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
-                .when(noSessionOrchestrationService)
+                .when(CROSS_BROWSER_ORCHESTRATION_SERVICE)
                 .generateNoSessionOrchestrationEntity(queryParameters);
 
         var response = handler.handleRequest(event, CONTEXT);

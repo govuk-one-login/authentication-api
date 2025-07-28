@@ -69,10 +69,10 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
@@ -130,8 +130,8 @@ class IPVCallbackHandlerTest {
             mock(OrchClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
-    private final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
     private final LogoutService logoutService = mock(LogoutService.class);
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
@@ -290,7 +290,7 @@ class IPVCallbackHandlerTest {
                         auditService,
                         logoutService,
                         accountInterventionService,
-                        noSessionOrchestrationService,
+                        crossBrowserOrchestrationService,
                         ipvCallbackHelper,
                         frontend);
         when(frontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
@@ -1007,7 +1007,7 @@ class IPVCallbackHandlerTest {
         queryParameters.put("state", STATE.getValue());
         queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
         queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
+        when(crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
                         new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
@@ -1050,7 +1050,7 @@ class IPVCallbackHandlerTest {
         doThrow(
                         new NoSessionException(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
-                .when(noSessionOrchestrationService)
+                .when(crossBrowserOrchestrationService)
                 .generateNoSessionOrchestrationEntity(queryParameters);
 
         var response =
@@ -1202,7 +1202,7 @@ class IPVCallbackHandlerTest {
                         UnsuccessfulCredentialResponseException,
                         Json.JsonException {
 
-            when(noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             anyMap(), anyString()))
                     .thenReturn(Optional.empty());
 
@@ -1263,7 +1263,7 @@ class IPVCallbackHandlerTest {
         void itReturnsToRpIfTheCrossBrowserServiceReturnsAMismatchEntity()
                 throws NoSessionException, Json.JsonException {
 
-            when(noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             anyMap(), anyString()))
                     .thenReturn(
                             Optional.of(

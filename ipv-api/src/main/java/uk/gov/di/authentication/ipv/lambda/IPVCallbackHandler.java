@@ -47,10 +47,10 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
@@ -91,7 +91,7 @@ public class IPVCallbackHandler
     private final LogoutService logoutService;
     private final AccountInterventionService accountInterventionService;
     private final IPVCallbackHelper ipvCallbackHelper;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CommonFrontend frontend;
     protected final Json objectMapper = SerializationService.getInstance();
 
@@ -110,7 +110,7 @@ public class IPVCallbackHandler
             AuditService auditService,
             LogoutService logoutService,
             AccountInterventionService accountInterventionService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper,
             CommonFrontend frontend) {
         this.configurationService = configurationService;
@@ -123,7 +123,7 @@ public class IPVCallbackHandler
         this.auditService = auditService;
         this.logoutService = logoutService;
         this.accountInterventionService = accountInterventionService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
         this.frontend = frontend;
     }
@@ -146,8 +146,8 @@ public class IPVCallbackHandler
                         configurationService,
                         new CloudwatchMetricsService(configurationService),
                         auditService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = getFrontend(configurationService);
     }
@@ -171,8 +171,8 @@ public class IPVCallbackHandler
                         configurationService,
                         new CloudwatchMetricsService(configurationService),
                         auditService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService, redis);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = getFrontend(configurationService);
     }
@@ -198,7 +198,7 @@ public class IPVCallbackHandler
                     CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
             if (Objects.isNull(sessionCookiesIds)) {
                 var noSessionEntity =
-                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
@@ -237,7 +237,7 @@ public class IPVCallbackHandler
 
             if (configurationService.isEnhancedCrossBrowserHandlingEnabled()) {
                 var mismatchedEntity =
-                        noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                        crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                                 input.getQueryStringParameters(), clientSessionId);
 
                 if (mismatchedEntity.isPresent()) {

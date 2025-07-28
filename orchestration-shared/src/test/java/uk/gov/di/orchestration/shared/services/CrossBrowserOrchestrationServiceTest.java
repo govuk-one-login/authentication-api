@@ -31,7 +31,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class NoSessionOrchestrationServiceTest {
+class CrossBrowserOrchestrationServiceTest {
 
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -44,12 +44,12 @@ class NoSessionOrchestrationServiceTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private NoSessionOrchestrationService noSessionOrchestrationService;
+    private CrossBrowserOrchestrationService crossBrowserOrchestrationService;
 
     @BeforeEach
     void setup() {
-        noSessionOrchestrationService =
-                new NoSessionOrchestrationService(
+        crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(
                         redisConnectionService, orchClientSessionService, configurationService);
     }
 
@@ -66,7 +66,7 @@ class NoSessionOrchestrationServiceTest {
         queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
         queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
         var noSessionEntity =
-                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParams);
+                crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(queryParams);
 
         assertThat(
                 noSessionEntity.getErrorObject().getCode(),
@@ -99,8 +99,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -120,8 +120,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -139,8 +139,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -159,8 +159,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -182,8 +182,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -206,8 +206,8 @@ class NoSessionOrchestrationServiceTest {
                 assertThrows(
                         NoSessionException.class,
                         () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams));
+                                crossBrowserOrchestrationService
+                                        .generateNoSessionOrchestrationEntity(queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -217,7 +217,7 @@ class NoSessionOrchestrationServiceTest {
     @Test
     void shouldCallRedisAndSaveClientSessionIdAgainstState() {
         when(configurationService.getSessionExpiry()).thenReturn(7200L);
-        noSessionOrchestrationService.storeClientSessionIdAgainstState(CLIENT_SESSION_ID, STATE);
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(CLIENT_SESSION_ID, STATE);
 
         verify(redisConnectionService)
                 .saveWithExpiry("state:" + STATE.getValue(), CLIENT_SESSION_ID, 7200);
@@ -240,7 +240,7 @@ class NoSessionOrchestrationServiceTest {
             assertThrows(
                     NoSessionException.class,
                     () ->
-                            noSessionOrchestrationService
+                            crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
                                             queryParams, CLIENT_SESSION_ID));
         }
@@ -258,7 +258,7 @@ class NoSessionOrchestrationServiceTest {
             queryParams.put("code", new AuthorizationCode().getValue());
 
             var noSessionEntity =
-                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                    crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             queryParams, IdGenerator.generate());
 
             assertTrue(noSessionEntity.isPresent());
@@ -292,7 +292,7 @@ class NoSessionOrchestrationServiceTest {
             queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
             queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
             var noSessionEntity =
-                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                    crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             queryParams, cookieClientSessionID);
 
             assertTrue(noSessionEntity.isPresent());
@@ -325,7 +325,7 @@ class NoSessionOrchestrationServiceTest {
             queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
             queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
             var noSessionEntity =
-                    noSessionOrchestrationService.generateEntityForMismatchInClientSessionId(
+                    crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             queryParams, CLIENT_SESSION_ID);
 
             assertTrue(noSessionEntity.isEmpty());
@@ -346,7 +346,7 @@ class NoSessionOrchestrationServiceTest {
             assertThrows(
                     NoSessionException.class,
                     () ->
-                            noSessionOrchestrationService
+                            crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
                                             queryParams, CLIENT_SESSION_ID));
         }
@@ -369,7 +369,7 @@ class NoSessionOrchestrationServiceTest {
             assertThrows(
                     NoSessionException.class,
                     () ->
-                            noSessionOrchestrationService
+                            crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
                                             queryParams, CLIENT_SESSION_ID));
         }

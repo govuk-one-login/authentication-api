@@ -70,11 +70,11 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -135,7 +135,7 @@ public class AuthorisationHandler
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DocAppAuthorisationService docAppAuthorisationService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
@@ -152,7 +152,7 @@ public class AuthorisationHandler
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
             AuthorisationService authorisationService,
@@ -167,7 +167,7 @@ public class AuthorisationHandler
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
         this.authorisationService = authorisationService;
@@ -180,14 +180,14 @@ public class AuthorisationHandler
         var jwksService = new JwksService(configurationService, kmsConnectionService);
         var stateStorageService = new StateStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(
                         configurationService,
                         kmsConnectionService,
-                        noSessionOrchestrationService,
+                        crossBrowserOrchestrationService,
                         stateStorageService);
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
@@ -235,8 +235,8 @@ public class AuthorisationHandler
                         stateStorageService);
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
         this.cloudwatchMetricsService = cloudwatchMetricService;
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService, redis);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
@@ -609,7 +609,7 @@ public class AuthorisationHandler
         var authorisationRequest = authRequestBuilder.build();
 
         docAppAuthorisationService.storeState(newSessionId, state);
-        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,

@@ -20,15 +20,15 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class NoSessionOrchestrationService {
+public class CrossBrowserOrchestrationService {
 
-    private static final Logger LOG = LogManager.getLogger(NoSessionOrchestrationService.class);
+    private static final Logger LOG = LogManager.getLogger(CrossBrowserOrchestrationService.class);
     private final RedisConnectionService redisConnectionService;
     private final OrchClientSessionService orchClientSessionService;
     private final ConfigurationService configurationService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
-    public NoSessionOrchestrationService(
+    public CrossBrowserOrchestrationService(
             RedisConnectionService redisConnectionService,
             OrchClientSessionService orchClientSessionService,
             ConfigurationService configurationService) {
@@ -37,14 +37,14 @@ public class NoSessionOrchestrationService {
         this.configurationService = configurationService;
     }
 
-    public NoSessionOrchestrationService(ConfigurationService configurationService) {
+    public CrossBrowserOrchestrationService(ConfigurationService configurationService) {
         this(
                 new RedisConnectionService(configurationService),
                 new OrchClientSessionService(configurationService),
                 configurationService);
     }
 
-    public NoSessionOrchestrationService(
+    public CrossBrowserOrchestrationService(
             ConfigurationService configurationService, RedisConnectionService redis) {
         this(redis, new OrchClientSessionService(configurationService), configurationService);
     }
