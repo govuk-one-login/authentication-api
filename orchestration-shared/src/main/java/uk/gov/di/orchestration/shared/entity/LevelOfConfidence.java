@@ -9,7 +9,7 @@ public enum LevelOfConfidence {
     HMRC250("PCL250", true),
     LOW_LEVEL("P1", true),
     MEDIUM_LEVEL("P2", true),
-    HIGH_LEVEL("P3", false),
+    HIGH_LEVEL("P3", true),
     VERY_HIGH_LEVEL("P4", false);
 
     private String value;
