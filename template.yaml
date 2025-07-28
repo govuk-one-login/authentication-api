@@ -1682,8 +1682,6 @@ Resources:
             - true
             - false
       Policies:
-        - !Ref DocAppCredentialTableReadAccessPolicy
-        - !Ref DocAppCredentialTableWriteAccessPolicy
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -3556,7 +3554,6 @@ Resources:
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
