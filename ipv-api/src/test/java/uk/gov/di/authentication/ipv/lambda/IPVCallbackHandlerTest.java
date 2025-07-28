@@ -51,9 +51,9 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
-import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -1009,7 +1009,7 @@ class IPVCallbackHandlerTest {
         queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
         when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
-                        new NoSessionEntity(
+                        new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response =
@@ -1267,7 +1267,7 @@ class IPVCallbackHandlerTest {
                             anyMap(), anyString()))
                     .thenReturn(
                             Optional.of(
-                                    new NoSessionEntity(
+                                    new CrossBrowserEntity(
                                             clientSessionIdFromState,
                                             errorObject,
                                             clientSessionFromState)));

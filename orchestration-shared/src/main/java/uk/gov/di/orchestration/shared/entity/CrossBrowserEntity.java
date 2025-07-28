@@ -2,13 +2,13 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 
-public class NoSessionEntity {
+public class CrossBrowserEntity {
 
     private final String clientSessionId;
     private final ErrorObject errorObject;
     private final OrchClientSessionItem orchClientSession;
 
-    public NoSessionEntity(
+    public CrossBrowserEntity(
             String clientSessionId,
             ErrorObject errorObject,
             OrchClientSessionItem orchClientSession) {

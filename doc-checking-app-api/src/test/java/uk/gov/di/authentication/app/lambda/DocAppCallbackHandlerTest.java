@@ -32,7 +32,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
-import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -458,7 +458,7 @@ class DocAppCallbackHandlerTest {
         queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
         when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
-                        new NoSessionEntity(
+                        new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response =

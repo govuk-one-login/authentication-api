@@ -6,7 +6,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
@@ -49,7 +49,7 @@ public class NoSessionOrchestrationService {
         this(redis, new OrchClientSessionService(configurationService), configurationService);
     }
 
-    public NoSessionEntity generateNoSessionOrchestrationEntity(
+    public CrossBrowserEntity generateNoSessionOrchestrationEntity(
             Map<String, String> queryStringParameters) throws NoSessionException {
         LOG.info("Attempting to generate error response using state");
         if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
@@ -86,7 +86,7 @@ public class NoSessionOrchestrationService {
                             "Access denied for security reasons, a new authentication request may be successful");
             LOG.info(
                     "ErrorObject created for session cookie not present. Generating NoSessionEntity in preparation for response to RP");
-            return new NoSessionEntity(clientSessionId, errorObject, orchClientSession);
+            return new CrossBrowserEntity(clientSessionId, errorObject, orchClientSession);
         } else {
             LOG.warn(
                     "Session Cookie not present and access_denied or state param missing from error response");
@@ -95,7 +95,7 @@ public class NoSessionOrchestrationService {
         }
     }
 
-    public Optional<NoSessionEntity> generateEntityForMismatchInClientSessionId(
+    public Optional<CrossBrowserEntity> generateEntityForMismatchInClientSessionId(
             Map<String, String> queryStringParameters, String clientSessionIdFromCookie)
             throws NoSessionException {
         if (!isStatePresentInQueryParams(queryStringParameters)) {
@@ -144,7 +144,7 @@ public class NoSessionOrchestrationService {
                         "Access denied for security reasons, a new authentication request may be successful");
 
         return Optional.of(
-                new NoSessionEntity(clientSessionIdFromState, errorObject, orchClientSession));
+                new CrossBrowserEntity(clientSessionIdFromState, errorObject, orchClientSession));
     }
 
     @NotNull
