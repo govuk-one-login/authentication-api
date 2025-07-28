@@ -53,14 +53,11 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.HashMap;
@@ -102,6 +99,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.as
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -111,8 +109,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
-    private static final KeyPair RP_KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
-    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
+    private static final KeyPair RP_KEY_PAIR = generateRsaKeyPair();
+    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = generateRsaKeyPair();
     private static final String AUTH_PUBLIC_ENCRYPTION_KEY =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder()
@@ -2316,17 +2314,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var signer = new RSASSASigner(RP_KEY_PAIR.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
-    }
-
-    private static KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private static String getClientSessionId(APIGatewayProxyResponseEvent response) {

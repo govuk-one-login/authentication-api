@@ -26,8 +26,6 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.net.URI;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -36,6 +34,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class DocAppUserHelperTest {
 
@@ -66,7 +65,7 @@ class DocAppUserHelperTest {
     @ParameterizedTest
     @MethodSource("clientTypes")
     void shouldReturnFalseIfRequestObjectDoesNotContainDocAppScope(ClientType clientType)
-            throws NoSuchAlgorithmException, JOSEException {
+            throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -94,7 +93,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnFalseIfClientIsNotAppClient() throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnFalseIfClientIsNotAppClient() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -113,8 +112,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnTrueIfClientIsDocCheckingAppUser()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnTrueIfClientIsDocCheckingAppUser() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -133,8 +131,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject() throws JOSEException {
 
         JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
 
@@ -148,8 +145,7 @@ class DocAppUserHelperTest {
     }
 
     @Test
-    void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject() throws JOSEException {
 
         JWTClaimsSet.Builder claimsSetBuilder = getBaseJWTClaimsSetBuilder();
 
@@ -212,9 +208,8 @@ class DocAppUserHelperTest {
         return authRequestBuilder.build();
     }
 
-    private SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
-            throws NoSuchAlgorithmException, JOSEException {
-        var keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+    private SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet) throws JOSEException {
+        var keyPair = generateRsaKeyPair();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         var signer = new RSASSASigner(keyPair.getPrivate());

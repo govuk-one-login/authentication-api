@@ -22,12 +22,9 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Optional;
@@ -42,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class PrivateKeyJwtClientAuthValidatorTest {
 
@@ -51,7 +49,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
     private OidcAPI oidcAPI = mock(OidcAPI.class);
     private static final URI OIDC_TOKEN_URL = URI.create("https://example.com/token");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final KeyPair RSA_KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
+    private static final KeyPair RSA_KEY_PAIR = generateRsaKeyPair();
     private PrivateKeyJwtClientAuthValidator privateKeyJwtClientAuthValidator;
 
     @BeforeEach
@@ -248,16 +246,5 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 new PrivateKeyJWT(claimsSet, algorithm, RSA_KEY_PAIR.getPrivate(), null, null);
         var privateKeyParams = privateKeyJWT.toParameters();
         return URLUtils.serializeParameters(privateKeyParams);
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 }

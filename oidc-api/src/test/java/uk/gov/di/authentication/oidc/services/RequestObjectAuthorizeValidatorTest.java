@@ -38,12 +38,9 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +60,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class RequestObjectAuthorizeValidatorTest {
 
@@ -88,7 +86,7 @@ class RequestObjectAuthorizeValidatorTest {
     @BeforeEach
     void setup() {
         when(oidcApi.authorizeURI()).thenReturn(OIDC_BASE_AUTHORIZE_URI);
-        keyPair = KeyPairUtils.generateRsaKeyPair();
+        keyPair = generateRsaKeyPair();
         validator =
                 new RequestObjectAuthorizeValidator(
                         configurationService,
@@ -842,11 +840,8 @@ class RequestObjectAuthorizeValidatorTest {
 
     @Test
     void shouldThrowWhenUnableToValidateRequestJwtSignature()
-            throws JOSEException,
-                    NoSuchAlgorithmException,
-                    ClientSignatureValidationException,
-                    JwksException {
-        var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+            throws JOSEException, ClientSignatureValidationException, JwksException {
+        var keyPair2 = generateRsaKeyPair();
         var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
         doThrow(new RuntimeException())

@@ -5,7 +5,6 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -32,8 +31,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -46,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class ClientSignatureValidationServiceTest {
 
@@ -70,7 +68,7 @@ class ClientSignatureValidationServiceTest {
         when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
         when(oidcAPI.getIssuerURI()).thenReturn(OIDC_BASE_URI);
         when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
-        keyPair = generateKeyPair();
+        keyPair = generateRsaKeyPair();
     }
 
     @Nested
@@ -128,7 +126,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             var signedJWT = generateSignedJWT(keyPair2.getPrivate());
 
             assertThrows(
@@ -138,7 +136,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             var privateKeyJWT = generatePrivateKeyJWT(keyPair2.getPrivate());
 
             assertThrows(
@@ -204,7 +202,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidSignedJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
             when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
@@ -216,7 +214,7 @@ class ClientSignatureValidationServiceTest {
 
         @Test
         void shouldThrowExceptionWhenValidatingInvalidPrivateKeyJWT() {
-            var keyPair2 = generateKeyPair();
+            var keyPair2 = generateRsaKeyPair();
             InvokeResponse response = generateFetchJwksLambdaValidResponse(keyPair2.getPublic());
             when(lambdaClient.invoke((InvokeRequest) ArgumentMatchers.any())).thenReturn(response);
             var privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
@@ -270,16 +268,6 @@ class ClientSignatureValidationServiceTest {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static KeyPair generateKeyPair() {
-        KeyPairGenerator keyPairGenerator;
-        try {
-            keyPairGenerator = KeyPairGenerator.getInstance(KeyType.RSA.getValue());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        return keyPairGenerator.generateKeyPair();
     }
 
     private InvokeResponse generateFetchJwksLambdaValidResponse(PublicKey publicKey) {
