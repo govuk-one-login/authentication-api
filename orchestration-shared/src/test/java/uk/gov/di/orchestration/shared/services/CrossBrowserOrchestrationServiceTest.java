@@ -69,17 +69,16 @@ class CrossBrowserOrchestrationServiceTest {
                 crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(queryParams);
 
         assertThat(
-                noSessionEntity.getErrorObject().getCode(),
-                equalTo(OAuth2Error.ACCESS_DENIED_CODE));
+                noSessionEntity.errorObject().getCode(), equalTo(OAuth2Error.ACCESS_DENIED_CODE));
         assertThat(
-                noSessionEntity.getErrorObject().getDescription(),
+                noSessionEntity.errorObject().getDescription(),
                 equalTo(
                         "Access denied for security reasons, a new authentication request may be successful"));
-        assertThat(noSessionEntity.getClientSessionId(), equalTo(CLIENT_SESSION_ID));
+        assertThat(noSessionEntity.clientSessionId(), equalTo(CLIENT_SESSION_ID));
 
         var authenticationRequest =
                 AuthenticationRequest.parse(
-                        noSessionEntity.getClientSession().getAuthRequestParams());
+                        noSessionEntity.orchClientSession().getAuthRequestParams());
         assertThat(authenticationRequest.getClientID(), equalTo(CLIENT_ID));
         assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
     }
@@ -263,17 +262,17 @@ class CrossBrowserOrchestrationServiceTest {
 
             assertTrue(noSessionEntity.isPresent());
             assertThat(
-                    noSessionEntity.get().getErrorObject().getCode(),
+                    noSessionEntity.get().errorObject().getCode(),
                     equalTo(OAuth2Error.ACCESS_DENIED_CODE));
             assertThat(
-                    noSessionEntity.get().getErrorObject().getDescription(),
+                    noSessionEntity.get().errorObject().getDescription(),
                     equalTo(
                             "Access denied for security reasons, a new authentication request may be successful"));
-            assertThat(noSessionEntity.get().getClientSessionId(), equalTo(CLIENT_SESSION_ID));
+            assertThat(noSessionEntity.get().clientSessionId(), equalTo(CLIENT_SESSION_ID));
 
             var authenticationRequest =
                     AuthenticationRequest.parse(
-                            noSessionEntity.get().getClientSession().getAuthRequestParams());
+                            noSessionEntity.get().orchClientSession().getAuthRequestParams());
             assertThat(authenticationRequest.getClientID(), equalTo(CLIENT_ID));
             assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
         }
@@ -297,17 +296,17 @@ class CrossBrowserOrchestrationServiceTest {
 
             assertTrue(noSessionEntity.isPresent());
             assertThat(
-                    noSessionEntity.get().getErrorObject().getCode(),
+                    noSessionEntity.get().errorObject().getCode(),
                     equalTo(OAuth2Error.ACCESS_DENIED_CODE));
             assertThat(
-                    noSessionEntity.get().getErrorObject().getDescription(),
+                    noSessionEntity.get().errorObject().getDescription(),
                     equalTo(
                             "Access denied for security reasons, a new authentication request may be successful"));
-            assertThat(noSessionEntity.get().getClientSessionId(), equalTo(CLIENT_SESSION_ID));
+            assertThat(noSessionEntity.get().clientSessionId(), equalTo(CLIENT_SESSION_ID));
 
             var authenticationRequest =
                     AuthenticationRequest.parse(
-                            noSessionEntity.get().getClientSession().getAuthRequestParams());
+                            noSessionEntity.get().orchClientSession().getAuthRequestParams());
             assertThat(authenticationRequest.getClientID(), equalTo(CLIENT_ID));
             assertThat(authenticationRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
         }

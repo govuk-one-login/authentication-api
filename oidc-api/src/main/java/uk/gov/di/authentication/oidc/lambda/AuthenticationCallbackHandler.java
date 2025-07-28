@@ -606,16 +606,15 @@ public class AuthenticationCallbackHandler
                         input.getQueryStringParameters());
         var authenticationRequest =
                 AuthenticationRequest.parse(
-                        noSessionEntity.getClientSession().getAuthRequestParams());
+                        noSessionEntity.orchClientSession().getAuthRequestParams());
         auditService.submitAuditEvent(
                 OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                TxmaAuditUser.user()
-                        .withGovukSigninJourneyId(noSessionEntity.getClientSessionId()));
+                TxmaAuditUser.user().withGovukSigninJourneyId(noSessionEntity.clientSessionId()));
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
-                        noSessionEntity.getErrorObject(),
+                        noSessionEntity.errorObject(),
                         authenticationRequest.getState(),
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(

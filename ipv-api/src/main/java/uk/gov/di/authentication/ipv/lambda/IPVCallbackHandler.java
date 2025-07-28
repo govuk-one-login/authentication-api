@@ -202,13 +202,13 @@ public class IPVCallbackHandler
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
-                                noSessionEntity.getClientSession().getAuthRequestParams());
+                                noSessionEntity.orchClientSession().getAuthRequestParams());
                 attachLogFieldToLogs(CLIENT_ID, authRequest.getClientID().getValue());
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
                         authRequest,
-                        noSessionEntity.getErrorObject(),
+                        noSessionEntity.errorObject(),
                         true,
-                        noSessionEntity.getClientSessionId(),
+                        noSessionEntity.clientSessionId(),
                         AuditService.UNKNOWN);
             }
             var sessionId = sessionCookiesIds.getSessionId();
@@ -246,16 +246,16 @@ public class IPVCallbackHandler
                             AuthenticationRequest.parse(
                                     mismatchedEntity
                                             .get()
-                                            .getClientSession()
+                                            .orchClientSession()
                                             .getAuthRequestParams());
                     attachLogFieldToLogs(
                             CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
 
                     return ipvCallbackHelper.generateAuthenticationErrorResponse(
                             authRequestFromStateDerivedRP,
-                            mismatchedEntity.get().getErrorObject(),
+                            mismatchedEntity.get().errorObject(),
                             false,
-                            mismatchedEntity.get().getClientSessionId(),
+                            mismatchedEntity.get().clientSessionId(),
                             AuditService.UNKNOWN);
                 }
             }
