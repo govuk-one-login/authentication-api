@@ -37,7 +37,7 @@ class TokenClientAuthValidatorFactoryTest {
                 new PrivateKeyJWT(
                         claimsSet,
                         JWSAlgorithm.RS256,
-                        KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPrivate(),
+                        KeyPairHelper.generateRsaKeyPair().getPrivate(),
                         null,
                         null);
 

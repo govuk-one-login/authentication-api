@@ -157,7 +157,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallTokenResourceAndReturnAccessAndRefreshTokenWhenAuthenticatingWithPrivateKeyJwt(
             Optional<String> vtr, String expectedVotClaim, Optional<String> clientId)
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -192,7 +192,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldAllowIssuerUriAsPrivateKeyJwtAudience() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -236,7 +236,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200WithTokensWhenPrivateKeyJwtContainsBothIssuerAndTokenURIAsAudienceList()
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -321,7 +321,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndReturn400WhenClientIdParameterDoesNotMatch() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -348,7 +348,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnIdTokenWithPublicSubjectId() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -389,7 +389,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnIdTokenWithPairwiseSubjectId() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -429,7 +429,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndReturnIdentityClaims() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -478,7 +478,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
@@ -513,7 +513,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
         Subject internalPairwiseSubject = new Subject();
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
@@ -572,7 +572,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
@@ -661,7 +661,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallTokenResourceUsingPrivateKeyJwtAndWarnWhenClientIdInAuthCodeDoesNotMatchRequest()
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -693,7 +693,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallTokenResourceAndWarnWhenPkceValidationFails() throws Exception {
         CodeVerifier invalidCodeVerifier = new CodeVerifier();
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());

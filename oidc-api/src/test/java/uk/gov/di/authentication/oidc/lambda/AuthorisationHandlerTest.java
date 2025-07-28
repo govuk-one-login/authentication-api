@@ -214,7 +214,7 @@ class AuthorisationHandlerTest {
     private static final Boolean IS_ONE_LOGIN = false;
     private static final Boolean IS_COOKIE_CONSENT_SHARED = false;
     private static final String RP_SERVICE_TYPE = "MANDATORY";
-    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
     private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
 
     static {

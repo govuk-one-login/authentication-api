@@ -1687,7 +1687,7 @@ public class TokenHandlerTest {
     }
 
     private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

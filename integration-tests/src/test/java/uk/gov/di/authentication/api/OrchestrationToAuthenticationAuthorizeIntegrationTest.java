@@ -64,7 +64,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
     private static final String LOGIN_HINT = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
     private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())

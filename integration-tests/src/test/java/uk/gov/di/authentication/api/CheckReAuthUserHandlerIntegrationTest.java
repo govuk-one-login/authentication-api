@@ -52,7 +52,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String CLIENT_NAME = "some-client-name";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final Subject SUBJECT = new Subject();
-    private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private final KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final String SESSION_ID = "test-session-id";

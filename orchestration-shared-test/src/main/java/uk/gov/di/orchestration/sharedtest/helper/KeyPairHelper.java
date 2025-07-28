@@ -8,7 +8,7 @@ public class KeyPairHelper {
 
     private KeyPairHelper() {}
 
-    public static KeyPair GENERATE_RSA_KEY_PAIR() {
+    public static KeyPair generateRsaKeyPair() {
         KeyPairGenerator kpg;
         try {
             kpg = KeyPairGenerator.getInstance("RSA");

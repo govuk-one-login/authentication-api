@@ -111,7 +111,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
         private String publicKey =
                 Base64.getMimeEncoder()
                         .encodeToString(
-                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded());
+                                KeyPairHelper.generateRsaKeyPair().getPublic().getEncoded());
         private List<String> postLogoutRedirectUris =
                 singletonList("http://localhost/post-redirect-logout");
         private String backChannelLogoutUri = "http://example.com";

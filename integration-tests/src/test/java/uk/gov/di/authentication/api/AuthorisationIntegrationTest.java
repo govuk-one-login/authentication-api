@@ -111,8 +111,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
-    private static final KeyPair RP_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair RP_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
+    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
     private static final String AUTH_PUBLIC_ENCRYPTION_KEY =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder()

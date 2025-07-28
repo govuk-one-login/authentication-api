@@ -46,7 +46,7 @@ class ClientSubjectHelperTest {
 
     @BeforeEach
     void setUp() {
-        keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        keyPair = KeyPairHelper.generateRsaKeyPair();
         when(authenticationService.getOrGenerateSalt(userProfile))
                 .thenReturn(SaltHelper.generateNewSalt());
     }

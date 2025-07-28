@@ -107,7 +107,7 @@ class DocAppSubjectIdHelperTest {
         }
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
-        var signer = new RSASSASigner(KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPrivate());
+        var signer = new RSASSASigner(KeyPairHelper.generateRsaKeyPair().getPrivate());
         signedJWT.sign(signer);
         var authRequest =
                 new AuthenticationRequest.Builder(

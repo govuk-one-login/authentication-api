@@ -88,7 +88,7 @@ class RequestObjectAuthorizeValidatorTest {
     @BeforeEach
     void setup() {
         when(oidcApi.authorizeURI()).thenReturn(OIDC_BASE_AUTHORIZE_URI);
-        keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        keyPair = KeyPairHelper.generateRsaKeyPair();
         validator =
                 new RequestObjectAuthorizeValidator(
                         configurationService,

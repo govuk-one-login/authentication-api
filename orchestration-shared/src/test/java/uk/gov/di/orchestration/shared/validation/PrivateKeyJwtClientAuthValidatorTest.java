@@ -51,7 +51,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
     private OidcAPI oidcAPI = mock(OidcAPI.class);
     private static final URI OIDC_TOKEN_URL = URI.create("https://example.com/token");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.generateRsaKeyPair();
     private PrivateKeyJwtClientAuthValidator privateKeyJwtClientAuthValidator;
 
     @BeforeEach
