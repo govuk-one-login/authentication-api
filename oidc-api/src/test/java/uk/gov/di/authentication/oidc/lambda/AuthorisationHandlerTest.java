@@ -84,8 +84,8 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -168,8 +168,8 @@ class AuthorisationHandlerTest {
     private final AuthorisationService authorisationService = mock(AuthorisationService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
-    private final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
     private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator =
@@ -296,7 +296,7 @@ class AuthorisationHandlerTest {
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService,
+                        crossBrowserOrchestrationService,
                         tokenValidationService,
                         authFrontend,
                         authorisationService,
@@ -1897,7 +1897,7 @@ class AuthorisationHandlerTest {
         void shouldSaveStateAndStoreItToClientSession() throws JOSEException {
             makeDocAppHandlerRequest();
             verify(docAppAuthorisationService).storeState(eq(NEW_SESSION_ID), any());
-            verify(noSessionOrchestrationService)
+            verify(crossBrowserOrchestrationService)
                     .storeClientSessionIdAgainstState(eq(NEW_CLIENT_SESSION_ID), any());
         }
 

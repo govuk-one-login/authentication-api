@@ -40,9 +40,9 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
@@ -90,8 +90,8 @@ class OrchestrationAuthorizationServiceTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private PrivateKey privateKey;
 
@@ -106,7 +106,7 @@ class OrchestrationAuthorizationServiceTest {
                         configurationService,
                         dynamoClientService,
                         kmsConnectionService,
-                        noSessionOrchestrationService,
+                        crossBrowserOrchestrationService,
                         stateStorageService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
@@ -311,7 +311,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var prefixedSessionId = "auth-state:" + sessionId;
         verify(stateStorageService).storeState(prefixedSessionId, state.getValue());
-        verify(noSessionOrchestrationService)
+        verify(crossBrowserOrchestrationService)
                 .storeClientSessionIdAgainstState(clientSessionId, state);
     }
 

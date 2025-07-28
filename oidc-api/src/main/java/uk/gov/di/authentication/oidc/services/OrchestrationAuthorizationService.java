@@ -38,9 +38,9 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.net.URI;
@@ -60,7 +60,7 @@ public class OrchestrationAuthorizationService {
     private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
     private final KmsConnectionService kmsConnectionService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final StateStorageService stateStorageService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
@@ -68,12 +68,12 @@ public class OrchestrationAuthorizationService {
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             KmsConnectionService kmsConnectionService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
         this.kmsConnectionService = kmsConnectionService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.stateStorageService = stateStorageService;
     }
 
@@ -82,20 +82,20 @@ public class OrchestrationAuthorizationService {
                 configurationService,
                 new DynamoClientService(configurationService),
                 new KmsConnectionService(configurationService),
-                new NoSessionOrchestrationService(configurationService),
+                new CrossBrowserOrchestrationService(configurationService),
                 new StateStorageService(configurationService));
     }
 
     public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             StateStorageService stateStorageService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
                 kmsConnectionService,
-                noSessionOrchestrationService,
+                crossBrowserOrchestrationService,
                 stateStorageService);
     }
 
@@ -251,7 +251,7 @@ public class OrchestrationAuthorizationService {
         LOG.info("Storing state");
         stateStorageService.storeState(
                 AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId, state.getValue());
-        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
     public boolean isJarValidationRequired(ClientRegistry client) {

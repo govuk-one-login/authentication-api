@@ -56,10 +56,10 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -116,7 +116,7 @@ public class AuthenticationCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final LogoutService logoutService;
     private final AuthFrontend authFrontend;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -146,7 +146,7 @@ public class AuthenticationCallbackHandler
                         auditService,
                         new IPVAuthorisationService(configurationService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(configurationService),
+                        new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(
                                 configurationService,
                                 redisConnectionService,
@@ -157,8 +157,8 @@ public class AuthenticationCallbackHandler
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -185,7 +185,7 @@ public class AuthenticationCallbackHandler
                         auditService,
                         new IPVAuthorisationService(configurationService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(
+                        new CrossBrowserOrchestrationService(
                                 configurationService, redisConnectionService),
                         new TokenService(
                                 configurationService,
@@ -197,8 +197,8 @@ public class AuthenticationCallbackHandler
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redisConnectionService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService, redisConnectionService);
     }
 
     public AuthenticationCallbackHandler(
@@ -216,7 +216,7 @@ public class AuthenticationCallbackHandler
             AccountInterventionService accountInterventionService,
             LogoutService logoutService,
             AuthFrontend authFrontend,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -231,7 +231,7 @@ public class AuthenticationCallbackHandler
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
         this.authFrontend = authFrontend;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -602,7 +602,7 @@ public class AuthenticationCallbackHandler
     private APIGatewayProxyResponseEvent handleCrossBrowserError(APIGatewayProxyRequestEvent input)
             throws NoSessionException, ParseException {
         var noSessionEntity =
-                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                         input.getQueryStringParameters());
         var authenticationRequest =
                 AuthenticationRequest.parse(

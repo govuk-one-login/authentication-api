@@ -32,10 +32,10 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -74,7 +74,7 @@ public class DocAppCallbackHandler
     private final AuditService auditService;
     private final DynamoDocAppCriService dynamoDocAppCriService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final AuthFrontend authFrontend;
     private final DocAppCriAPI docAppCriApi;
@@ -94,7 +94,7 @@ public class DocAppCallbackHandler
             DynamoDocAppCriService dynamoDocAppCriService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             AuthFrontend authFrontend,
             DocAppCriAPI docAppCriApi,
             OrchSessionService orchSessionService) {
@@ -106,7 +106,7 @@ public class DocAppCallbackHandler
         this.dynamoDocAppCriService = dynamoDocAppCriService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.authFrontend = authFrontend;
         this.docAppCriApi = docAppCriApi;
         this.orchSessionService = orchSessionService;
@@ -129,8 +129,8 @@ public class DocAppCallbackHandler
         this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -153,8 +153,8 @@ public class DocAppCallbackHandler
         this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(configurationService, redis);
+        this.crossBrowserOrchestrationService =
+                new CrossBrowserOrchestrationService(configurationService, redis);
         this.authFrontend = new AuthFrontend(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }
@@ -180,7 +180,7 @@ public class DocAppCallbackHandler
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");
                 var noSessionEntity =
-                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(

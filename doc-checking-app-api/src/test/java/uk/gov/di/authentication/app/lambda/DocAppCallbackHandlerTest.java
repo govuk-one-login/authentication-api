@@ -32,7 +32,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
-import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -41,8 +41,8 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
-import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -91,8 +91,8 @@ class DocAppCallbackHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppCriService dynamoDocAppCriService =
             mock(DynamoDocAppCriService.class);
-    private final NoSessionOrchestrationService noSessionOrchestrationService =
-            mock(NoSessionOrchestrationService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
@@ -157,7 +157,7 @@ class DocAppCallbackHandlerTest {
                         dynamoDocAppCriService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService,
+                        crossBrowserOrchestrationService,
                         authFrontend,
                         docAppCriApi,
                         orchSessionService);
@@ -456,9 +456,9 @@ class DocAppCallbackHandlerTest {
         queryParameters.put("state", STATE.getValue());
         queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
         queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
+        when(crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
-                        new NoSessionEntity(
+                        new CrossBrowserEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, orchClientSession));
 
         var response =
@@ -514,7 +514,7 @@ class DocAppCallbackHandlerTest {
         Mockito.doThrow(
                         new NoSessionException(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
-                .when(noSessionOrchestrationService)
+                .when(crossBrowserOrchestrationService)
                 .generateNoSessionOrchestrationEntity(queryParameters);
 
         var response =
