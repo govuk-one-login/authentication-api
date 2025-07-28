@@ -16,7 +16,6 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -28,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationResult;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
@@ -44,7 +43,6 @@ import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class IPVAuthorisationService {
 
@@ -81,47 +79,41 @@ public class IPVAuthorisationService {
         this.nowClock = nowClock;
     }
 
-    public Optional<IpvCallbackValidationError> validateResponse(
+    public IpvCallbackValidationResult validateResponse(
             Map<String, String> queryParams, String sessionId) {
         if (queryParams == null || queryParams.isEmpty()) {
             LOG.warn("No Query parameters in IPV Authorisation response");
-            return Optional.of(
-                    new IpvCallbackValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
+            return new IpvCallbackValidationResult(
+                    false, IpvCallbackValidationResult.FailureCode.EMPTY_CALLBACK);
         }
         if (queryParams.containsKey("error")) {
 
             if (SESSION_INVALIDATED_ERROR_CODE.equals(queryParams.get("error"))) {
                 LOG.warn("Session invalidated response from IPV");
-                return Optional.of(
-                        new IpvCallbackValidationError(queryParams.get("error"), null, true));
+                return new IpvCallbackValidationResult(
+                        false, IpvCallbackValidationResult.FailureCode.SESSION_INVALIDATION);
             }
 
             LOG.warn("Error response found in IPV Authorisation response");
-            return Optional.of(new IpvCallbackValidationError(queryParams.get("error"), null));
+            return new IpvCallbackValidationResult(
+                    false, IpvCallbackValidationResult.FailureCode.OAUTH_ERROR);
         }
         if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
             LOG.warn("No state param in IPV Authorisation response");
-            return Optional.of(
-                    new IpvCallbackValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No state param present in Authorisation response"));
+            return new IpvCallbackValidationResult(
+                    false, IpvCallbackValidationResult.FailureCode.MISSING_STATE);
         }
         if (!isStateValid(sessionId, queryParams.get("state"))) {
-            return Optional.of(
-                    new IpvCallbackValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Invalid state param present in Authorisation response"));
+            return new IpvCallbackValidationResult(
+                    false, IpvCallbackValidationResult.FailureCode.INVALID_STATE);
         }
         if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
             LOG.warn("No code param in IPV Authorisation response");
-            return Optional.of(
-                    new IpvCallbackValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No code param present in Authorisation response"));
+            return new IpvCallbackValidationResult(
+                    false, IpvCallbackValidationResult.FailureCode.INVALID_STATE);
         }
 
-        return Optional.empty();
+        return new IpvCallbackValidationResult(true);
     }
 
     public void storeState(String sessionId, State state) {

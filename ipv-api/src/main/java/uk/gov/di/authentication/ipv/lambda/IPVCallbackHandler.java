@@ -63,6 +63,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static uk.gov.di.authentication.ipv.entity.IpvCallbackValidationResult.GENERIC_CALLBACK_ERROR_DESCRIPTION;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -271,7 +272,7 @@ public class IPVCallbackHandler
                                             new IpvCallbackException(
                                                     "Client registry not found with given clientId"));
 
-            var errorObject =
+            var validationResult =
                     segmentedFunctionCall(
                             "validateIpvAuthResponse",
                             () ->
@@ -280,7 +281,7 @@ public class IPVCallbackHandler
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
-            if (errorObject.isPresent()) {
+            if (!validationResult.isValid()) {
                 var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
                 AccountIntervention intervention =
                         segmentedFunctionCall(
@@ -307,20 +308,25 @@ public class IPVCallbackHandler
                             intervention);
                 }
 
-                if (errorObject.get().isSessionInvalidation()) {
-                    return logoutService.handleSessionInvalidationLogout(
+                return switch (validationResult.failureCode()) {
+                    case EMPTY_CALLBACK,
+                            OAUTH_ERROR,
+                            MISSING_STATE,
+                            INVALID_STATE,
+                            MISSING_AUTH_CODE -> ipvCallbackHelper
+                            .generateAuthenticationErrorResponse(
+                                    authRequest,
+                                    new ErrorObject(
+                                            ACCESS_DENIED_CODE, GENERIC_CALLBACK_ERROR_DESCRIPTION),
+                                    false,
+                                    clientSessionId,
+                                    sessionId);
+                    case SESSION_INVALIDATION -> logoutService.handleSessionInvalidationLogout(
                             destroySessionRequest,
                             orchSession.getInternalCommonSubjectId(),
                             input,
                             clientId);
-                }
-
-                return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                        authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().errorDescription()),
-                        false,
-                        clientSessionId,
-                        sessionId);
+                };
             }
 
             UserInfo authUserInfo =
