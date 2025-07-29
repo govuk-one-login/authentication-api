@@ -29,7 +29,7 @@ module "mfa_reset_jar_signing_jwk" {
 
   handler_environment_variables = {
     ENVIRONMENT                                   = var.environment
-    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.name
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = var.environment == "production" || var.environment == "integration" ? aws_kms_alias.ipv_reverification_request_signing_key_alias.arn : aws_kms_alias.ipv_reverification_request_signing_key_alias_v2.arn
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
   runbook_link          = "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
