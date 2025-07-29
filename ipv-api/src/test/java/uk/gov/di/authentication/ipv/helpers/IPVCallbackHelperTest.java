@@ -115,6 +115,12 @@ class IPVCallbackHelperTest {
                             CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+    private static final List<VectorOfTrust> VTR_LIST_P2_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -147,7 +153,8 @@ class IPVCallbackHelperTest {
     private static Stream<Arguments> validUserIdentities() {
         return Stream.of(
                 Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2),
-                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY));
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_AND_P3));
     }
 
     @BeforeEach
@@ -224,7 +231,6 @@ class IPVCallbackHelperTest {
     void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
             UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
-
         assertEquals(Optional.empty(), response);
 
         assertNoAuthorisationCodeGeneratedAndSaved();
