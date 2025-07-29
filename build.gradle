@@ -6,6 +6,13 @@ buildscript {
             url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
         }
     }
+    dependencies {
+        constraints {
+            classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
+                because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+            }
+        }
+    }
 }
 
 plugins {
