@@ -25,7 +25,7 @@ java {
 
 application {
     mainClass = "uk.gov.di.authentication.local.App"
-//    applicationDefaultJvmArgs = [
-//            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5002"
-//    ]
+    applicationDefaultJvmArgs = [
+            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
+    ]
 }

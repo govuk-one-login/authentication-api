@@ -25,7 +25,7 @@ at the same level as `authentication-api`, and the containers will be built from
 <dev workspace>
 ├─ authentication-api/
 ├─ authentication-frontend/
-├─ authentication-stubs/
+└─ authentication-stubs/
 ```
 
 ### Basic usage
@@ -42,12 +42,52 @@ The simplest way is to run `docker compose up` in the repository root. This will
 The orchestrator stub will run at [http://localhost:4400] and journeys can be started there.
 
 Standard docker compose commands can be used to rebuild containers when needed,
-e.g. `docker compose build authentication-api`. 
+e.g. `docker compose build authentication-api`.
+
+### Debugging
+
+#### Authentication API debugging
+
+Authentication API exposes a debug port at `localhost:5402` for use with your favourite Java debugger.
+
+In IntelliJ, you can set up a 'Remote JVM Debug' debug configuration targeting that port.
+It should use the classpath for the local-running:main gradle project.
+
+### Authentication Frontend debugging
+
+Authentication Frontend exposes a debug port at `localhost:5401` for use with your favourite Node debugger.
+
+In VSCode, you can set up a `launch.json` configuration to target the port. For example:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Authentication Frontend",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "localRoot": "${workspaceFolder}/dist",
+      "remoteRoot": "/app/dist",
+      "address": "localhost",
+      "port": 5401
+    }
+  ]
+}
+```
+
+Note that you will need to build the project yourself (`yarn build`) to make the source maps available to the debugger.
 
 ### Advanced usage
 
-It is also possible to run a subset of these services if you wish to run some/all of them yourself
-or point them to a separate instance.
+It is also possible to run a subset of services if you wish to run some/all of them yourself
+or point them to other local/remote instances.
 
 In some cases you may need to update the configuration in the corresponding `*.env` files,
 but care should be taken not to commit any secrets or real configuration values.
