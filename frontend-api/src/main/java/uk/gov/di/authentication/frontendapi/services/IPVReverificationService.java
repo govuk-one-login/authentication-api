@@ -149,11 +149,10 @@ public class IPVReverificationService {
         JWTClaimsSet mfaResetAuthorizationClaims =
                 createMfaResetAuthorizationClaims(state, subject, claims, clientSessionId);
 
+        String signingKeyId = configurationService.getMfaResetJarSigningKeyId();
+        LOG.info("Signing MFA Reset JWT with signing key with id: {}", signingKeyId);
         SignedJWT signedJWT =
-                jwtService.signJWT(
-                        SIGNING_ALGORITHM,
-                        mfaResetAuthorizationClaims,
-                        configurationService.getMfaResetJarSigningKeyId());
+                jwtService.signJWT(SIGNING_ALGORITHM, mfaResetAuthorizationClaims, signingKeyId);
         LOG.info("Created Signed MFA Reset JWT");
 
         EncryptedJWT encryptedJWT = jwtService.encryptJWT(signedJWT, getPublicKey());
