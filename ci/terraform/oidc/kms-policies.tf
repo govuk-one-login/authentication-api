@@ -197,7 +197,8 @@ data "aws_iam_policy_document" "ipv_reverification_request_signing_key_policy_do
       "kms:GetPublicKey" #JWT Service calls GetPublicKey to derive KeyId
     ]
     resources = [
-      aws_kms_key.ipv_reverification_request_signing_key.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn,
+      aws_kms_key.ipv_reverification_request_signing_key_v2.arn
     ]
   }
 }
@@ -224,7 +225,8 @@ data "aws_iam_policy_document" "mfa_reset_jar_jwk_document" {
       "kms:GetPublicKey",
     ]
     resources = [
-      aws_kms_key.ipv_reverification_request_signing_key.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn,
+      aws_kms_key.ipv_reverification_request_signing_key_v2.arn
     ]
   }
 }
