@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.local.initialisers;
 
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.ParameterType;
 import software.amazon.awssdk.services.ssm.model.PutParameterRequest;
@@ -12,6 +13,7 @@ public class ParameterInitialiser {
                 SsmClient.builder()
                         .endpointOverride(InitialiserConfig.LOCALSTACK_ENDPOINT)
                         .region(InitialiserConfig.REGION)
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
     }
 

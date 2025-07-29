@@ -11,8 +11,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.net.URI;
 
 public class DynamoClientHelper {
-    private static final String ENVIRONMENT = System.getenv("ENVIRONMENT");
-
     public static DynamoDbClient createDynamoClient(ConfigurationService configurationService) {
         var dynamoDbClientBuilder =
                 DynamoDbClient.builder()
@@ -35,7 +33,7 @@ public class DynamoClientHelper {
         try {
             table.describeTable();
         } catch (ResourceNotFoundException e) {
-            if ("local".equals(ENVIRONMENT)) {
+            if ("local".equals(System.getenv("ENVIRONMENT"))) {
                 table.createTable();
             } else {
                 throw e;

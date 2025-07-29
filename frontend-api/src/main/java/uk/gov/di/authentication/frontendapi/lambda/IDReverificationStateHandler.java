@@ -26,7 +26,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeader;
 
-public class IDReverificationStateHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class IDReverificationStateHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
@@ -59,8 +60,10 @@ public class IDReverificationStateHandler implements RequestHandler<APIGatewayPr
             ThreadContext.clearMap();
             attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
             var txmaAuditEncoded = getTxmaAuditEncodedHeader(input);
-            var auditContext = AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);
-            var request = objectMapper.readValue(input.getBody(), IDReverificationStateRequest.class);
+            var auditContext =
+                    AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);
+            var request =
+                    objectMapper.readValue(input.getBody(), IDReverificationStateRequest.class);
             return fetchOrchestrationRedirectUrl(request, auditContext);
         } catch (Json.JsonException jsonException) {
             LOG.error("Unexpected JSON exception: ", jsonException);

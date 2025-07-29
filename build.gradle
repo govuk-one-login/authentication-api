@@ -102,6 +102,7 @@ subprojects {
         govuk_notify
         gson
         hamcrest
+        javalin
         jetbrains_annotations
         kms
         lambda
@@ -191,6 +192,8 @@ subprojects {
 
         hamcrest "org.hamcrest:hamcrest:3.0"
 
+        javalin "io.javalin:javalin:6.7.0"
+
         jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
 
         kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
@@ -229,7 +232,8 @@ subprojects {
                 "org.awaitility:awaitility:4.3.0",
                 "com.approvaltests:approvaltests:25.0.23",
                 configurations.hamcrest,
-                "org.reflections:reflections:0.10.2"
+                "org.reflections:reflections:0.10.2",
+                "uk.org.webcompere:system-stubs-jupiter:2.1.8"
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 

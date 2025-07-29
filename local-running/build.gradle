@@ -7,7 +7,7 @@ group "uk.gov.di.authentication.local"
 version "unspecified"
 
 dependencies {
-    implementation "io.javalin:javalin:6.6.0",
+    implementation configurations.javalin,
             configurations.dynamodb,
             configurations.kms,
             configurations.lambda,
@@ -26,6 +26,12 @@ java {
 application {
     mainClass = "uk.gov.di.authentication.local.App"
     applicationDefaultJvmArgs = [
-            "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
     ]
+}
+
+sonar {
+    properties {
+        property 'sonar.coverage.exclusions', '**/uk/gov/di/authentication/local/**'
+    }
 }
