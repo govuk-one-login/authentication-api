@@ -61,8 +61,10 @@ services:
       context: ../authentication-frontend
       dockerfile: sandpit.Dockerfile
     env_file: local-running/authentication-frontend.env
+    command: "node --enable-source-maps --inspect=0.0.0.0:5401 dist/server.js"
     ports:
       - "4401:4401"
+      - "5401:5401"
     networks:
       - di-authentication-api-net
 
@@ -82,6 +84,7 @@ services:
     env_file: local-running/authentication-api.env
     ports:
       - "4402:4402"
+      - "5402:5402"
     networks:
       - di-authentication-api-net
 
