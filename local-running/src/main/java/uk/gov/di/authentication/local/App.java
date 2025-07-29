@@ -8,9 +8,12 @@ import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
 import uk.gov.di.authentication.shared.entity.AccountModifiers;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CommonPassword;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
+import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -63,15 +66,12 @@ public class App {
         sqsInitialiser.createQueue("local-pending-email-check-queue");
         sqsInitialiser.createQueue("local-txma-audit-queue");
 
-        // Set up DynamoDB tables
+        // Set up data in the DynamoDB tables
         //
-        // Once the client registry dependency is removed
-        // these could be moved into the 'warm up' step of the various DynamoDB clients
+        // Tables generally initialised automatically in the 'warm up' step
+        // Once we remove reliance on the client registry this can be removed as well
         var dynamoInitialiser = new DynamoDbInitialiser();
-        dynamoInitialiser.createTable("local-account-modifiers", AccountModifiers.class);
-        dynamoInitialiser.createTable("local-auth-code-store", AuthCodeStore.class);
-        dynamoInitialiser.createTable("local-auth-session", AuthSessionItem.class);
-        dynamoInitialiser.createTableWithRecords(
+        dynamoInitialiser.addRecords(
                 "local-client-registry",
                 ClientRegistry.class,
                 List.of(
@@ -87,8 +87,5 @@ public class App {
                                 .withIdentityVerificationSupported(true)
                                 .withTestClient(true)
                                 .withTestClientEmailAllowlist(List.of("^.*$"))));
-        dynamoInitialiser.createTable("local-common-passwords", CommonPassword.class);
-        dynamoInitialiser.createTable("local-user-credentials", UserCredentials.class);
-        dynamoInitialiser.createTable("local-user-profile", UserProfile.class);
     }
 }

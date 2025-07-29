@@ -1,6 +1,6 @@
 services:
   aws:
-    image: localstack/localstack:4.6.0
+    image: localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348
     restart: no
     environment:
       SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events, logs
@@ -17,7 +17,7 @@ services:
       - 45678:45678
 
   redis:
-    image: redis:6.0.5-alpine
+    image: redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb
     restart: no
     healthcheck:
       test: '[[ $$(redis-cli ping 2> /dev/null) == "PONG" ]] || exit 1'
@@ -32,7 +32,7 @@ services:
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ."
     restart: no
     working_dir: /home/dynamodblocal
-    image: amazon/dynamodb-local:1.22.0
+    image: amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b
     healthcheck:
       test: curl http://localhost:8000
       interval: 5s
