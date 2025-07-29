@@ -19,11 +19,7 @@ public class DynamoDbInitialiser {
         this.enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoClient).build();
     }
 
-    public <T> void createTable(String tableName, Class<T> modelClass) {
-        createTableWithRecords(tableName, modelClass, List.of());
-    }
-
-    public <T> void createTableWithRecords(String tableName, Class<T> modelClass, List<T> records) {
+    public <T> void addRecords(String tableName, Class<T> modelClass, List<T> records) {
         var table = enhancedClient.table(tableName, TableSchema.fromBean(modelClass));
         try {
             table.describeTable();
