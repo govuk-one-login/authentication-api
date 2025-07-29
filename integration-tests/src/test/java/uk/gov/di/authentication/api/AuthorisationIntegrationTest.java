@@ -1046,6 +1046,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             jsonArrayOf("Cl.Cm.PCL200", "Cl.Cm.P2"),
                             MEDIUM_LEVEL,
                             LevelOfConfidence.HMRC200),
+                    Arguments.of(
+                            jsonArrayOf("Cl.Cm.P2", "Cl.Cm.P3"),
+                            MEDIUM_LEVEL,
+                            LevelOfConfidence.MEDIUM_LEVEL),
                     Arguments.of(null, MEDIUM_LEVEL, null));
         }
     }
@@ -2178,6 +2182,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .withClientLoCs(
                         List.of(
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.HIGH_LEVEL.getValue(),
                                 LevelOfConfidence.HMRC200.getValue()))
                 .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                 .withPublicKey(
