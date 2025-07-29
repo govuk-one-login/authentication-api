@@ -33,7 +33,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserI
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -75,7 +75,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
-    private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private final KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     public static final String ENCODED_DEVICE_INFORMATION =

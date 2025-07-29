@@ -25,7 +25,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -64,7 +64,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
     private static final String LOGIN_HINT = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair KEY_PAIR = KeyPairUtils.generateRsaKeyPair();
     private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())

@@ -48,8 +48,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -74,6 +72,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class OrchestrationAuthorizationServiceTest {
 
@@ -369,17 +368,6 @@ class OrchestrationAuthorizationServiceTest {
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
         encryptedJWT.decrypt(new RSADecrypter(privateKey));
         return encryptedJWT.getPayload().toSignedJWT();
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private SdkBytes getHashSdkBytes(String jwtMessage) {

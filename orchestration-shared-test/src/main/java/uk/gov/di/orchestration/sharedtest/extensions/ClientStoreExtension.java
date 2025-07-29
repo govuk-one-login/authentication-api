@@ -18,7 +18,7 @@ import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.util.Base64;
 import java.util.List;
@@ -110,8 +110,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
         private List<String> scopes = singletonList("openid");
         private String publicKey =
                 Base64.getMimeEncoder()
-                        .encodeToString(
-                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded());
+                        .encodeToString(KeyPairUtils.generateRsaKeyPair().getPublic().getEncoded());
         private List<String> postLogoutRedirectUris =
                 singletonList("http://localhost/post-redirect-logout");
         private String backChannelLogoutUri = "http://example.com";

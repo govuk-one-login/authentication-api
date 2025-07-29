@@ -19,7 +19,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -52,7 +52,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String CLIENT_NAME = "some-client-name";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final Subject SUBJECT = new Subject();
-    private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private final KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final String SESSION_ID = "test-session-id";

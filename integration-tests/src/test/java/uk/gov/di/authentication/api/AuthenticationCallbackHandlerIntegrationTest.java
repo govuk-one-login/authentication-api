@@ -61,8 +61,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -98,6 +96,7 @@ import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -1068,17 +1067,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         "code",
                         new AuthorizationCode().getValue()));
         return queryStringParameters;
-    }
-
-    private static KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {

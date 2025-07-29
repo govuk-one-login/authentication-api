@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.services.AuthenticationService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
@@ -46,7 +46,7 @@ class ClientSubjectHelperTest {
 
     @BeforeEach
     void setUp() {
-        keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        keyPair = KeyPairUtils.generateRsaKeyPair();
         when(authenticationService.getOrGenerateSalt(userProfile))
                 .thenReturn(SaltHelper.generateNewSalt());
     }

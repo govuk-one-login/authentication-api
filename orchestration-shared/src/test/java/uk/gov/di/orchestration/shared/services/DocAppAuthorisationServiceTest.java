@@ -37,9 +37,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -60,6 +57,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.shared.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class DocAppAuthorisationServiceTest {
 
@@ -320,16 +318,5 @@ class DocAppAuthorisationServiceTest {
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
         encryptedJWT.decrypt(new RSADecrypter(privateKey));
         return encryptedJWT.getPayload().toSignedJWT();
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 }

@@ -56,8 +56,8 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
 import java.net.URI;
 import java.util.Base64;
@@ -800,7 +800,7 @@ class AuthCodeHandlerTest {
     }
 
     private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairUtils.generateRsaKeyPair();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)

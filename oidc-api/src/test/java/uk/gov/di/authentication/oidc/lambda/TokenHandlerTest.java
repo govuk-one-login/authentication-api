@@ -71,15 +71,12 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -114,6 +111,7 @@ import static uk.gov.di.orchestration.shared.entity.CustomScopeValue.DOC_CHECKIN
 import static uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 public class TokenHandlerTest {
 
@@ -1675,19 +1673,8 @@ public class TokenHandlerTest {
                 .build();
     }
 
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException();
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
-    }
-
     private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = generateRsaKeyPair();
         Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

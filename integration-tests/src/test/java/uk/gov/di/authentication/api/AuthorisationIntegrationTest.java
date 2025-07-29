@@ -53,14 +53,11 @@ import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
-import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.HashMap;
@@ -102,6 +99,7 @@ import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.as
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -111,8 +109,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
-    private static final KeyPair RP_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final KeyPair RP_KEY_PAIR = generateRsaKeyPair();
+    private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = generateRsaKeyPair();
     private static final String AUTH_PUBLIC_ENCRYPTION_KEY =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder()
@@ -1172,6 +1170,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of(
                                     LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                     LevelOfConfidence.HMRC200.getValue()))
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
@@ -1343,6 +1344,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration, redisConnectionService);
             txmaAuditQueue.clear();
@@ -1924,6 +1928,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .withPkceEnforced(true)
+                    .withPublicKey(
+                            Base64.getMimeEncoder()
+                                    .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
             handler = new AuthorisationHandler(configuration, redisConnectionService);
             txmaAuditQueue.clear();
@@ -2174,6 +2181,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                                 LevelOfConfidence.HMRC200.getValue()))
                 .withClaims(List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
+                .withPublicKey(
+                        Base64.getMimeEncoder()
+                                .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                 .saveToDynamo();
         handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
@@ -2304,17 +2314,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var signer = new RSASSASigner(RP_KEY_PAIR.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
-    }
-
-    private static KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private static String getClientSessionId(APIGatewayProxyResponseEvent response) {
