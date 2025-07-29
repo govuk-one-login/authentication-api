@@ -41,7 +41,7 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
                 KmsClient.builder()
                         .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
                         .region(Region.of(REGION))
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
 
         keyAlias =
