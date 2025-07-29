@@ -5,25 +5,16 @@ import uk.gov.di.authentication.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.authentication.local.initialisers.KmsInitialiser;
 import uk.gov.di.authentication.local.initialisers.ParameterInitialiser;
 import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
-import uk.gov.di.authentication.shared.entity.AccountModifiers;
-import uk.gov.di.authentication.shared.entity.AuthCodeStore;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.CommonPassword;
-import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
-import uk.gov.di.authentication.shared.entity.IDReverificationState;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.util.List;
 
 import static java.lang.String.valueOf;
 
 public class App {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         initialiseDownstreamComponents();
         new LocalAuthApi();
     }

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.local.initialisers;
 
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
 import software.amazon.awssdk.services.kms.model.CreateKeyRequest;
@@ -19,6 +20,7 @@ public class KmsInitialiser {
                 KmsClient.builder()
                         .endpointOverride(InitialiserConfig.LOCALSTACK_ENDPOINT)
                         .region(InitialiserConfig.REGION)
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
     }
 

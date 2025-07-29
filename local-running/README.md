@@ -3,7 +3,7 @@
 This directory contains a wrapper for running the authentication API locally without an AWS environment.
 
 It can be used to test code changes quickly and with a debugger,
-but cannot be used to fully test changes involving AWS components.  
+but cannot be used to fully test changes involving AWS components.
 
 ## How it works
 
@@ -37,7 +37,7 @@ The simplest way is to run `docker compose up` in the repository root. This will
 - `dynamodb` - DynamoDB container for DynamoDB tables
 - `orchestrator-stub` - Orchestrator stub for starting auth journeys, running on [http://localhost:4400]
 - `authentication-frontend` - Auth frontend running on [http://localhost:4401]
-- `authentication-api` - Local running Auth API running on [http://localhost:4402] 
+- `authentication-api` - Local running Auth API running on [http://localhost:4402]
 
 The orchestrator stub will run at [http://localhost:4400] and journeys can be started there.
 
@@ -67,12 +67,8 @@ In VSCode, you can set up a `launch.json` configuration to target the port. For 
       "type": "node",
       "request": "attach",
       "name": "Authentication Frontend",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "localRoot": "${workspaceFolder}/dist",
       "remoteRoot": "/app/dist",
       "address": "localhost",

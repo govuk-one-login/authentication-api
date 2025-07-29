@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.local.initialisers;
 
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -15,6 +16,7 @@ public class DynamoDbInitialiser {
                 DynamoDbClient.builder()
                         .region(InitialiserConfig.REGION)
                         .endpointOverride(InitialiserConfig.DYNAMO_ENDPOINT)
+                        .credentialsProvider(DefaultCredentialsProvider.builder().build())
                         .build();
         this.enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoClient).build();
     }
