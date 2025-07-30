@@ -42,7 +42,8 @@ void setUp() {
 
 ### Test Constants
 
-- Define all test data as `private static final` constants at class level
+- Prefer constants already defined in CommonTestVariables to creating a new one.
+- Define all test data as `private static final` constants in CommonTestVariables
 - Use meaningful names (e.g., `TEST_EMAIL`, `TEST_PHONE_NUMBER_WITH_COUNTRY_CODE`)
 - Group related constants together
 
