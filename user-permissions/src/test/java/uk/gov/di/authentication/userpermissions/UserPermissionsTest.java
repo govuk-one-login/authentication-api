@@ -5,10 +5,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
-import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -85,6 +82,12 @@ class UserPermissionsTest {
         }
 
         @Override
+        public Result<DecisionError, Decision> canVerifyOtp(
+                JourneyType journeyType, UserPermissionContext userPermissionContext) {
+            return null;
+        }
+
+        @Override
         public Result<DecisionError, Decision> canVerifySmsOtp(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
@@ -100,12 +103,6 @@ class UserPermissionsTest {
         public Result<DecisionError, Decision> canStartJourney(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
-        }
-
-        @Override
-        public Result<DecisionError, List<LockoutInformation>> getActiveAuthAppLockouts(
-                UserPermissionContext userPermissionContext) {
-            return Result.success(List.of());
         }
     }
 }

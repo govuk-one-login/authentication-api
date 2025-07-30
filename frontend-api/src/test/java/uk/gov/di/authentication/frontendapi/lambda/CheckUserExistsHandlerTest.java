@@ -43,6 +43,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -61,8 +62,8 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -152,8 +153,8 @@ class CheckUserExistsHandlerTest {
         // Setup default PermissionDecisionManager behavior after reset
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.getActiveAuthAppLockouts(any()))
-                .thenReturn(Result.success(List.of()));
+        when(permissionDecisionManager.canVerifyOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
     }
 
     @Nested
@@ -289,17 +290,24 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
-            var lockoutInfo1 =
-                    new uk.gov.di.authentication.userpermissions.entity.LockoutInformation(
-                            "codeBlock", MFAMethodType.AUTH_APP, 15L, JourneyType.SIGN_IN);
-            var lockoutInfo2 =
-                    new uk.gov.di.authentication.userpermissions.entity.LockoutInformation(
-                            "codeBlock",
-                            MFAMethodType.AUTH_APP,
-                            15L,
-                            JourneyType.PASSWORD_RESET_MFA);
-            when(permissionDecisionManager.getActiveAuthAppLockouts(any()))
-                    .thenReturn(Result.success(List.of(lockoutInfo1, lockoutInfo2)));
+            var lockoutExpiry = java.time.Instant.now().plusSeconds(15);
+            var signInLockout =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            lockoutExpiry);
+            var passwordResetLockout =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            lockoutExpiry);
+
+            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.SIGN_IN), any()))
+                    .thenReturn(Result.success(signInLockout));
+            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.PASSWORD_RESET_MFA), any()))
+                    .thenReturn(Result.success(passwordResetLockout));
 
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -309,18 +317,25 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(event, context);
             verify(authSessionService).updateSession(any(AuthSessionItem.class));
             assertThat(result, hasStatus(200));
-            assertTrue(
-                    result.getBody()
-                            .contains(
-                                    "\"lockoutInformation\":["
-                                            + "{\"lockType\":\"codeBlock\","
-                                            + "\"mfaMethodType\":\"AUTH_APP\","
-                                            + "\"lockTTL\":15,"
-                                            + "\"journeyType\":\"SIGN_IN\"},"
-                                            + "{\"lockType\":\"codeBlock\","
-                                            + "\"mfaMethodType\":\"AUTH_APP\","
-                                            + "\"lockTTL\":15,"
-                                            + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
+
+            var expectedResponse =
+                    new CheckUserExistsResponse(
+                            EMAIL_ADDRESS,
+                            true,
+                            MFAMethodType.AUTH_APP,
+                            null,
+                            List.of(
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            lockoutExpiry.getEpochSecond(),
+                                            JourneyType.SIGN_IN),
+                                    new LockoutInformation(
+                                            "codeBlock",
+                                            MFAMethodType.AUTH_APP,
+                                            lockoutExpiry.getEpochSecond(),
+                                            JourneyType.PASSWORD_RESET_MFA)));
+            assertThat(result, hasJsonBody(expectedResponse));
         }
 
         @Test
@@ -530,18 +545,18 @@ class CheckUserExistsHandlerTest {
 
         @ParameterizedTest
         @MethodSource("decisionErrorToExpectedErrorResponse")
-        void shouldReturnCorrectErrorResponseForGetActiveAuthAppLockoutsFailure(
+        void shouldReturnCorrectErrorResponseForCanVerifyOtpFailure(
                 DecisionError decisionError, ErrorResponse expectedErrorResponse) {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
-            when(permissionDecisionManager.getActiveAuthAppLockouts(any()))
+            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.SIGN_IN), any()))
                     .thenReturn(Result.failure(decisionError));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(expectedErrorResponse));
+            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
         }
 
         private static Stream<Arguments> decisionErrorToExpectedErrorResponse() {

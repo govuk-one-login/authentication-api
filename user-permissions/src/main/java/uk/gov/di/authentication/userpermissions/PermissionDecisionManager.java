@@ -9,12 +9,9 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.stream.Stream;
 
 public class PermissionDecisionManager implements UserPermissions {
 
@@ -98,8 +95,27 @@ public class PermissionDecisionManager implements UserPermissions {
     }
 
     @Override
+    public Result<DecisionError, Decision> canVerifyOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        return canVerifyAuthAppOtp(journeyType, userPermissionContext);
+    }
+
+    @Override
     public Result<DecisionError, Decision> canVerifyAuthAppOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
+
+        var ttl =
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        userPermissionContext.emailAddress(), MFAMethodType.AUTH_APP, journeyType);
+
+        if (ttl > 0) {
+            return Result.success(
+                    new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                            0,
+                            Instant.ofEpochSecond(ttl)));
+        }
+
         return Result.success(new Decision.Permitted(0));
     }
 
@@ -107,24 +123,5 @@ public class PermissionDecisionManager implements UserPermissions {
     public Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return Result.success(new Decision.Permitted(0));
-    }
-
-    @Override
-    public Result<DecisionError, List<LockoutInformation>> getActiveAuthAppLockouts(
-            UserPermissionContext userPermissionContext) {
-        return Result.success(
-                Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                        .map(
-                                journeyType -> {
-                                    var ttl =
-                                            codeStorageService.getMfaCodeBlockTimeToLive(
-                                                    userPermissionContext.emailAddress(),
-                                                    MFAMethodType.AUTH_APP,
-                                                    journeyType);
-                                    return new LockoutInformation(
-                                            "codeBlock", MFAMethodType.AUTH_APP, ttl, journeyType);
-                                })
-                        .filter(info -> info.lockTTL() > 0)
-                        .toList());
     }
 }

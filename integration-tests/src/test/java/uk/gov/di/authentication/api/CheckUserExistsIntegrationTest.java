@@ -103,6 +103,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void userCanCheckAccountStatusWhenMfaIsTemporarilyLocked() throws JsonException {
             var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.AUTH_APP);
             var clientSessionId = IdGenerator.generate();
+
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;

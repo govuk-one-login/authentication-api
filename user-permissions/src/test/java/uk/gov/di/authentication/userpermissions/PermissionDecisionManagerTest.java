@@ -12,9 +12,10 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import java.time.Instant;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.mock;
@@ -153,66 +154,94 @@ class PermissionDecisionManagerTest {
     }
 
     @Nested
-    class ActiveAuthAppLockouts {
+    class AuthAppOtpVerification {
         @Test
-        void shouldReturnEmptyList_whenNoLockoutsActive() {
+        void shouldReturnPermitted_whenNoLockoutActive() {
             // Given
             when(codeStorageService.getMfaCodeBlockTimeToLive(
                             TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(0L);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
-                    .thenReturn(0L);
 
             // When
-            var result = permissionDecisionManager.getActiveAuthAppLockouts(userPermissionContext);
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
 
             // Then
             assertThat("Should return successful result", result.isSuccess(), is(true));
+            var decision = result.getSuccess();
+            assertThat(decision, instanceOf(Decision.Permitted.class));
+            assertThat(decision.attemptCount(), equalTo(0));
+        }
+
+        @Test
+        void shouldReturnTemporarilyLockedOut_whenLockoutActive() {
+            // Given
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenReturn(300L);
+
+            // When
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            // Then
+            assertThat("Should return successful result", result.isSuccess(), is(true));
+            var decision = result.getSuccess();
+            assertThat(decision, instanceOf(Decision.TemporarilyLockedOut.class));
+            var lockedOut = (Decision.TemporarilyLockedOut) decision;
             assertThat(
-                    "Should return empty list when no lockouts", result.getSuccess(), hasSize(0));
+                    lockedOut.forbiddenReason(),
+                    equalTo(ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT));
+            assertThat(lockedOut.attemptCount(), equalTo(0));
+            assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
         }
+    }
 
+    @Nested
+    class OtpVerification {
         @Test
-        void shouldReturnActiveLockouts_whenLockoutsExist() {
+        void shouldReturnPermitted_whenNoLockoutActive() {
             // Given
             when(codeStorageService.getMfaCodeBlockTimeToLive(
                             TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                    .thenReturn(300L);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
                     .thenReturn(0L);
 
             // When
-            var result = permissionDecisionManager.getActiveAuthAppLockouts(userPermissionContext);
+            var result =
+                    permissionDecisionManager.canVerifyOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
 
             // Then
             assertThat("Should return successful result", result.isSuccess(), is(true));
-            var lockouts = result.getSuccess();
-            assertThat("Should return one active lockout", lockouts, hasSize(1));
-            var lockout = lockouts.get(0);
-            assertThat(lockout.lockType(), equalTo("codeBlock"));
-            assertThat(lockout.mfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-            assertThat(lockout.lockTTL(), equalTo(300L));
-            assertThat(lockout.journeyType(), equalTo(JourneyType.SIGN_IN));
+            var decision = result.getSuccess();
+            assertThat(decision, instanceOf(Decision.Permitted.class));
+            assertThat(decision.attemptCount(), equalTo(0));
         }
 
         @Test
-        void shouldReturnMultipleLockouts_whenBothJourneyTypesLocked() {
+        void shouldReturnTemporarilyLockedOut_whenLockoutActive() {
             // Given
             when(codeStorageService.getMfaCodeBlockTimeToLive(
                             TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(300L);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
-                    .thenReturn(600L);
 
             // When
-            var result = permissionDecisionManager.getActiveAuthAppLockouts(userPermissionContext);
+            var result =
+                    permissionDecisionManager.canVerifyOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
 
             // Then
             assertThat("Should return successful result", result.isSuccess(), is(true));
-            assertThat("Should return two active lockouts", result.getSuccess(), hasSize(2));
+            var decision = result.getSuccess();
+            assertThat(decision, instanceOf(Decision.TemporarilyLockedOut.class));
+            var lockedOut = (Decision.TemporarilyLockedOut) decision;
+            assertThat(
+                    lockedOut.forbiddenReason(),
+                    equalTo(ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT));
+            assertThat(lockedOut.attemptCount(), equalTo(0));
+            assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
         }
     }
 }

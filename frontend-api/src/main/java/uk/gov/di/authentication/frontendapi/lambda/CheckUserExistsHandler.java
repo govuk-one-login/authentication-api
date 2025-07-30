@@ -15,6 +15,8 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -29,8 +31,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -129,8 +134,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             UserPermissionContext userPermissionContext =
                     new UserPermissionContext(null, null, emailAddress, null);
 
-            // WHY ONLY PASSWORD_RESET?
-
             var decisionResult =
                     permissionDecisionManager.canReceivePassword(
                             JourneyType.PASSWORD_RESET, userPermissionContext);
@@ -192,19 +195,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            // ***** WHY ONLY FOR AUTH_APP?  ****** \\
+            var lockoutInformationResult = determineLockoutInformation(userPermissionContext);
 
-            var lockoutInformation =
-                    permissionDecisionManager.getActiveAuthAppLockouts(userPermissionContext);
-
-            if (lockoutInformation.isFailure()) {
-                var error =
-                        DecisionErrorAntiCorruption.toErrorResponse(
-                                lockoutInformation.getFailure());
-                return generateApiGatewayProxyErrorResponse(400, error);
+            if (lockoutInformationResult.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
             }
 
-            var newLockoutList = lockoutInformation.getSuccess();
+            var lockoutInformation = lockoutInformationResult.getSuccess();
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
@@ -212,7 +210,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            newLockoutList);
+                            lockoutInformation);
 
             authSessionService.updateSession(authSession);
 
@@ -223,5 +221,40 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private Result<ErrorResponse, List<LockoutInformation>> determineLockoutInformation(
+            UserPermissionContext userPermissionContext) {
+        var lockoutInformation = new ArrayList<LockoutInformation>();
+
+        var signInResult =
+                permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
+        if (signInResult.isFailure()) {
+            return Result.failure(ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+        }
+        if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock", MFAMethodType.AUTH_APP, ttl, JourneyType.SIGN_IN));
+        }
+
+        var passwordResetResult =
+                permissionDecisionManager.canVerifyOtp(
+                        JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
+        if (passwordResetResult.isFailure()) {
+            return Result.failure(ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+        }
+        if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock",
+                            MFAMethodType.AUTH_APP,
+                            ttl,
+                            JourneyType.PASSWORD_RESET_MFA));
+        }
+
+        return Result.success(lockoutInformation);
     }
 }
