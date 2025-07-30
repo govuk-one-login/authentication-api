@@ -8,6 +8,14 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      DeploymentPreference:
+        Type:
+          !FindInMap [
+            LambdaConfiguration,
+            "check-reauth-user",
+            LambdaDeploymentPreference,
+          ]
+        Role: !GetAtt CodeDeployServiceRole.Arn
       Handler: uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest
       Environment:
         Variables:

@@ -380,22 +380,64 @@ Mappings:
       UseAlarmActions: "Yes"
       useStronglyConsistentReads: false
   LambdaConfiguration:
+    account-interventions:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
     account-recovery:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     auth-token:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+    auth-userinfo:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
+    check-email-fraud-block:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
+    check-reauth-user:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
+    email-notification-sqs:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
     id-reverification-state:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
+    login:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
     mfa-reset-authorize:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-jar-jwk:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-storage-token-jwk:
+      LambdaDeploymentPreference: Canary10Percent5Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
+    mfa:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
+    orch-auth-code:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
+    reset-password-request:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
+    reset-password:
+      LambdaDeploymentPreference: Canary10Percent5Minutes
     reverification-result:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
+    send-notification:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
+    signup:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
+    start:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
     ticf-cri:
+      LambdaDeploymentPreference: Canary10Percent5Minutes
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+    update-profile:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
+    user-exists:
+      LambdaDeploymentPreference: Canary10Percent2Minutes
+    verify-code:
+      LambdaDeploymentPreference: Canary10Percent4Minutes
+    verify-mfa-code:
+      LambdaDeploymentPreference: Canary10Percent6Minutes
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -508,6 +550,39 @@ Resources:
           !Ref PermissionsBoundary,
           !Ref AWS::NoValue,
         ]
+
+  Canary10Percent2Minutes:
+    Type: AWS::CodeDeploy::DeploymentConfig
+    Properties:
+      DeploymentConfigName: Canary10Percent2Minutes
+      ComputePlatform: Lambda
+      TrafficRoutingConfig:
+        Type: TimeBasedCanary
+        TimeBasedCanary:
+          CanaryInterval: 2
+          CanaryPercentage: 10
+
+  Canary10Percent4Minutes:
+    Type: AWS::CodeDeploy::DeploymentConfig
+    Properties:
+      DeploymentConfigName: Canary10Percent4Minutes
+      ComputePlatform: Lambda
+      TrafficRoutingConfig:
+        Type: TimeBasedCanary
+        TimeBasedCanary:
+          CanaryInterval: 4
+          CanaryPercentage: 10
+
+  Canary10Percent6Minutes:
+    Type: AWS::CodeDeploy::DeploymentConfig
+    Properties:
+      DeploymentConfigName: Canary10Percent6Minutes
+      ComputePlatform: Lambda
+      TrafficRoutingConfig:
+        Type: TimeBasedCanary
+        TimeBasedCanary:
+          CanaryInterval: 6
+          CanaryPercentage: 10
 
   # ----------------
   # Common Resources
