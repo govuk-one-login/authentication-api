@@ -4,8 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.userpermissions.PermissionDecisions;
 import uk.gov.di.authentication.userpermissions.UserActions;
-import uk.gov.di.authentication.userpermissions.UserPermissions;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 class ExampleSmsVerificationHandlerTest {
 
-    private UserPermissions userPermissions;
+    private PermissionDecisions permissionDecisions;
     private UserActions userActions;
 
     private ExampleSmsVerificationHandler handler;
@@ -33,16 +33,16 @@ class ExampleSmsVerificationHandlerTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create mocks manually instead of using annotations
-        userPermissions = mock(UserPermissions.class);
+        permissionDecisions = mock(PermissionDecisions.class);
         userActions = mock(UserActions.class);
 
         handler = new ExampleSmsVerificationHandler();
 
         // Use reflection to set the mocked dependencies
-        Field userPermissionsField =
-                ExampleSmsVerificationHandler.class.getDeclaredField("userPermissions");
-        userPermissionsField.setAccessible(true);
-        userPermissionsField.set(handler, userPermissions);
+        Field permissionDecisionsField =
+                ExampleSmsVerificationHandler.class.getDeclaredField("permissionDecisions");
+        permissionDecisionsField.setAccessible(true);
+        permissionDecisionsField.set(handler, permissionDecisions);
 
         Field userActionsField =
                 ExampleSmsVerificationHandler.class.getDeclaredField("userActions");
@@ -53,7 +53,7 @@ class ExampleSmsVerificationHandlerTest {
     @Test
     void shouldReturnSuccessWhenOtpIsCorrect() {
         // Given
-        when(userPermissions.canVerifySmsOtp(any(), any()))
+        when(permissionDecisions.canVerifySmsOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(userActions.correctSmsOtpReceived(any(), any())).thenReturn(Result.success(null));
 
@@ -69,7 +69,7 @@ class ExampleSmsVerificationHandlerTest {
     @Test
     void shouldReturnErrorWhenOtpIsIncorrect() {
         // Given
-        when(userPermissions.canVerifySmsOtp(any(), any()))
+        when(permissionDecisions.canVerifySmsOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(userActions.incorrectSmsOtpReceived(any(), any())).thenReturn(Result.success(null));
 
@@ -87,7 +87,7 @@ class ExampleSmsVerificationHandlerTest {
         // Given
         Instant lockedUntil = Instant.now().plusSeconds(300);
         ForbiddenReason reason = ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
-        when(userPermissions.canVerifySmsOtp(any(), any()))
+        when(permissionDecisions.canVerifySmsOtp(any(), any()))
                 .thenReturn(
                         Result.success(new Decision.TemporarilyLockedOut(reason, 5, lockedUntil)));
 
@@ -102,7 +102,7 @@ class ExampleSmsVerificationHandlerTest {
     @Test
     void shouldReturnErrorWhenPermissionCheckFails() {
         // Given
-        when(userPermissions.canVerifySmsOtp(any(), any()))
+        when(permissionDecisions.canVerifySmsOtp(any(), any()))
                 .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
 
         // When

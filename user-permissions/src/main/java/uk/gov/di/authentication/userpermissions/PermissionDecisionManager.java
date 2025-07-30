@@ -13,7 +13,7 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
 
-public class PermissionDecisionManager implements UserPermissions {
+public class PermissionDecisionManager implements PermissionDecisions {
 
     private final CodeStorageService codeStorageService;
 

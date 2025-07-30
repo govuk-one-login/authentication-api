@@ -11,24 +11,24 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-class UserPermissionsTest {
+class PermissionDecisionsTest {
 
     private static final UserPermissionContext CONTEXT = mock(UserPermissionContext.class);
     private static final JourneyType JOURNEY_TYPE = JourneyType.SIGN_IN;
 
     /**
-     * This is a simple test to demonstrate how to test implementations of the UserPermissions
+     * This is a simple test to demonstrate how to test implementations of the PermissionDecisions
      * interface. In a real implementation, you would create a concrete implementation of
-     * UserPermissions and test it.
+     * PermissionDecisions and test it.
      */
     @Test
     void demonstrateHowToTestUserPermissionsImplementation() {
         // Given
-        UserPermissions userPermissions = new TestUserPermissions();
+        PermissionDecisions permissionDecisions = new TestPermissionDecisions();
 
         // When
         Result<DecisionError, Decision> result =
-                userPermissions.canReceiveEmailAddress(JOURNEY_TYPE, CONTEXT);
+                permissionDecisions.canReceiveEmailAddress(JOURNEY_TYPE, CONTEXT);
 
         // Then
         assertTrue(result.isSuccess());
@@ -38,19 +38,19 @@ class UserPermissionsTest {
     @Test
     void shouldTestCanStartJourneyMethod() {
         // Given
-        UserPermissions userPermissions = new TestUserPermissions();
+        PermissionDecisions permissionDecisions = new TestPermissionDecisions();
 
         // When
         Result<DecisionError, Decision> result =
-                userPermissions.canStartJourney(JOURNEY_TYPE, CONTEXT);
+                permissionDecisions.canStartJourney(JOURNEY_TYPE, CONTEXT);
 
         // Then
         assertTrue(result.isSuccess());
         assertEquals(0, result.getSuccess().attemptCount());
     }
 
-    /** Simple implementation of UserPermissions for testing purposes. */
-    private static class TestUserPermissions implements UserPermissions {
+    /** Simple implementation of PermissionDecisions for testing purposes. */
+    private static class TestPermissionDecisions implements PermissionDecisions {
         @Override
         public Result<DecisionError, Decision> canReceiveEmailAddress(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {

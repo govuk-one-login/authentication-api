@@ -37,7 +37,7 @@ class ExperimentalTest {
     void shouldBeAppliedToUserPermissionsMethod() throws NoSuchMethodException {
         // Given
         Method canLoginMethod =
-                UserPermissions.class.getMethod(
+                PermissionDecisions.class.getMethod(
                         "canLogin",
                         uk.gov.di.authentication.shared.entity.JourneyType.class,
                         uk.gov.di.authentication.userpermissions.entity.UserPermissionContext
