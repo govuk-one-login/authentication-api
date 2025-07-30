@@ -12,6 +12,7 @@ Metadata:
             - none
       ignore_checks:
         - E1011 # FindInMap within FindInMap DefaultValue is currently not working w/ cfn-lint
+        - E3004 # False positives on supported self references
 
 Parameters:
   Environment:
@@ -604,6 +605,31 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Deny
+              Principal:
+                AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              NotAction:
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:ConditionCheckItem
+                - dynamodb:DeleteItem
+                - dynamodb:DeleteItem
+                - dynamodb:Describe*
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:RestoreTableToPointInTime
+                - dynamodb:UpdateItem
+              Resource: !GetAtt AuthUserInfoTable.Arn
+              Condition:
+                StringNotLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator
+                StringLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
       Tags:
         - Key: Name
           Value: AuthUserInfoTable
@@ -797,6 +823,62 @@ Resources:
                         !Ref Environment,
                         authAccountId,
                       ]
+            - Sid: DenyNonAdminTeamRolesAccess
+              Effect: Deny
+              Principal:
+                AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              NotAction:
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:ConditionCheckItem
+                - dynamodb:DeleteItem
+                - dynamodb:DeleteItem
+                - dynamodb:Describe*
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:RestoreTableToPointInTime
+                - dynamodb:UpdateItem
+              Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+              Condition:
+                StringNotLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator
+                StringLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+            - Sid: DenyAuthAccountNonAdminTeamRolesAccess
+              Effect: Deny
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+              NotAction:
+                - dynamodb:DescribeTable
+                - dynamodb:Get*
+              Resource: !GetAtt OrchIdentityCredentialsTable.Arn
+              Condition:
+                StringNotLike:
+                  aws:PrincipalARN: !Sub
+                    - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                StringLike:
+                  aws:PrincipalARN: !Sub
+                    - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
   #endregion
 
   #region RP Public Key DynamoDB Table
@@ -967,6 +1049,31 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Deny
+              Principal:
+                AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+              NotAction:
+                - dynamodb:BatchGetItem
+                - dynamodb:BatchWriteItem
+                - dynamodb:ConditionCheckItem
+                - dynamodb:DeleteItem
+                - dynamodb:DeleteItem
+                - dynamodb:Describe*
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:RestoreTableToPointInTime
+                - dynamodb:UpdateItem
+              Resource: !GetAtt DocAppCredentialTable.Arn
+              Condition:
+                StringNotLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator
+                StringLike:
+                  aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
       Tags:
         - Key: Name
           Value: DocAppCredentialTable
