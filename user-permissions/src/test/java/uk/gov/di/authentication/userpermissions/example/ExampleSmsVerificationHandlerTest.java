@@ -103,12 +103,12 @@ class ExampleSmsVerificationHandlerTest {
     void shouldReturnErrorWhenPermissionCheckFails() {
         // Given
         when(userPermissions.canVerifySmsOtp(any(), any()))
-                .thenReturn(Result.failure(DecisionError.UNKNOWN));
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
 
         // When
         String result = handler.handle(CORRECT_OTP);
 
         // Then
-        assertEquals("500: UNKNOWN", result);
+        assertEquals("500: STORAGE_SERVICE_ERROR", result);
     }
 }

@@ -539,7 +539,7 @@ class CheckUserExistsHandlerTest {
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
-            assertThat(result, hasStatus(400));
+            assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(expectedErrorResponse));
         }
 
@@ -561,10 +561,8 @@ class CheckUserExistsHandlerTest {
 
         private static Stream<Arguments> decisionErrorToExpectedErrorResponse() {
             return Stream.of(
-                    Arguments.of(DecisionError.UNKNOWN, ErrorResponse.ACCT_TEMPORARILY_LOCKED),
                     Arguments.of(
-                            DecisionError.STORAGE_SERVICE_ERROR,
-                            ErrorResponse.ACCT_TEMPORARILY_LOCKED),
+                            DecisionError.STORAGE_SERVICE_ERROR, ErrorResponse.STORAGE_LAYER_ERROR),
                     Arguments.of(
                             DecisionError.INVALID_USER_CONTEXT,
                             ErrorResponse.REQUEST_MISSING_PARAMS),

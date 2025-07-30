@@ -142,7 +142,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 LOG.info("No decision made: {}", decisionResult.getFailure());
                 var error =
                         DecisionErrorAntiCorruption.toErrorResponse(decisionResult.getFailure());
-                return generateApiGatewayProxyErrorResponse(400, error);
+                return generateApiGatewayProxyErrorResponse(500, error);
             }
 
             if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
