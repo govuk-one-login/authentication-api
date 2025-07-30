@@ -5,6 +5,8 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 
 public class DecisionErrorHttpMapper {
 
+    private DecisionErrorHttpMapper() {}
+
     public static ErrorResponseWithStatus toHttpResponse(DecisionError decisionError) {
         ErrorResponse errorResponse = DecisionErrorAntiCorruption.toErrorResponse(decisionError);
         int statusCode =
