@@ -104,19 +104,25 @@ public class PermissionDecisionManager implements UserPermissions {
     public Result<DecisionError, Decision> canVerifyAuthAppOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
 
-        var ttl =
-                codeStorageService.getMfaCodeBlockTimeToLive(
-                        userPermissionContext.emailAddress(), MFAMethodType.AUTH_APP, journeyType);
+        try {
+            var ttl =
+                    codeStorageService.getMfaCodeBlockTimeToLive(
+                            userPermissionContext.emailAddress(),
+                            MFAMethodType.AUTH_APP,
+                            journeyType);
 
-        if (ttl > 0) {
-            return Result.success(
-                    new Decision.TemporarilyLockedOut(
-                            ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
-                            0,
-                            Instant.ofEpochSecond(ttl)));
+            if (ttl > 0) {
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                0,
+                                Instant.ofEpochSecond(ttl)));
+            }
+
+            return Result.success(new Decision.Permitted(0));
+        } catch (Exception e) {
+            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
         }
-
-        return Result.success(new Decision.Permitted(0));
     }
 
     @Override

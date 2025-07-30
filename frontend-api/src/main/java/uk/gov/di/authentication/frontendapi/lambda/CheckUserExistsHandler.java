@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorAntiCorruption;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -140,9 +140,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             if (decisionResult.isFailure()) {
                 LOG.info("No decision made: {}", decisionResult.getFailure());
-                var error =
-                        DecisionErrorAntiCorruption.toErrorResponse(decisionResult.getFailure());
-                return generateApiGatewayProxyErrorResponse(500, error);
+                var httpResponse =
+                        DecisionErrorHttpMapper.toHttpResponse(decisionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(
+                        httpResponse.statusCode(), httpResponse.errorResponse());
             }
 
             if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
@@ -199,7 +200,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             if (lockoutInformationResult.isFailure()) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+                        500, lockoutInformationResult.getFailure());
             }
 
             var lockoutInformation = lockoutInformationResult.getSuccess();
@@ -230,7 +231,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         var signInResult =
                 permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
         if (signInResult.isFailure()) {
-            return Result.failure(ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
         }
         if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
             long ttl = tempLockOut.lockedUntil().getEpochSecond();
@@ -243,7 +244,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 permissionDecisionManager.canVerifyOtp(
                         JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
         if (passwordResetResult.isFailure()) {
-            return Result.failure(ErrorResponse.ACCT_TEMPORARILY_LOCKED);
+            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
         }
         if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
             long ttl = tempLockOut.lockedUntil().getEpochSecond();

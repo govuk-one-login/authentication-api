@@ -530,17 +530,38 @@ class CheckUserExistsHandlerTest {
             setupClient();
         }
 
+        private static Stream<Arguments> decisionErrorToExpectedStatusAndErrorResponse() {
+            return Stream.of(
+                    Arguments.of(
+                            DecisionError.STORAGE_SERVICE_ERROR,
+                            500,
+                            ErrorResponse.STORAGE_LAYER_ERROR),
+                    Arguments.of(
+                            DecisionError.INVALID_USER_CONTEXT,
+                            400,
+                            ErrorResponse.REQUEST_MISSING_PARAMS));
+        }
+
         @ParameterizedTest
-        @MethodSource("decisionErrorToExpectedErrorResponse")
+        @MethodSource("decisionErrorToExpectedStatusAndErrorResponse")
         void shouldReturnCorrectErrorResponseForCanReceivePasswordFailure(
-                DecisionError decisionError, ErrorResponse expectedErrorResponse) {
+                DecisionError decisionError,
+                int expectedStatusCode,
+                ErrorResponse expectedErrorResponse) {
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(Result.failure(decisionError));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
-            assertThat(result, hasStatus(500));
+            assertThat(result, hasStatus(expectedStatusCode));
             assertThat(result, hasJsonBody(expectedErrorResponse));
+        }
+
+        private static Stream<Arguments> decisionErrorToExpectedErrorResponse() {
+            return Stream.of(
+                    Arguments.of(
+                            DecisionError.STORAGE_SERVICE_ERROR,
+                            ErrorResponse.STORAGE_LAYER_ERROR));
         }
 
         @ParameterizedTest
@@ -555,20 +576,8 @@ class CheckUserExistsHandlerTest {
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
-        }
-
-        private static Stream<Arguments> decisionErrorToExpectedErrorResponse() {
-            return Stream.of(
-                    Arguments.of(
-                            DecisionError.STORAGE_SERVICE_ERROR, ErrorResponse.STORAGE_LAYER_ERROR),
-                    Arguments.of(
-                            DecisionError.INVALID_USER_CONTEXT,
-                            ErrorResponse.REQUEST_MISSING_PARAMS),
-                    Arguments.of(
-                            DecisionError.CONFIGURATION_ERROR,
-                            ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
         }
     }
 }
