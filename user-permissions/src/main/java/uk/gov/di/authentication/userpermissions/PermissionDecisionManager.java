@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.userpermissions;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -14,6 +16,7 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 import java.time.Instant;
 
 public class PermissionDecisionManager implements PermissionDecisions {
+    private static final Logger LOG = LogManager.getLogger(PermissionDecisionManager.class);
 
     private final CodeStorageService codeStorageService;
 
@@ -24,7 +27,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     public PermissionDecisionManager(CodeStorageService codeStorageService) {
-        var configurationService = ConfigurationService.getInstance();
         this.codeStorageService = codeStorageService;
     }
 
@@ -49,17 +51,16 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canReceivePassword(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
+
+        if (userPermissionContext == null || userPermissionContext.emailAddress() == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        if (journeyType == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
         try {
-            // Validate input parameters
-            if (userPermissionContext == null || userPermissionContext.emailAddress() == null) {
-                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
-            }
-
-            if (journeyType == null) {
-                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
-            }
-
-            // Check if user is blocked for password operations
             boolean isBlocked =
                     codeStorageService.isBlockedForEmail(
                             userPermissionContext.emailAddress(),
@@ -76,8 +77,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
             }
 
             return Result.success(new Decision.Permitted(0));
-        } catch (Exception e) {
-            // Catch all exceptions from storage service calls
+        } catch (RuntimeException e) {
+            LOG.error("Could not retrieve from lock details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
         }
     }
@@ -120,7 +121,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
             }
 
             return Result.success(new Decision.Permitted(0));
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            LOG.error("Could not retrieve from lock details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
         }
     }

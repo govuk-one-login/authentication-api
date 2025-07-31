@@ -197,6 +197,23 @@ class PermissionDecisionManagerTest {
             assertThat(lockedOut.attemptCount(), equalTo(0));
             assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
         }
+
+        @Test
+        void shouldReturnStorageServiceError_whenCodeStorageServiceThrowsException() {
+            // Given
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenThrow(new RuntimeException("Storage error"));
+
+            // When
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            // Then
+            assertThat("Should return failure for storage exception", result.isFailure(), is(true));
+            assertThat(result.getFailure(), equalTo(DecisionError.STORAGE_SERVICE_ERROR));
+        }
     }
 
     @Nested
@@ -242,6 +259,23 @@ class PermissionDecisionManagerTest {
                     equalTo(ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT));
             assertThat(lockedOut.attemptCount(), equalTo(0));
             assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
+        }
+
+        @Test
+        void shouldReturnStorageServiceError_whenCodeStorageServiceThrowsException() {
+            // Given
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            TEST_EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenThrow(new RuntimeException("Storage error"));
+
+            // When
+            var result =
+                    permissionDecisionManager.canVerifyOtp(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            // Then
+            assertThat("Should return failure for storage exception", result.isFailure(), is(true));
+            assertThat(result.getFailure(), equalTo(DecisionError.STORAGE_SERVICE_ERROR));
         }
     }
 }
