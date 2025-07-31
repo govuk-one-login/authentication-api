@@ -13,7 +13,7 @@ Resources:
       ReceiveMessageWaitTimeSeconds: 10
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt EmailNotificationDeadLetterQueue.Arn
-        maxReceiveCount: 3
+        maxReceiveCount: 1
       VisibilityTimeout: 180
       Tags:
         - Key: Service
