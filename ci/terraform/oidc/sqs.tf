@@ -17,7 +17,7 @@ resource "aws_sqs_queue" "email_queue" {
   visibility_timeout_seconds = 180
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = 1
   })
 
   kms_master_key_id                 = "alias/aws/sqs"

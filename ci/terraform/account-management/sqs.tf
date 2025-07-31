@@ -17,7 +17,7 @@ resource "aws_sqs_queue" "email_queue" {
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
-    maxReceiveCount     = 3
+    maxReceiveCount     = 1
   })
 }
 
