@@ -73,14 +73,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  EnableFetchJwks:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   IsReturnAuthTimeInIdTokenEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1876,10 +1868,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - EnableFetchJwks
-            - true
-            - false
           RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED: !If
             - IsReturnAuthTimeInIdTokenEnabled
             - true
@@ -3317,10 +3305,6 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
-          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - EnableFetchJwks
-            - true
-            - false
           SUPPORT_MAX_AGE_ENABLED: !If
             - SupportMaxAgeEnabled
             - true
