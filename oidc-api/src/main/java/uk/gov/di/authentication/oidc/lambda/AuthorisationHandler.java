@@ -579,7 +579,6 @@ public class AuthorisationHandler
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
                         authenticationRequest.toParameters(),
-                        configurationService.isCustomDocAppClaimEnabled(),
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
 

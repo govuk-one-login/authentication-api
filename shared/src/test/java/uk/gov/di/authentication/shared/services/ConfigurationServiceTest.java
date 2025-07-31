@@ -236,11 +236,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isCustomDocAppClaimEnabledShouldDefault() {
-        assertFalse(configurationService.isCustomDocAppClaimEnabled());
-    }
-
-    @Test
     void getDocAppAuthorisationURIShouldDefault() {
         assertEquals(URI.create(""), configurationService.getDocAppAuthorisationURI());
     }

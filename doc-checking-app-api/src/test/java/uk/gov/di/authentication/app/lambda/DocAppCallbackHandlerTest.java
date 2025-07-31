@@ -450,7 +450,6 @@ class DocAppCallbackHandlerTest {
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
                     throws NoSessionException {
         usingValidClientSession();
-        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("state", STATE.getValue());

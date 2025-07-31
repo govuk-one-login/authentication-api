@@ -25,7 +25,6 @@ import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocAppSubjectIdHelperTest {
@@ -40,52 +39,22 @@ class DocAppSubjectIdHelperTest {
     private static final String AUDIENCE = "https://localhost/authorize";
 
     @Test
-    void shouldUseSubjectFromRequestObjectWhenPresentAndCustomDocAppClaimEnabled()
-            throws JOSEException {
+    void shouldUseSubjectFromRequestObjectWhenPresent() throws JOSEException {
         var expectedSubject = new Subject();
         var authRequestParams = generateAuthRequestParams(expectedSubject);
 
         var docAppSubjectId =
-                DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        authRequestParams, true, DOC_APP_DOMAIN);
+                DocAppSubjectIdHelper.calculateDocAppSubjectId(authRequestParams, DOC_APP_DOMAIN);
 
         assertThat(docAppSubjectId, equalTo(expectedSubject));
     }
 
     @Test
-    void
-            shouldUsePairwiseSubjectWhenSubjectInRequestObjectIsPresentButCustomDocAppClaimIsNotEnabled()
-                    throws JOSEException {
-        var expectedSubject = new Subject();
-        var authRequestParams = generateAuthRequestParams(expectedSubject);
-
-        var docAppSubjectId =
-                DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        authRequestParams, false, DOC_APP_DOMAIN);
-
-        assertThat(docAppSubjectId, not(equalTo(expectedSubject)));
-        assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-    }
-
-    @Test
-    void shouldUsePairwiseSubjectWhenSubjectNotPresentInRequestObjectAndCustomAppClaimIsNotEnabled()
-            throws JOSEException {
+    void shouldUsePairwiseSubjectWhenSubjectNotPresentInRequestObject() throws JOSEException {
         var authRequestParams = generateAuthRequestParams(null);
 
         var docAppSubjectId =
-                DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        authRequestParams, false, DOC_APP_DOMAIN);
-
-        assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
-    }
-
-    @Test
-    void shouldUsePairwiseSubjectWhenCustomAppClaimIsEnabledButSubjectNotPresentInRequestObject()
-            throws JOSEException {
-        var clientSession = generateAuthRequestParams(null);
-
-        var docAppSubjectId =
-                DocAppSubjectIdHelper.calculateDocAppSubjectId(clientSession, true, DOC_APP_DOMAIN);
+                DocAppSubjectIdHelper.calculateDocAppSubjectId(authRequestParams, DOC_APP_DOMAIN);
 
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
