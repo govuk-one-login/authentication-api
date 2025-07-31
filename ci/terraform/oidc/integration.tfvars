@@ -81,7 +81,6 @@ ipv_audience                                = "https://identity.integration.acco
 evcs_audience                               = "https://credential-store.integration.account.gov.uk"
 auth_issuer_claim_for_evcs                  = "https://signin.integration.account.gov.uk"
 spot_enabled                                = true
-custom_doc_app_claim_enabled                = true
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 

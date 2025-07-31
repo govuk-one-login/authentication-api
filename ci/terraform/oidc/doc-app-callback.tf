@@ -28,7 +28,6 @@ module "doc-app-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    CUSTOM_DOC_APP_CLAIM_ENABLED       = var.custom_doc_app_claim_enabled
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name

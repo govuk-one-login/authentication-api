@@ -256,12 +256,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("EMAIL_MAX_RE_AUTH_RETRIES", "6"));
     }
 
-    public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv()
-                .getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public URI getDocAppAuthorisationURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
     }

@@ -54,7 +54,6 @@ module "authorize" {
     DOC_APP_DOMAIN                       = var.doc_app_domain
     DOC_APP_AUD                          = var.doc_app_aud
     DOC_APP_NEW_AUD_CLAIM_ENABLED        = var.doc_app_new_aud_claim_enabled
-    CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
     ORCH_REDIRECT_URI                    = var.orch_redirect_uri
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     USE_STRONGLY_CONSISTENT_READS        = var.use_strongly_consistent_reads

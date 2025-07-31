@@ -79,7 +79,6 @@ notify_template_map = {
   CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID = "d253a170-8144-4471-b339-c35965c9298a"
 }
 
-custom_doc_app_claim_enabled = true
 doc_app_cri_data_endpoint    = "userinfo"
 doc_app_cri_data_v2_endpoint = "userinfo/v2"
 

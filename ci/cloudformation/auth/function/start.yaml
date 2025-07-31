@@ -11,13 +11,6 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest
       Environment:
         Variables:
-          CUSTOM_DOC_APP_CLAIM_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              customDocAppClaimEnabled,
-              DefaultValue: "false",
-            ]
           DOC_APP_DOMAIN:
             !FindInMap [
               EnvironmentConfiguration,

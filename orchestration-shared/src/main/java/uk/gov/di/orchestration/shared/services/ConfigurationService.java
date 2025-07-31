@@ -150,10 +150,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
 
-    public boolean isCustomDocAppClaimEnabled() {
-        return getFlagOrFalse("CUSTOM_DOC_APP_CLAIM_ENABLED");
-    }
-
     public URI getDocAppAuthorisationURI() {
         return getURIOrEmpty("DOC_APP_AUTHORISATION_URI");
     }

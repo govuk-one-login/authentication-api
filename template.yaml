@@ -1582,8 +1582,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
       Environment:
         Variables:
-          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          CUSTOM_DOC_APP_CLAIM_ENABLED: true
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
             - ServiceDomain:
@@ -3189,8 +3187,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
       Environment:
         Variables:
-          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          CUSTOM_DOC_APP_CLAIM_ENABLED: true
           DOC_APP_AUD:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub

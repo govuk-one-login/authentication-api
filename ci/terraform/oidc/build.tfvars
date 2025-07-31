@@ -76,7 +76,6 @@ doc_app_jwks_endpoint                       = "https://dcmaw-cri.build.stubs.acc
 doc_app_aud                                 = "https://dcmaw-cri.build.stubs.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
 spot_enabled                                = false
-custom_doc_app_claim_enabled                = true
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true

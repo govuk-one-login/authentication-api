@@ -109,11 +109,6 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
-variable "custom_doc_app_claim_enabled" {
-  default = false
-  type    = bool
-}
-
 variable "terms_and_conditions" {
   type    = string
   default = "1.13"
