@@ -20,10 +20,14 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -32,6 +36,7 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.StateItem;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
@@ -40,6 +45,9 @@ import java.net.URI;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,6 +82,10 @@ class DocAppAuthorisationServiceTest {
     private static final URI JWKS_URL =
             URI.create("http://localhost/doc-app/.well-known/jwks.json");
     private static final String ENCRYPTION_KID = UUID.randomUUID().toString();
+    private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
+    private static final NowHelper.NowClock FIXED_NOW_HELPER = new NowHelper.NowClock(FIXED_CLOCK);
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -82,7 +94,11 @@ class DocAppAuthorisationServiceTest {
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
-                    configurationService, kmsConnectionService, jwksService, stateStorageService);
+                    configurationService,
+                    kmsConnectionService,
+                    jwksService,
+                    stateStorageService,
+                    FIXED_CLOCK);
     private PrivateKey privateKey;
     private RSAKey publicRsaKey;
 
@@ -257,7 +273,7 @@ class DocAppAuthorisationServiceTest {
                     signedJWTResponse
                             .getJWTClaimsSet()
                             .getExpirationTime()
-                            .after(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
+                            .after(FIXED_NOW_HELPER.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
         } else {
             assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("test_client"), equalTo(null));
@@ -267,6 +283,37 @@ class DocAppAuthorisationServiceTest {
                             .getExpirationTime()
                             .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
+        }
+    }
+
+    @Nested
+    class Approvals {
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
+                throws JOSEException, ParseException, MalformedURLException {
+            setupSigning();
+            var state = new State("state");
+            var pairwise = new Subject("pairwise-identifier");
+            when(clientRegistry.isTestClient()).thenReturn(isTestClient);
+            when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+
+            EncryptedJWT requestJWT;
+
+            try (MockedStatic<IdGenerator> mockIdGenerator =
+                    Mockito.mockStatic(IdGenerator.class)) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("jti");
+                requestJWT =
+                        authorisationService.constructRequestJWT(
+                                state, pairwise.getValue(), clientRegistry, "client-session-id");
+            }
+
+            var signedJWTResponse = decryptJWT(requestJWT);
+
+            JsonApprovals.verifyAsJson(
+                    signedJWTResponse.getJWTClaimsSet().toJSONObject(),
+                    org.approvaltests.Approvals.NAMES.withParameters(
+                            isTestClient ? "forTestClient" : "forNonTestClient"));
         }
     }
 
