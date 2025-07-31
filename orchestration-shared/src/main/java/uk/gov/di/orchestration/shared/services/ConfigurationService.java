@@ -433,10 +433,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public boolean isReturnAuthTimeInIdTokenEnabled() {
-        return getFlagOrFalse("RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED");
-    }
-
     public boolean isUseIPVJwksEndpointEnabled() {
         return getFlagOrFalse("USE_IPV_JWKS_ENDPOINT");
     }
