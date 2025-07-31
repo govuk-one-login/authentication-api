@@ -76,12 +76,7 @@ public class ClientSignatureValidationService {
     public void validate(SignedJWT signedJWT, ClientRegistry client)
             throws ClientSignatureValidationException, JwksException {
         try {
-            PublicKey publicKey;
-            if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                publicKey = retrievePublicKey(client, signedJWT.getHeader().getKeyID());
-            } else {
-                publicKey = convertPemToPublicKey(client.getPublicKey());
-            }
+            PublicKey publicKey = retrievePublicKey(client, signedJWT.getHeader().getKeyID());
 
             JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
             if (!signedJWT.verify(verifier)) {
@@ -101,14 +96,9 @@ public class ClientSignatureValidationService {
     public void validateTokenClientAssertion(PrivateKeyJWT privateKeyJWT, ClientRegistry client)
             throws ClientSignatureValidationException, JwksException {
         try {
-            PublicKey publicKey;
-            if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                publicKey =
-                        retrievePublicKey(
-                                client, privateKeyJWT.getClientAssertion().getHeader().getKeyID());
-            } else {
-                publicKey = convertPemToPublicKey(client.getPublicKey());
-            }
+            PublicKey publicKey =
+                    retrievePublicKey(
+                            client, privateKeyJWT.getClientAssertion().getHeader().getKeyID());
             ClientAuthenticationVerifier<?> authenticationVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey),

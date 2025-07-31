@@ -67,7 +67,6 @@ class ClientSignatureValidationServiceTest {
     void setup() {
         when(oidcAPI.tokenURI()).thenReturn(TOKEN_URI);
         when(oidcAPI.getIssuerURI()).thenReturn(OIDC_BASE_URI);
-        when(configurationService.fetchRpPublicKeyFromJwksEnabled()).thenReturn(true);
         keyPair = generateRsaKeyPair();
     }
 
