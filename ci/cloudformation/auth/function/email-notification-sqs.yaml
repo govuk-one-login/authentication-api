@@ -90,6 +90,8 @@ Resources:
           Type: SQS
           Properties:
             Queue: !GetAtt EmailNotificationQueue.Arn
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
       LoggingConfig:
         LogGroup: !Ref EmailNotificationQueueFunctionLogGroup
       Policies:

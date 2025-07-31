@@ -29,6 +29,7 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -55,6 +56,7 @@ public class NotificationHandlerTest {
     private static final URI GOV_UK_ACCOUNTS_URL = URI.create("gov-uk-accounts-url");
     private static final String TEST_UNIQUE_NOTIFICATION_REFERENCE =
             "known-unique-notification-reference";
+    private static final String TEST_MESSAGE_ID = "test-message-id";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -85,7 +87,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent = notifyRequestEvent(CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -107,7 +111,9 @@ public class NotificationHandlerTest {
                 notifyRequestEvent(CommonTestVariables.EMAIL, PASSWORD_RESET_CONFIRMATION, null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
@@ -130,7 +136,9 @@ public class NotificationHandlerTest {
                         null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = Map.of("contact-us-link", contactUsLinkUrl);
 
@@ -154,7 +162,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent =
                 notifyRequestEvent(CommonTestVariables.EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
@@ -175,7 +185,9 @@ public class NotificationHandlerTest {
                 notifyRequestEvent(
                         CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -193,14 +205,19 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent =
                 notifyRequestEvent(CommonTestVariables.EMAIL, TERMS_AND_CONDITIONS_BULK_EMAIL, "");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         verifyNoInteractions(notificationService);
     }
 
     @Test
     void shouldThrowExceptionIfUnableToProcessMessageFromQueue() {
-        SQSEvent sqsEvent = generateSQSEvent("");
+        SQSMessage sqsMessage = new SQSMessage();
+        sqsMessage.setBody("");
+        SQSEvent sqsEvent = new SQSEvent();
+        sqsEvent.setRecords(singletonList(sqsMessage));
 
         RuntimeException exception =
                 assertThrows(
@@ -213,7 +230,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
+    void shouldReturnBatchFailureIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
         SQSEvent sqsEvent = notifyRequestEvent(CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -230,19 +247,14 @@ public class NotificationHandlerTest {
                         VERIFY_EMAIL,
                         EXPECTED_REFERENCE);
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(sqsEvent, context),
-                        "Expected to throw exception");
+        var response = handler.handleRequest(sqsEvent, context);
 
-        assertEquals(
-                "Error sending Notify email with NotificationType: VERIFY_EMAIL",
-                exception.getMessage());
+        assertEquals(1, response.getBatchItemFailures().size());
+        assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
     }
 
     @Test
-    void shouldThrowExceptionIfNotifyIsUnableToSendText()
+    void shouldReturnBatchFailureIfNotifyIsUnableToSendText()
             throws Json.JsonException, NotificationClientException {
         SQSEvent sqsEvent =
                 notifyRequestEvent(
@@ -258,15 +270,68 @@ public class NotificationHandlerTest {
                         VERIFY_PHONE_NUMBER,
                         EXPECTED_REFERENCE);
 
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(sqsEvent, context),
-                        "Expected to throw exception");
+        var response = handler.handleRequest(sqsEvent, context);
 
+        assertEquals(1, response.getBatchItemFailures().size());
+        assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
+    }
+
+    @Test
+    void shouldStillProcessOtherMessagesIfNotifyIsUnableToSendOne()
+            throws Json.JsonException, NotificationClientException {
+        var badCode = "123456";
+        var goodCode = "456789";
+
+        var goodMessage1 =
+                notifyRequestMessage(
+                        CommonTestVariables.EMAIL, VERIFY_EMAIL, goodCode, "good-message-1");
+        var badMessage =
+                notifyRequestMessage(
+                        CommonTestVariables.EMAIL, VERIFY_EMAIL, badCode, "bad-message");
+        var goodMessage2 =
+                notifyRequestMessage(
+                        CommonTestVariables.EMAIL, VERIFY_EMAIL, goodCode, "good-message-2");
+
+        SQSEvent sqsEvent = new SQSEvent();
+        sqsEvent.setRecords(List.of(goodMessage1, badMessage, goodMessage2));
+
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
+
+        var badPersonalisation =
+                Map.<String, Object>of(
+                        "validation-code", badCode,
+                        "email-address", CommonTestVariables.EMAIL,
+                        "contact-us-link", contactUsLinkUrl);
+
+        var goodPersonalisation =
+                Map.<String, Object>of(
+                        "validation-code", goodCode,
+                        "email-address", CommonTestVariables.EMAIL,
+                        "contact-us-link", contactUsLinkUrl);
+
+        Mockito.doThrow(NotificationClientException.class)
+                .when(notificationService)
+                .sendEmail(
+                        CommonTestVariables.EMAIL,
+                        badPersonalisation,
+                        VERIFY_EMAIL,
+                        EXPECTED_REFERENCE);
+
+        var response = handler.handleRequest(sqsEvent, context);
+
+        // Good messages are sent
+        verify(notificationService, times(2))
+                .sendEmail(
+                        CommonTestVariables.EMAIL,
+                        goodPersonalisation,
+                        VERIFY_EMAIL,
+                        EXPECTED_REFERENCE);
+
+        // Bad message is included in a batch failure
+        assertEquals(1, response.getBatchItemFailures().size());
         assertEquals(
-                "Error sending Notify SMS with NotificationType: VERIFY_PHONE_NUMBER and country code: 44",
-                exception.getMessage());
+                badMessage.getMessageId(),
+                response.getBatchItemFailures().get(0).getItemIdentifier());
     }
 
     @Test
@@ -276,7 +341,9 @@ public class NotificationHandlerTest {
                 notifyRequestEvent(
                         CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -301,7 +368,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent =
                 notifyRequestEvent(CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, "654321");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -320,7 +389,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent =
                 notifyRequestEvent(CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, "654321");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -346,7 +417,9 @@ public class NotificationHandlerTest {
         SQSEvent sqsEvent =
                 notifyRequestEvent(CommonTestVariables.EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", buildContactUsUrl());
@@ -373,7 +446,9 @@ public class NotificationHandlerTest {
                 notifyRequestEvent(CommonTestVariables.EMAIL, RESET_PASSWORD_WITH_CODE, "654321");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -395,7 +470,9 @@ public class NotificationHandlerTest {
                 notifyRequestEvent(
                         CommonTestVariables.EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "654321");
 
-        handler.handleRequest(sqsEvent, context);
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertTrue(response.getBatchItemFailures().isEmpty());
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -414,15 +491,8 @@ public class NotificationHandlerTest {
                 .toString();
     }
 
-    private SQSEvent generateSQSEvent(String messageBody) {
-        SQSMessage sqsMessage = new SQSMessage();
-        sqsMessage.setBody(messageBody);
-        SQSEvent sqsEvent = new SQSEvent();
-        sqsEvent.setRecords(singletonList(sqsMessage));
-        return sqsEvent;
-    }
-
-    private SQSEvent notifyRequestEvent(String destination, NotificationType template, String code)
+    private SQSMessage notifyRequestMessage(
+            String destination, NotificationType template, String code, String messageId)
             throws Json.JsonException {
         var notifyRequest =
                 new NotifyRequest(
@@ -439,6 +509,18 @@ public class NotificationHandlerTest {
                         objectMapper.writeValueAsString(notifyRequest), JsonObject.class);
         jsonMap.addProperty("unique_notification_reference", TEST_UNIQUE_NOTIFICATION_REFERENCE);
 
-        return generateSQSEvent(new Gson().toJson(jsonMap));
+        SQSMessage sqsMessage = new SQSMessage();
+        sqsMessage.setBody(new Gson().toJson(jsonMap));
+        sqsMessage.setMessageId(messageId);
+
+        return sqsMessage;
+    }
+
+    private SQSEvent notifyRequestEvent(String destination, NotificationType template, String code)
+            throws Json.JsonException {
+        SQSEvent sqsEvent = new SQSEvent();
+        sqsEvent.setRecords(
+                singletonList(notifyRequestMessage(destination, template, code, TEST_MESSAGE_ID)));
+        return sqsEvent;
     }
 }
