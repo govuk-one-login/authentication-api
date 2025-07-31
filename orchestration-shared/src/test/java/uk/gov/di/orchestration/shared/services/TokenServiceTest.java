@@ -602,7 +602,8 @@ class TokenServiceTest {
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
                 is(JOURNEY_ID));
-        assertNull(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"));
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("auth_time"),
+                is(AUTH_TIME));
     }
 }

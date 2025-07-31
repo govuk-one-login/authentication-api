@@ -247,9 +247,7 @@ public class TokenService {
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
             idTokenClaims.setClaim("vot", vot);
-            if (configService.isReturnAuthTimeInIdTokenEnabled()) {
-                idTokenClaims.setClaim("auth_time", authTime);
-            }
+            idTokenClaims.setClaim("auth_time", authTime);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
