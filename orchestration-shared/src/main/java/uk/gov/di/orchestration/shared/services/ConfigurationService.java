@@ -219,10 +219,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
-    public boolean fetchRpPublicKeyFromJwksEnabled() {
-        return getFlagOrFalse("FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED");
-    }
-
     public String getSpotQueueURI() {
         return System.getenv("SPOT_QUEUE_URL");
     }
