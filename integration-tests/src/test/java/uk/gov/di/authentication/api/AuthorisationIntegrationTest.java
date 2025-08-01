@@ -47,7 +47,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
@@ -122,8 +122,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
-    @RegisterExtension
-    public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
+    @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
 
     @RegisterExtension
     public static final KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
