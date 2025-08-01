@@ -98,6 +98,16 @@ Conditions:
           - !Ref Environment
           - production
 
+  IsNotIntegrationOrProduction:
+    Fn::Not:
+      - Fn::Or:
+          - Fn::Equals:
+              - !Ref Environment
+              - integration
+          - Fn::Equals:
+              - !Ref Environment
+              - production
+
   IsSplunkEnabled:
     Fn::Equals:
       - !FindInMap [EnvironmentConfiguration, !Ref Environment, IsSplunkEnabled]
