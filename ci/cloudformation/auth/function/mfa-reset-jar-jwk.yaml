@@ -8,14 +8,6 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
-      DeploymentPreference:
-        Type:
-          !FindInMap [
-            LambdaConfiguration,
-            "mfa-reset-jar-jwk",
-            LambdaDeploymentPreference,
-          ]
-        Role: !GetAtt CodeDeployServiceRole.Arn
       Handler: uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest
       Environment:
         Variables:
