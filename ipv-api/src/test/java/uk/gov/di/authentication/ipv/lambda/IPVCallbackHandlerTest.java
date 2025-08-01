@@ -38,7 +38,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
-import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationResult;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
@@ -379,8 +379,9 @@ class IPVCallbackHandlerTest {
 
         when(responseService.validateResponse(anyMap(), anyString()))
                 .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError("session_invalidated", null, true)));
+                        new IpvCallbackValidationResult(
+                                false,
+                                IpvCallbackValidationResult.FailureCode.SESSION_INVALIDATION));
 
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", STATE.getValue());
@@ -603,7 +604,8 @@ class IPVCallbackHandlerTest {
                                                 CLIENT_NAME)
                                         .withRpPairwiseId(TEST_RP_PAIRWISE_ID)));
 
-        when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
+        when(responseService.validateResponse(anyMap(), anyString()))
+                .thenReturn(new IpvCallbackValidationResult(true));
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
@@ -795,7 +797,7 @@ class IPVCallbackHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
+                .thenReturn(new IpvCallbackValidationResult(true));
 
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.setQueryStringParameters(responseHeaders);
@@ -862,9 +864,8 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError(
-                                        errorObject.getCode(), redirectUriErrorMessage)));
+                        new IpvCallbackValidationResult(
+                                false, IpvCallbackValidationResult.FailureCode.OAUTH_ERROR));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -898,9 +899,8 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError(
-                                        errorObject.getCode(), redirectUriErrorMessage)));
+                        new IpvCallbackValidationResult(
+                                false, IpvCallbackValidationResult.FailureCode.OAUTH_ERROR));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -975,7 +975,7 @@ class IPVCallbackHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
+                .thenReturn(new IpvCallbackValidationResult(true));
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
         when(authUserInfoStorageService.getAuthenticationUserInfo(
                         TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
@@ -1096,9 +1096,8 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError(
-                                        errorObject.getCode(), redirectUriErrorMessage)));
+                        new IpvCallbackValidationResult(
+                                false, IpvCallbackValidationResult.FailureCode.OAUTH_ERROR));
         var intervention =
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
@@ -1134,7 +1133,7 @@ class IPVCallbackHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
+                .thenReturn(new IpvCallbackValidationResult(true));
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
@@ -1408,7 +1407,7 @@ class IPVCallbackHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
+                .thenReturn(new IpvCallbackValidationResult(true));
 
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
         when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
