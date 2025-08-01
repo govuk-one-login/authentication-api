@@ -33,6 +33,13 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder:
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref MfaResetAuthorizeFunctionAliasactive,
+            "",
+          ]
 
   MfaResetJarJwkFunctionPermission:
     Type: AWS::Lambda::Permission
