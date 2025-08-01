@@ -92,6 +92,27 @@ Conditions:
             ]
           - "Yes"
 
+  EnforceLambdaDeploymentOrder:
+    Fn::Or:
+      - Fn::And:
+          - !Condition UseSubEnvironment
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  EnforceLambdaDeploymentOrder,
+                ]
+              - "Yes"
+      - Fn::And:
+          - !Condition NotSubEnvironment
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  EnforceLambdaDeploymentOrder,
+                ]
+              - "Yes"
+
   IsNotProduction:
     Fn::Not:
       - Fn::Equals:
@@ -156,6 +177,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       emailAcctCreationOtpCodeTtlDuration: 600
+      EnforceLambdaDeploymentOrder: "Yes"
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       lockoutCountTtl: 600
@@ -186,6 +208,7 @@ Mappings:
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
+      EnforceLambdaDeploymentOrder: "No"
       frontendApiFMSTagValue: "authenticationfrontend"
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       lockoutCountTtl: 600
@@ -220,6 +243,7 @@ Mappings:
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       orchApiVpcEndpointId: ""
@@ -260,6 +284,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
@@ -301,6 +326,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
@@ -337,6 +363,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
@@ -368,6 +395,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       docAppDomain: https://api.review-b.account.gov.uk
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://signin.account.gov.uk
       IPVApiEnabled: true
