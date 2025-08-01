@@ -1,0 +1,15 @@
+{
+  "baseBranch": "origin/main",
+  "enums": [
+    "uk.gov.di.authentication.shared.entity.CodeRequestType",
+    "uk.gov.di.authentication.shared.entity.CountType",
+    "uk.gov.di.authentication.shared.entity.CredentialTrustLevel",
+    "uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType",
+    "uk.gov.di.authentication.shared.entity.EmailCheckResultStatus",
+    "uk.gov.di.authentication.shared.entity.ErrorResponse",
+    "uk.gov.di.authentication.shared.entity.JourneyType",
+    "uk.gov.di.authentication.shared.entity.LevelOfConfidence",
+    "uk.gov.di.authentication.shared.entity.MFAMethodType",
+    "uk.gov.di.authentication.shared.entity.PriorityIdentifier"
+  ]
+}

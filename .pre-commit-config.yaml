@@ -31,6 +31,7 @@ repos:
           checkov-policies.*|\
           .terraform-docs.yml|\
           package.json|\
+          deprecation-config.json|\
           http-client.env.json|\
           package-lock.json|\
           .*provider.json|\
@@ -142,3 +143,9 @@ repos:
           - windows_amd64
           - -r
           - ci/terraform
+      - id: deprecation-checker
+        name: Check deprecation policy
+        entry: ./gradlew :deprecation-checker:checkDeprecations
+        language: system
+        pass_filenames: false
+        files: '\.java$'
