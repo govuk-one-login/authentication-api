@@ -12,6 +12,8 @@ File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 dependencies {
 
     implementation project(path: ':shared')
+    implementation project(':user-permissions')
+
     compileOnly configurations.lambda,
             configurations.sqs,
             configurations.ssm,

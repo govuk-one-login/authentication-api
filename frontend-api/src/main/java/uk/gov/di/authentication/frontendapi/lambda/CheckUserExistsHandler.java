@@ -7,14 +7,15 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.UserMfaDetail;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
-import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -26,13 +27,16 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
@@ -47,7 +51,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
     private final AuditService auditService;
-    private final CodeStorageService codeStorageService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -55,7 +59,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService) {
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -63,7 +67,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
-        this.codeStorageService = codeStorageService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public CheckUserExistsHandler() {
@@ -73,14 +77,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService);
-    }
-
-    public CheckUserExistsHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckUserExistsRequest.class, configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.permissionDecisionManager = new PermissionDecisionManager();
     }
 
     @Override
@@ -117,7 +114,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             persistentSessionId);
 
             if (errorResponse.isPresent()) {
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -135,9 +131,22 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             : AuditService.UNKNOWN;
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
-            if (codeStorageService.isBlockedForEmail(
-                    emailAddress,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
+            UserPermissionContext userPermissionContext =
+                    new UserPermissionContext(null, null, emailAddress, null);
+
+            var decisionResult =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            if (decisionResult.isFailure()) {
+                LOG.info("No decision made: {}", decisionResult.getFailure());
+                var httpResponse =
+                        DecisionErrorHttpMapper.toHttpResponse(decisionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(
+                        httpResponse.statusCode(), httpResponse.errorResponse());
+            }
+
+            if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
                 LOG.info("User account is locked");
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 authSessionService.updateSession(userContext.getAuthSession());
@@ -187,23 +196,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             auditService.submitAuditEvent(
                     auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
-            var lockoutInformation =
-                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(
-                                    journeyType -> {
-                                        var ttl =
-                                                codeStorageService.getMfaCodeBlockTimeToLive(
-                                                        emailAddress,
-                                                        MFAMethodType.AUTH_APP,
-                                                        journeyType);
-                                        return new LockoutInformation(
-                                                "codeBlock",
-                                                MFAMethodType.AUTH_APP,
-                                                ttl,
-                                                journeyType);
-                                    })
-                            .filter(info -> info.lockTTL() > 0)
-                            .toList();
+            var lockoutInformationResult = determineLockoutInformation(userPermissionContext);
+
+            if (lockoutInformationResult.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(
+                        500, lockoutInformationResult.getFailure());
+            }
+
+            var lockoutInformation = lockoutInformationResult.getSuccess();
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
@@ -212,6 +212,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
+
             authSessionService.updateSession(authSession);
 
             LOG.info("Successfully processed request");
@@ -221,5 +222,40 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private Result<ErrorResponse, List<LockoutInformation>> determineLockoutInformation(
+            UserPermissionContext userPermissionContext) {
+        var lockoutInformation = new ArrayList<LockoutInformation>();
+
+        var signInResult =
+                permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
+        if (signInResult.isFailure()) {
+            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
+        }
+        if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock", MFAMethodType.AUTH_APP, ttl, JourneyType.SIGN_IN));
+        }
+
+        var passwordResetResult =
+                permissionDecisionManager.canVerifyOtp(
+                        JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
+        if (passwordResetResult.isFailure()) {
+            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
+        }
+        if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
+            long ttl = tempLockOut.lockedUntil().getEpochSecond();
+            lockoutInformation.add(
+                    new LockoutInformation(
+                            "codeBlock",
+                            MFAMethodType.AUTH_APP,
+                            ttl,
+                            JourneyType.PASSWORD_RESET_MFA));
+        }
+
+        return Result.success(lockoutInformation);
     }
 }

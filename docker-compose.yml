@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   aws:
     image: localstack/localstack:3.1.0@sha256:a47b435f876a100115d1d9f24e19b6b302cc7acb78b91e9258122116283ba462

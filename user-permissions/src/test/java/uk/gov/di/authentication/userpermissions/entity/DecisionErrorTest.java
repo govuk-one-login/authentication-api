@@ -9,6 +9,6 @@ class DecisionErrorTest {
     @Test
     void shouldHaveCorrectEnumValues() {
         // Then
-        assertEquals("UNKNOWN", DecisionError.UNKNOWN.name());
+        assertEquals("STORAGE_SERVICE_ERROR", DecisionError.STORAGE_SERVICE_ERROR.name());
     }
 }
