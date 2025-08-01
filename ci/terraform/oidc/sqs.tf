@@ -137,8 +137,9 @@ resource "aws_sqs_queue_policy" "email_dlq_queue_policy" {
 }
 
 resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
-  event_source_arn = aws_sqs_queue.email_queue.arn
-  function_name    = aws_lambda_function.email_sqs_lambda.arn
+  event_source_arn        = aws_sqs_queue.email_queue.arn
+  function_name           = aws_lambda_function.email_sqs_lambda.arn
+  function_response_types = ["ReportBatchItemFailures"]
 
   depends_on = [
     aws_sqs_queue.email_queue,
