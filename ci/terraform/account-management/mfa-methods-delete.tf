@@ -21,7 +21,6 @@ module "mfa-methods-delete" {
   endpoint_name = "mfa-methods-delete"
   handler_environment_variables = {
     ENVIRONMENT                       = var.environment
-    REDIS_KEY                         = var.environment == "production" ? local.redis_key : null
     EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI               = var.internal_sector_uri
@@ -39,9 +38,9 @@ module "mfa-methods-delete" {
   lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.allow_aws_service_access_security_group_id,
-  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+  ]
 
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
@@ -54,6 +53,8 @@ module "mfa-methods-delete" {
   account_alias         = local.aws_account_alias
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
+
+  snapstart = var.snapstart_enabled
 
   runbook_link                          = "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
   lambda_log_alarm_error_rate_threshold = 25

@@ -30,5 +30,6 @@ notify_template_map = {
 logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
 cloudwatch_log_retention = 30
 
-# Sizing
+# Performance Tuning
 lambda_min_concurrency = 25
+snapstart_enabled      = false

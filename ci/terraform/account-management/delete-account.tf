@@ -63,5 +63,7 @@ module "delete_account" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
+  snapstart = var.snapstart_enabled
+
   depends_on = [module.account_management_api_remove_account_role]
 }
