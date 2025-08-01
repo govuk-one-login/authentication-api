@@ -149,29 +149,29 @@ Mappings:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
-      authApiId: "9il43udl10"
-      authExternalApiId: "i5ib7bm0pe"
-      authAccountId: "653994557586"
-      authEnvironment: authdev3
-      serviceDomain: authdev3.dev.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/cf42638b-73a6-498f-a56f-e7ec341c276b
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37
-      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
+      authApiId: "dfwubyergf"
+      authExternalApiId: "48oqh70cm7"
+      authAccountId: "761723964695"
+      authEnvironment: sandpit
+      serviceDomain: sandpit.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/170fc24d-b278-49b0-a860-4fa1f3fa7a48
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8447683f-8800-4920-b4fe-1f410bf52ce0
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-dev
-      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/055d799b-c648-4232-801b-c83aef0f2bd1
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:653994557586:key/3e5dd566-314a-4be8-8976-d8177824f959
-      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
-      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
       ipvStubDomain: "ipvstub.oidc.sandpit.account.gov.uk"
