@@ -187,6 +187,7 @@ resource "aws_iam_policy" "mfa_reset_token_kms_signing_policy" {
 }
 
 # Policy for mfa-reset-authorize lambda to access the key used to sign the MFA reset JAR
+# NOTE: Cannot use the alias to identify a KMS key: https://docs.aws.amazon.com/kms/latest/developerguide/cmks-in-iam-policies.html
 data "aws_iam_policy_document" "ipv_reverification_request_signing_key_policy_document" {
   statement {
     sid    = "AllowAccessToKmsSigningKey"
@@ -197,7 +198,8 @@ data "aws_iam_policy_document" "ipv_reverification_request_signing_key_policy_do
       "kms:GetPublicKey" #JWT Service calls GetPublicKey to derive KeyId
     ]
     resources = [
-      aws_kms_key.ipv_reverification_request_signing_key.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn,
+      aws_kms_key.ipv_reverification_request_signing_key_v2.arn
     ]
   }
 }
@@ -214,7 +216,7 @@ resource "aws_iam_policy" "ipv_reverification_request_signing_key_policy" {
 
 
 ### MFA reset JAR signing key access
-
+# NOTE: Cannot use the alias to identify a KMS key: https://docs.aws.amazon.com/kms/latest/developerguide/cmks-in-iam-policies.html
 data "aws_iam_policy_document" "mfa_reset_jar_jwk_document" {
   statement {
     sid    = "AllowAccessToJarSigningKmsPublicKey"
@@ -224,7 +226,8 @@ data "aws_iam_policy_document" "mfa_reset_jar_jwk_document" {
       "kms:GetPublicKey",
     ]
     resources = [
-      aws_kms_key.ipv_reverification_request_signing_key.arn
+      aws_kms_key.ipv_reverification_request_signing_key.arn,
+      aws_kms_key.ipv_reverification_request_signing_key_v2.arn
     ]
   }
 }
