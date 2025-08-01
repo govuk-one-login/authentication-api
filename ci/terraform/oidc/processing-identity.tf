@@ -59,7 +59,6 @@ module "processing-identity" {
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     ENVIRONMENT                                 = var.environment
-    REDIS_KEY                                   = var.environment == "production" ? local.redis_key : null
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
@@ -87,9 +86,9 @@ module "processing-identity" {
   lambda_zip_file_version = aws_s3_object.ipv_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = var.is_orch_stubbed ? module.ipv_processing_identity_role_2.arn : module.ipv_processing_identity_role_with_orch_session_table_read_write_delete_access_2[0].arn
