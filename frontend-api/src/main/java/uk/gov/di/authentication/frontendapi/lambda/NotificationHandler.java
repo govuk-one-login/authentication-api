@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,7 +38,7 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
-public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
+public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(NotificationHandler.class);
 
@@ -74,14 +76,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     @Override
-    public Void handleRequest(SQSEvent event, Context context) {
+    public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         return segmentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
-                () -> notificationRequestHandler(event, context));
+                () -> notificationRequestHandler(event));
     }
 
-    public Void notificationRequestHandler(SQSEvent event, Context context) {
+    public SQSBatchResponse notificationRequestHandler(SQSEvent event) {
         attachTraceId();
+
+        var failures = new ArrayList<SQSBatchResponse.BatchItemFailure>();
 
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());
@@ -92,9 +96,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             LOG.info(
                     "Processing NotifyRequest with reference: {}",
                     request.getUniqueNotificationReference());
-            sendNotifyMessage(request);
+            try {
+                sendNotifyMessage(request);
+            } catch (Exception e) {
+                LOG.error(
+                        "Error processing NotifyRequest with reference: {}",
+                        request.getUniqueNotificationReference(),
+                        e);
+                failures.add(new SQSBatchResponse.BatchItemFailure(msg.getMessageId()));
+            }
         }
-        return null;
+        return new SQSBatchResponse(failures);
     }
 
     private NotifyRequest parseNotifyRequest(SQSMessage msg) {
