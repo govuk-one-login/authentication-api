@@ -28,6 +28,8 @@ class MfaResetJarJwkHandlerTest {
     private MfaResetJarJwkHandler handler;
     private final ECKey jarPublicSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+    private final ECKey jarSecondaryPublicSigningKey =
+            new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
 
     MfaResetJarJwkHandlerTest() throws JOSEException {}
 
@@ -38,7 +40,9 @@ class MfaResetJarJwkHandlerTest {
     }
 
     @Test
-    void shouldReturnMfaResetStorageTokenJwk() {
+    void shouldReturnOnlyPrimaryMfaResetStorageTokenJwk() {
+        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId()).thenReturn(null);
+
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
@@ -50,7 +54,22 @@ class MfaResetJarJwkHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenSigningKeyIsNotPresent() {
+    void shouldReturnPrimaryAndSecondaryMfaResetStorageTokenJwksWhenSecondaryKeyAvailable() {
+        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId())
+                .thenReturn(jarSecondaryPublicSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(jarPublicSigningKey, jarSecondaryPublicSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+        assertThat(result, hasHeader("Cache-Control", "max-age=86400"));
+    }
+
+    @Test
+    void shouldReturn500WhenPrimarySigningKeyIsNotPresent() {
         when(jwksService.getPublicMfaResetJarJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
