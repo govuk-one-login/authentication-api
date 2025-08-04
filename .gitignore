@@ -40,3 +40,5 @@ auth-template.yaml
 
 # Amazon Q files
 .amazonq/
+
+specs-and-prompts/
