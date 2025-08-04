@@ -49,6 +49,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -59,6 +60,7 @@ import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -107,6 +109,7 @@ import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.gener
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
+import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.CustomScopeValue.DOC_CHECKING_APP;
 import static uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper.generateIDToken;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -171,6 +174,7 @@ public class TokenHandlerTest {
     private TokenHandler handler;
     private final Json objectMapper = SerializationService.getInstance();
     private final LocalDateTime clientSessionCreationTime = LocalDateTime.now();
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     void setUp() {
@@ -189,7 +193,8 @@ public class TokenHandlerTest {
                         tokenValidationService,
                         redisConnectionService,
                         tokenClientAuthValidatorFactory,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        auditService);
     }
 
     private static Stream<Arguments> validVectorValues() {
@@ -206,8 +211,8 @@ public class TokenHandlerTest {
     @MethodSource("validVectorValues")
     void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
+        KeyPair keyPair = generateRsaKeyPair();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -233,7 +238,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
@@ -250,7 +255,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, clientIdInHeader);
+                generateApiGatewayRequest(privateKeyJWT, authCode, clientIdInHeader);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -262,6 +267,11 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService)
+                .submitAuditEvent(
+                        OIDC_TOKEN_GENERATED,
+                        CLIENT_ID,
+                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService)
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
@@ -301,7 +311,7 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(
                 authCode, authenticationRequest.toParameters(), vtr, "a-different-client-id", null);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
@@ -318,11 +328,13 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
                 .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -363,7 +375,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
@@ -380,7 +392,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, clientIdInHeader);
+                generateApiGatewayRequest(privateKeyJWT, authCode, clientIdInHeader);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -392,6 +404,11 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService)
+                .submitAuditEvent(
+                        OIDC_TOKEN_GENERATED,
+                        CLIENT_ID,
+                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -455,6 +472,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }
 
     @ParameterizedTest
@@ -518,6 +537,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }
 
     @Test
@@ -536,8 +557,7 @@ public class TokenHandlerTest {
                                 "unknown"));
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(
-                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, new AuthorizationCode().toString(), true);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
@@ -549,6 +569,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }
 
     @Test
@@ -578,7 +600,7 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
@@ -598,7 +620,7 @@ public class TokenHandlerTest {
         String authCode = new AuthorizationCode().getValue();
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
@@ -640,8 +662,7 @@ public class TokenHandlerTest {
                                 "unknown"));
 
         var result =
-                generateApiGatewayRequest(
-                        privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, new AuthorizationCode().toString(), true);
 
         assertThat(result, hasStatus(400));
         assertThat(
@@ -660,6 +681,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
     }
 
     @Test
@@ -678,7 +701,7 @@ public class TokenHandlerTest {
         when(orchAuthCodeService.getExchangeDataForCode(authCode)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -689,6 +712,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -711,7 +736,7 @@ public class TokenHandlerTest {
         setupClientSessions(authCode, authRequestParams, vtr);
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, authCode, "http://invalid-redirect-uri", CLIENT_ID, true);
+                        privateKeyJWT, authCode, "http://invalid-redirect-uri", true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -722,6 +747,8 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -771,7 +798,7 @@ public class TokenHandlerTest {
                             authenticationRequest.getCustomParameter("vtr"));
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-            when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+            when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
                             INTERNAL_SUBJECT,
@@ -799,6 +826,11 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OIDC_TOKEN_GENERATED,
+                            CLIENT_ID,
+                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -841,6 +873,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -884,6 +918,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -928,6 +964,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -971,6 +1009,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1041,6 +1081,8 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1077,7 +1119,7 @@ public class TokenHandlerTest {
                             authenticationRequest.getCustomParameter("vtr"));
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-            when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+            when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
                             INTERNAL_SUBJECT,
@@ -1106,6 +1148,11 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OIDC_TOKEN_GENERATED,
+                            CLIENT_ID,
+                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1142,7 +1189,7 @@ public class TokenHandlerTest {
                             authenticationRequest.getCustomParameter("vtr"));
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-            when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+            when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
                             INTERNAL_SUBJECT,
@@ -1160,7 +1207,7 @@ public class TokenHandlerTest {
             when(configurationService.isPkceEnabled()).thenReturn(true);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                    generateApiGatewayRequest(privateKeyJWT, authCode, true);
             assertThat(result, hasStatus(200));
             verify(cloudwatchMetricsService)
                     .incrementCounter(
@@ -1170,6 +1217,11 @@ public class TokenHandlerTest {
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
                                     CLIENT_ID));
+            verify(auditService)
+                    .submitAuditEvent(
+                            OIDC_TOKEN_GENERATED,
+                            CLIENT_ID,
+                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1292,9 +1344,7 @@ public class TokenHandlerTest {
                         null))
                 .thenReturn(tokenResponse);
 
-        var result =
-                generateApiGatewayRequest(
-                        privateKeyJWT, authCode, DOC_APP_CLIENT_ID.getValue(), true);
+        var result = generateApiGatewayRequest(privateKeyJWT, authCode, true);
 
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
@@ -1307,6 +1357,11 @@ public class TokenHandlerTest {
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
                                 DOC_APP_CLIENT_ID.getValue()));
+        verify(auditService)
+                .submitAuditEvent(
+                        OIDC_TOKEN_GENERATED,
+                        DOC_APP_CLIENT_ID.getValue(),
+                        auditUser(CLIENT_SESSION_ID, DOC_APP_USER_PUBLIC_SUBJECT.getValue()));
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -1353,7 +1408,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
                         eq(INTERNAL_SUBJECT),
@@ -1370,7 +1425,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -1415,7 +1470,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
                         eq(INTERNAL_SUBJECT),
@@ -1436,7 +1491,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -1472,7 +1527,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         INTERNAL_SUBJECT,
@@ -1494,12 +1549,14 @@ public class TokenHandlerTest {
                                 "Some unchecked exception during orch auth code exchange data retrieval."));
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, true);
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
         verify(cloudwatchMetricsService, never())
                 .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -1608,7 +1665,6 @@ public class TokenHandlerTest {
             PrivateKeyJWT privateKeyJWT,
             String authorisationCode,
             String redirectUri,
-            String clientId,
             boolean clientIdInHeader) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
@@ -1644,12 +1700,9 @@ public class TokenHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(
-            PrivateKeyJWT privateKeyJWT,
-            String authorisationCode,
-            String clientId,
-            boolean clientIdInHeader) {
+            PrivateKeyJWT privateKeyJWT, String authorisationCode, boolean clientIdInHeader) {
         return generateApiGatewayRequest(
-                privateKeyJWT, authorisationCode, REDIRECT_URI, clientId, clientIdInHeader);
+                privateKeyJWT, authorisationCode, REDIRECT_URI, clientIdInHeader);
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -1745,5 +1798,9 @@ public class TokenHandlerTest {
 
     private void assertAuthCodeExchangeDataRetrieved(String authCode) {
         verify(orchAuthCodeService, times(1)).getExchangeDataForCode(eq(authCode));
+    }
+
+    private static TxmaAuditUser auditUser(String clientSessionId, String userId) {
+        return TxmaAuditUser.user().withUserId(userId).withGovukSigninJourneyId(clientSessionId);
     }
 }
