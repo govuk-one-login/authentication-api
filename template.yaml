@@ -133,7 +133,11 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   IsRpRateLimitingEnabled:
-    !Or [!Equals [dev, !Ref Environment], !Equals [staging, !Ref Environment]]
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
   IsEnhancedCrossBrowserHandlingEnabled:
     !Or [
