@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -38,6 +39,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -83,6 +86,8 @@ class ResetPasswordHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
@@ -152,6 +157,8 @@ class ResetPasswordHandlerTest {
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -164,7 +171,8 @@ class ResetPasswordHandlerTest {
                         commonPasswordsService,
                         passwordValidator,
                         accountModifiersService,
-                        authSessionService);
+                        authSessionService,
+                        permissionDecisionManager);
     }
 
     @Test
@@ -379,7 +387,8 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(2)));
         var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
