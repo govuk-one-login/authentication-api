@@ -95,7 +95,8 @@ data "aws_iam_policy_document" "mfa_reset_signing_key_access_policy" {
   }
 }
 
-
+## ipv_reverification_request_signing_key - V1 ##
+# NOTE: Before deleting these V1 resources, ensure they are no longer being used on higher environments such as production.
 
 resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   description              = "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset"
@@ -106,11 +107,29 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
 }
 
+## / ipv_reverification_request_signing_key - V1 ##
 
+## ipv_reverification_request_signing_key - V2 ##
+
+resource "aws_kms_key" "ipv_reverification_request_signing_key_v2" {
+  description              = "KMS signing key (ECC) for JARs sent from Authentication to IPV for MFA reset (v2)"
+  deletion_window_in_days  = 30
+  key_usage                = "SIGN_VERIFY"
+  customer_master_key_spec = "ECC_NIST_P256"
+
+  policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
+}
+
+## / ipv_reverification_request_signing_key - V2 ##
 
 resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
   name          = "alias/${var.environment}-ipv_reverification_request_signing_key"
   target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
+}
+
+resource "aws_kms_alias" "ipv_reverification_request_signing_key_secondary_alias" {
+  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_secondary"
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
 }
 
 data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_policy" {
