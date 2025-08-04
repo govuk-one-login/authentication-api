@@ -8,7 +8,6 @@ import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +18,6 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
-import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -34,11 +32,19 @@ import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256Strin
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class JwksService {
-
+    private static JwksService jwksService;
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
     private static final Map<String, JWK> KEY_CACHE = new HashMap<>();
     private static final Logger LOG = LogManager.getLogger(JwksService.class);
+
+    public static JwksService getInstance(
+            ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
+        if (jwksService == null) {
+            jwksService = new JwksService(configurationService, kmsConnectionService);
+        }
+        return jwksService;
+    }
 
     public JwksService(
             ConfigurationService configurationService, KmsConnectionService kmsConnectionService) {
@@ -71,17 +77,9 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getMfaResetJarSigningKeyAlias());
     }
 
-    public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
+    public JWK retrieveJwkFromJwkSource(JWKSource<SecurityContext> jwkSource, String keyId) {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
-        JWKSource<SecurityContext> jwkSource =
-                JWKSourceBuilder.create(url)
-                        .retrying(true)
-                        .refreshAheadCache(false)
-                        .cache(false)
-                        .rateLimited(false)
-                        .build();
         try {
-            LOG.info("Retrieving JWKSet with URL: {}", url);
             return jwkSource.get(selector, null).stream()
                     .findFirst()
                     .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
