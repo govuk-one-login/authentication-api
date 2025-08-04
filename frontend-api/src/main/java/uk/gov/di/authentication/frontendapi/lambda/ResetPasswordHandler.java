@@ -40,6 +40,10 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -61,6 +65,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -74,7 +79,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
             DynamoAccountModifiersService dynamoAccountModifiersService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -88,6 +94,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public ResetPasswordHandler() {
@@ -108,6 +115,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager();
     }
 
     public ResetPasswordHandler(
@@ -125,6 +133,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(codeStorageService);
     }
 
     @Override
@@ -192,9 +201,25 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             updateAccountRecoveryBlockTable(
                     userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
-            var incorrectPasswordCount =
-                    codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
-            if (incorrectPasswordCount != 0) {
+            UserPermissionContext userPermissionContext =
+                    new UserPermissionContext(null, null, userCredentials.getEmail(), null);
+
+            var decisionResult =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            if (decisionResult.isFailure()) {
+                LOG.error("Permission decision failed: {}", decisionResult.getFailure());
+                var httpResponse =
+                        DecisionErrorHttpMapper.toHttpResponse(decisionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(
+                        httpResponse.statusCode(), httpResponse.errorResponse());
+            }
+
+            var decision = decisionResult.getSuccess();
+            int attemptCount = decision.attemptCount();
+
+            if (attemptCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
             }
 
