@@ -193,7 +193,7 @@ class PermissionDecisionManagerTest {
             var lockedOut = (Decision.TemporarilyLockedOut) decision;
             assertThat(
                     lockedOut.forbiddenReason(),
-                    equalTo(ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT));
+                    equalTo(ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT));
             assertThat(lockedOut.attemptCount(), equalTo(0));
             assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
         }
@@ -256,7 +256,7 @@ class PermissionDecisionManagerTest {
             var lockedOut = (Decision.TemporarilyLockedOut) decision;
             assertThat(
                     lockedOut.forbiddenReason(),
-                    equalTo(ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT));
+                    equalTo(ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT));
             assertThat(lockedOut.attemptCount(), equalTo(0));
             assertThat(lockedOut.lockedUntil(), equalTo(Instant.ofEpochSecond(300L)));
         }

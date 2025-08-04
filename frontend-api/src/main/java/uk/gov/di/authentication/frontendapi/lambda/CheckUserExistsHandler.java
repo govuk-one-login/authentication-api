@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.LockoutInformation;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
@@ -199,8 +200,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var lockoutInformationResult = determineLockoutInformation(userPermissionContext);
 
             if (lockoutInformationResult.isFailure()) {
+                var httpResponse =
+                        DecisionErrorHttpMapper.toHttpResponse(
+                                lockoutInformationResult.getFailure());
                 return generateApiGatewayProxyErrorResponse(
-                        500, lockoutInformationResult.getFailure());
+                        httpResponse.statusCode(), httpResponse.errorResponse());
             }
 
             var lockoutInformation = lockoutInformationResult.getSuccess();
@@ -224,14 +228,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
     }
 
-    private Result<ErrorResponse, List<LockoutInformation>> determineLockoutInformation(
+    private Result<DecisionError, List<LockoutInformation>> determineLockoutInformation(
             UserPermissionContext userPermissionContext) {
         var lockoutInformation = new ArrayList<LockoutInformation>();
 
         var signInResult =
                 permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
         if (signInResult.isFailure()) {
-            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
+            return Result.failure(signInResult.getFailure());
         }
         if (signInResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
             long ttl = tempLockOut.lockedUntil().getEpochSecond();
@@ -244,7 +248,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 permissionDecisionManager.canVerifyOtp(
                         JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
         if (passwordResetResult.isFailure()) {
-            return Result.failure(ErrorResponse.STORAGE_LAYER_ERROR);
+            return Result.failure(passwordResetResult.getFailure());
         }
         if (passwordResetResult.getSuccess() instanceof Decision.TemporarilyLockedOut tempLockOut) {
             long ttl = tempLockOut.lockedUntil().getEpochSecond();

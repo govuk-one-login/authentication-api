@@ -115,7 +115,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             if (ttl > 0) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
                                 0,
                                 Instant.ofEpochSecond(ttl)));
             }
