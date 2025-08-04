@@ -98,6 +98,16 @@ Conditions:
           - !Ref Environment
           - production
 
+  IsNotIntegrationOrProduction:
+    Fn::Not:
+      - Fn::Or:
+          - Fn::Equals:
+              - !Ref Environment
+              - integration
+          - Fn::Equals:
+              - !Ref Environment
+              - production
+
   IsSplunkEnabled:
     Fn::Equals:
       - !FindInMap [EnvironmentConfiguration, !Ref Environment, IsSplunkEnabled]
@@ -1858,10 +1868,23 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource: !Sub
-              - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key}}"
-              - env:
-                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            Resource:
+              - !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key_secondary_alias}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   MfaResetTokenKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy

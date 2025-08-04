@@ -21,6 +21,19 @@ Resources:
                 ]
               env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS: !If
+            - IsNotIntegrationOrProduction
+            - !Sub
+              - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key_secondary
+              - DataStoreAccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    dataStoreAccountId,
+                  ]
+                env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - !Ref AWS::NoValue
       LoggingConfig:
         LogGroup: !Ref MfaResetJarJwkFunctionLogGroup
       Policies:
