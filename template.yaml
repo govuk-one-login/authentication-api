@@ -2746,21 +2746,7 @@ Resources:
                   !Ref Environment,
                   aisUriSecretId,
                 ]
-          AUTHENTICATION_BACKEND_URI: !Sub
-            - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
-            - AuthExternalApiId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authExternalApiId,
-                ]
-              VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+          AUTHENTICATION_BACKEND_URI: "authstub.oidc.authdev3.dev.account.gov.uk"
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           CREDENTIAL_STORE_URI: !Sub
@@ -2876,14 +2862,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          AUTH_FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          AUTH_FRONTEND_BASE_URL: "authstub.oidc.authdev3.dev.account.gov.uk"
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
             !If [AisAbortOnError, true, false]
           STORAGE_TOKEN_SIGNING_KEY_ALIAS:
@@ -3505,14 +3484,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          AUTH_FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          AUTH_FRONTEND_BASE_URL: "authstub.oidc.authdev3.dev.account.gov.uk"
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
