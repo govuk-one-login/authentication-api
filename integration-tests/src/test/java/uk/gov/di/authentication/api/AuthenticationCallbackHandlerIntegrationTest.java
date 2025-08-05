@@ -3,6 +3,9 @@ package uk.gov.di.authentication.api;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -49,6 +52,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
@@ -58,14 +62,16 @@ import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.KeyPair;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -138,6 +144,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @RegisterExtension
     public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
+    @RegisterExtension public static final JwksExtension ipvJwksExtension = new JwksExtension();
+
     protected static ConfigurationService configurationService;
 
     private static final String CLIENT_ID = "test-client-id";
@@ -147,10 +155,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final KeyPair keyPair = generateRsaKeyPair();
-    private static final String publicKey =
-            "-----BEGIN PUBLIC KEY-----\n"
-                    + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                    + "\n-----END PUBLIC KEY-----\n";
 
     @BeforeAll
     static void beforeAll() {
@@ -167,6 +171,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         accountInterventionApiStub,
                         false);
         redisConnectionService = new RedisConnectionService(configurationService);
+        var rsaKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .keyUse(KeyUse.ENCRYPTION)
+                        .keyID("test-key-id")
+                        .build();
+        ipvJwksExtension.init(new JWKSet(rsaKey));
     }
 
     @BeforeEach()
@@ -1182,6 +1192,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Override
         public String getBackChannelLogoutQueueURI() {
             return backChannelLogoutQueueExtension.getQueueUrl();
+        }
+
+        @Override
+        public URL getIPVJwksUrl() {
+            try {
+                return ipvJwksExtension.getJwksUrl();
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
