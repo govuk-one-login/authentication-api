@@ -42,6 +42,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Collections;
@@ -65,6 +66,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final PasswordValidator passwordValidator;
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
     private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -79,7 +81,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             PasswordValidator passwordValidator,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AuthSessionService authSessionService,
-            PermissionDecisionManager permissionDecisionManager) {
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -94,6 +97,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = passwordValidator;
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
         this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
     }
 
     public ResetPasswordHandler() {
@@ -115,6 +119,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager();
+        this.userActionsManager = new UserActionsManager(codeStorageService);
     }
 
     public ResetPasswordHandler(
@@ -133,6 +138,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(codeStorageService);
+        this.userActionsManager = new UserActionsManager(codeStorageService);
     }
 
     @Override
@@ -215,18 +221,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         httpResponse.statusCode(), httpResponse.errorResponse());
             }
 
-            var decision = decisionResult.getSuccess();
-            int attemptCount = decision.attemptCount();
-
-            if (attemptCount != 0) {
-                codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
-            }
-
-            String codeBlockedKeyPrefix =
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-
-            codeStorageService.deleteBlockForEmail(
-                    userCredentials.getEmail(), codeBlockedKeyPrefix);
+            userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
