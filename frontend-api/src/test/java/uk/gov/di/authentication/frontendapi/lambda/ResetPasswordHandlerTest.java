@@ -40,6 +40,7 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 
 import java.time.temporal.ChronoUnit;
@@ -88,6 +89,7 @@ class ResetPasswordHandlerTest {
             mock(DynamoAccountModifiersService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
@@ -172,7 +174,8 @@ class ResetPasswordHandlerTest {
                         passwordValidator,
                         accountModifiersService,
                         authSessionService,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        userActionsManager);
     }
 
     @Test
@@ -382,20 +385,18 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() throws Json.JsonException {
+    void shouldCallUserActionsManagerPasswordResetOnSuccessfulRequest() throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(2)));
         var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+        verify(userActionsManager).passwordReset(any(), any());
         verify(sqsClient)
                 .send(
                         argThat(
