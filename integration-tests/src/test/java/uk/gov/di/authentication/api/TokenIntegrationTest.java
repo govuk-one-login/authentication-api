@@ -387,7 +387,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 idTokenClaims.getSubject(),
                 equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
-        assertNull(idTokenClaims.getClaim("auth_time"));
+        assertThat(idTokenClaims.getClaim("auth_time"), equalTo(AUTH_TIME));
 
         AuditAssertionsHelper.assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(OIDC_TOKEN_GENERATED));
@@ -428,7 +428,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 idTokenClaims.getSubject(),
                 not(equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL))));
-        assertNull(idTokenClaims.getClaim("auth_time"));
+        assertThat(idTokenClaims.getClaim("auth_time"), equalTo(AUTH_TIME));
 
         AuditAssertionsHelper.assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(OIDC_TOKEN_GENERATED));

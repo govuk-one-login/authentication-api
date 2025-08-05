@@ -81,14 +81,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsReturnAuthTimeInIdTokenEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   IsIntegrationOrProduction:
     !Or [
       !Equals [!Ref Environment, integration],
@@ -1885,10 +1877,6 @@ Resources:
                 ]
           FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
             - EnableFetchJwks
-            - true
-            - false
-          RETURN_AUTH_TIME_IN_ID_TOKEN_ENABLED: !If
-            - IsReturnAuthTimeInIdTokenEnabled
             - true
             - false
           PKCE_ENABLED: !If
