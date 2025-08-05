@@ -37,3 +37,6 @@ node_modules
 
 # ignore the rain merged template generated from the components yamls in ci/cloudformation/auth/*
 auth-template.yaml
+
+# Amazon Q files
+.amazonq/

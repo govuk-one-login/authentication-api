@@ -12,7 +12,7 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
  * <p>This interface provides methods to determine if a user is permitted to perform specific
  * authentication actions based on their context and journey type.
  */
-public interface UserPermissions {
+public interface PermissionDecisions {
     /**
      * Checks if a user is permitted to submit an email address.
      *
@@ -61,6 +61,10 @@ public interface UserPermissions {
      * @return A Result containing either a Decision or a DecisionError
      */
     Result<DecisionError, Decision> canSendSmsOtpNotification(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    @Experimental()
+    Result<DecisionError, Decision> canVerifyOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**

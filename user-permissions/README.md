@@ -60,7 +60,7 @@ The module includes an `ExampleSmsVerificationHandler` that demonstrates how to 
 
 ```java
 // Check if user can verify SMS OTP
-var checkResult = userPermissions.canVerifySmsOtp(journeyType, userPermissionContext);
+var checkResult = permissionDecisions.canVerifySmsOtp(journeyType, userPermissionContext);
 if (checkResult.isFailure()) {
     return errorResponse;
 }

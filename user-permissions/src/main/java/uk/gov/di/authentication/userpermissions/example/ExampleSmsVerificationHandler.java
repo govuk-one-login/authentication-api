@@ -3,8 +3,8 @@ package uk.gov.di.authentication.userpermissions.example;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.userpermissions.PermissionDecisions;
 import uk.gov.di.authentication.userpermissions.UserActions;
-import uk.gov.di.authentication.userpermissions.UserPermissions;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
@@ -14,7 +14,7 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class ExampleSmsVerificationHandler {
     private static final String EXPECTED_OTP = "372615";
 
-    private UserPermissions userPermissions;
+    private PermissionDecisions permissionDecisions;
     private UserActions userActions;
 
     public String handle(String submittedOtp) {
@@ -28,7 +28,7 @@ public class ExampleSmsVerificationHandler {
                         .withAuthSessionItem(new AuthSessionItem())
                         .build();
 
-        var checkResult = userPermissions.canVerifySmsOtp(journeyType, userPermissionContext);
+        var checkResult = permissionDecisions.canVerifySmsOtp(journeyType, userPermissionContext);
         if (checkResult.isFailure()) {
             return (format("500: %s", checkResult.getFailure().name()));
         }
