@@ -20,7 +20,6 @@ locals {
     pattern = "test-user+${var.environment}-$${instantiationMillis}-$${counter}@test.null.local" # '$${' = literal '${' (escaped)
     regex   = "^test-user\\+${var.environment}-\\d+-\\d+@test\\.null\\.local$"
   }
-  stub_rp_client_name_pattern = "relying-party-stub-${var.environment}"
   orch_acceptance_test_rp_client_emails = {
     regex = "^orch-test-user\\d*@digital.cabinet-office.gov.uk$"
   }
