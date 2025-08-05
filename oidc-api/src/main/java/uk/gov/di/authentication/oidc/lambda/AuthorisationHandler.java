@@ -82,9 +82,11 @@ import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +141,7 @@ public class AuthorisationHandler
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
     private final AuthorisationService authorisationService;
+    private final NowHelper.NowClock nowClock;
     private final RateLimitService rateLimitService;
 
     public AuthorisationHandler(
@@ -156,7 +159,8 @@ public class AuthorisationHandler
             TokenValidationService tokenValidationService,
             AuthFrontend authFrontend,
             AuthorisationService authorisationService,
-            RateLimitService rateLimitService) {
+            RateLimitService rateLimitService,
+            Clock clock) {
         this.configurationService = configurationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -172,6 +176,7 @@ public class AuthorisationHandler
         this.authFrontend = authFrontend;
         this.authorisationService = authorisationService;
         this.rateLimitService = rateLimitService;
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -209,6 +214,7 @@ public class AuthorisationHandler
         var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
         this.rateLimitService =
                 new RateLimitService(slidingWindowAlgorithm, cloudwatchMetricService);
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
     public AuthorisationHandler(
@@ -243,6 +249,7 @@ public class AuthorisationHandler
         this.rateLimitService =
                 new RateLimitService(
                         new SlidingWindowAlgorithm(configurationService), cloudwatchMetricService);
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
     public AuthorisationHandler() {
@@ -684,7 +691,7 @@ public class AuthorisationHandler
             var maxAgeParam = getMaxAge(authenticationRequest);
             boolean isMaxAgeSupported =
                     configurationService.supportMaxAgeEnabled() && client.getMaxAgeEnabled();
-            final long timeNow = NowHelper.now().toInstant().getEpochSecond();
+            final long timeNow = nowClock.now().toInstant().getEpochSecond();
 
             if (maxAgeParam.isPresent()
                     && isMaxAgeSupported
@@ -862,7 +869,7 @@ public class AuthorisationHandler
                         clientSessionId);
 
         var jwtID = IdGenerator.generate();
-        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+        var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
                         client, configurationService.getInternalSectorURI());
@@ -907,8 +914,8 @@ public class AuthorisationHandler
                         .issuer(configurationService.getOrchestrationClientId())
                         .audience(authFrontend.baseURI().toString())
                         .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
-                        .notBeforeTime(NowHelper.now())
+                        .issueTime(nowClock.now())
+                        .notBeforeTime(nowClock.now())
                         .jwtID(jwtID)
                         .claim("rp_client_id", client.getClientID())
                         .claim("rp_sector_host", rpSectorIdentifierHost)
@@ -1102,6 +1109,7 @@ public class AuthorisationHandler
 
         var claimSetEntries =
                 claimsSet.stream()
+                        .sorted(Comparator.naturalOrder())
                         .map(claim -> new ClaimsSetRequest.Entry(claim.getValue()))
                         .toList();
 
