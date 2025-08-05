@@ -56,9 +56,16 @@ public class MfaResetJarJwkHandler
 
             signingKeys.add(jwksService.getPublicMfaResetJarJwkWithOpaqueId());
 
+            JWK secondarySigningKey = jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId();
+            if (secondarySigningKey != null) {
+                signingKeys.add(secondarySigningKey);
+            }
+
             JWKSet jwkSet = new JWKSet(signingKeys);
 
-            LOG.info("Served Auth reverification request JAR signature verification key JWK set.");
+            LOG.info(
+                    "Served Auth reverification request JAR signature verification key JWK set containing {} key(s).",
+                    signingKeys.size());
 
             return generateApiGatewayProxyResponse(
                     200,

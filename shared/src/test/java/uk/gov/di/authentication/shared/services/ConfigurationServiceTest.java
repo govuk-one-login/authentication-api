@@ -564,6 +564,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getMfaResetJarSecondarySigningKeyAliasShouldNotDefault() {
+        assertNull(configurationService.getMfaResetJarSecondarySigningKeyAlias());
+    }
+
+    @Test
     void getMfaResetJarSigningKeyIdShouldNotDefault() {
         assertNull(configurationService.getMfaResetJarSigningKeyId());
     }
