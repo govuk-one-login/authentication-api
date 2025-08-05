@@ -390,8 +390,7 @@ public class AuthenticationCallbackHandler
                     orchSession.setAuthTime(NowHelper.now().toInstant().getEpochSecond());
                 }
 
-                if (configurationService.supportMaxAgeEnabled()
-                        && Objects.nonNull(orchSession.getPreviousSessionId())) {
+                if (Objects.nonNull(orchSession.getPreviousSessionId())) {
                     LOG.info("Previous session id is present - handling max age");
                     handleMaxAgeSession(orchSession, user);
                 }
