@@ -1147,11 +1147,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
-        public String getIPVAuthEncryptionPublicKey() {
-            return publicKey;
-        }
-
-        @Override
         public URI getAccountInterventionServiceURI() {
             try {
                 return new URIBuilder()

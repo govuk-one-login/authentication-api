@@ -244,20 +244,6 @@ public class IPVAuthorisationService {
         }
     }
 
-    private RSAPublicKey getPublicKeyFromSSM() {
-        try {
-            LOG.info("Getting IPV Encryption Public Key via SSM");
-            var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
-            return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
-                    .build()
-                    .toRSAPublicKey();
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException(e);
-        }
-    }
-
     private JWK getJwkFromJwksEndpoint() {
         LOG.info("Getting IPV Encryption JWK via JWKS endpoint");
         return jwksService.getIpvJwk();

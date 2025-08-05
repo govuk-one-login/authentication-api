@@ -48,7 +48,6 @@ import java.net.URL;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -112,11 +111,6 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var certpem =
-                "-----BEGIN PUBLIC KEY-----\n"
-                        + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                        + "\n-----END PUBLIC KEY-----\n";
-        when(configurationService.getIPVAuthEncryptionPublicKey()).thenReturn(certpem);
         var rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
