@@ -220,15 +220,10 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            String keyId = null;
-            RSAPublicKey publicEncryptionKey;
-            if (configurationService.isUseIPVJwksEndpointEnabled()) {
-                JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
-                keyId = publicEncryptionJwk.getKeyID();
-                publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
-            } else {
-                publicEncryptionKey = getPublicKeyFromSSM();
-            }
+            JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
+            String keyId = publicEncryptionJwk.getKeyID();
+            RSAPublicKey publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
+
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(

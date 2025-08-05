@@ -425,10 +425,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public boolean isUseIPVJwksEndpointEnabled() {
-        return getFlagOrFalse("USE_IPV_JWKS_ENDPOINT");
-    }
-
     public boolean isUseStronglyConsistentReads() {
         return getFlagOrFalse("USE_STRONGLY_CONSISTENT_READS");
     }

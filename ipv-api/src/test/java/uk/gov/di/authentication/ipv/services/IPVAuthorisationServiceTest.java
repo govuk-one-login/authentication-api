@@ -29,8 +29,6 @@ import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -288,11 +286,8 @@ class IPVAuthorisationServiceTest {
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         }
 
-        @ParameterizedTest(name = "With useIpvJwksEndpointEnabled = {0}")
-        @ValueSource(booleans = {true, false})
-        void shouldConstructASignedRequestJWT(boolean useIpvJwksEndpoint)
-                throws JOSEException, ParseException {
-            when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(useIpvJwksEndpoint);
+        @Test
+        void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
             var state = new State("test-state");
             var scope = new Scope(OIDCScopeValue.OPENID);
             var pairwise = new Subject("pairwise-identifier");
@@ -328,16 +323,14 @@ class IPVAuthorisationServiceTest {
                                 List.of("P2", "PCL200"),
                                 true);
             }
-            if (useIpvJwksEndpoint) {
-                assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
-            }
+            assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
+
             var signedJWTResponse = decryptJWT(encryptedJWT);
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
                     GsonBuilder::serializeNulls,
-                    Approvals.NAMES.withParameters(
-                            useIpvJwksEndpoint ? "usingJwksEndpoint" : "usingSSM"));
+                    Approvals.NAMES.withParameters("usingJwksEndpoint"));
 
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),

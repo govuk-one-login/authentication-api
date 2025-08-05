@@ -79,14 +79,6 @@ Conditions:
       !Equals [!Ref Environment, production],
     ]
   IsProduction: !Equals [!Ref Environment, production]
-  UseIpvJwksEndpointToGetEncryptionKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -2616,10 +2608,6 @@ Resources:
               storageTokenKeyArn,
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
-          USE_IPV_JWKS_ENDPOINT: !If
-            - UseIpvJwksEndpointToGetEncryptionKey
-            - true
-            - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
@@ -4345,10 +4333,6 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
-          USE_IPV_JWKS_ENDPOINT: !If
-            - UseIpvJwksEndpointToGetEncryptionKey
-            - true
-            - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
