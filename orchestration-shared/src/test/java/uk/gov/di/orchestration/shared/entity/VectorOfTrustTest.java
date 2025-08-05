@@ -67,6 +67,17 @@ class VectorOfTrustTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
                 Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P3.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
+                Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm", "P3.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
+                Arguments.of(
                         jsonArrayOf("PCL250.Cl.Cm", "Cl.P2.Cm", "Cm.Cl.PCL200"),
                         List.of(
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250),
@@ -142,6 +153,12 @@ class VectorOfTrustTest {
                         List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL),
                 Arguments.of(
                         List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)),
+                        MEDIUM_LEVEL),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)),
                         MEDIUM_LEVEL));
@@ -305,7 +322,9 @@ class VectorOfTrustTest {
                 Arguments.of(jsonArrayOf("P2.Cl.Cm")),
                 Arguments.of(jsonArrayOf("P3.Cl.Cm")),
                 Arguments.of(jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm")),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm", "P3.Cl.Cm")));
+                Arguments.of(jsonArrayOf("P2.Cl.Cm", "P3.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P1.Cl.Cm", "P3.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm", "P3.Cl.Cm")));
     }
 
     @Test

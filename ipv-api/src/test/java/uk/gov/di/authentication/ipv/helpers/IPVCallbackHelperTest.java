@@ -104,19 +104,48 @@ class IPVCallbackHelperTest {
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
-    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
+    private static final List<VectorOfTrust> VTR_LIST_P0_AND_P2 =
             List.of(
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_ONLY =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL));
     private static final List<VectorOfTrust> VTR_LIST_P2_ONLY =
             List.of(
                     VectorOfTrust.of(
                             CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P3_ONLY =
+            List.of(
+                    VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.HIGH_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
     private static final List<VectorOfTrust> VTR_LIST_P2_AND_P3 =
             List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
+
+    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2_AND_P3 =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     VectorOfTrust.of(
@@ -134,12 +163,32 @@ class IPVCallbackHelperTest {
                                     "sub", "sub-val",
                                     "vot", "P0",
                                     "vtm", OIDC_TRUSTMARK_URI.toString())));
+
+    private static final UserInfo p1VotUserIdentityUserInfo =
+            new UserInfo(
+                    new JSONObject(
+                            Map.of(
+                                    "sub", "sub-val",
+                                    "vot", "P1",
+                                    "vtm", OIDC_TRUSTMARK_URI.toString(),
+                                    "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
+                                    "https://vocab.account.gov.uk/v1/passport", "passport")));
     private static final UserInfo p2VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
                             Map.of(
                                     "sub", "sub-val",
                                     "vot", "P2",
+                                    "vtm", OIDC_TRUSTMARK_URI.toString(),
+                                    "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
+                                    "https://vocab.account.gov.uk/v1/passport", "passport")));
+
+    private static final UserInfo p3VotUserIdentityUserInfo =
+            new UserInfo(
+                    new JSONObject(
+                            Map.of(
+                                    "sub", "sub-val",
+                                    "vot", "P3",
                                     "vtm", OIDC_TRUSTMARK_URI.toString(),
                                     "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
                                     "https://vocab.account.gov.uk/v1/passport", "passport")));
@@ -152,9 +201,13 @@ class IPVCallbackHelperTest {
 
     private static Stream<Arguments> validUserIdentities() {
         return Stream.of(
-                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2),
+                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P0_AND_P2),
+                Arguments.of(p1VotUserIdentityUserInfo, VTR_LIST_P1_ONLY),
                 Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY),
-                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_AND_P3));
+                Arguments.of(p3VotUserIdentityUserInfo, VTR_LIST_P3_ONLY),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_AND_P3),
+                Arguments.of(p3VotUserIdentityUserInfo, VTR_LIST_P1_AND_P3),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2_AND_P3));
     }
 
     @BeforeEach

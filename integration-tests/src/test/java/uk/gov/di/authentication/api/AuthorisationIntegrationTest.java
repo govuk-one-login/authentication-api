@@ -1050,6 +1050,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             jsonArrayOf("Cl.Cm.P2", "Cl.Cm.P3"),
                             MEDIUM_LEVEL,
                             LevelOfConfidence.MEDIUM_LEVEL),
+                    Arguments.of(
+                            jsonArrayOf("Cl.Cm.P3"), MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL),
                     Arguments.of(null, MEDIUM_LEVEL, null));
         }
     }
