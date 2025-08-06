@@ -1098,7 +1098,6 @@ class AuthenticationCallbackHandlerTest {
         void setup() {
             usingValidClientSession();
             usingValidClient();
-            when(configurationService.supportMaxAgeEnabled()).thenReturn(true);
         }
 
         @Test

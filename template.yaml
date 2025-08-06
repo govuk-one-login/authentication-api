@@ -78,14 +78,6 @@ Conditions:
       !Equals [!Ref Environment, integration],
       !Equals [!Ref Environment, production],
     ]
-  SupportMaxAgeEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseIpvJwksEndpointToGetEncryptionKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -2647,10 +2639,6 @@ Resources:
               storageTokenKeyArn,
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
-          SUPPORT_MAX_AGE_ENABLED: !If
-            - SupportMaxAgeEnabled
-            - true
-            - false
           USE_IPV_JWKS_ENDPOINT: !If
             - UseIpvJwksEndpointToGetEncryptionKey
             - true
@@ -3298,10 +3286,6 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
-          SUPPORT_MAX_AGE_ENABLED: !If
-            - SupportMaxAgeEnabled
-            - true
-            - false
           PKCE_ENABLED: !If
             - PkceEnabled
             - true

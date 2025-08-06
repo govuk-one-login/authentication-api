@@ -386,10 +386,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
-    public boolean supportMaxAgeEnabled() {
-        return getFlagOrFalse("SUPPORT_MAX_AGE_ENABLED");
-    }
-
     public String getStorageTokenClaimName() {
         return System.getenv()
                 .getOrDefault(

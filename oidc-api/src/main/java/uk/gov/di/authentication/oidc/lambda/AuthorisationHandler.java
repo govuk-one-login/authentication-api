@@ -503,9 +503,7 @@ public class AuthorisationHandler
                                         requestedVtr.getCredentialTrustLevel().toString())));
 
         var maxAgeParam = getMaxAge(authRequest);
-        if (configurationService.supportMaxAgeEnabled()
-                && client.getMaxAgeEnabled()
-                && maxAgeParam.isPresent()) {
+        if (client.getMaxAgeEnabled() && maxAgeParam.isPresent()) {
             auditEventExtensions.add(pair("maximumSessionAge", maxAgeParam.get()));
         }
 
@@ -689,12 +687,10 @@ public class AuthorisationHandler
             previousSessionIdFromCookie = Optional.empty();
         } else {
             var maxAgeParam = getMaxAge(authenticationRequest);
-            boolean isMaxAgeSupported =
-                    configurationService.supportMaxAgeEnabled() && client.getMaxAgeEnabled();
             final long timeNow = nowClock.now().toInstant().getEpochSecond();
 
             if (maxAgeParam.isPresent()
-                    && isMaxAgeSupported
+                    && client.getMaxAgeEnabled()
                     && maxAgeExpired(
                             existingOrchSessionOptional.get().getAuthTime(),
                             maxAgeParam,

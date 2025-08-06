@@ -1184,7 +1184,6 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWithMaxAgeExtensionWhenSupportedByClient() {
             var client = generateClientRegistry();
             client.setMaxAgeEnabled(true);
-            when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(clientService.getClient(anyString())).thenReturn(Optional.of(client));
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]", "max_age", "123"));
@@ -1198,7 +1197,6 @@ class AuthorisationHandlerTest {
         void shouldSendAuditRequestParsedWithChannel() {
             var client = generateClientRegistry();
             client.setMaxAgeEnabled(true);
-            when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(clientService.getClient(anyString())).thenReturn(Optional.of(client));
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("channel", Channel.GENERIC_APP.toString()));
@@ -2451,7 +2449,6 @@ class AuthorisationHandlerTest {
     class MaxAge {
         @BeforeEach
         void setup() {
-            when(configService.supportMaxAgeEnabled()).thenReturn(true);
             when(configService.getSessionExpiry()).thenReturn(3600L);
             orchSession.incrementProcessingIdentityAttempts();
             withExistingSession();
@@ -2530,7 +2527,6 @@ class AuthorisationHandlerTest {
                 Long authTime, String maxAgeParam, boolean maxAgeExpired) {
             when(clientService.getClient(anyString()))
                     .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
-            when(configService.supportMaxAgeEnabled()).thenReturn(true);
             orchSession.incrementProcessingIdentityAttempts();
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
             var requestParams =
@@ -2607,7 +2603,6 @@ class AuthorisationHandlerTest {
                 Long authTime, String maxAgeParam, boolean maxAgeExpired) throws JOSEException {
             when(clientService.getClient(anyString()))
                     .thenReturn(Optional.of(generateClientRegistry().withMaxAgeEnabled(true)));
-            when(configService.supportMaxAgeEnabled()).thenReturn(true);
             withExistingOrchSession(orchSession.withAuthenticated(true).withAuthTime(authTime));
 
             var jwtClaimsSet =
