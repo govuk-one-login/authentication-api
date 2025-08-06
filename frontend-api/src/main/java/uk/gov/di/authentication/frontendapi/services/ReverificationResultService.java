@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
@@ -31,6 +32,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class ReverificationResultService {
     public static final int MAX_RETRIES = 2;
@@ -171,10 +173,21 @@ public class ReverificationResultService {
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
+            var signingKeyId =
+                    kmsConnectionService
+                            .getPublicKey(
+                                    GetPublicKeyRequest.builder()
+                                            .keyId(
+                                                    configurationService
+                                                            .getMfaResetJarSigningKeyId())
+                                            .build())
+                            .keyId();
+
             var jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(configurationService.getMfaResetJarSigningKeyAlias())
+                            .keyID(hashSha256String(signingKeyId))
                             .build();
+
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
             var message = encodedHeader + "." + encodedClaims;
