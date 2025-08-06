@@ -46,6 +46,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
@@ -184,7 +185,8 @@ class ReverificationResultServiceTest {
 
             String jwtMessage = actualSignRequest.message().asUtf8String();
             String[] parts = jwtMessage.split("\\.");
-            String decodedHeader = new String(Base64URL.from(parts[0]).decode());
+            String decodedHeader =
+                    new String(Base64URL.from(parts[0]).decode(), StandardCharsets.UTF_8);
             assertThat(
                     decodedHeader,
                     org.hamcrest.Matchers.containsString("\"kid\":\"" + expectedHashedKid + "\""));
