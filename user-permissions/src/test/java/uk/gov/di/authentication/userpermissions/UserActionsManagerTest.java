@@ -38,4 +38,24 @@ class UserActionsManagerTest {
                                 + JourneyType.PASSWORD_RESET);
         assertTrue(result.isSuccess());
     }
+
+    @Test
+    void allNoOpMethodsShouldReturnSuccessWithNull() {
+        var journeyType = JourneyType.SIGN_IN;
+        var context = USER_PERMISSION_CONTEXT;
+
+        assertTrue(
+                userActionsManager.incorrectEmailAddressReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.sentEmailOtpNotification(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.incorrectEmailOtpReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.correctEmailOtpReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.incorrectPasswordReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.incorrectSmsOtpReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.correctSmsOtpReceived(journeyType, context).isSuccess());
+        assertTrue(
+                userActionsManager.incorrectAuthAppOtpReceived(journeyType, context).isSuccess());
+        assertTrue(userActionsManager.correctAuthAppOtpReceived(journeyType, context).isSuccess());
+    }
 }
