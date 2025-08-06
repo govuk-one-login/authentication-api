@@ -108,7 +108,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  EnablePagerDutyAlarms: !Equals [dev, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -6294,6 +6293,16 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
+  PagerDutySNSSubscription:
+    Condition: IsProduction
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:integrationURL}}"
+        - SecretArn: !Ref PagerDutyUrlSecret
+      Protocol: https
+      RawMessageDelivery: false
+      TopicArn: !Ref PagerDutyEvents
   #endregion
   #region OrchAuthCode DynamoDB Table
 
@@ -7270,7 +7279,7 @@ Resources:
 
   # region PagerDuty alarms
   IpvHandbackPagerDutyAlarm:
-    Condition: EnablePagerDutyAlarms
+    Condition: IsProduction
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
@@ -7315,7 +7324,7 @@ Resources:
             Unit: Count
 
   DocAppHandbackPagerDutyAlarm:
-    Condition: EnablePagerDutyAlarms
+    Condition: IsProduction
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
