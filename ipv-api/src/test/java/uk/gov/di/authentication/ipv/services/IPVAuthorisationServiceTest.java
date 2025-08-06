@@ -24,7 +24,6 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.approvaltests.Approvals;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -329,8 +328,7 @@ class IPVAuthorisationServiceTest {
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
-                    GsonBuilder::serializeNulls,
-                    Approvals.NAMES.withParameters("usingJwksEndpoint"));
+                    GsonBuilder::serializeNulls);
 
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),
