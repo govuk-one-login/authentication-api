@@ -89,7 +89,7 @@ class VectorOfTrustTest {
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
                 Arguments.of(
-                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P3.Cl")),
+                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P4.Cl")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
                 Arguments.of(

@@ -62,6 +62,22 @@ class VectorOfTrustTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
                 Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm", "P3.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
+                Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P3.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
+                Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm", "P3.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL))),
+                Arguments.of(
                         jsonArrayOf("PCL250.Cl.Cm", "Cl.P2.Cm", "Cm.Cl.PCL200"),
                         List.of(
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250),
@@ -100,9 +116,10 @@ class VectorOfTrustTest {
         var vtrList =
                 List.of(
                         VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
+                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.HIGH_LEVEL));
         var levelsOfConfidence = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-        assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1")));
+        assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1", "P3")));
     }
 
     @Test
@@ -133,7 +150,18 @@ class VectorOfTrustTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, null)),
                         MEDIUM_LEVEL),
                 Arguments.of(
-                        List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL));
+                        List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)),
+                        MEDIUM_LEVEL),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)),
+                        MEDIUM_LEVEL));
     }
 
     @ParameterizedTest
@@ -168,7 +196,20 @@ class VectorOfTrustTest {
                         List.of(
                                 VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))));
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL)),
+                        Arguments.of(
+                                List.of(
+                                        VectorOfTrust.of(
+                                                MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                        VectorOfTrust.of(
+                                                MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)),
+                                List.of(
+                                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                        VectorOfTrust.of(
+                                                MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                        VectorOfTrust.of(
+                                                MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)))));
     }
 
     @ParameterizedTest
@@ -195,7 +236,7 @@ class VectorOfTrustTest {
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
                 Arguments.of(
-                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P3.Cl")),
+                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P4.Cl")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
                 Arguments.of(
@@ -221,7 +262,8 @@ class VectorOfTrustTest {
                 Arguments.of(MEDIUM_LEVEL, null),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.NONE),
                 Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
     }
 
     @ParameterizedTest
@@ -237,8 +279,10 @@ class VectorOfTrustTest {
         return Stream.of(
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(LOW_LEVEL, LevelOfConfidence.HIGH_LEVEL),
                 Arguments.of(null, LevelOfConfidence.LOW_LEVEL),
-                Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
+                Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(null, LevelOfConfidence.HIGH_LEVEL));
     }
 
     @Test
@@ -262,14 +306,25 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
     }
 
-    @Test
-    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent() {
-        String vectorString = "P2.Cl.Cm";
+    @ParameterizedTest
+    @MethodSource("validIdentityVtrs")
+    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent(String jsonArrayVector) {
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
+                                Collections.singletonList(jsonArrayVector))
                         .get(0);
         assertTrue(vectorOfTrust.containsLevelOfConfidence());
+    }
+
+    public static Stream<Arguments> validIdentityVtrs() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("P1.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P3.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm", "P3.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P1.Cl.Cm", "P3.Cl.Cm")),
+                Arguments.of(jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm", "P3.Cl.Cm")));
     }
 
     @Test
