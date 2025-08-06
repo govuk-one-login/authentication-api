@@ -35,7 +35,7 @@ module "reverification_result" {
     IPV_AUTHORISATION_CALLBACK_URI                = var.ipv_auth_authorize_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                   = var.ipv_auth_authorize_client_id
     ENVIRONMENT                                   = var.environment
-    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = var.environment != "integration" && var.environment != "production" ? aws_kms_alias.ipv_reverification_request_signing_key_secondary_alias.arn : aws_kms_alias.ipv_reverification_request_signing_key_alias.arn
+    IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_alias.arn
     IPV_BACKEND_URI                               = var.ipv_backend_uri
     USE_STRONGLY_CONSISTENT_READS                 = var.use_strongly_consistent_reads
   }
