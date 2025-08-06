@@ -20,7 +20,6 @@ locals {
     pattern = "test-user+${var.environment}-$${instantiationMillis}-$${counter}@test.null.local" # '$${' = literal '${' (escaped)
     regex   = "^test-user\\+${var.environment}-\\d+-\\d+@test\\.null\\.local$"
   }
-  stub_rp_client_name_pattern = "relying-party-stub-${var.environment}"
   orch_acceptance_test_rp_client_emails = {
     regex = "^orch-test-user\\d*@digital.cabinet-office.gov.uk$"
   }
@@ -128,6 +127,9 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
             },
             {
               S = "P2"
+            },
+            {
+              S = "P3"
             }
           ]
         }
