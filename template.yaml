@@ -2623,7 +2623,6 @@ Resources:
         - !Ref StorageTokenSigningKmsAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
-        - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
@@ -5767,23 +5766,6 @@ Resources:
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
-
-  IpvPublicEncryptionKeyAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowGetIpvPublicParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource: !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-public-encryption-key
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
