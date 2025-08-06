@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -42,8 +41,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
-import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -162,8 +159,6 @@ class ResetPasswordHandlerTest {
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -660,30 +655,6 @@ class ResetPasswordHandlerTest {
 
             assertThat(result, hasStatus(400));
             verifyNoInteractions(authenticationService);
-            verifyNoInteractions(auditService);
-            verifyNoInteractions(accountModifiersService);
-        }
-    }
-
-    @Nested
-    class ServerErrorTests {
-        @Test
-        void shouldReturn500WhenPermissionDecisionFails() {
-            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                    .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
-            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
-
-            var result = handler.handleRequest(event, context);
-
-            assertThat(result, hasStatus(500));
-            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-            verify(userActionsManager, never()).passwordReset(any(), any());
-            verifyNoInteractions(sqsClient);
             verifyNoInteractions(auditService);
             verifyNoInteractions(accountModifiersService);
         }

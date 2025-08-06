@@ -8,7 +8,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -208,18 +207,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
             UserPermissionContext userPermissionContext =
                     new UserPermissionContext(null, null, userCredentials.getEmail(), null);
-
-            var decisionResult =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.PASSWORD_RESET, userPermissionContext);
-
-            if (decisionResult.isFailure()) {
-                LOG.error("Permission decision failed: {}", decisionResult.getFailure());
-                var httpResponse =
-                        DecisionErrorHttpMapper.toHttpResponse(decisionResult.getFailure());
-                return generateApiGatewayProxyErrorResponse(
-                        httpResponse.statusCode(), httpResponse.errorResponse());
-            }
 
             userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
