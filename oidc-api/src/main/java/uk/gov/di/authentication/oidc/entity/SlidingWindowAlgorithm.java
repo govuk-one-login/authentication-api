@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.entity;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ObjectMessage;
 import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -9,6 +10,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
     private static final Logger LOG = LogManager.getLogger(SlidingWindowAlgorithm.class);
@@ -70,6 +72,12 @@ public class SlidingWindowAlgorithm implements RateLimitAlgorithm {
         var previousCountInWindow =
                 previousCount
                         * ((double) secondsFromPreviousPeriodInWindow / PERIOD_LENGTH_IN_SECONDS);
+
+        if (rateLimit > 0) {
+            var consumption = (previousCountInWindow + currentCount) / rateLimit;
+            LOG.info(new ObjectMessage(Map.of("client", clientId, "consumption", consumption)));
+        }
+
         if (previousCountInWindow + currentCount > rateLimit) {
             LOG.warn(
                     "Client with ID {} has exceeded rate limit. Current count: {}. Limit {}",
