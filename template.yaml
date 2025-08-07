@@ -100,14 +100,6 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  SnapStartEnabledSpotResponse:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   IsRpRateLimitingEnabled:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4604,10 +4596,8 @@ Resources:
         - !Ref OrchIdentityCredentialsTableDeleteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
-      SnapStart: !If
-        - SnapStartEnabledSpotResponse
-        - ApplyOn: PublishedVersions
-        - !Ref AWS::NoValue
+      SnapStart:
+        ApplyOn: PublishedVersions
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
