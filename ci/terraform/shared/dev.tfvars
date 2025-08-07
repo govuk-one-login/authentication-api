@@ -13,4 +13,4 @@ new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"
 
 # App Specific
 di_tools_signing_profile_version_arn = "arn:aws:signer:eu-west-2:706615647326:/signing-profiles/di_auth_lambda_signing_20220214175605677200000001/ZPqg7ZUgCP"
-test_clients_enabled                 = true
+provision_test_client_secret         = true
