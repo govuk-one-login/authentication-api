@@ -78,6 +78,7 @@ Conditions:
       !Equals [!Ref Environment, integration],
       !Equals [!Ref Environment, production],
     ]
+  IsProduction: !Equals [!Ref Environment, production]
   UseIpvJwksEndpointToGetEncryptionKey:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4909,6 +4910,13 @@ Resources:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: spot_response_queue_key_arn
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  PagerDutyUrlSecret:
+    Condition: IsProduction
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: pager_duty_url
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   HttpsEgressSecurityGroup:
