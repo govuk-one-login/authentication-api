@@ -21,7 +21,9 @@ module "ticf_cri_lambda" {
   source = "../modules/endpoint-lambda"
 
   endpoint_name = "ticf-cri"
-  runbook_link  = "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+
+  runbook_link               = "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+  lambda_log_alarm_threshold = 20
 
   environment = var.environment
 
