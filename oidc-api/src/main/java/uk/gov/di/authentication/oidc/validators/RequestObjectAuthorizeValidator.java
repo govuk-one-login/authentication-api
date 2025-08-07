@@ -194,16 +194,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         state);
             }
 
-            if (configurationService.isPkceEnabled()) {
-                var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
-                var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
+            var codeChallenge = jwtClaimsSet.getStringClaim("code_challenge");
+            var codeChallengeMethod = jwtClaimsSet.getStringClaim("code_challenge_method");
 
-                var codeChallengeError =
-                        validateCodeChallengeAndMethod(
-                                codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
-                if (codeChallengeError.isPresent()) {
-                    return errorResponse(redirectURI, codeChallengeError.get(), state);
-                }
+            var codeChallengeError =
+                    validateCodeChallengeAndMethod(
+                            codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
+            if (codeChallengeError.isPresent()) {
+                return errorResponse(redirectURI, codeChallengeError.get(), state);
             }
 
             var vtrError = validateVtr(jwtClaimsSet, client);

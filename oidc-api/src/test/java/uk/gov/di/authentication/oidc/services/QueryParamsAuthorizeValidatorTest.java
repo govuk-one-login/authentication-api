@@ -491,27 +491,7 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled() {
-        when(configurationService.isPkceEnabled()).thenReturn(false);
-
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                VALID_RESPONSE_TYPE,
-                                VALID_SCOPES,
-                                new ClientID(CLIENT_ID),
-                                REDIRECT_URI)
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .build();
-
-        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
-
-        assertTrue(errorObject.isEmpty());
-    }
-
-    @Test
-    void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled() {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
+    void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing() {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 VALID_RESPONSE_TYPE,
@@ -533,7 +513,6 @@ class QueryParamsAuthorizeValidatorTest {
         clientRegistry.setPKCEEnforced(true);
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(clientRegistry));
-        when(configurationService.isPkceEnabled()).thenReturn(true);
 
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
@@ -562,7 +541,6 @@ class QueryParamsAuthorizeValidatorTest {
     @SuppressWarnings("deprecation")
     void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
             throws ParseException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
 
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
 
@@ -594,7 +572,6 @@ class QueryParamsAuthorizeValidatorTest {
     @SuppressWarnings("deprecation")
     void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
             throws ParseException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
 
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.PLAIN;
@@ -626,8 +603,6 @@ class QueryParamsAuthorizeValidatorTest {
     @Test
     @SuppressWarnings("deprecation")
     void shouldNotReturnErrorWhenPkceCodeChallengeAndMethodAreValid() throws ParseException {
-        when(configurationService.isPkceEnabled()).thenReturn(true);
-
         var codeChallenge = CodeChallenge.parse("aCodeChallenge");
         var codeChallengeMethod = CodeChallengeMethod.S256;
 
