@@ -114,11 +114,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     configurationParameters) {
 
                 @Override
-                public boolean isPkceEnabled() {
-                    return true;
-                }
-
-                @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
                 }

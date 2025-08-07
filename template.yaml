@@ -86,14 +86,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  PkceEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1118,10 +1110,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          PKCE_ENABLED: !If
-            - PkceEnabled
-            - true
-            - false
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -1857,10 +1845,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          PKCE_ENABLED: !If
-            - PkceEnabled
-            - true
-            - false
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
             - true
@@ -3286,10 +3270,6 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
-          PKCE_ENABLED: !If
-            - PkceEnabled
-            - true
-            - false
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
             - true

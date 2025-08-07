@@ -460,22 +460,8 @@ class RequestObjectAuthorizeValidatorTest {
     @Nested
     class Pkce {
         @Test
-        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsNotEnabled()
+        void shouldNotReturnErrorWhenPkceIsNotEnforcedAndCodeChallengeAndMethodAreMissing()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(configurationService.isPkceEnabled()).thenReturn(false);
-
-            var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
-            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-
-            var requestObjectError = validator.validate(authRequest);
-
-            assertTrue(requestObjectError.isEmpty());
-        }
-
-        @Test
-        void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreMissingAndPkceIsEnabled()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(configurationService.isPkceEnabled()).thenReturn(true);
 
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -495,7 +481,6 @@ class RequestObjectAuthorizeValidatorTest {
             clientRegistry.setPKCEEnforced(true);
             when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                     .thenReturn(Optional.of(clientRegistry));
-            when(configurationService.isPkceEnabled()).thenReturn(true);
 
             var jwtClaimsSet = getDefaultJWTClaimsSetBuilder().claim("scope", "openid").build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
@@ -517,8 +502,6 @@ class RequestObjectAuthorizeValidatorTest {
         @Test
         void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsMissing()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(configurationService.isPkceEnabled()).thenReturn(true);
-
             var jwtClaimsSet =
                     getDefaultJWTClaimsSetBuilder()
                             .claim("code_challenge", PKCE_CODE_CHALLENGE)
@@ -542,8 +525,6 @@ class RequestObjectAuthorizeValidatorTest {
         @Test
         void shouldReturnErrorWhenPkceCodeChallengeMethodIsExpectedAndIsInvalid()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(configurationService.isPkceEnabled()).thenReturn(true);
-
             var invalidCodeChallengeMethod = CodeChallengeMethod.PLAIN.getValue();
 
             var jwtClaimsSet =
@@ -571,8 +552,6 @@ class RequestObjectAuthorizeValidatorTest {
         @Test
         void shouldValidateSuccessfullyWhenPkceCodeChallengeAndMethodAreValid()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(configurationService.isPkceEnabled()).thenReturn(true);
-
             var codeChallengeMethod = CodeChallengeMethod.S256.getValue();
 
             var jwtClaimsSet =

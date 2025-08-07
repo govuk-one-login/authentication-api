@@ -200,11 +200,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 public String getOrchestrationToAuthenticationEncryptionPublicKey() {
                     return AUTH_PUBLIC_ENCRYPTION_KEY;
                 }
-
-                @Override
-                public boolean isPkceEnabled() {
-                    return true;
-                }
             };
 
     @Nested

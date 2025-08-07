@@ -181,7 +181,6 @@ public class TokenHandlerTest {
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(configurationService.getEnvironment()).thenReturn("test");
-        when(configurationService.isPkceEnabled()).thenReturn(false);
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
         handler =
                 new TokenHandler(
@@ -761,11 +760,6 @@ public class TokenHandlerTest {
         private static final String CODE_CHALLENGE_PLAIN_STRING =
                 CodeChallenge.compute(CodeChallengeMethod.PLAIN, CODE_VERIFIER).toString();
 
-        @BeforeEach
-        void setup() {
-            when(configurationService.isPkceEnabled()).thenReturn(true);
-        }
-
         @Test
         void shouldReturn200IfCodeChallengeAndVerifierIsCorrect()
                 throws JOSEException, TokenAuthInvalidException {
@@ -813,7 +807,6 @@ public class TokenHandlerTest {
                             lowestLevelVtr.retrieveVectorOfTrustForToken(),
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
-            when(configurationService.isPkceEnabled()).thenReturn(true);
 
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
@@ -1060,7 +1053,6 @@ public class TokenHandlerTest {
                             lowestLevelVtr.retrieveVectorOfTrustForToken(),
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
-            when(configurationService.isPkceEnabled()).thenReturn(true);
 
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
@@ -1083,76 +1075,6 @@ public class TokenHandlerTest {
                                     CLIENT_ID));
             verify(auditService, never())
                     .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
-        }
-
-        @Test
-        void shouldNotValidateCodeIfPkceFlagNotEnabled()
-                throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            UserProfile userProfile = generateUserProfile();
-            SignedJWT signedJWT =
-                    generateIDToken(
-                            CLIENT_ID,
-                            RP_PAIRWISE_SUBJECT,
-                            "issuer-url",
-                            new ECKeyGenerator(Curve.P_256)
-                                    .algorithm(JWSAlgorithm.ES256)
-                                    .generate());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-            when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-            when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                    .thenReturn(Optional.of(tokenClientAuthValidator));
-            when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                            anyString(), any()))
-                    .thenReturn(clientRegistry);
-            String authCode = new AuthorizationCode().toString();
-            AuthenticationRequest authenticationRequest =
-                    generateAuthRequestWithCorrectCodeChallenge();
-            List<VectorOfTrust> vtr =
-                    VectorOfTrust.parseFromAuthRequestAttribute(
-                            authenticationRequest.getCustomParameter("vtr"));
-            VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-            setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-            when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
-            when(tokenService.generateTokenResponse(
-                            CLIENT_ID,
-                            INTERNAL_SUBJECT,
-                            SCOPES,
-                            Map.of("nonce", NONCE),
-                            RP_PAIRWISE_SUBJECT,
-                            INTERNAL_PAIRWISE_SUBJECT,
-                            null,
-                            false,
-                            JWSAlgorithm.ES256,
-                            CLIENT_SESSION_ID,
-                            lowestLevelVtr.retrieveVectorOfTrustForToken(),
-                            AUTH_TIME))
-                    .thenReturn(tokenResponse);
-            when(configurationService.isPkceEnabled()).thenReturn(false);
-
-            APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCodeVerifier(
-                            privateKeyJWT, authCode, REDIRECT_URI, true, "Incorrect-verifier");
-            assertThat(result, hasStatus(200));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService)
-                    .submitAuditEvent(
-                            OIDC_TOKEN_GENERATED,
-                            CLIENT_ID,
-                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1204,7 +1126,6 @@ public class TokenHandlerTest {
                             lowestLevelVtr.retrieveVectorOfTrustForToken(),
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
-            when(configurationService.isPkceEnabled()).thenReturn(true);
 
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequest(privateKeyJWT, authCode, true);

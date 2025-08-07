@@ -109,23 +109,20 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
 
-        if (configurationService.isPkceEnabled()) {
-            var codeChallenge =
-                    Optional.ofNullable(authRequest.getCodeChallenge())
-                            .map(Identifier::getValue)
-                            .orElse(null);
-            var codeChallengeMethod =
-                    Optional.ofNullable(authRequest.getCodeChallengeMethod())
-                            .map(Identifier::getValue)
-                            .orElse(null);
+        var codeChallenge =
+                Optional.ofNullable(authRequest.getCodeChallenge())
+                        .map(Identifier::getValue)
+                        .orElse(null);
+        var codeChallengeMethod =
+                Optional.ofNullable(authRequest.getCodeChallengeMethod())
+                        .map(Identifier::getValue)
+                        .orElse(null);
 
-            var codeChallengeError =
-                    validateCodeChallengeAndMethod(
-                            codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
-            if (codeChallengeError.isPresent()) {
-                return Optional.of(
-                        new AuthRequestError(codeChallengeError.get(), redirectURI, state));
-            }
+        var codeChallengeError =
+                validateCodeChallengeAndMethod(
+                        codeChallenge, codeChallengeMethod, client.getPKCEEnforced());
+        if (codeChallengeError.isPresent()) {
+            return Optional.of(new AuthRequestError(codeChallengeError.get(), redirectURI, state));
         }
 
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);

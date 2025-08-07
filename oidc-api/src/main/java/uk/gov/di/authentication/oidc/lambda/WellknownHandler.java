@@ -118,9 +118,7 @@ public class WellknownHandler
             oidcMetadata.setSupportsBackChannelLogout(true);
             oidcMetadata.setCustomParameter("trustmarks", oidcApi.trustmarkURI().toString());
 
-            if (configService.isPkceEnabled()) {
-                oidcMetadata.setCodeChallengeMethods(List.of(CodeChallengeMethod.S256));
-            }
+            oidcMetadata.setCodeChallengeMethods(List.of(CodeChallengeMethod.S256));
 
             oidcMetadata.setPolicyURI(authFrontend.privacyNoticeURI());
             oidcMetadata.setTermsOfServiceURI(authFrontend.termsOfServiceURI());

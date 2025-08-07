@@ -267,14 +267,12 @@ public class TokenHandler
             return ApiResponse.badRequest(e.getErrorObject());
         }
 
-        if (configurationService.isPkceEnabled()) {
-            if (!isPKCEValid(
-                    Optional.ofNullable(authRequest.getCodeChallenge()),
-                    Optional.ofNullable(requestBody.get("code_verifier")))) {
-                LOG.warn("PKCE validation failed, returning invalid_grant error");
-                return ApiResponse.badRequest(
-                        new ErrorObject(INVALID_GRANT_CODE, "PKCE code verification failed"));
-            }
+        if (!isPKCEValid(
+                Optional.ofNullable(authRequest.getCodeChallenge()),
+                Optional.ofNullable(requestBody.get("code_verifier")))) {
+            LOG.warn("PKCE validation failed, returning invalid_grant error");
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "PKCE code verification failed"));
         }
 
         var tokenResponse =
