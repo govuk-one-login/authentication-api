@@ -17,5 +17,6 @@ dlq_alarm_threshold                  = 999999
 orch_stub_deployed                   = false
 
 # Sizing
-redis_node_size  = "cache.t2.small"
-provision_dynamo = false
+redis_node_size      = "cache.t2.small"
+provision_dynamo     = false
+test_clients_enabled = false
