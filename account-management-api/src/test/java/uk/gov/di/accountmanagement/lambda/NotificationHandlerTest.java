@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_REMOVED;
@@ -56,6 +58,11 @@ import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BE
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.WRITING_OTP_TO_S_3_BUCKET;
 import static uk.gov.di.accountmanagement.lambda.NotificationHandler.EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.APPLICATION;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.IS_TEST_DESTINATION;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.NOTIFICATION_HTTP_ERROR;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class NotificationHandlerTest {
@@ -73,7 +80,18 @@ class NotificationHandlerTest {
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final S3Client s3Client = mock(S3Client.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private NotificationHandler handler;
+
+    private static final Map<String, String> BASE_METRIC_DIMENSIONS =
+            Map.of(
+                    ENVIRONMENT,
+                    "unit-test",
+                    APPLICATION,
+                    "OneLoginHome",
+                    IS_TEST_DESTINATION,
+                    "false");
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -83,7 +101,10 @@ class NotificationHandlerTest {
     void setUp() {
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
-        handler = new NotificationHandler(notificationService, configService, s3Client);
+        when(configService.getEnvironment()).thenReturn("unit-test");
+        handler =
+                new NotificationHandler(
+                        notificationService, configService, s3Client, cloudwatchMetricsService);
     }
 
     @Test
@@ -115,6 +136,9 @@ class NotificationHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 formatMessage(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_EMAIL))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent", getMetricDimensionsForTemplateType(VERIFY_EMAIL));
     }
 
     @Test
@@ -146,6 +170,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent",
+                        getMetricDimensionsForTemplateType(VERIFY_PHONE_NUMBER));
     }
 
     @Test
@@ -178,6 +206,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent",
+                        getMetricDimensionsForTemplateType(VERIFY_PHONE_NUMBER));
     }
 
     @Test
@@ -208,6 +240,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         TEXT_HAS_BEEN_SENT_USING_NOTIFY, VERIFY_PHONE_NUMBER))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent",
+                        getMetricDimensionsForTemplateType(VERIFY_PHONE_NUMBER));
     }
 
     @Test
@@ -232,6 +268,9 @@ class NotificationHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 formatMessage(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, EMAIL_UPDATED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent", getMetricDimensionsForTemplateType(EMAIL_UPDATED));
     }
 
     @Test
@@ -257,6 +296,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, PASSWORD_UPDATED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(PASSWORD_UPDATED));
     }
 
     @Test
@@ -282,6 +325,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, PHONE_NUMBER_UPDATED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(PHONE_NUMBER_UPDATED));
     }
 
     @Test
@@ -305,6 +352,10 @@ class NotificationHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 formatMessage(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, DELETE_ACCOUNT))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(DELETE_ACCOUNT));
     }
 
     @Test
@@ -327,6 +378,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_ADDED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(BACKUP_METHOD_ADDED));
     }
 
     @Test
@@ -349,6 +404,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, BACKUP_METHOD_REMOVED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(BACKUP_METHOD_REMOVED));
     }
 
     @Test
@@ -373,6 +432,10 @@ class NotificationHandlerTest {
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY,
                                         CHANGED_AUTHENTICATOR_APP))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(CHANGED_AUTHENTICATOR_APP));
     }
 
     @Test
@@ -395,6 +458,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, CHANGED_DEFAULT_MFA))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(CHANGED_DEFAULT_MFA));
     }
 
     @Test
@@ -417,6 +484,10 @@ class NotificationHandlerTest {
                         withMessageContaining(
                                 formatMessage(
                                         EMAIL_HAS_BEEN_SENT_USING_NOTIFY, SWITCHED_MFA_METHODS))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(SWITCHED_MFA_METHODS));
     }
 
     @Test
@@ -445,6 +516,7 @@ class NotificationHandlerTest {
                                 formatMessage(
                                         NOTIFY_TEST_DESTINATION_USED_WRITING_TO_S3_BUCKET,
                                         VERIFY_PHONE_NUMBER))));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -473,6 +545,7 @@ class NotificationHandlerTest {
                                 formatMessage(
                                         NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION,
                                         EMAIL_UPDATED))));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -505,6 +578,7 @@ class NotificationHandlerTest {
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining(formatMessage(WRITING_OTP_TO_S_3_BUCKET, "654321"))));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -544,6 +618,7 @@ class NotificationHandlerTest {
                                         EXCEPTION_THROWN_WHEN_WRITING_TO_S_3_BUCKET,
                                         "s3 failed",
                                         s3failException))));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -620,6 +695,17 @@ class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         assertThat(logging.events(), hasItem(withMessageContaining(expectedMessage)));
+
+        if (exception instanceof NotificationClientException) {
+            var dimensions = getMetricDimensionsForTemplateType(type);
+            dimensions.put(NOTIFICATION_HTTP_ERROR, "400");
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            type.isForPhoneNumber()
+                                    ? "SmsNotificationError"
+                                    : "EmailNotificationError",
+                            dimensions);
+        }
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {
@@ -628,5 +714,17 @@ class NotificationHandlerTest {
         SQSEvent sqsEvent = new SQSEvent();
         sqsEvent.setRecords(singletonList(sqsMessage));
         return sqsEvent;
+    }
+
+    private Map<String, String> getMetricDimensionsForTemplateType(
+            NotificationType notificationType) {
+
+        final var dimensions = new HashMap<>(BASE_METRIC_DIMENSIONS);
+
+        dimensions.put(NOTIFICATION_TYPE, notificationType.toString());
+        if (notificationType.isForPhoneNumber()) {
+            dimensions.put("Country", "44");
+        }
+        return dimensions;
     }
 }

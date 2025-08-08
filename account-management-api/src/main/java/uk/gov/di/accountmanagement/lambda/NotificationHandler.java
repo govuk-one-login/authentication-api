@@ -12,8 +12,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.authentication.entity.metrics.MetricDimensions;
+import uk.gov.di.authentication.entity.metrics.MetricNames;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -39,6 +42,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGetCountry;
 
 public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -51,14 +55,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
     private final S3Client s3Client;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configService,
-            S3Client s3Client) {
+            S3Client s3Client,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.notificationService = notificationService;
         this.configurationService = configService;
         this.s3Client = s3Client;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public NotificationHandler() {
@@ -80,6 +87,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         this.notificationService = new NotificationService(client, configurationService);
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -226,8 +234,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         notificationService.sendEmail(
                                 destination, per, NotificationType.valueOf(type));
                         LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        emitMetricForNotification(notifyRequest);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        emitMetricForNotification(notifyRequest, e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
@@ -250,8 +260,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         notificationService.sendText(
                                 destination, per, NotificationType.valueOf(type));
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        emitMetricForNotification(notifyRequest);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        emitMetricForNotification(notifyRequest, e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
@@ -328,5 +340,49 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     LogMessageTemplates.NOT_WRITING_TO_BUCKET_AS_NOT_OTP_NOTIFICATION,
                     notificationType);
         }
+    }
+
+    private void emitMetricForNotification(NotifyRequest request) {
+        emitMetricForNotification(request, null);
+    }
+
+    private void emitMetricForNotification(
+            NotifyRequest request, NotificationClientException notificationClientException) {
+        String metricName;
+        var dimensions =
+                new HashMap<>(
+                        Map.of(
+                                MetricDimensions.ENVIRONMENT,
+                                configurationService.getEnvironment(),
+                                MetricDimensions.APPLICATION,
+                                "OneLoginHome",
+                                MetricDimensions.NOTIFICATION_TYPE,
+                                request.getNotificationType().toString(),
+                                MetricDimensions.IS_TEST_DESTINATION,
+                                Boolean.FALSE.toString()));
+
+        if (request.getNotificationType().isForPhoneNumber()) {
+            dimensions.put(
+                    MetricDimensions.COUNTRY,
+                    maybeGetCountry(request.getDestination()).orElse("INVALID"));
+            if (notificationClientException == null) {
+                metricName = MetricNames.SMS_NOTIFICATION_SENT;
+            } else {
+                metricName = MetricNames.SMS_NOTIFICATION_ERROR;
+                dimensions.put(
+                        MetricDimensions.NOTIFICATION_HTTP_ERROR,
+                        Integer.toString(notificationClientException.getHttpResult()));
+            }
+        } else {
+            if (notificationClientException == null) {
+                metricName = MetricNames.EMAIL_NOTIFICATION_SENT;
+            } else {
+                metricName = MetricNames.EMAIL_NOTIFICATION_ERROR;
+                dimensions.put(
+                        MetricDimensions.NOTIFICATION_HTTP_ERROR,
+                        Integer.toString(notificationClientException.getHttpResult()));
+            }
+        }
+        cloudwatchMetricsService.incrementCounter(metricName, dimensions);
     }
 }
