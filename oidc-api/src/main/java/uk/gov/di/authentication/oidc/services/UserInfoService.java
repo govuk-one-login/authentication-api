@@ -68,11 +68,20 @@ public class UserInfoService {
             var userProfile =
                     authenticationService.getUserProfileFromSubject(
                             accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-            return ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorURI(),
-                            authenticationService)
-                    .getValue();
+            var internalCommonSubjectIdFromAccessToken =
+                    accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
+            var internalCommonSubjetIdFromUserProfile =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                    userProfile,
+                                    configurationService.getInternalSectorURI(),
+                                    authenticationService)
+                            .getValue();
+            LOG.info(
+                    "Is internalCommonSubjectId from user profile equal to one from access token store? {}",
+                    Objects.equals(
+                            internalCommonSubjetIdFromUserProfile,
+                            internalCommonSubjectIdFromAccessToken));
+            return internalCommonSubjetIdFromUserProfile;
         }
     }
 
