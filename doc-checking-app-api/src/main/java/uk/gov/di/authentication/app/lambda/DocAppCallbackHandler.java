@@ -184,15 +184,15 @@ public class DocAppCallbackHandler
                                 input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
-                                noSessionEntity.getClientSession().getAuthRequestParams());
+                                noSessionEntity.orchClientSession().getAuthRequestParams());
                 return generateAuthenticationErrorResponse(
                         authRequest,
-                        noSessionEntity.getErrorObject(),
+                        noSessionEntity.errorObject(),
                         true,
                         TxmaAuditUser.user()
-                                .withGovukSigninJourneyId(noSessionEntity.getClientSessionId())
+                                .withGovukSigninJourneyId(noSessionEntity.clientSessionId())
                                 .withUserId(
-                                        noSessionEntity.getClientSession().getDocAppSubjectId()));
+                                        noSessionEntity.orchClientSession().getDocAppSubjectId()));
             }
             var sessionId = sessionCookiesIds.getSessionId();
             var clientSessionId = sessionCookiesIds.getClientSessionId();
