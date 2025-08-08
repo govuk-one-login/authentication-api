@@ -78,7 +78,11 @@ Conditions:
       !Equals [!Ref Environment, integration],
       !Equals [!Ref Environment, production],
     ]
-  IsProduction: !Equals [!Ref Environment, production]
+  IsDevOrProd:
+    !Or [
+      !Equals [!Ref Environment, dev],
+      !Equals [!Ref Environment, production],
+    ]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4965,10 +4969,10 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   PagerDutyUrlSecret:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: pager_duty_url
+      Name: pager_duty_url_dev2
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   HttpsEgressSecurityGroup:
@@ -6155,17 +6159,6 @@ Resources:
             Condition:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
-
-  PagerDutySNSSubscription:
-    Condition: IsProduction
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint: !Sub
-        - "{{resolve:secretsmanager:${SecretArn}:SecretString:integrationURL}}"
-        - SecretArn: !Ref PagerDutyUrlSecret
-      Protocol: https
-      RawMessageDelivery: false
-      TopicArn: !Ref PagerDutyEvents
   #endregion
   #region OrchAuthCode DynamoDB Table
 
@@ -7142,7 +7135,7 @@ Resources:
 
   # region PagerDuty alarms
   IpvHandbackPagerDutyAlarm:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
@@ -7189,7 +7182,7 @@ Resources:
             Unit: Count
 
   DocAppHandbackPagerDutyAlarm:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
