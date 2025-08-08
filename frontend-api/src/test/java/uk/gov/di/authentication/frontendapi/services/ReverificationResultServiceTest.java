@@ -11,6 +11,7 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
@@ -30,7 +31,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
@@ -42,6 +46,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
@@ -61,6 +66,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -135,6 +141,8 @@ class ReverificationResultServiceTest {
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getIPVAudience()).thenReturn(ipvUri.toString());
+        when(configService.getMfaResetJarSigningKeyId()).thenReturn(KEY_ID);
+        when(configService.getMfaResetJarSigningKeyAlias()).thenReturn(KEY_ID);
     }
 
     @AfterEach
@@ -161,6 +169,27 @@ class ReverificationResultServiceTest {
             var tokenResponse = reverificationResultService.getToken("an auth code");
 
             assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+
+            var expectedHashedKid = hashSha256String(KEY_ID);
+
+            ArgumentCaptor<SignRequest> signRequestCaptor =
+                    ArgumentCaptor.forClass(SignRequest.class);
+            verify(kmsService, times(1)).getPublicKey(any(GetPublicKeyRequest.class));
+            verify(kmsService, times(1)).sign(signRequestCaptor.capture());
+
+            SignRequest actualSignRequest = signRequestCaptor.getValue();
+            assertThat(actualSignRequest.keyId(), equalTo(KEY_ID));
+            assertThat(
+                    actualSignRequest.signingAlgorithm(),
+                    equalTo(SigningAlgorithmSpec.ECDSA_SHA_256));
+
+            String jwtMessage = actualSignRequest.message().asUtf8String();
+            String[] parts = jwtMessage.split("\\.");
+            String decodedHeader =
+                    new String(Base64URL.from(parts[0]).decode(), StandardCharsets.UTF_8);
+            assertThat(
+                    decodedHeader,
+                    org.hamcrest.Matchers.containsString("\"kid\":\"" + expectedHashedKid + "\""));
         }
 
         @Test
@@ -391,6 +420,8 @@ class ReverificationResultServiceTest {
                         .keyId(KEY_ID)
                         .build();
 
+        when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(GetPublicKeyResponse.builder().keyId(KEY_ID).build());
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 }
