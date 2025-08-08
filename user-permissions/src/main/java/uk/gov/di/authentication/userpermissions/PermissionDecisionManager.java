@@ -61,6 +61,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         try {
+            int attemptCount =
+                    codeStorageService.getIncorrectPasswordCount(
+                            userPermissionContext.emailAddress());
+
             boolean isBlocked =
                     codeStorageService.isBlockedForEmail(
                             userPermissionContext.emailAddress(),
@@ -71,12 +75,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                0,
+                                attemptCount,
                                 Instant.now().plusSeconds(3600) // placeholder TTL
                                 ));
             }
 
-            return Result.success(new Decision.Permitted(0));
+            return Result.success(new Decision.Permitted(attemptCount));
         } catch (RuntimeException e) {
             LOG.error("Could not retrieve from lock details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
