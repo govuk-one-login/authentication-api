@@ -70,14 +70,15 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
             LOG.warn(
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
-                            configurationService.getTicfCriServiceCallTimeout()));
+                            configurationService.getTicfCriServiceCallTimeout()),
+                    e);
             sendMetricsForInterventionsError("TicfCriServiceTimeout");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         } catch (IOException e) {
-            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e));
+            LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         }
         return null;
