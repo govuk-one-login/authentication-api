@@ -78,7 +78,11 @@ Conditions:
       !Equals [!Ref Environment, integration],
       !Equals [!Ref Environment, production],
     ]
-  IsProduction: !Equals [!Ref Environment, production]
+  IsDevOrProd:
+    !Or [
+      !Equals [!Ref Environment, dev],
+      !Equals [!Ref Environment, production],
+    ]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4885,10 +4889,10 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   PagerDutyUrlSecret:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: pager_duty_url
+      Name: pager_duty_url_dev
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
   HttpsEgressSecurityGroup:
@@ -6173,7 +6177,7 @@ Resources:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
   PagerDutySNSSubscription:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::SNS::Subscription
     Properties:
       Endpoint: !Sub
@@ -7158,7 +7162,7 @@ Resources:
 
   # region PagerDuty alarms
   IpvHandbackPagerDutyAlarm:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
@@ -7203,7 +7207,7 @@ Resources:
             Unit: Count
 
   DocAppHandbackPagerDutyAlarm:
-    Condition: IsProduction
+    Condition: IsDevOrProd
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
