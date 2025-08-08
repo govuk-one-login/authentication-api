@@ -220,15 +220,10 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            String keyId = null;
-            RSAPublicKey publicEncryptionKey;
-            if (configurationService.isUseIPVJwksEndpointEnabled()) {
-                JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
-                keyId = publicEncryptionJwk.getKeyID();
-                publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
-            } else {
-                publicEncryptionKey = getPublicKeyFromSSM();
-            }
+            JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
+            String keyId = publicEncryptionJwk.getKeyID();
+            RSAPublicKey publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
+
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
@@ -245,20 +240,6 @@ public class IPVAuthorisationService {
             throw new RuntimeException(e);
         } catch (ParseException e) {
             LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private RSAPublicKey getPublicKeyFromSSM() {
-        try {
-            LOG.info("Getting IPV Encryption Public Key via SSM");
-            var ipvAuthEncryptionPublicKey = configurationService.getIPVAuthEncryptionPublicKey();
-            return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
-                    .build()
-                    .toRSAPublicKey();
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException(e);
         }
     }

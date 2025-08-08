@@ -79,14 +79,6 @@ Conditions:
       !Equals [!Ref Environment, production],
     ]
   IsProduction: !Equals [!Ref Environment, production]
-  UseIpvJwksEndpointToGetEncryptionKey:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -2616,10 +2608,6 @@ Resources:
               storageTokenKeyArn,
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
-          USE_IPV_JWKS_ENDPOINT: !If
-            - UseIpvJwksEndpointToGetEncryptionKey
-            - true
-            - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
@@ -2635,7 +2623,6 @@ Resources:
         - !Ref StorageTokenSigningKmsAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
-        - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
@@ -4345,10 +4332,6 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
-          USE_IPV_JWKS_ENDPOINT: !If
-            - UseIpvJwksEndpointToGetEncryptionKey
-            - true
-            - false
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
@@ -5783,23 +5766,6 @@ Resources:
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
               - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
-
-  IpvPublicEncryptionKeyAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowGetIpvPublicParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource: !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-public-encryption-key
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt

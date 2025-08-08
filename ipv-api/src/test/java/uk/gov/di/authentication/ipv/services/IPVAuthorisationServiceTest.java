@@ -24,13 +24,10 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.approvaltests.Approvals;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
@@ -51,7 +48,6 @@ import java.net.URL;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -115,11 +111,6 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var certpem =
-                "-----BEGIN PUBLIC KEY-----\n"
-                        + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                        + "\n-----END PUBLIC KEY-----\n";
-        when(configurationService.getIPVAuthEncryptionPublicKey()).thenReturn(certpem);
         var rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
@@ -288,11 +279,8 @@ class IPVAuthorisationServiceTest {
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         }
 
-        @ParameterizedTest(name = "With useIpvJwksEndpointEnabled = {0}")
-        @ValueSource(booleans = {true, false})
-        void shouldConstructASignedRequestJWT(boolean useIpvJwksEndpoint)
-                throws JOSEException, ParseException {
-            when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(useIpvJwksEndpoint);
+        @Test
+        void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
             var state = new State("test-state");
             var scope = new Scope(OIDCScopeValue.OPENID);
             var pairwise = new Subject("pairwise-identifier");
@@ -328,16 +316,13 @@ class IPVAuthorisationServiceTest {
                                 List.of("P2", "PCL200"),
                                 true);
             }
-            if (useIpvJwksEndpoint) {
-                assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
-            }
+            assertThat(encryptedJWT.getHeader().getKeyID(), equalTo(KEY_ID));
+
             var signedJWTResponse = decryptJWT(encryptedJWT);
 
             JsonApprovals.verifyAsJson(
                     signedJWTResponse.getJWTClaimsSet().toJSONObject(),
-                    GsonBuilder::serializeNulls,
-                    Approvals.NAMES.withParameters(
-                            useIpvJwksEndpoint ? "usingJwksEndpoint" : "usingSSM"));
+                    GsonBuilder::serializeNulls);
 
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("client_id"),

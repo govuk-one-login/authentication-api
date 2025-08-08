@@ -90,9 +90,8 @@ class JwksServiceTest {
     }
 
     @Test
-    void shouldUseJwkCacheToGetKeyWhenFeatureFlagEnabled() throws Exception {
+    void shouldUseJwkCacheToGetEncryptionKey() throws Exception {
         EncryptionJwkCache.getInstance().clear();
-        when(configurationService.isUseIPVJwksEndpointEnabled()).thenReturn(true);
         URL testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
         int testTimeout = 123;
         when(configurationService.getIPVJwksUrl()).thenReturn(testJwksUrl);
