@@ -82,3 +82,6 @@ orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:8160
 
 cmk_for_back_channel_logout_enabled = true
 use_strongly_consistent_reads       = true
+
+# Performance Tuning
+snapstart_enabled = true

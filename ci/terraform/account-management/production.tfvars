@@ -32,6 +32,7 @@ performance_tuning = {
 
 lambda_max_concurrency = 10
 lambda_min_concurrency = 3
+snapstart_enabled      = false
 
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"

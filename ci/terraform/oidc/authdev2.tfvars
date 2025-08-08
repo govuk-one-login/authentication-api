@@ -81,3 +81,6 @@ oidc_cloudfront_enabled = false
 support_reauth_signout_enabled          = true
 authentication_attempts_service_enabled = true
 use_strongly_consistent_reads           = true
+
+# Performance Tuning
+snapstart_enabled = true
