@@ -170,3 +170,8 @@ variable "new_auth_privatesub_cidr_blocks" {
   default     = []
   description = "New Auth equivalent environment private subnets"
 }
+
+variable "provision_test_client_secret" {
+  type    = bool
+  default = false
+}

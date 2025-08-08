@@ -134,6 +134,21 @@ Conditions:
           - Fn::Equals:
               - !Ref SubEnvironment
               - none
+  ProvisionTestClientSecret:
+    !Or [
+      !And [
+        !Condition UseSubEnvironment,
+        !Or [
+          !Equals [!Ref SubEnvironment, "authdev1"],
+          !Equals [!Ref SubEnvironment, "authdev2"],
+        ],
+      ],
+      !Or [
+        !Equals [!Ref Environment, "dev"],
+        !Equals [!Ref Environment, "build"],
+        !Equals [!Ref Environment, "staging"],
+      ],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1985,3 +2000,28 @@ Resources:
               Resource:
                 - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes
                 - !Sub arn:aws:s3:::${Environment}-smoke-test-sms-codes/*
+
+  TestClientEmailAllowListSecretEncryptionKey:
+    Condition: ProvisionTestClientSecret
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for test client email allow list
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  TestClientEmailAllowListSecret:
+    Condition: ProvisionTestClientSecret
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub
+        - /${Env}/test-client-email-allow-list
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
