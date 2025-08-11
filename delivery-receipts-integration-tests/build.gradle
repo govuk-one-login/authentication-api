@@ -22,9 +22,9 @@ dependencies {
 test {
     useJUnitPlatform()
 
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
     environment "HEADERS_CASE_INSENSITIVE", "true"
