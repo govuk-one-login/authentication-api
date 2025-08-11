@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
 class JwksUtilsIntegrationTest {
-    @RegisterExtension private static final JwksExtension jwksExtension = new JwksExtension();
+    @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
     private static final String TEST_JWK_ID_1 = "test-jwk-id-1";
     private static final String TEST_JWK_ID_2 = "test-jwk-id-2";
     private static final JWK TEST_JWK_1 = createPublicJwk(TEST_JWK_ID_1);

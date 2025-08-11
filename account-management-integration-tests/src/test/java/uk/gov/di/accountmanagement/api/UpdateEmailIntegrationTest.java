@@ -148,8 +148,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenOtpIsInvalid() throws Exception {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
-        String validOtp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
-        var badOtp = "012345";
+        var goodOtp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+        var badOtp = goodOtp.equals("012345") ? "123456" : "012345";
 
         var response =
                 makeRequest(
