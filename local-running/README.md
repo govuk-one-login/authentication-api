@@ -35,7 +35,7 @@ The simplest way is to run `docker compose up` in the repository root. This will
 - `aws` - Localstack instance for SSM, KMS, and SQS dependencies
 - `redis` - Redis container for remaining redis dependencies
 - `dynamodb` - DynamoDB container for DynamoDB tables
-- `orchestrator-stub` - Orchestrator stub for starting auth journeys, running on [http://localhost:4400]
+- `orchestration-stub` - Orchestration stub for starting auth journeys, running on [http://localhost:4400]
 - `authentication-frontend` - Auth frontend running on [http://localhost:4401]
 - `authentication-api` - Local running Auth API running on [http://localhost:4402]
 

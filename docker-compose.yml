@@ -1,9 +1,13 @@
+version: "3.8"
+
+name: di-authentication-local
+
 services:
   aws:
     image: localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348
     restart: no
     environment:
-      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events, logs
+      SERVICES: sqs, kms, ssm
       GATEWAY_LISTEN: 0.0.0.0:45678
       LOCALSTACK_HOST: localhost:45678
       TEST_AWS_ACCOUNT_ID: 123456789012
@@ -42,13 +46,15 @@ services:
     networks:
       - di-authentication-api-net
 
-  orchestrator-stub:
+  orchestration-stub:
     image: orch-stub-local:latest
     container_name: orch-stub-local
     build:
       context: ../authentication-stubs/orchestration-stub
       dockerfile: Dockerfile
-    env_file: local-running/orchestrator-stub.env
+    env_file: ../authentication-stubs/orchestration-stub/.env.local
+    environment:
+      AUTHENTICATION_BACKEND_URL: http://host.docker.internal:4402/
     ports:
       - "4400:4400"
     networks:
@@ -59,8 +65,10 @@ services:
     container_name: authentication-frontend-local
     build:
       context: ../authentication-frontend
-      dockerfile: sandpit.Dockerfile
-    env_file: local-running/authentication-frontend.env
+      dockerfile: dev.Dockerfile
+    env_file: ../authentication-frontend/.env.local
+    environment:
+      FRONTEND_API_BASE_URL: http://host.docker.internal:4402/
     command: "node --enable-source-maps --inspect=0.0.0.0:5401 dist/server.js"
     ports:
       - "4401:4401"
@@ -81,7 +89,7 @@ services:
         condition: service_healthy
       dynamodb:
         condition: service_healthy
-    env_file: local-running/authentication-api.env
+    env_file: local-running/.env.local
     ports:
       - "4402:4402"
       - "5402:5402"

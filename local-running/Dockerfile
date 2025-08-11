@@ -13,6 +13,7 @@ RUN ./gradlew --version
 COPY spotbugsExclude.xml ./
 COPY local-running ./local-running
 COPY shared ./shared
+COPY user-permissions ./user-permissions
 COPY auth-external-api ./auth-external-api
 COPY frontend-api ./frontend-api
 
