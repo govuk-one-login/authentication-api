@@ -1162,6 +1162,35 @@ class VerifyCodeHandlerTest {
                 Arguments.of(CodeRequestType.MFA_SIGN_IN, null));
     }
 
+    @Test
+    void shouldLogExceptionWhenGetRpPairwiseIdFails() {
+        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            when(codeStorageService.getOtpCode(EMAIL, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(
+                            Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
+            mockedClientSubjectHelperClass
+                    .when(
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            eq(userProfile),
+                                            any(AuthSessionItem.class),
+                                            any(AuthenticationService.class)))
+                    .thenThrow(new RuntimeException("Test exception"));
+
+            var result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+
+            assertThat(result, hasStatus(204));
+            assertThat(logging.events(), hasItem(withMessageContaining("Test exception")));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.")));
+        }
+    }
+
     private void withReauthTurnedOn() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
