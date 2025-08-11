@@ -38,17 +38,6 @@ public class ClientSubjectHelper {
         }
     }
 
-    public static Subject getSubjectWithSectorIdentifier(
-            UserProfile userProfile,
-            String sectorIdentifierURI,
-            AuthenticationService authenticationService) {
-        return new Subject(
-                calculatePairwiseIdentifier(
-                        userProfile.getSubjectID(),
-                        returnHost(sectorIdentifierURI),
-                        authenticationService.getOrGenerateSalt(userProfile)));
-    }
-
     public static String getSectorIdentifierForClient(
             ClientRegistry client, String internalSectorUri) {
         if (client.isOneLoginService()) {

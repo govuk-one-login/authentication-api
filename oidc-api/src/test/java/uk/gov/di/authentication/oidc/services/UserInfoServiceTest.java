@@ -33,7 +33,6 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -60,7 +59,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.*;
+import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.DRIVING_PERMIT;
+import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
+import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.RETURN_CODE;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
@@ -113,7 +115,6 @@ class UserInfoServiceTest {
     void setUp() {
         userInfoService =
                 new UserInfoService(
-                        authenticationService,
                         identityService,
                         dynamoClientService,
                         dynamoDocAppCriService,
@@ -494,15 +495,7 @@ class UserInfoServiceTest {
         @Test
         void shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresent()
                 throws JOSEException {
-            var salt = SaltHelper.generateNewSalt();
-            var expectedCommonSubject =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", salt);
             accessToken = createSignedAccessToken(null);
-            var userProfile = generateUserprofile();
-            when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                    .thenReturn(userProfile);
-            when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
@@ -515,7 +508,7 @@ class UserInfoServiceTest {
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
-            assertThat(subjectForAudit, equalTo(expectedCommonSubject));
+            assertThat(subjectForAudit, equalTo(INTERNAL_PAIRWISE_SUBJECT.getValue()));
         }
     }
 
