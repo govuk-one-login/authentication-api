@@ -27,8 +27,6 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
 
-import static java.util.Objects.nonNull;
-
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
     private final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable;
@@ -127,20 +125,6 @@ public class DynamoService implements AuthenticationService {
     @Override
     public Optional<UserProfile> getUserProfileByEmailMaybe(String email) {
         return Optional.ofNullable(getUserProfileByEmail(email));
-    }
-
-    @Override
-    public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        if (nonNull(email) && !email.isBlank()) {
-            var userCredentials =
-                    dynamoUserCredentialsTable.getItem(
-                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-            if (nonNull(userCredentials)) {
-                return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
-            }
-        }
-        return Optional.empty();
     }
 
     @Override
