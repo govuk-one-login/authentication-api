@@ -46,9 +46,9 @@ test {
     exclude 'uk/gov/di/authentication/contract/**'
 
     environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DEFAULT_LOGOUT_URI", "http://localhost:3000/signed-out"
     environment "DOMAIN_NAME", "localhost"
@@ -103,12 +103,12 @@ task pactProviderTests (type: Test, group: "verification") {
     systemProperties['pact.provider.version'] = "${System.env.GIT_SHA}"
 
     environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
-    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_ACCESS_KEY_ID", "mockaccesskey"
     environment "AWS_REGION", "eu-west-2"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "REDIS_KEY", "session"
     environment "TRACING_ENABLED", "false"
-    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey "
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "ENVIRONMENT", "local"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
