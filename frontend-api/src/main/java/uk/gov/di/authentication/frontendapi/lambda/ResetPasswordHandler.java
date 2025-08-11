@@ -40,6 +40,9 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -61,6 +64,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
+    private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -74,7 +79,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
             DynamoAccountModifiersService dynamoAccountModifiersService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -88,6 +95,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
+        this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
     }
 
     public ResetPasswordHandler() {
@@ -108,6 +117,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager();
+        this.userActionsManager = new UserActionsManager(codeStorageService);
     }
 
     public ResetPasswordHandler(
@@ -125,6 +136,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(codeStorageService);
+        this.userActionsManager = new UserActionsManager(codeStorageService);
     }
 
     @Override
@@ -192,17 +205,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             updateAccountRecoveryBlockTable(
                     userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
 
-            var incorrectPasswordCount =
-                    codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
-            if (incorrectPasswordCount != 0) {
-                codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
-            }
+            UserPermissionContext userPermissionContext =
+                    new UserPermissionContext(null, null, userCredentials.getEmail(), null);
 
-            String codeBlockedKeyPrefix =
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-
-            codeStorageService.deleteBlockForEmail(
-                    userCredentials.getEmail(), codeBlockedKeyPrefix);
+            userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
