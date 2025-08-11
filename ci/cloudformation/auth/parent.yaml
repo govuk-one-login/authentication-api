@@ -2271,3 +2271,27 @@ Resources:
         - /${Env}/test-client-email-allow-list
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsKeyId: !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
+
+  TestClientEmailAllowListSecretAccessPolicy:
+    Condition: ProvisionTestClientSecret
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for manging access to the test client email allow list secret"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetSecretValue
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Ref TestClientEmailAllowListSecret
+          - Sid: AllowSecretDecrypt
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
