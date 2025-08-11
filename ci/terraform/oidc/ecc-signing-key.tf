@@ -124,12 +124,13 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key_v2" {
 
 resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
   name          = "alias/${var.environment}-ipv_reverification_request_signing_key"
-  target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
+  target_key_id = var.environment != "integration" && var.environment != "production" ? aws_kms_key.ipv_reverification_request_signing_key_v2.key_id : aws_kms_key.ipv_reverification_request_signing_key.key_id
 }
 
 resource "aws_kms_alias" "ipv_reverification_request_signing_key_deprecated_alias" {
+  count         = var.environment == "integration" || var.environment == "production" ? 0 : 1
   name          = "alias/${var.environment}-ipv_reverification_request_signing_key_deprecated"
-  target_key_id = null
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
 }
 
 data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_policy" {
