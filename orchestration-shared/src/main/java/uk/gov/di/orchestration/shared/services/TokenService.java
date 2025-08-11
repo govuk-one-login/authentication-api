@@ -343,7 +343,6 @@ public class TokenService {
                     objectMapper.writeValueAsString(
                             new AccessTokenStore(
                                     accessToken.getValue(),
-                                    internalSubject.getValue(),
                                     internalPairwiseSubject.getValue(),
                                     journeyId)),
                     configService.getAccessTokenExpiry());

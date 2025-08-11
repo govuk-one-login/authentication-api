@@ -564,7 +564,6 @@ class TokenServiceTest {
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                         JOURNEY_ID);
         verify(redisConnectionService)
