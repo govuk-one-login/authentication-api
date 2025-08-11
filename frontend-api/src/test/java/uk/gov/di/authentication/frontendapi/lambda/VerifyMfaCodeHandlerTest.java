@@ -109,6 +109,7 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withExceptionMessage;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -164,7 +165,7 @@ class VerifyMfaCodeHandlerTest {
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(VerifyCodeHandler.class);
+            new CaptureLoggingExtension(VerifyMfaCodeHandler.class);
 
     private final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -1230,5 +1231,36 @@ class VerifyMfaCodeHandlerTest {
     private void withReauthTurnedOn() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+    }
+
+    @Test
+    void shouldLogExceptionWhenClientSubjectHelperThrowsException() throws Json.JsonException {
+        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelper =
+                mockStatic(ClientSubjectHelper.class)) {
+            RuntimeException testException = new RuntimeException("Test exception");
+            mockedClientSubjectHelper
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
+                    .thenThrow(testException);
+
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+
+            var body =
+                    objectMapper.writeValueAsString(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, REGISTRATION, AUTH_APP_SECRET));
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
+
+            handler.handleRequest(event, context);
+
+            assertThat(logging.events(), hasItem(withExceptionMessage("Test exception")));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.")));
+        }
     }
 }
