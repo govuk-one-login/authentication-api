@@ -14,6 +14,12 @@ public class AccessTokenStore {
 
     public AccessTokenStore() {}
 
+    public AccessTokenStore(String token, String internalPairwiseSubjectId, String journeyId) {
+        this.token = token;
+        this.internalPairwiseSubjectId = internalPairwiseSubjectId;
+        this.journeyId = journeyId;
+    }
+
     public AccessTokenStore(
             String token,
             String internalSubjectId,
