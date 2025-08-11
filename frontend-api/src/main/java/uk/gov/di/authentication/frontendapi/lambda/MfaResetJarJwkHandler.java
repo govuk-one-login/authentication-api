@@ -56,9 +56,9 @@ public class MfaResetJarJwkHandler
 
             signingKeys.add(jwksService.getPublicMfaResetJarJwkWithOpaqueId());
 
-            JWK secondarySigningKey = jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId();
-            if (secondarySigningKey != null) {
-                signingKeys.add(secondarySigningKey);
+            JWK deprecatedSigningKey = jwksService.getPublicMfaResetDeprecatedJarJwkWithOpaqueId();
+            if (deprecatedSigningKey != null) {
+                signingKeys.add(deprecatedSigningKey);
             }
 
             JWKSet jwkSet = new JWKSet(signingKeys);

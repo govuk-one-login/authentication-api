@@ -632,8 +632,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
 
-    public String getMfaResetJarSecondarySigningKeyAlias() {
-        return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS");
+    public String getMfaResetJarDeprecatedSigningKeyAlias() {
+        return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS");
     }
 
     public String getMfaResetJarSigningKeyId() {

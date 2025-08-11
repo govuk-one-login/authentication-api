@@ -28,7 +28,7 @@ class MfaResetJarJwkHandlerTest {
     private MfaResetJarJwkHandler handler;
     private final ECKey jarPublicSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
-    private final ECKey jarSecondaryPublicSigningKey =
+    private final ECKey jarDeprecatedPublicSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
 
     MfaResetJarJwkHandlerTest() throws JOSEException {}
@@ -41,7 +41,7 @@ class MfaResetJarJwkHandlerTest {
 
     @Test
     void shouldReturnOnlyPrimaryMfaResetStorageTokenJwk() {
-        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicMfaResetDeprecatedJarJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -54,14 +54,15 @@ class MfaResetJarJwkHandlerTest {
     }
 
     @Test
-    void shouldReturnPrimaryAndSecondaryMfaResetStorageTokenJwksWhenSecondaryKeyAvailable() {
-        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId())
-                .thenReturn(jarSecondaryPublicSigningKey);
+    void shouldReturnPrimaryAndDeprecatedMfaResetStorageTokenJwksWhenDeprecatedKeyAvailable() {
+        when(jwksService.getPublicMfaResetDeprecatedJarJwkWithOpaqueId())
+                .thenReturn(jarDeprecatedPublicSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
 
-        var expectedJWKSet = new JWKSet(List.of(jarPublicSigningKey, jarSecondaryPublicSigningKey));
+        var expectedJWKSet =
+                new JWKSet(List.of(jarPublicSigningKey, jarDeprecatedPublicSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));
