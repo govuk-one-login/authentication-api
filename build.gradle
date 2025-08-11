@@ -255,7 +255,7 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        spotbugs "com.github.spotbugs:spotbugs:4.9.3"
+        spotbugs "com.github.spotbugs:spotbugs:4.9.4"
 
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
 
