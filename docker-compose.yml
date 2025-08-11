@@ -1,9 +1,13 @@
+version: "3.8"
+
+name: di-authentication-local
+
 services:
   aws:
-    image: localstack/localstack:3.1.0@sha256:a47b435f876a100115d1d9f24e19b6b302cc7acb78b91e9258122116283ba462
+    image: localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348
     restart: no
     environment:
-      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch, events, logs
+      SERVICES: sqs, kms, ssm
       GATEWAY_LISTEN: 0.0.0.0:45678
       LOCALSTACK_HOST: localhost:45678
       TEST_AWS_ACCOUNT_ID: 123456789012
@@ -17,7 +21,7 @@ services:
       - 45678:45678
 
   redis:
-    image: redis:6.0.5-alpine
+    image: redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb
     restart: no
     healthcheck:
       test: '[[ $$(redis-cli ping 2> /dev/null) == "PONG" ]] || exit 1'
@@ -29,16 +33,66 @@ services:
       - di-authentication-api-net
 
   dynamodb:
-    command: "-jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ."
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ."
     restart: no
     working_dir: /home/dynamodblocal
-    image: amazon/dynamodb-local:1.22.0
+    image: amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b
     healthcheck:
       test: curl http://localhost:8000
       interval: 5s
       timeout: 1m
     ports:
       - 8000:8000
+    networks:
+      - di-authentication-api-net
+
+  orchestration-stub:
+    image: orch-stub-local:latest
+    container_name: orch-stub-local
+    build:
+      context: ../authentication-stubs/orchestration-stub
+      dockerfile: Dockerfile
+    env_file: ../authentication-stubs/orchestration-stub/.env.local
+    environment:
+      AUTHENTICATION_BACKEND_URL: http://host.docker.internal:4402/
+    ports:
+      - "4400:4400"
+    networks:
+      - di-authentication-api-net
+
+  authentication-frontend:
+    image: authentication-frontend-local:latest
+    container_name: authentication-frontend-local
+    build:
+      context: ../authentication-frontend
+      dockerfile: dev.Dockerfile
+    env_file: ../authentication-frontend/.env.local
+    environment:
+      FRONTEND_API_BASE_URL: http://host.docker.internal:4402/
+    command: "node --enable-source-maps --inspect=0.0.0.0:5401 dist/server.js"
+    ports:
+      - "4401:4401"
+      - "5401:5401"
+    networks:
+      - di-authentication-api-net
+
+  authentication-api:
+    image: authentication-api-local:latest
+    container_name: authentication-api-local
+    build:
+      context: .
+      dockerfile: local-running/Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+    env_file: local-running/.env.local
+    ports:
+      - "4402:4402"
+      - "5402:5402"
     networks:
       - di-authentication-api-net
 

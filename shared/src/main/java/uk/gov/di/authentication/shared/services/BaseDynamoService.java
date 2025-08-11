@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 
 public class BaseDynamoService<T> {
 
@@ -28,7 +29,7 @@ public class BaseDynamoService<T> {
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
 
-        warmUp();
+        warmUp(dynamoTable);
     }
 
     public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
@@ -70,10 +71,6 @@ public class BaseDynamoService<T> {
 
     public void delete(String partition, String sortKey) {
         get(partition, sortKey).ifPresent(dynamoTable::deleteItem);
-    }
-
-    private void warmUp() {
-        dynamoTable.describeTable();
     }
 
     public QueryResponse query(QueryRequest request) {

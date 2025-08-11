@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -50,7 +51,7 @@ public class TokenHandler
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
     private final AuditService auditService;
-    private final DynamoService dynamoService;
+    private final AuthenticationService authenticationService;
 
     public TokenHandler(
             ConfigurationService configurationService,
@@ -59,14 +60,14 @@ public class TokenHandler
             TokenService tokenUtilityService,
             TokenRequestValidator tokenRequestValidator,
             AuditService auditService,
-            DynamoService dynamoService) {
+            AuthenticationService authenticationService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
         this.auditService = auditService;
-        this.dynamoService = dynamoService;
+        this.authenticationService = authenticationService;
     }
 
     public TokenHandler() {
@@ -86,7 +87,7 @@ public class TokenHandler
         this.tokenRequestValidator =
                 new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
         this.auditService = new AuditService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
     }
 
     @Override
@@ -97,7 +98,7 @@ public class TokenHandler
                     "auth-external-api::" + getClass().getSimpleName(),
                     () -> tokenRequestHandler(input));
         } catch (Exception e) {
-            LOG.error("Unexpected exception: {}", e.getMessage());
+            LOG.error("Unexpected exception", e);
             return generateApiGatewayProxyResponse(500, "server_error");
         }
     }
@@ -176,7 +177,7 @@ public class TokenHandler
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
             String subjectID = authCodeStore.getSubjectID();
-            UserProfile userProfile = dynamoService.getUserProfileFromSubject(subjectID);
+            UserProfile userProfile = authenticationService.getUserProfileFromSubject(subjectID);
             String internalPairwiseId =
                     userProfile.getSalt() == null
                             ? AuditService.UNKNOWN

@@ -112,6 +112,7 @@ subprojects {
         gson
         hamcrest
         java_parser
+        javalin
         jetbrains_annotations
         jgit
         kms
@@ -204,6 +205,8 @@ subprojects {
 
         java_parser "com.github.javaparser:javaparser-core:${dependencyVersions.java_parser}"
 
+        javalin "io.javalin:javalin:6.7.0"
+
         jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
 
         jgit "org.eclipse.jgit:org.eclipse.jgit:${dependencyVersions.jgit}"
@@ -244,7 +247,8 @@ subprojects {
                 "org.awaitility:awaitility:4.3.0",
                 "com.approvaltests:approvaltests:25.0.23",
                 configurations.hamcrest,
-                "org.reflections:reflections:0.10.2"
+                "org.reflections:reflections:0.10.2",
+                "uk.org.webcompere:system-stubs-jupiter:2.1.8"
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 
