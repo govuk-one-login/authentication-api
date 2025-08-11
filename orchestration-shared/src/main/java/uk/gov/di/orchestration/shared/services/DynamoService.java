@@ -206,8 +206,7 @@ public class DynamoService implements AuthenticationService {
         dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
     }
 
-    @Override
-    public UserProfile getUserProfileFromSubject(String subject) {
+    private UserProfile getUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
         DynamoDbIndex<UserProfile> subjectIDIndex = dynamoUserProfileTable.index("SubjectIDIndex");
