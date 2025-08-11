@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -32,7 +31,6 @@ import java.util.Optional;
 
 public class UserInfoService {
     private final AuthenticationUserInfoStorageService userInfoStorageService;
-    private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoClientService dynamoClientService;
     private final DynamoDocAppCriService dynamoDocAppCriService;
@@ -42,14 +40,12 @@ public class UserInfoService {
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
-            AuthenticationService authenticationService,
             DynamoIdentityService identityService,
             DynamoClientService dynamoClientService,
             DynamoDocAppCriService dynamoDocAppCriService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             AuthenticationUserInfoStorageService userInfoStorageService) {
-        this.authenticationService = authenticationService;
         this.identityService = identityService;
         this.dynamoClientService = dynamoClientService;
         this.dynamoDocAppCriService = dynamoDocAppCriService;
@@ -65,23 +61,7 @@ public class UserInfoService {
             return accessTokenInfo.getSubject();
         } else {
             LOG.info("Calculating internal common subject identifier");
-            var userProfile =
-                    authenticationService.getUserProfileFromSubject(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-            var internalCommonSubjectIdFromAccessToken =
-                    accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
-            var internalCommonSubjetIdFromUserProfile =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                    userProfile,
-                                    configurationService.getInternalSectorURI(),
-                                    authenticationService)
-                            .getValue();
-            LOG.info(
-                    "Is internalCommonSubjectId from user profile equal to one from access token store? {}",
-                    Objects.equals(
-                            internalCommonSubjetIdFromUserProfile,
-                            internalCommonSubjectIdFromAccessToken));
-            return internalCommonSubjetIdFromUserProfile;
+            return accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
         }
     }
 

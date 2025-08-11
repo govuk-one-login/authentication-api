@@ -25,7 +25,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -82,7 +81,6 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(
-                        new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
                         new DynamoDocAppCriService(configurationService),
@@ -107,7 +105,6 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(
-                        new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
                         new DynamoClientService(configurationService),
                         new DynamoDocAppCriService(configurationService),
