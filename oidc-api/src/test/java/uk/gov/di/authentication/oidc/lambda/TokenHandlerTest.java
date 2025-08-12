@@ -238,9 +238,9 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
@@ -249,7 +249,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         AUTH_TIME))
                 .thenReturn(tokenResponse);
 
@@ -311,9 +311,9 @@ public class TokenHandlerTest {
         setupClientSessions(
                 authCode, authenticationRequest.toParameters(), vtr, "a-different-client-id", null);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
@@ -322,7 +322,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         AUTH_TIME))
                 .thenReturn(tokenResponse);
 
@@ -375,9 +375,9 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
@@ -386,7 +386,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.RS256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         AUTH_TIME))
                 .thenReturn(tokenResponse);
 
@@ -451,7 +451,6 @@ public class TokenHandlerTest {
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
@@ -516,7 +515,6 @@ public class TokenHandlerTest {
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
@@ -600,9 +598,9 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
@@ -611,7 +609,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         AUTH_TIME))
                 .thenReturn(tokenResponse);
         setupNoClientSessions();
@@ -793,9 +791,9 @@ public class TokenHandlerTest {
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
             when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+            String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
-                            INTERNAL_SUBJECT,
                             SCOPES,
                             Map.of("nonce", NONCE),
                             RP_PAIRWISE_SUBJECT,
@@ -804,7 +802,7 @@ public class TokenHandlerTest {
                             false,
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
-                            lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                            vot,
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
 
@@ -1039,9 +1037,9 @@ public class TokenHandlerTest {
                             authenticationRequest.getCustomParameter("vtr"));
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+            String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
-                            INTERNAL_SUBJECT,
                             SCOPES,
                             Map.of("nonce", NONCE),
                             RP_PAIRWISE_SUBJECT,
@@ -1050,7 +1048,7 @@ public class TokenHandlerTest {
                             false,
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
-                            lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                            vot,
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
 
@@ -1112,9 +1110,9 @@ public class TokenHandlerTest {
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
             when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+            String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
-                            INTERNAL_SUBJECT,
                             SCOPES,
                             Map.of("nonce", NONCE),
                             RP_PAIRWISE_SUBJECT,
@@ -1123,7 +1121,7 @@ public class TokenHandlerTest {
                             false,
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
-                            lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                            vot,
                             AUTH_TIME))
                     .thenReturn(tokenResponse);
 
@@ -1250,10 +1248,12 @@ public class TokenHandlerTest {
                 DOC_APP_CLIENT_ID.getValue(),
                 DOC_APP_USER_PUBLIC_SUBJECT);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String clientID = DOC_APP_CLIENT_ID.getValue();
+        Scope authRequestScopes = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
-                        DOC_APP_CLIENT_ID.getValue(),
-                        DOC_APP_USER_PUBLIC_SUBJECT,
-                        new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID),
+                        clientID,
+                        authRequestScopes,
                         Map.of("nonce", NONCE),
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         DOC_APP_USER_PUBLIC_SUBJECT,
@@ -1261,7 +1261,7 @@ public class TokenHandlerTest {
                         true,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         null))
                 .thenReturn(tokenResponse);
 
@@ -1332,7 +1332,6 @@ public class TokenHandlerTest {
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
                         eq(SCOPES),
                         eq(Map.of("nonce", NONCE)),
                         eq(RP_PAIRWISE_SUBJECT),
@@ -1394,7 +1393,6 @@ public class TokenHandlerTest {
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
-                        eq(INTERNAL_SUBJECT),
                         eq(SCOPES),
                         eq(Map.of("nonce", NONCE)),
                         eq(RP_PAIRWISE_SUBJECT),
@@ -1449,9 +1447,9 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         when(dynamoService.getUserProfileByEmail(TEST_EMAIL)).thenReturn(userProfile);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
@@ -1460,7 +1458,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        lowestLevelVtr.retrieveVectorOfTrustForToken(),
+                        vot,
                         AUTH_TIME))
                 .thenReturn(tokenResponse);
 
@@ -1696,7 +1694,6 @@ public class TokenHandlerTest {
         var finalClaimsRequestCaptor = ArgumentCaptor.forClass(OIDCClaimsRequest.class);
         verify(tokenService)
                 .generateTokenResponse(
-                        any(),
                         any(),
                         any(),
                         any(),

@@ -561,7 +561,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String redisResponse = redis.getFromRedis(REFRESH_TOKEN_PREFIX + jwtId);
         RefreshTokenStore refreshTokenStore =
                 objectMapper.readValue(redisResponse, RefreshTokenStore.class);
-        assertEquals(refreshTokenStore.getInternalSubjectId(), internalSubject.getValue());
         assertEquals(
                 refreshTokenStore.getInternalPairwiseSubjectId(),
                 internalPairwiseSubject.getValue());

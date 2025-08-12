@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
@@ -390,7 +391,6 @@ public class TokenHandler
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
                         clientId,
-                        new Subject(tokenStore.getInternalSubjectId()),
                         scopes,
                         rpPairwiseSubject,
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
@@ -479,20 +479,22 @@ public class TokenHandler
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
-                            () ->
-                                    tokenService.generateTokenResponse(
-                                            clientRegistry.getClientID(),
-                                            clientDocAppSubjectId,
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            clientDocAppSubjectId,
-                                            clientDocAppSubjectId,
-                                            finalClaimsRequest,
-                                            true,
-                                            signingAlgorithm,
-                                            clientSessionId,
-                                            vot,
-                                            null));
+                            () -> {
+                                String clientID = clientRegistry.getClientID();
+                                Scope authRequestScopes = authRequest.getScope();
+                                return tokenService.generateTokenResponse(
+                                        clientID,
+                                        authRequestScopes,
+                                        additionalTokenClaims,
+                                        clientDocAppSubjectId,
+                                        clientDocAppSubjectId,
+                                        finalClaimsRequest,
+                                        true,
+                                        signingAlgorithm,
+                                        clientSessionId,
+                                        vot,
+                                        null);
+                            });
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -522,7 +524,6 @@ public class TokenHandler
                             () ->
                                     tokenService.generateTokenResponse(
                                             clientRegistry.getClientID(),
-                                            new Subject(userProfile.getSubjectID()),
                                             authRequest.getScope(),
                                             additionalTokenClaims,
                                             rpPairwiseSubject,
