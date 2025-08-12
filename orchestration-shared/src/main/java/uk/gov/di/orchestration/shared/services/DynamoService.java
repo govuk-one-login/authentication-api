@@ -27,8 +27,6 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
 
-import static java.util.Objects.nonNull;
-
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
     private final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable;
@@ -130,20 +128,6 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        if (nonNull(email) && !email.isBlank()) {
-            var userCredentials =
-                    dynamoUserCredentialsTable.getItem(
-                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-            if (nonNull(userCredentials)) {
-                return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
-            }
-        }
-        return Optional.empty();
-    }
-
-    @Override
     public byte[] getOrGenerateSalt(UserProfile userProfile) {
         if (userProfile.getSalt() == null
                 || SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray().length == 0) {
@@ -206,8 +190,7 @@ public class DynamoService implements AuthenticationService {
         dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
     }
 
-    @Override
-    public UserProfile getUserProfileFromSubject(String subject) {
+    private UserProfile getUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
         DynamoDbIndex<UserProfile> subjectIDIndex = dynamoUserProfileTable.index("SubjectIDIndex");

@@ -27,13 +27,11 @@ import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -43,7 +41,6 @@ import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +66,6 @@ class UserInfoServiceTest {
     private final AuthenticationUserInfoStorageService userInfoStorageService =
             mock(AuthenticationUserInfoStorageService.class);
     private UserInfoService userInfoService;
-    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
     private final DynamoDocAppCriService dynamoDocAppCriService =
@@ -178,8 +174,6 @@ class UserInfoServiceTest {
                 List.of(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.WALLET_SUBJECT_ID.getValue());
-        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                .thenReturn(generateUserprofile());
 
         var accessTokenStore =
                 new AccessTokenStore(
@@ -319,8 +313,6 @@ class UserInfoServiceTest {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             accessToken = createSignedAccessToken(null);
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
-            when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                    .thenReturn(generateUserprofile());
 
             var accessTokenStore =
                     new AccessTokenStore(
@@ -546,17 +538,6 @@ class UserInfoServiceTest {
         userInfo.setPhoneNumber(PHONE_NUMBER);
         userInfo.setPhoneNumberVerified(true);
         return userInfo;
-    }
-
-    private UserProfile generateUserprofile() {
-        return new UserProfile()
-                .withEmail("joe.bloggs@digital.cabinet-office.gov.uk")
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withSubjectID(INTERNAL_SUBJECT.toString())
-                .withCreated(LocalDateTime.now().toString())
-                .withUpdated(LocalDateTime.now().toString());
     }
 
     private void assertClaimMetricPublished(String v3) {

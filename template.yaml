@@ -3471,7 +3471,6 @@ Resources:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
