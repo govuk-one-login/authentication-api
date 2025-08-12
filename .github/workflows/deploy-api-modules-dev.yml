@@ -76,7 +76,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION}}
           distribution: ${{ env.JAVA_DISTRIBUTION}}
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -198,14 +198,14 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ needs.set-up.outputs.promotion_role }}
           aws-region: ${{ needs.set-up.outputs.aws_region }}
 
       - name: Download all promotion artifacts
         id: download_promotion_artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: promotion-artifacts
           pattern: promotion_artifact_*

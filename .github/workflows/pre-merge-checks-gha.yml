@@ -24,7 +24,7 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@db8d0bfea5a44e51abd5dc1454386c668ae901f9 # v45.0.7
+        uses: tj-actions/changed-files@f963b3f3562b00b6d2dd25efc390eb04e51ef6c6 # v45.0.7
         with:
           files: .github/workflows/**.{yml,yaml}
 
