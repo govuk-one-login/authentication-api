@@ -1,15 +1,15 @@
 {
   "baseBranch": "origin/main",
-  "enums": [
-    "uk.gov.di.authentication.shared.entity.CodeRequestType",
-    "uk.gov.di.authentication.shared.entity.CountType",
-    "uk.gov.di.authentication.shared.entity.CredentialTrustLevel",
-    "uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType",
-    "uk.gov.di.authentication.shared.entity.EmailCheckResultStatus",
-    "uk.gov.di.authentication.shared.entity.ErrorResponse",
-    "uk.gov.di.authentication.shared.entity.JourneyType",
-    "uk.gov.di.authentication.shared.entity.LevelOfConfidence",
-    "uk.gov.di.authentication.shared.entity.MFAMethodType",
-    "uk.gov.di.authentication.shared.entity.PriorityIdentifier"
+  "enumFiles": [
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/CodeRequestType.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/CountType.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/CredentialTrustLevel.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/DeliveryReceiptsNotificationType.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/EmailCheckResultStatus.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/ErrorResponse.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/JourneyType.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/LevelOfConfidence.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/mfa/MFAMethodType.java",
+    "shared/src/main/java/uk/gov/di/authentication/shared/entity/PriorityIdentifier.java"
   ]
 }

@@ -4,7 +4,6 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.EnumConstantDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
-import com.github.javaparser.ast.nodeTypes.NodeWithName;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,9 +59,10 @@ public class DeprecationChecker {
         ConfigJson configJson = gson.fromJson(json, ConfigJson.class);
 
         String baseBranch = configJson.baseBranch != null ? configJson.baseBranch : "origin/main";
-        Set<String> enums = configJson.enums != null ? Set.copyOf(configJson.enums) : Set.of();
+        Set<String> enumFiles =
+                configJson.enumFiles != null ? Set.copyOf(configJson.enumFiles) : Set.of();
 
-        return new Config(baseBranch, enums);
+        return new Config(baseBranch, enumFiles);
     }
 
     static List<String> performCheck(Config config) throws IOException {
@@ -82,33 +82,17 @@ public class DeprecationChecker {
                 return new ArrayList<>();
             }
 
-            List<String> allJavaFiles = getAllJavaFiles();
             List<String> violations = new ArrayList<>();
 
-            for (String filePath : allJavaFiles) {
+            for (String filePath : config.enumFiles) {
                 String oldContent = getCommitedFileContent(repository, mainId, filePath);
                 String newContent = getWorkspaceFileContent(filePath);
 
-                violations.addAll(
-                        checkEnumRemovals(filePath, oldContent, newContent, config.enums));
+                violations.addAll(checkEnumRemovals(filePath, oldContent, newContent));
             }
 
             return violations;
         }
-    }
-
-    static List<String> getAllJavaFiles() throws IOException {
-        List<String> javaFiles = new ArrayList<>();
-        var workDir = Paths.get(System.getProperty("user.dir"));
-        try (var paths = Files.walk(workDir)) {
-            paths.filter(path -> path.toString().endsWith(".java"))
-                    .filter(path -> !path.toString().contains("/build/"))
-                    .filter(path -> !path.toString().contains("/target/"))
-                    .filter(path -> !path.toString().contains("/.gradle/"))
-                    .map(path -> workDir.relativize(path).toString())
-                    .forEach(javaFiles::add);
-        }
-        return javaFiles;
     }
 
     static String getWorkspaceFileContent(String path) throws IOException {
@@ -136,8 +120,7 @@ public class DeprecationChecker {
         }
     }
 
-    static List<String> checkEnumRemovals(
-            String filePath, String oldContent, String newContent, Set<String> targetEnums) {
+    static List<String> checkEnumRemovals(String filePath, String oldContent, String newContent) {
         List<String> violations = new ArrayList<>();
 
         try {
@@ -149,22 +132,10 @@ public class DeprecationChecker {
                 return violations;
             }
 
-            String packageName =
-                    oldUnit.get()
-                            .getPackageDeclaration()
-                            .map(NodeWithName::getNameAsString)
-                            .orElse("");
-
             List<EnumDeclaration> oldEnums = oldUnit.get().findAll(EnumDeclaration.class);
             List<EnumDeclaration> newEnums = newUnit.get().findAll(EnumDeclaration.class);
 
             for (EnumDeclaration oldEnum : oldEnums) {
-                String fullEnumName = packageName + "." + oldEnum.getNameAsString();
-
-                if (!targetEnums.isEmpty() && !targetEnums.contains(fullEnumName)) {
-                    continue;
-                }
-
                 Optional<EnumDeclaration> newEnum =
                         newEnums.stream()
                                 .filter(e -> e.getNameAsString().equals(oldEnum.getNameAsString()))
@@ -209,16 +180,16 @@ public class DeprecationChecker {
 
     static class Config {
         final String baseBranch;
-        final Set<String> enums;
+        final Set<String> enumFiles;
 
-        Config(String baseBranch, Set<String> enums) {
+        Config(String baseBranch, Set<String> enumFiles) {
             this.baseBranch = baseBranch;
-            this.enums = enums;
+            this.enumFiles = enumFiles;
         }
     }
 
     private static class ConfigJson {
         String baseBranch;
-        java.util.List<String> enums;
+        java.util.List<String> enumFiles;
     }
 }
