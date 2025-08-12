@@ -37,7 +37,7 @@ ext {
         jetbrains_annotations: "26.0.2",
         jgit: "6.10.1.202505221210-r",
         nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "10.4",
+        nimbusds_jwt_version: "10.4.1",
         junit: "5.13.4",
         xray: "2.19.0",
         pact: "4.6.17",
