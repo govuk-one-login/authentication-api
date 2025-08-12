@@ -19,6 +19,11 @@ public class RefreshTokenStore {
 
     public RefreshTokenStore() {}
 
+    public RefreshTokenStore(String refreshToken, String internalPairwiseSubjectId) {
+        this.refreshToken = refreshToken;
+        this.internalPairwiseSubjectId = internalPairwiseSubjectId;
+    }
+
     public RefreshTokenStore(
             String refreshToken, String internalSubjectId, String internalPairwiseSubjectId) {
         this.refreshToken = refreshToken;
