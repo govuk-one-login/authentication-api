@@ -123,6 +123,10 @@ public class DeprecationChecker {
     static List<String> checkEnumRemovals(String filePath, String oldContent, String newContent) {
         List<String> violations = new ArrayList<>();
 
+        if (oldContent.equals(newContent)) {
+            return violations;
+        }
+
         try {
             JavaParser parser = new JavaParser();
             Optional<CompilationUnit> oldUnit = parser.parse(oldContent).getResult();

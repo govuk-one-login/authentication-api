@@ -336,6 +336,23 @@ class DeprecationCheckerTest {
 
             assertTrue(violations.isEmpty());
         }
+
+        @Test
+        void shouldReturnEmptyWhenContentIsIdentical() {
+            String content =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A,
+                    CONSTANT_B
+                }
+                """;
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals("TestEnum.java", content, content);
+
+            assertTrue(violations.isEmpty());
+        }
     }
 
     @Nested
