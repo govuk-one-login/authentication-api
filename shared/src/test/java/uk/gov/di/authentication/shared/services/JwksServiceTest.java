@@ -140,9 +140,9 @@ class JwksServiceTest {
     }
 
     @Test
-    void shouldReturnMfaResetJarSecondarySigningKeyAndParseToJwk() {
+    void shouldReturnMfaResetJarDeprecatedSigningKeyAndParseToJwk() {
         String mockKeyId = "123456789";
-        when(configurationService.getMfaResetJarSecondarySigningKeyAlias()).thenReturn(mockKeyId);
+        when(configurationService.getMfaResetJarDeprecatedSigningKeyAlias()).thenReturn(mockKeyId);
 
         byte[] publicKey =
                 Base64.getDecoder()
@@ -159,7 +159,7 @@ class JwksServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
-        JWK publicKeyJwk = jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId();
+        JWK publicKeyJwk = jwksService.getPublicMfaResetJarDeprecatedJwkWithOpaqueId();
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(mockKeyId)));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));

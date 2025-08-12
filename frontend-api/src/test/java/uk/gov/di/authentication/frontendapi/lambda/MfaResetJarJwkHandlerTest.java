@@ -41,7 +41,7 @@ class MfaResetJarJwkHandlerTest {
 
     @Test
     void shouldReturnOnlyPrimaryMfaResetStorageTokenJwk() {
-        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicMfaResetJarDeprecatedJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
@@ -55,7 +55,7 @@ class MfaResetJarJwkHandlerTest {
 
     @Test
     void shouldReturnPrimaryAndSecondaryMfaResetStorageTokenJwksWhenSecondaryKeyAvailable() {
-        when(jwksService.getPublicMfaResetJarSecondaryJwkWithOpaqueId())
+        when(jwksService.getPublicMfaResetJarDeprecatedJwkWithOpaqueId())
                 .thenReturn(jarSecondaryPublicSigningKey);
 
         var event = new APIGatewayProxyRequestEvent();
