@@ -120,7 +120,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 var auditContext =
                         AuditContext.auditContextFromUserContext(
                                 userContext,
-                                userProfile.get().getSubjectID(),
+                                userContext.getAuthSession().getInternalCommonSubjectId(),
                                 userProfile.get().getEmail(),
                                 IpAddressHelper.extractIpAddress(input),
                                 userProfile.get().getPhoneNumber(),

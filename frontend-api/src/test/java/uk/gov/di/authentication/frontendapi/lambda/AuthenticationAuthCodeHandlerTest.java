@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -73,6 +74,10 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String LOCATION = "location";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    TEST_SUBJECT_ID, TEST_SECTOR_IDENTIFIER, TEST_SALT);
     private static final String CALCULATED_PAIRWISE_ID = "some-rp-pairwise-id";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
@@ -94,7 +99,7 @@ class AuthenticationAuthCodeHandlerTest {
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    TEST_SUBJECT_ID,
+                    TEST_INTERNAL_COMMON_SUBJECT,
                     EMAIL,
                     IP_ADDRESS,
                     UK_MOBILE_NUMBER,
@@ -108,7 +113,8 @@ class AuthenticationAuthCodeHandlerTest {
                 new AuthSessionItem()
                         .withSessionId(SESSION_ID)
                         .withEmailAddress(CommonTestVariables.EMAIL)
-                        .withClientId(CLIENT_ID);
+                        .withClientId(CLIENT_ID)
+                        .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
