@@ -12,6 +12,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import java.io.File;
@@ -80,6 +81,12 @@ public class DeprecationChecker {
             }
             if (mainId == null) {
                 return new ArrayList<>();
+            }
+
+            ObjectId headId = repository.resolve("HEAD");
+            ObjectId mergeBase = findMergeBase(repository, headId, mainId);
+            if (mergeBase != null) {
+                mainId = mergeBase;
             }
 
             List<String> violations = new ArrayList<>();
@@ -180,6 +187,21 @@ public class DeprecationChecker {
     static boolean isDeprecated(EnumConstantDeclaration constant) {
         return constant.getAnnotations().stream()
                 .anyMatch(annotation -> annotation.getNameAsString().equals("Deprecated"));
+    }
+
+    static ObjectId findMergeBase(Repository repository, ObjectId commit1, ObjectId commit2) {
+        try (RevWalk walk = new RevWalk(repository)) {
+            RevCommit c1 = walk.parseCommit(commit1);
+            RevCommit c2 = walk.parseCommit(commit2);
+            walk.setRevFilter(RevFilter.MERGE_BASE);
+            walk.markStart(c1);
+            walk.markStart(c2);
+            RevCommit mergeBase = walk.next();
+            return mergeBase != null ? mergeBase.getId() : null;
+        } catch (Exception e) {
+            LOG.error("Could not find merge base: {}", e.getMessage());
+            return null;
+        }
     }
 
     static class Config {

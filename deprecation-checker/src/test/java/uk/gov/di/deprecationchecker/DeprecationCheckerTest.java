@@ -376,4 +376,35 @@ class DeprecationCheckerTest {
             assertTrue(DeprecationChecker.isDeprecated(constant));
         }
     }
+
+    @Nested
+    class FindMergeBase {
+        @Test
+        void shouldReturnMergeBaseWhenFound() {
+            Repository mockRepo = mock(Repository.class);
+            ObjectId commit1 = ObjectId.fromString("1234567890123456789012345678901234567890");
+            ObjectId commit2 = ObjectId.fromString("abcdef1234567890123456789012345678901234");
+            ObjectId mergeBaseId = ObjectId.fromString("fedcba0987654321098765432109876543210987");
+
+            RevCommit mockCommit1 = mock(RevCommit.class);
+            RevCommit mockCommit2 = mock(RevCommit.class);
+            RevCommit mockMergeBase = mock(RevCommit.class);
+
+            when(mockMergeBase.getId()).thenReturn(mergeBaseId);
+
+            try (MockedConstruction<RevWalk> mockRevWalkConstruction =
+                    mockConstruction(
+                            RevWalk.class,
+                            (mock, context) -> {
+                                when(mock.parseCommit(commit1)).thenReturn(mockCommit1);
+                                when(mock.parseCommit(commit2)).thenReturn(mockCommit2);
+                                when(mock.next()).thenReturn(mockMergeBase);
+                            })) {
+
+                ObjectId result = DeprecationChecker.findMergeBase(mockRepo, commit1, commit2);
+
+                assertEquals(mergeBaseId, result);
+            }
+        }
+    }
 }
