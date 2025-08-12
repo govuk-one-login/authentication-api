@@ -475,6 +475,42 @@ data "aws_iam_policy_document" "dynamo_authentication_attempt_read_policy_docume
   }
 }
 
+data "aws_iam_policy_document" "dynamo_authentication_attempt_read_write_delete_policy_document" {
+  statement {
+    sid    = "AllowReadWriteAndDeleteActions"
+    effect = "Allow"
+
+    actions = [
+      # Read actions
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      # Write actions
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+      # Delete actions
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.authentication_attempt_table.arn,
+      "${data.aws_dynamodb_table.authentication_attempt_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEncryptionDecryptionActions"
+    effect = "Allow"
+    actions = [
+      # Read
+      "kms:Decrypt",
+      # Write
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
+    ]
+    resources = [local.authentication_attempt_kms_key_arn]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_auth_session_delete_policy_document" {
   statement {
     sid    = "AllowDelete"
@@ -975,6 +1011,17 @@ resource "aws_iam_policy" "dynamo_authentication_attempt_delete_policy" {
   description = "IAM policy for managing delete permissions to the authentication attempts table"
 
   policy = data.aws_iam_policy_document.dynamo_authentication_attempt_delete_policy_document.json
+}
+
+
+// This is required because we've reached the managed polices per role quota limit (20)
+// Ticket raised to request quota increase (ATO-1056)
+resource "aws_iam_policy" "dynamo_authentication_attempt_read_write_delete_policy" {
+  name_prefix = "dynamo-authentication-attempt-read-write-delete-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing combined read, write and, delete permissions to the authentication attempts table"
+
+  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_read_write_delete_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_auth_session_write_policy" {
