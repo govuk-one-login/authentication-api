@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -37,6 +38,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.APPLICATION;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.IS_TEST_DESTINATION;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.NOTIFICATION_HTTP_ERROR;
+import static uk.gov.di.authentication.entity.metrics.MetricDimensions.NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
@@ -63,11 +69,31 @@ public class NotificationHandlerTest {
     private final S3Client s3Client = mock(S3Client.class);
     private NotificationHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final String EXPECTED_REFERENCE =
             String.format(
                     "%s/%s",
                     TEST_UNIQUE_NOTIFICATION_REFERENCE, CommonTestVariables.CLIENT_SESSION_ID);
+
+    private static final Map<String, String> BASE_METRIC_DIMENSIONS =
+            Map.of(
+                    ENVIRONMENT,
+                    "unit-test",
+                    APPLICATION,
+                    "Authentication",
+                    IS_TEST_DESTINATION,
+                    "false");
+
+    private static final Map<String, String> TEST_NUMBER_BASE_METRIC_DIMENSIONS =
+            Map.of(
+                    ENVIRONMENT,
+                    "unit-test",
+                    APPLICATION,
+                    "Authentication",
+                    IS_TEST_DESTINATION,
+                    "true");
 
     @BeforeEach
     void setUp() {
@@ -77,7 +103,10 @@ public class NotificationHandlerTest {
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         when(configService.getGovUKAccountsURL()).thenReturn(GOV_UK_ACCOUNTS_URL);
-        handler = new NotificationHandler(notificationService, configService, s3Client);
+        when(configService.getEnvironment()).thenReturn("unit-test");
+        handler =
+                new NotificationHandler(
+                        notificationService, configService, s3Client, cloudwatchMetricsService);
     }
 
     @Test
@@ -102,6 +131,9 @@ public class NotificationHandlerTest {
                         personalisation,
                         VERIFY_EMAIL,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent", getMetricDimensionsForTemplateType(VERIFY_EMAIL));
     }
 
     @Test
@@ -124,6 +156,10 @@ public class NotificationHandlerTest {
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(PASSWORD_RESET_CONFIRMATION));
     }
 
     @Test
@@ -148,6 +184,10 @@ public class NotificationHandlerTest {
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION_SMS,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent",
+                        getMetricDimensionsForTemplateType(PASSWORD_RESET_CONFIRMATION_SMS));
     }
 
     @Test
@@ -176,6 +216,10 @@ public class NotificationHandlerTest {
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(ACCOUNT_CREATED_CONFIRMATION));
     }
 
     @Test
@@ -198,6 +242,10 @@ public class NotificationHandlerTest {
                         personalisation,
                         VERIFY_PHONE_NUMBER,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent",
+                        getMetricDimensionsForTemplateType(VERIFY_PHONE_NUMBER, true));
     }
 
     @Test
@@ -210,6 +258,7 @@ public class NotificationHandlerTest {
         assertTrue(response.getBatchItemFailures().isEmpty());
 
         verifyNoInteractions(notificationService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -227,6 +276,8 @@ public class NotificationHandlerTest {
 
         assertEquals(
                 "Error when mapping message from queue to a NotifyRequest", exception.getMessage());
+
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -239,7 +290,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         personalisation.put("email-address", CommonTestVariables.EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
-        Mockito.doThrow(NotificationClientException.class)
+        Mockito.doThrow(new NotificationClientException("test-exception-message"))
                 .when(notificationService)
                 .sendEmail(
                         CommonTestVariables.EMAIL,
@@ -251,6 +302,10 @@ public class NotificationHandlerTest {
 
         assertEquals(1, response.getBatchItemFailures().size());
         assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
+
+        var dimensions = getMetricDimensionsForTemplateType(VERIFY_EMAIL, false);
+        dimensions.put(NOTIFICATION_HTTP_ERROR, "400");
+        verify(cloudwatchMetricsService).incrementCounter("EmailNotificationError", dimensions);
     }
 
     @Test
@@ -262,7 +317,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        Mockito.doThrow(NotificationClientException.class)
+        Mockito.doThrow(new NotificationClientException("test-exception-message"))
                 .when(notificationService)
                 .sendText(
                         CommonTestVariables.UK_MOBILE_NUMBER,
@@ -274,6 +329,10 @@ public class NotificationHandlerTest {
 
         assertEquals(1, response.getBatchItemFailures().size());
         assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
+
+        var dimensions = getMetricDimensionsForTemplateType(VERIFY_PHONE_NUMBER, true);
+        dimensions.put(NOTIFICATION_HTTP_ERROR, "400");
+        verify(cloudwatchMetricsService).incrementCounter("SmsNotificationError", dimensions);
     }
 
     @Test
@@ -381,6 +440,9 @@ public class NotificationHandlerTest {
                         personalisation,
                         MFA_SMS,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent", getMetricDimensionsForTemplateType(MFA_SMS, true));
     }
 
     @Test
@@ -408,6 +470,9 @@ public class NotificationHandlerTest {
                         .key(CommonTestVariables.UK_MOBILE_NUMBER)
                         .build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "SmsNotificationSent", getMetricDimensionsForTemplateType(MFA_SMS, true));
     }
 
     @Test
@@ -437,6 +502,10 @@ public class NotificationHandlerTest {
                         .key(CommonTestVariables.UK_MOBILE_NUMBER)
                         .build();
         verify(s3Client, times(0)).putObject(eq(putObjectRequest), any(RequestBody.class));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(ACCOUNT_CREATED_CONFIRMATION));
     }
 
     @Test
@@ -461,6 +530,14 @@ public class NotificationHandlerTest {
                         personalisation,
                         RESET_PASSWORD_WITH_CODE,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(RESET_PASSWORD_WITH_CODE));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(RESET_PASSWORD_WITH_CODE));
     }
 
     @Test
@@ -484,6 +561,10 @@ public class NotificationHandlerTest {
                         personalisation,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailNotificationSent",
+                        getMetricDimensionsForTemplateType(VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
     }
 
     private String buildContactUsUrl() {
@@ -522,5 +603,24 @@ public class NotificationHandlerTest {
         sqsEvent.setRecords(
                 singletonList(notifyRequestMessage(destination, template, code, TEST_MESSAGE_ID)));
         return sqsEvent;
+    }
+
+    private Map<String, String> getMetricDimensionsForTemplateType(
+            NotificationType notificationType) {
+        return getMetricDimensionsForTemplateType(notificationType, false);
+    }
+
+    private Map<String, String> getMetricDimensionsForTemplateType(
+            NotificationType notificationType, boolean isTestDestination) {
+        Map<String, String> dimensions =
+                new HashMap<>(
+                        isTestDestination
+                                ? TEST_NUMBER_BASE_METRIC_DIMENSIONS
+                                : BASE_METRIC_DIMENSIONS);
+        dimensions.put(NOTIFICATION_TYPE, notificationType.toString());
+        if (notificationType.isForPhoneNumber()) {
+            dimensions.put("Country", "44");
+        }
+        return dimensions;
     }
 }
