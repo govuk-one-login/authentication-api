@@ -8,26 +8,23 @@ This document describes the zero-downtime key rotation process for KMS signing k
 
 ### Key Components
 
-- **Current Alias** (`ipv_reverification_request_signing_key_current_alias`): Points to the key currently served by JWKS endpoints
-- **Secondary Alias** (`ipv_reverification_request_signing_key_secondary_alias`): Points to the secondary key served by JWKS endpoints
-- **Signing Alias** (`ipv_reverification_request_signing_key_alias`): Points to the key used by signing lambda handlers
-- **Versioned Keys**: Keys created with version suffixes (`_v1`, `_v2`, etc.)
+- **Versioned Key Aliases**: Individual key aliases with version suffixes (`ipv_reverification_request_signing_key_v1`, `ipv_reverification_request_signing_key_v2`, etc.)
 
 ### Environment Variables
 
 - **JWKS Lambda Environment Variables**:
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references current alias
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS` - references secondary alias
+  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references current versioned alias
+  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS` - references secondary versioned alias
 - **Signing Lambda Environment Variable**:
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references signing alias
+  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references signing versioned alias
 
 ## Key Rotation Process
 
 | Step | Description | Terraform Changes | Deployment | Result |
 |------|-------------|-------------------|------------|--------|
-| **1** | **Create New Key & Update JWKS** | • Add `aws_kms_key.ipv_reverification_request_signing_key_v2`<br>• Update `current_alias` target to `_v2` key<br>• Update JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` to reference `current_alias`<br>• Update JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS` to reference `secondary_alias` (pointing to `_v1`) | `terraform apply` | • JWKS serves both `_v1` and `_v2` keys<br>• Signing still uses `_v1` key<br>• Zero downtime |
-| **2** | **Switch Signing to New Key** | • Update `signing_alias` target from `_v1` to `_v2` key | `terraform apply` | • JWKS serves both `_v1` and `_v2` keys<br>• Signing uses `_v2` key<br>• Zero downtime |
-| **3** | **Remove Old Key** | • Remove JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS`<br>• Remove `aws_kms_key.ipv_reverification_request_signing_key_v1`<br>• Remove any aliases pointing to `_v1` key | `terraform apply` | • JWKS serves only `_v2` key<br>• Signing uses `_v2` key<br>• Rotation complete |
+| **1** | **Create New Key & Update JWKS** | • Create new KMS key<br>• Create `ipv_reverification_request_signing_key_v2` alias pointing to new key<br>• Update JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` to `ipv_reverification_request_signing_key_v2`<br>• Add JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS` to `ipv_reverification_request_signing_key_v1` | `terraform apply` | • JWKS serves both `_v1` and `_v2` keys<br>• Signing still uses `_v1` key<br>• Zero downtime |
+| **2** | **Switch Signing to New Key** | • Update signing env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` to `ipv_reverification_request_signing_key_v2` | `terraform apply` | • JWKS serves both `_v1` and `_v2` keys<br>• Signing uses `_v2` key<br>• Zero downtime |
+| **3** | **Remove Old Key** | • Remove JWKS env var `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS`<br>• Remove `aws_kms_key.ipv_reverification_request_signing_key_v1`<br>• Remove `aws_kms_alias.ipv_reverification_request_signing_key_v1` | `terraform apply` | • JWKS serves only `_v2` key<br>• Signing uses `_v2` key<br>• Rotation complete |
 
 ## Detailed Terraform File Changes
 
@@ -44,16 +41,10 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key_v2" {
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
 }
 
-# Update current alias to point to v2
-resource "aws_kms_alias" "ipv_reverification_request_signing_key_current_alias" {
-  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_current"
+# Add versioned alias for v2 key
+resource "aws_kms_alias" "ipv_reverification_request_signing_key_v2" {
+  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_v2"
   target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
-}
-
-# Keep secondary alias pointing to v1
-resource "aws_kms_alias" "ipv_reverification_request_signing_key_secondary_alias" {
-  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_secondary"
-  target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id  # v1 key
 }
 ```
 
@@ -61,19 +52,18 @@ resource "aws_kms_alias" "ipv_reverification_request_signing_key_secondary_alias
 ```hcl
 handler_environment_variables = {
   ENVIRONMENT                                             = var.environment
-  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS           = aws_kms_alias.ipv_reverification_request_signing_key_current_alias.name
-  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_secondary_alias.name
+  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS           = aws_kms_alias.ipv_reverification_request_signing_key_v2.name
+  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_v1.name
 }
 ```
 
 ### Step 2: Switch Signing to New Key
 
-**File: `ci/terraform/oidc/ecc-signing-key.tf`**
+**File: `ci/terraform/oidc/mfa-reset-jar-signing.tf`** (or relevant signing lambda config)
 ```hcl
-# Update signing alias to point to v2
-resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
-  name          = "alias/${var.environment}-ipv_reverification_request_signing_key"
-  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
+handler_environment_variables = {
+  ENVIRONMENT                                   = var.environment
+  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_v2.name
 }
 ```
 
@@ -82,17 +72,17 @@ resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
 **File: `ci/terraform/oidc/mfa-reset-jar-jwk.tf`**
 ```hcl
 handler_environment_variables = {
-  ENVIRONMENT                                             = var.environment
-  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS           = aws_kms_alias.ipv_reverification_request_signing_key_current_alias.name
+  ENVIRONMENT                                   = var.environment
+  IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = aws_kms_alias.ipv_reverification_request_signing_key_v2.name
   # Remove secondary alias reference
 }
 ```
 
 **File: `ci/terraform/oidc/ecc-signing-key.tf`**
 ```hcl
-# Remove old key and secondary alias
-# Delete: aws_kms_key.ipv_reverification_request_signing_key (v1)
-# Delete: aws_kms_alias.ipv_reverification_request_signing_key_secondary_alias
+# Remove old key and versioned alias
+# Delete: aws_kms_key.ipv_reverification_request_signing_key_v1
+# Delete: aws_kms_alias.ipv_reverification_request_signing_key_v1
 ```
 
 ## Deployment Commands
@@ -110,8 +100,8 @@ terraform apply
 
 ## Key States During Rotation
 
-| Step | Current Alias | Secondary Alias | Signing Alias | JWKS Keys | Signing Key |
-|------|---------------|-----------------|---------------|-----------|-------------|
+| Step | JWKS Current | JWKS Secondary | Signing | JWKS Keys | Signing Key |
+|------|--------------|----------------|---------|-----------|-------------|
 | **Initial** | `_v1` | N/A | `_v1` | 1 (`_v1`) | `_v1` |
 | **Step 1** | `_v2` | `_v1` | `_v1` | 2 (`_v2`, `_v1`) | `_v1` |
 | **Step 2** | `_v2` | `_v1` | `_v2` | 2 (`_v2`, `_v1`) | `_v2` |
