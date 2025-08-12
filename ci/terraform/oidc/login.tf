@@ -30,6 +30,39 @@ module "frontend_api_login_role" {
   }
 }
 
+# ATO-1878: This is a duplicate of the above role however it has a combined
+# read/write/delete policy for the authentication attempts table
+module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "frontend-api-login-role"
+  vpc_arn     = local.authentication_vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_user_write_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
+    aws_iam_policy.lambda_sns_policy.arn,
+    aws_iam_policy.pepper_parameter_policy.arn,
+    aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.dynamo_common_passwords_read_access_policy.arn,
+    module.oidc_txma_audit.access_policy_arn,
+    local.account_modifiers_encryption_policy_arn,
+    local.common_passwords_encryption_policy_arn,
+    local.client_registry_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn,
+    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_auth_session_read_write_policy.arn
+  ]
+  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20)
+  // Ticket raised to request quota increase (ATO-1056)
+  extra_tags = {
+    Service = "login"
+  }
+}
 
 module "login" {
   source = "../modules/endpoint-module-v2"
