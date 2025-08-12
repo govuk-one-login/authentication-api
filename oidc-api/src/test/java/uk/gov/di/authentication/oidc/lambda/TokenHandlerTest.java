@@ -440,9 +440,7 @@ public class TokenHandlerTest {
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
                 new RefreshTokenStore(
-                        refreshToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
@@ -504,9 +502,7 @@ public class TokenHandlerTest {
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
                 new RefreshTokenStore(
-                        refreshToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
