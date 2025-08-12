@@ -135,10 +135,7 @@ class UserInfoServiceTest {
         accessToken = createSignedAccessToken(null);
         var accessTokenStore =
                 new AccessTokenStore(
-                        accessToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                        JOURNEY_ID);
+                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
         givenThereIsUserInfo();
@@ -177,10 +174,7 @@ class UserInfoServiceTest {
 
         var accessTokenStore =
                 new AccessTokenStore(
-                        accessToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                        JOURNEY_ID);
+                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
 
@@ -212,7 +206,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -263,7 +256,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -317,7 +309,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -350,7 +341,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -391,7 +381,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -444,7 +433,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
@@ -467,10 +455,7 @@ class UserInfoServiceTest {
                             CustomScopeValue.DOC_CHECKING_APP.getValue());
             var accessTokenStore =
                     new AccessTokenStore(
-                            accessToken.getValue(),
-                            DOC_APP_SUBJECT.getValue(),
-                            DOC_APP_SUBJECT.getValue(),
-                            JOURNEY_ID);
+                            accessToken.getValue(), DOC_APP_SUBJECT.getValue(), JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -491,7 +476,6 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(
                             accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
                             INTERNAL_PAIRWISE_SUBJECT.getValue(),
                             JOURNEY_ID);
             var accessTokenInfo =
