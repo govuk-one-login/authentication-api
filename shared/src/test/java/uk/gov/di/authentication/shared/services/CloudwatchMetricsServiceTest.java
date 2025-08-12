@@ -9,8 +9,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
+import uk.gov.di.authentication.entity.Application;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Collections;
 import java.util.List;
@@ -136,6 +139,123 @@ class CloudwatchMetricsServiceTest {
                             "BACKUP");
 
             verify(spyService).putEmbeddedValue("MfaMethodOperationCount", 1, expectedDimensions);
+        }
+    }
+
+    @Nested
+    class EmitMetricForNotification {
+        @Test
+        void shouldEmitSmsNotificationSentMetricWithCorrectDimensions() {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+
+            spyService.emitMetricForNotificationError(
+                    NotificationType.VERIFY_PHONE_NUMBER,
+                    "+447700900123",
+                    false,
+                    Application.AUTHENTICATION);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", "Authentication",
+                            "NotificationType", "VERIFY_PHONE_NUMBER",
+                            "IsTest", "false",
+                            "Country", "44");
+
+            verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
+        }
+
+        @Test
+        void shouldEmitEmailNotificationSentMetricWithCorrectDimensions() {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+
+            spyService.emitMetricForNotificationError(
+                    NotificationType.VERIFY_EMAIL,
+                    "test@example.com",
+                    true,
+                    Application.ONE_LOGIN_HOME);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", "OneLoginHome",
+                            "NotificationType", "VERIFY_EMAIL",
+                            "IsTest", "true");
+
+            verify(spyService).incrementCounter("EmailNotificationSent", expectedDimensions);
+        }
+
+        @Test
+        void shouldEmitSmsNotificationErrorMetricWithHttpError() {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+            var notificationException = new NotificationClientException("Error");
+
+            spyService.emitMetricForNotificationError(
+                    NotificationType.MFA_SMS,
+                    "+447700900123",
+                    false,
+                    Application.AUTHENTICATION,
+                    notificationException);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", "Authentication",
+                            "NotificationType", "MFA_SMS",
+                            "IsTest", "false",
+                            "Country", "44",
+                            "NotificationHttpError", "400");
+
+            verify(spyService).incrementCounter("SmsNotificationError", expectedDimensions);
+        }
+
+        @Test
+        void shouldEmitEmailNotificationErrorMetricWithHttpError() {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+            var notificationException = new NotificationClientException("Error");
+
+            spyService.emitMetricForNotificationError(
+                    NotificationType.RESET_PASSWORD_WITH_CODE,
+                    "test@example.com",
+                    false,
+                    Application.AUTHENTICATION,
+                    notificationException);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", "Authentication",
+                            "NotificationType", "RESET_PASSWORD_WITH_CODE",
+                            "IsTest", "false",
+                            "NotificationHttpError", "400");
+
+            verify(spyService).incrementCounter("EmailNotificationError", expectedDimensions);
+        }
+
+        @Test
+        void shouldHandleInvalidPhoneNumberCountry() {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+
+            spyService.emitMetricForNotificationError(
+                    NotificationType.VERIFY_PHONE_NUMBER,
+                    "invalid-phone",
+                    false,
+                    Application.AUTHENTICATION);
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", "Authentication",
+                            "NotificationType", "VERIFY_PHONE_NUMBER",
+                            "IsTest", "false",
+                            "Country", "INVALID");
+
+            verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
         }
     }
 

@@ -5,17 +5,23 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
+import uk.gov.di.authentication.entity.Application;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotifiableType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.service.notify.NotificationClientException;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static java.lang.String.valueOf;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.APPLICATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.COUNTRY;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IPV_RESPONSE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
@@ -23,15 +29,22 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_PRIORITY_IDENTIFIER;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_METHOD_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_HTTP_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_SENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_SENT;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGetCountry;
 
 public class CloudwatchMetricsService {
 
@@ -237,5 +250,64 @@ public class CloudwatchMetricsService {
         dimensions.forEach(dimensionSet::addDimension);
 
         return dimensionSet;
+    }
+
+    public void emitMetricForNotificationError(
+            NotifiableType notificationType,
+            String destination,
+            Boolean isTestDestination,
+            Application application,
+            NotificationClientException notificationClientException) {
+        String metricName;
+        var dimensions =
+                getNotificationBaseMetricDimensions(
+                        notificationType, isTestDestination, application);
+
+        if (notificationType.isForPhoneNumber()) {
+            dimensions.put(COUNTRY.getValue(), maybeGetCountry(destination).orElse("INVALID"));
+            metricName = SMS_NOTIFICATION_ERROR.getValue();
+        } else {
+            metricName = EMAIL_NOTIFICATION_ERROR.getValue();
+        }
+        if (notificationClientException != null) {
+            dimensions.put(
+                    NOTIFICATION_HTTP_ERROR.getValue(),
+                    Integer.toString(notificationClientException.getHttpResult()));
+        }
+        incrementCounter(metricName, dimensions);
+    }
+
+    public void emitMetricForNotificationError(
+            NotifiableType notificationType,
+            String destination,
+            Boolean isTestDestination,
+            Application application) {
+        String metricName;
+        var dimensions =
+                getNotificationBaseMetricDimensions(
+                        notificationType, isTestDestination, application);
+
+        if (notificationType.isForPhoneNumber()) {
+            dimensions.put(COUNTRY.getValue(), maybeGetCountry(destination).orElse("INVALID"));
+            metricName = SMS_NOTIFICATION_SENT.getValue();
+
+        } else {
+            metricName = EMAIL_NOTIFICATION_SENT.getValue();
+        }
+        incrementCounter(metricName, dimensions);
+    }
+
+    private HashMap<String, String> getNotificationBaseMetricDimensions(
+            NotifiableType notificationType, Boolean isTestDestination, Application application) {
+        return new HashMap<>(
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        APPLICATION.getValue(),
+                        application.getValue(),
+                        NOTIFICATION_TYPE.getValue(),
+                        notificationType.toString(),
+                        IS_TEST.getValue(),
+                        isTestDestination.toString()));
     }
 }

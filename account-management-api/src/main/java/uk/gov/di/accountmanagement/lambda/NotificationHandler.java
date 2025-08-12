@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -33,6 +34,7 @@ import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_SENDI
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.TEXT_HAS_BEEN_SENT_USING_NOTIFY;
 import static uk.gov.di.accountmanagement.lambda.LogMessageTemplates.UNEXPECTED_ERROR_SENDING_NOTIFICATION;
+import static uk.gov.di.authentication.entity.Application.ONE_LOGIN_HOME;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -51,14 +53,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
     private final S3Client s3Client;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configService,
-            S3Client s3Client) {
+            S3Client s3Client,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.notificationService = notificationService;
         this.configurationService = configService;
         this.s3Client = s3Client;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public NotificationHandler() {
@@ -80,6 +85,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         this.notificationService = new NotificationService(client, configurationService);
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -226,8 +232,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         notificationService.sendEmail(
                                 destination, per, NotificationType.valueOf(type));
                         LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME,
+                                e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
@@ -250,8 +267,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         notificationService.sendText(
                                 destination, per, NotificationType.valueOf(type));
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
                         LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        cloudwatchMetricsService.emitMetricForNotificationError(
+                                notifyRequest.getNotificationType(),
+                                destination,
+                                false,
+                                ONE_LOGIN_HOME,
+                                e);
                     } catch (RuntimeException e) {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,

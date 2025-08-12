@@ -11,8 +11,6 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import uk.gov.di.authentication.entity.metrics.MetricDimensions;
-import uk.gov.di.authentication.entity.metrics.MetricNames;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -31,6 +29,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.APPLICATION;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.COUNTRY;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_HTTP_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_SENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_ERROR;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
@@ -186,13 +195,22 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                 writeTestClientOtpToS3(
                         request.getNotificationType(), request.getCode(), request.getDestination());
             }
-            emitMetricForNotification(request, isTestDestination);
+            cloudwatchMetricsService.emitMetricForNotificationError(
+                    request.getNotificationType(),
+                    request.getDestination(),
+                    isTestDestination,
+                    AUTHENTICATION);
         } catch (NotificationClientException e) {
             LOG.error(
                     "Error sending with Notify using NotificationType: {}, reference: {}",
                     request.getNotificationType(),
                     reference);
-            emitMetricForNotification(request, isTestDestination, e);
+            cloudwatchMetricsService.emitMetricForNotificationError(
+                    request.getNotificationType(),
+                    request.getDestination(),
+                    isTestDestination,
+                    AUTHENTICATION,
+                    e);
             if (isPhoneNotification(request.getNotificationType())) {
                 throw new RuntimeException(
                         String.format(
@@ -272,34 +290,34 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
         var dimensions =
                 new HashMap<>(
                         Map.of(
-                                MetricDimensions.ENVIRONMENT,
+                                ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
-                                MetricDimensions.APPLICATION,
+                                APPLICATION.getValue(),
                                 "Authentication",
-                                MetricDimensions.NOTIFICATION_TYPE,
+                                NOTIFICATION_TYPE.getValue(),
                                 request.getNotificationType().toString(),
-                                MetricDimensions.IS_TEST_DESTINATION,
+                                IS_TEST.getValue(),
                                 isTestDestination.toString()));
 
         if (request.getNotificationType().isForPhoneNumber()) {
             dimensions.put(
-                    MetricDimensions.COUNTRY,
+                    COUNTRY.getValue(),
                     maybeGetCountry(request.getDestination()).orElse("INVALID"));
             if (notificationClientException == null) {
-                metricName = MetricNames.SMS_NOTIFICATION_SENT;
+                metricName = SMS_NOTIFICATION_SENT.getValue();
             } else {
-                metricName = MetricNames.SMS_NOTIFICATION_ERROR;
+                metricName = SMS_NOTIFICATION_ERROR.getValue();
                 dimensions.put(
-                        MetricDimensions.NOTIFICATION_HTTP_ERROR,
+                        NOTIFICATION_HTTP_ERROR.getValue(),
                         Integer.toString(notificationClientException.getHttpResult()));
             }
         } else {
             if (notificationClientException == null) {
-                metricName = MetricNames.EMAIL_NOTIFICATION_SENT;
+                metricName = EMAIL_NOTIFICATION_SENT.getValue();
             } else {
-                metricName = MetricNames.EMAIL_NOTIFICATION_ERROR;
+                metricName = EMAIL_NOTIFICATION_ERROR.getValue();
                 dimensions.put(
-                        MetricDimensions.NOTIFICATION_HTTP_ERROR,
+                        NOTIFICATION_HTTP_ERROR.getValue(),
                         Integer.toString(notificationClientException.getHttpResult()));
             }
         }
