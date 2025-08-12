@@ -101,7 +101,6 @@ public class TokenService {
                         () ->
                                 generateAndStoreAccessToken(
                                         clientID,
-                                        internalSubject,
                                         scopesForToken,
                                         rpPairwiseSubject,
                                         internalPairwiseSubject,
@@ -155,7 +154,6 @@ public class TokenService {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
-                        internalSubject,
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
@@ -292,7 +290,6 @@ public class TokenService {
 
     private AccessToken generateAndStoreAccessToken(
             String clientId,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
