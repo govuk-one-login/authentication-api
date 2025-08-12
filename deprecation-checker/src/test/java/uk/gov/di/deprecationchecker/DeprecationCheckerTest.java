@@ -43,7 +43,7 @@ class DeprecationCheckerTest {
                 var config = DeprecationChecker.loadConfig();
 
                 assertEquals("origin/main", config.baseBranch);
-                assertTrue(config.enums.isEmpty());
+                assertTrue(config.enumFiles.isEmpty());
             } finally {
                 System.setProperty("user.dir", originalDir);
             }
@@ -59,7 +59,7 @@ class DeprecationCheckerTest {
                         """
                     {
                         "baseBranch": "origin/develop",
-                        "enums": ["com.example.TestEnum"]
+                        "enumFiles": ["src/TestEnum.java"]
                     }
                     """);
 
@@ -68,7 +68,7 @@ class DeprecationCheckerTest {
                 var config = DeprecationChecker.loadConfig();
 
                 assertEquals("origin/develop", config.baseBranch);
-                assertEquals(Set.of("com.example.TestEnum"), config.enums);
+                assertEquals(Set.of("src/TestEnum.java"), config.enumFiles);
             } finally {
                 System.setProperty("user.dir", originalDir);
             }
@@ -79,7 +79,7 @@ class DeprecationCheckerTest {
             String originalDir = System.getProperty("user.dir");
             try {
                 Path configFile = tempDir.resolve("deprecation-config.json");
-                Files.writeString(configFile, "{\"enums\": [\"test\"]}");
+                Files.writeString(configFile, "{\"enumFiles\": [\"test.java\"]}");
                 System.setProperty("user.dir", tempDir.toString());
 
                 var config = DeprecationChecker.loadConfig();
@@ -100,7 +100,7 @@ class DeprecationCheckerTest {
 
                 var config = DeprecationChecker.loadConfig();
 
-                assertTrue(config.enums.isEmpty());
+                assertTrue(config.enumFiles.isEmpty());
             } finally {
                 System.setProperty("user.dir", originalDir);
             }
@@ -111,7 +111,8 @@ class DeprecationCheckerTest {
     class PerformCheck {
         @Test
         void shouldReturnEmptyListWhenBaseBranchNotFound() throws Exception {
-            var config = new DeprecationChecker.Config("nonexistent-branch", Set.of());
+            var config =
+                    new DeprecationChecker.Config("nonexistent-branch", Set.of("TestEnum.java"));
 
             var violations = DeprecationChecker.performCheck(config);
 
@@ -120,7 +121,7 @@ class DeprecationCheckerTest {
 
         @Test
         void shouldCallCheckEnumRemovalsAndReturnViolations() throws Exception {
-            var config = new DeprecationChecker.Config("origin/main", Set.of());
+            var config = new DeprecationChecker.Config("origin/main", Set.of("TestEnum.java"));
 
             try (MockedStatic<DeprecationChecker> mockStatic =
                             mockStatic(DeprecationChecker.class, Mockito.CALLS_REAL_METHODS);
@@ -141,9 +142,6 @@ class DeprecationCheckerTest {
                                     })) {
 
                 mockStatic
-                        .when(DeprecationChecker::getAllJavaFiles)
-                        .thenReturn(java.util.List.of("TestEnum.java"));
-                mockStatic
                         .when(
                                 () ->
                                         DeprecationChecker.getCommitedFileContent(
@@ -156,61 +154,13 @@ class DeprecationCheckerTest {
                         .when(
                                 () ->
                                         DeprecationChecker.checkEnumRemovals(
-                                                "TestEnum.java",
-                                                "old content",
-                                                "new content",
-                                                Set.of()))
+                                                "TestEnum.java", "old content", "new content"))
                         .thenReturn(java.util.List.of("violation found"));
 
                 var violations = DeprecationChecker.performCheck(config);
 
                 assertEquals(1, violations.size());
                 assertEquals("violation found", violations.get(0));
-            }
-        }
-    }
-
-    @Nested
-    class GetAllJavaFiles {
-        @Test
-        void shouldFindJavaFiles(@TempDir Path tempDir) throws IOException {
-            String originalDir = System.getProperty("user.dir");
-            try {
-                System.setProperty("user.dir", tempDir.toString());
-                Files.writeString(tempDir.resolve("Test.java"), "class Test {}");
-                Files.createDirectories(tempDir.resolve("src"));
-                Files.writeString(tempDir.resolve("src/Main.java"), "class Main {}");
-                Files.writeString(tempDir.resolve("README.md"), "# README");
-
-                var javaFiles = DeprecationChecker.getAllJavaFiles();
-
-                assertEquals(2, javaFiles.size());
-                assertTrue(javaFiles.contains("Test.java"));
-                assertTrue(javaFiles.contains("src/Main.java"));
-            } finally {
-                System.setProperty("user.dir", originalDir);
-            }
-        }
-
-        @Test
-        void shouldExcludeBuildDirectories(@TempDir Path tempDir) throws IOException {
-            String originalDir = System.getProperty("user.dir");
-            try {
-                System.setProperty("user.dir", tempDir.toString());
-                Files.createDirectories(tempDir.resolve("build"));
-                Files.writeString(tempDir.resolve("build/Generated.java"), "class Generated {}");
-                Files.createDirectories(tempDir.resolve("target"));
-                Files.writeString(tempDir.resolve("target/Compiled.java"), "class Compiled {}");
-                Files.createDirectories(tempDir.resolve(".gradle"));
-                Files.writeString(tempDir.resolve(".gradle/Cache.java"), "class Cache {}");
-                Files.writeString(tempDir.resolve("Valid.java"), "class Valid {}");
-
-                var javaFiles = DeprecationChecker.getAllJavaFiles();
-
-                assertEquals(1, javaFiles.size());
-                assertTrue(javaFiles.contains("Valid.java"));
-            } finally {
-                System.setProperty("user.dir", originalDir);
             }
         }
     }
@@ -320,11 +270,7 @@ class DeprecationCheckerTest {
                 """;
 
             List<String> violations =
-                    DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java",
-                            oldContent,
-                            newContent,
-                            Set.of("com.example.TestEnum"));
+                    DeprecationChecker.checkEnumRemovals("TestEnum.java", oldContent, newContent);
 
             assertTrue(violations.isEmpty());
         }
@@ -349,11 +295,7 @@ class DeprecationCheckerTest {
                 """;
 
             List<String> violations =
-                    DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java",
-                            oldContent,
-                            newContent,
-                            Set.of("com.example.TestEnum"));
+                    DeprecationChecker.checkEnumRemovals("TestEnum.java", oldContent, newContent);
 
             assertEquals(1, violations.size());
             assertTrue(violations.get(0).contains("CONSTANT_B"));
@@ -363,7 +305,7 @@ class DeprecationCheckerTest {
         void shouldReturnEmptyWhenOldContentUnparseable() {
             List<String> violations =
                     DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java", "invalid java", "public enum Test {}", Set.of());
+                            "TestEnum.java", "invalid java", "public enum Test {}");
 
             assertTrue(violations.isEmpty());
         }
@@ -372,36 +314,7 @@ class DeprecationCheckerTest {
         void shouldReturnEmptyWhenNewContentUnparseable() {
             List<String> violations =
                     DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java", "public enum Test {}", "invalid java", Set.of());
-
-            assertTrue(violations.isEmpty());
-        }
-
-        @Test
-        void shouldSkipEnumNotInTargetSet() {
-            String oldContent =
-                    """
-                package com.example;
-                public enum TestEnum {
-                    CONSTANT_A,
-                    CONSTANT_B
-                }
-                """;
-
-            String newContent =
-                    """
-                package com.example;
-                public enum TestEnum {
-                    CONSTANT_A
-                }
-                """;
-
-            List<String> violations =
-                    DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java",
-                            oldContent,
-                            newContent,
-                            Set.of("com.example.OtherEnum"));
+                            "TestEnum.java", "public enum Test {}", "invalid java");
 
             assertTrue(violations.isEmpty());
         }
@@ -419,11 +332,24 @@ class DeprecationCheckerTest {
             String newContent = "package com.example;";
 
             List<String> violations =
-                    DeprecationChecker.checkEnumRemovals(
-                            "TestEnum.java",
-                            oldContent,
-                            newContent,
-                            Set.of("com.example.TestEnum"));
+                    DeprecationChecker.checkEnumRemovals("TestEnum.java", oldContent, newContent);
+
+            assertTrue(violations.isEmpty());
+        }
+
+        @Test
+        void shouldReturnEmptyWhenContentIsIdentical() {
+            String content =
+                    """
+                package com.example;
+                public enum TestEnum {
+                    CONSTANT_A,
+                    CONSTANT_B
+                }
+                """;
+
+            List<String> violations =
+                    DeprecationChecker.checkEnumRemovals("TestEnum.java", content, content);
 
             assertTrue(violations.isEmpty());
         }
@@ -448,6 +374,37 @@ class DeprecationCheckerTest {
             var constant = enumDecl.getEntries().get(0);
 
             assertTrue(DeprecationChecker.isDeprecated(constant));
+        }
+    }
+
+    @Nested
+    class FindMergeBase {
+        @Test
+        void shouldReturnMergeBaseWhenFound() {
+            Repository mockRepo = mock(Repository.class);
+            ObjectId commit1 = ObjectId.fromString("1234567890123456789012345678901234567890");
+            ObjectId commit2 = ObjectId.fromString("abcdef1234567890123456789012345678901234");
+            ObjectId mergeBaseId = ObjectId.fromString("fedcba0987654321098765432109876543210987");
+
+            RevCommit mockCommit1 = mock(RevCommit.class);
+            RevCommit mockCommit2 = mock(RevCommit.class);
+            RevCommit mockMergeBase = mock(RevCommit.class);
+
+            when(mockMergeBase.getId()).thenReturn(mergeBaseId);
+
+            try (MockedConstruction<RevWalk> mockRevWalkConstruction =
+                    mockConstruction(
+                            RevWalk.class,
+                            (mock, context) -> {
+                                when(mock.parseCommit(commit1)).thenReturn(mockCommit1);
+                                when(mock.parseCommit(commit2)).thenReturn(mockCommit2);
+                                when(mock.next()).thenReturn(mockMergeBase);
+                            })) {
+
+                ObjectId result = DeprecationChecker.findMergeBase(mockRepo, commit1, commit2);
+
+                assertEquals(mergeBaseId, result);
+            }
         }
     }
 }
