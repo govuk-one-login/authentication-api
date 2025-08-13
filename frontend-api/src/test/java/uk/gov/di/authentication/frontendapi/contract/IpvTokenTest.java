@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -51,6 +52,7 @@ class IpvTokenTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private ReverificationResultService reverificationResultService;
+    private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
 
     private static final String IPV_AUD = "http://ipv/";
     private static final URI IPV_URI = URI.create(IPV_AUD);
@@ -77,13 +79,25 @@ class IpvTokenTest {
                     .toBase64URL()
                     .toString();
     private static final String CLIENT_ASSERTION_BODY =
-            "eyJzdWIiOiJhdXRoT3JjaGVzdHJhdG9yIiwiYXVkIjoiaHR0cDovL2lwdi8iLCJuYmYiOjk0NjY4NDgwMCwiaXNzIjoiYXV0aE9yY2hlc3RyYXRvciIsImV4cCI6NDA3MDkwODgwMCwiaWF0Ijo5NDY2ODQ4MDAsImp0aSI6IjEifQ";
+            ENCODER.encodeToString(
+                    String.format(
+                                    "{"
+                                            + "\"sub\":\"%s\","
+                                            + "\"aud\":\"%s\","
+                                            + "\"nbf\":946684800,"
+                                            + "\"iss\":\"%s\","
+                                            + "\"exp\":4070908800,"
+                                            + "\"iat\":946684800,"
+                                            + "\"jti\":\"1\""
+                                            + "}",
+                                    CLIENT_ID.getValue(), IPV_URI, CLIENT_ID.getValue())
+                            .getBytes(StandardCharsets.UTF_8));
 
     // Generated using the "JWT Encoder" on jwt.io, providing the above header and body and by using
     // the PRIVATE_JWT_KEY above.
     // Note that this signature needs to be updated whenever the header or body are updated.
     private static final String CLIENT_ASSERTION_SIGNATURE =
-            "EAQJjtb57sPyjiKQpT8YBShPlXXRNO8SQzO83Dc_RSLauhyEEaRcZQIgRKIFyhRQKOAOqtqFfLkhSUAgCOROPg";
+            "V_ocBG_qBVQH9pULox_Wxf8OuuL7Be3WUnrP5wR2lkJO29CwEz746Gdz1R2qRMRT-yOexfPdHb3vodfb_Da6kw";
 
     @BeforeEach
     void setUp() {
