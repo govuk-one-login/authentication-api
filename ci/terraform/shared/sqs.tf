@@ -4,7 +4,7 @@ resource "aws_sqs_queue" "pending_email_check_queue" {
   max_message_size           = 2048
   message_retention_seconds  = 1209600
   receive_wait_time_seconds  = 10
-  visibility_timeout_seconds = 46
+  visibility_timeout_seconds = 270
 
   kms_master_key_id                 = aws_kms_key.pending_email_check_queue_encryption_key.arn
   kms_data_key_reuse_period_seconds = 300
