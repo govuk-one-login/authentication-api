@@ -24,11 +24,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
-import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -37,7 +34,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
@@ -76,9 +72,6 @@ import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMes
 
 class IPVCallbackHelperTest {
     protected final Json objectMapper = SerializationService.getInstance();
-    private final AccountInterventionService accountInterventionService =
-            mock(AccountInterventionService.class);
-    private final AuditContext auditContext = mock(AuditContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
@@ -100,8 +93,6 @@ class IPVCallbackHelperTest {
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
-    private static final String TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION =
-            "internal-common-subject-id-with-intervention";
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
@@ -227,16 +218,6 @@ class IPVCallbackHelperTest {
                         sqsClient,
                         oidcAPI,
                         orchSessionService);
-        when(accountInterventionService.getAccountIntervention(
-                        TEST_INTERNAL_COMMON_SUBJECT_ID, auditContext))
-                .thenReturn(
-                        new AccountIntervention(
-                                new AccountInterventionState(false, false, false, false)));
-        when(accountInterventionService.getAccountIntervention(
-                        TEST_INTERNAL_COMMON_SUBJECT_ID_WITH_INTERVENTION, auditContext))
-                .thenReturn(
-                        new AccountIntervention(
-                                new AccountInterventionState(false, true, false, false)));
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
@@ -245,8 +226,6 @@ class IPVCallbackHelperTest {
                         anyLong(),
                         eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
-
-        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
     }
 
     @Test
@@ -285,6 +264,7 @@ class IPVCallbackHelperTest {
     @MethodSource("validUserIdentities")
     void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
             UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
         assertEquals(Optional.empty(), response);
 
@@ -319,6 +299,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldThrowIpvCallbackExceptionIfTrustmarkIsInvalid() {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var invalidTrustmarkUserIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
@@ -342,6 +323,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldQueueSPOTRequestIfValidFormat() throws JsonException {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         helper.queueSPOTRequest(
                 new LogIds(),
                 "sector-identifier",
@@ -367,6 +349,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldThrowJsonExceptionAndDoesNotInteractWithSqsIfCannotMapRequestToJson() {
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         var objectMapperMock = mock(SerializationService.class);
         helper =
                 new IPVCallbackHelper(
