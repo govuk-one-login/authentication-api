@@ -360,26 +360,6 @@ public class AuthenticationCallbackHandler
                             clientService.isTestJourney(clientId, userInfo.getEmailAddress());
                 }
 
-                // TODO-922: temporary logs for checking all is working as expected
-                LOG.info(
-                        "is email attached to auth-external-api userinfo response: {}",
-                        userInfo.getEmailAddress() != null);
-                LOG.info(
-                        "is verified_mfa_method_type attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue())
-                                != null);
-                LOG.info(
-                        "is uplift_required attached to auth-external-api userinfo response: {}",
-                        userInfo.getClaim(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()) != null);
-                LOG.info(
-                        "is rpPairwiseId attached to auth-external-api userinfo response: {}",
-                        userInfo.getStringClaim(AuthUserInfoClaims.RP_PAIRWISE_ID.getValue())
-                                != null);
-                LOG.info(
-                        "is salt attached to auth-external-api userinfo response: {}",
-                        userInfo.getStringClaim(AuthUserInfoClaims.SALT.getValue()) != null);
-                //
-
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
