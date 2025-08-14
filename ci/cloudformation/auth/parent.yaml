@@ -92,6 +92,17 @@ Conditions:
             ]
           - "Yes"
 
+  EnforceLambdaDeploymentOrder:
+    Fn::And:
+      - !Condition NotSubEnvironment
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              EnforceLambdaDeploymentOrder,
+            ]
+          - "Yes"
+
   IsNotProduction:
     Fn::Not:
       - Fn::Equals:
@@ -235,6 +246,7 @@ Mappings:
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       orchApiVpcEndpointId: ""
@@ -275,6 +287,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
@@ -316,6 +329,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
@@ -352,6 +366,7 @@ Mappings:
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
@@ -383,6 +398,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       docAppDomain: https://api.review-b.account.gov.uk
       EnableSnapStart: "No"
+      EnforceLambdaDeploymentOrder: "No"
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://signin.account.gov.uk
       IPVApiEnabled: true
