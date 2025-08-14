@@ -1,0 +1,1009 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  Auth Stub's API template for backend
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W1028
+        - W8003
+        - E1011
+        - W8001
+
+Parameters:
+  CodeSigningConfigArn:
+    Description: Asserts that lambdas are signed when deployed.
+    Type: String
+    Default: none
+
+  Environment:
+    Description: The name of the environment to deploy to
+    Type: String
+    AllowedValues:
+      - build
+      - dev
+
+  LambdaDeploymentPreference:
+    Description: Specifies the configuration to enable gradual Lambda deployments
+    Type: String
+    Default: AllAtOnce
+
+  LoggingSubscriptionEndpointArn:
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Type: String
+    Default: arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2
+
+  PermissionsBoundary:
+    Description: The ARN of the permissions boundary to apply when creating IAM roles
+    Type: String
+    Default: nonenonenonenonenone
+
+  SubEnvironment:
+    Description: |
+      When deploying to dev, optionally configure which sub-environment to deploy to i.e. authdev1, authdev2. This feature is not available for route-to-live environments
+    Type: String
+    Default: none
+
+  VpcStackName:
+    Description: The VPC stack name in the account
+    Type: String
+
+Mappings:
+  EnvironmentConfiguration:
+    authdev1:
+      EnableSnapStart: No
+      IsSplunkEnabled: No
+      UseAlarmActions: No
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dataStoreAccountId: 653994557586
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      lambdaMinConcurrency: 0
+    authdev2:
+      EnableSnapStart: No
+      IsSplunkEnabled: No
+      UseAlarmActions: No
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dataStoreAccountId: 653994557586
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      lambdaMinConcurrency: 0
+    build:
+      EnableSnapStart: No
+      IPVApiEnabled: true
+      IsSplunkEnabled: Yes
+      cloudwatchLogRetentionInDays: 7
+      dataStoreAccountId: 761723964695
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
+      lambdaMinConcurrency: 0
+    dev:
+      EnableSnapStart: No
+      IsSplunkEnabled: No
+      UseAlarmActions: No
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dataStoreAccountId: 653994557586
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      lambdaMinConcurrency: 0
+
+Conditions:
+  EnableProvisionedConcurrency: !And
+    - !Condition NotSubEnvironment
+    - !Not
+      - !Condition EnableSnapStart
+    - !Not
+      - !Equals
+        - !FindInMap
+          - EnvironmentConfiguration
+          - !Ref Environment
+          - lambdaMinConcurrency
+        - "0"
+
+  EnableSnapStart: !And
+    - !Condition NotSubEnvironment
+    - !Equals
+      - !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - EnableSnapStart
+      - Yes
+
+  IsNotProduction: !Not
+    - !Equals
+      - !Ref Environment
+      - production
+
+  IsSplunkEnabled: !Equals
+    - !FindInMap
+      - EnvironmentConfiguration
+      - !Ref Environment
+      - IsSplunkEnabled
+    - Yes
+
+  NotSubEnvironment: !Equals
+    - !Ref SubEnvironment
+    - none
+
+  UseAlarmActions: !Equals
+    - !FindInMap
+      - EnvironmentConfiguration
+      - !Ref Environment
+      - UseAlarmActions
+    - Yes
+
+  UseCodeSigning: !Not
+    - !Equals
+      - !Ref CodeSigningConfigArn
+      - none
+
+  UsePermissionsBoundary: !Not
+    - !Equals
+      - !Ref PermissionsBoundary
+      - nonenonenonenonenone
+
+  UseSubEnvironment: !And
+    - !Equals
+      - !Ref Environment
+      - dev
+    - !Not
+      - !Equals
+        - !Ref SubEnvironment
+        - none
+
+Transform:
+  - AWS::LanguageExtensions
+
+  - AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Architectures:
+      - x86_64
+    CodeSigningConfigArn: !If
+      - UseCodeSigning
+      - !Ref CodeSigningConfigArn
+      - !Ref AWS::NoValue
+    DeploymentPreference:
+      Role: !GetAtt CodeDeployServiceRole.Arn
+      Type: !Ref LambdaDeploymentPreference
+    Environment:
+      Variables:
+        AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
+        DT_CLUSTER_ID: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}"
+          - SecretArn: !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - dynatraceSecretArn
+        DT_CONNECTION_AUTH_TOKEN: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
+          - SecretArn: !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - dynatraceSecretArn
+        DT_CONNECTION_BASE_URL: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}"
+          - SecretArn: !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - dynatraceSecretArn
+        DT_LOG_COLLECTION_AUTH_TOKEN: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}"
+          - SecretArn: !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - dynatraceSecretArn
+        DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
+        DT_TENANT: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}"
+          - SecretArn: !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - dynatraceSecretArn
+        ENVIRONMENT: !If
+          - UseSubEnvironment
+          - !Ref SubEnvironment
+          - !Ref Environment
+        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'
+        OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING: "true"
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
+    Layers:
+      - !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
+        - SecretArn: !FindInMap
+            - EnvironmentConfiguration
+            - !Ref Environment
+            - dynatraceSecretArn
+    MemorySize: 1536
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+    ProvisionedConcurrencyConfig: !If
+      - EnableProvisionedConcurrency
+      - ProvisionedConcurrentExecutions: !FindInMap
+          - EnvironmentConfiguration
+          - !Ref Environment
+          - lambdaMinConcurrency
+          - DefaultValue: 0
+      - !Ref AWS::NoValue
+    Runtime: java17
+    SnapStart:
+      ApplyOn: !If
+        - EnableSnapStart
+        - PublishedVersions
+        - None
+    Timeout: 30
+
+Resources:
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+
+  DynamoticfstubsReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - IAM policy for managing read and write permissions to the ${Env}-stub-ticf-cri table
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      Path: !Sub
+        - /${Env}/ticf-cri-stub/
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      PolicyDocument:
+        Statement:
+          - Action:
+              - dynamodb:DescribeTable
+            Effect: Allow
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-ticf-cri
+                - Env: !If
+                    - UseSubEnvironment
+                    - !Ref SubEnvironment
+                    - !Ref Environment
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-ticf-cri/index/*
+                - Env: !If
+                    - UseSubEnvironment
+                    - !Ref SubEnvironment
+                    - !Ref Environment
+            Sid: AllowAccessToDynamoTables
+        Version: "2012-10-17"
+
+  LambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: IAM policy for Lambda Basic Execution
+      Path: !Sub
+        - /${Env}/ticf-cri-stub/
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - arn:aws:logs:*:*:*
+            Sid: LoggingFromLambda
+          - Action:
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+            Condition:
+              ArnLikeIfExists:
+                ec2:Vpc: !Sub
+                  - arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${VpcId}
+                  - VpcId: !ImportValue
+                      Fn::Sub: ${VpcStackName}-VpcId
+            Effect: Allow
+            Resource: "*"
+            Sid: ManagingVPCConnection
+          - Action: xray:*
+            Effect: Allow
+            Resource: "*"
+            Sid: XRay
+        Version: "2012-10-17"
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      SecurityGroupEgress:
+        - Description: Allow outbound traffic to vpc endpoints
+          DestinationSecurityGroupId: !ImportValue
+            Fn::Sub: ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 10.0.0.0/16
+          Description: Allow outbound traffic to elasticache
+          FromPort: 6379
+          IpProtocol: tcp
+          ToPort: 6379
+        - Description: Allow outgoing HTTPS requests to AWS DynamoDB route from security group
+          DestinationPrefixListId: pl-b3a742da
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+      VpcId: !ImportValue
+        Fn::Sub: ${VpcStackName}-VpcId
+
+  MainKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key that Lambda uses to encrypt and decrypt function's environment variables and logs
+      EnableKeyRotation: true
+      KeyPolicy:
+        Statement:
+          - Action: kms:*
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Resource: "*"
+          - Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+            Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Resource: "*"
+        Version: "2012-10-17"
+
+  StubTicfCriTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: InternalPairwiseId
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: false
+      KeySchema:
+        - AttributeName: InternalPairwiseId
+          KeyType: HASH
+      TableName: !Sub ${Environment}-stub-ticf-cri
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ticf-cri-stub
+
+  TicfCriStubApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - !ImportValue
+            Fn::Sub: ${VpcStackName}-ExecuteApiGatewayEndpointId
+      Name: !Sub
+        - ${Env}-di-ticf-cri-stub
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      Policy:
+        Statement:
+          - Action: execute-api:Invoke
+            Effect: Allow
+            Principal: "*"
+            Resource:
+              - execute-api:/*
+          - Action: execute-api:Invoke
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce:
+                  - !ImportValue
+                    Fn::Sub: ${VpcStackName}-ExecuteApiGatewayEndpointId
+            Effect: Deny
+            Principal: "*"
+            Resource:
+              - execute-api:/*
+        Version: "2012-10-17"
+
+  TicfCriStubApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - ${Env}-di-ticf-cri-api-access-logs
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - cloudwatchLogRetentionInDays
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-TicfCriStubApiAccessLogGroup
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/ticf-stub-api.yaml
+
+  TicfCriStubApiAccessLogSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TicfCriStubApiAccessLogGroup
+    Condition: IsSplunkEnabled
+
+  TicfCriStubApiDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardBody: !Sub
+        - |
+          {
+            "start": "-PT336H",
+            "widgets": [
+              {
+                "height": 6,
+                "width": 12,
+                "y": 6,
+                "x": 0,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(m1, 0)",
+                        "label": "",
+                        "id": "e1",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "Latency",
+                      "ApiName",
+                      "${Env}-di-ticf-cri-stub",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Average",
+                  "title": "Latency",
+                  "yAxis": {
+                    "left": {
+                      "label": "Millis",
+                      "showUnits": false,
+                      "min": 0
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  },
+                  "setPeriodToTimeRange": true,
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "liveData": false
+                }
+              },
+              {
+                "height": 6,
+                "width": 12,
+                "y": 0,
+                "x": 0,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(m1, 0)",
+                        "label": "",
+                        "id": "e1",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "Count",
+                      "ApiName",
+                      "${Env}-di-ticf-cri-stub",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Sum",
+                  "title": "Requests (sum/hr)",
+                  "yAxis": {
+                    "left": {
+                      "label": "Requests",
+                      "showUnits": false
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  }
+                }
+              },
+              {
+                "height": 6,
+                "width": 12,
+                "y": 0,
+                "x": 12,
+                "type": "metric",
+                "properties": {
+                  "metrics": [
+                    [
+                      {
+                        "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                        "label": "",
+                        "id": "e2",
+                        "region": "${AWS::Region}",
+                        "period": 900
+                      }
+                    ],
+                    [
+                      "AWS/ApiGateway",
+                      "5XXError",
+                      "ApiName",
+                      "${Env}-di-ticf-cri-stub",
+                      {
+                        "id": "m1",
+                        "visible": false
+                      }
+                    ],
+                    [
+                      ".",
+                      "Count",
+                      ".",
+                      ".",
+                      {
+                        "id": "m2",
+                        "visible": false
+                      }
+                    ]
+                  ],
+                  "view": "timeSeries",
+                  "stacked": false,
+                  "region": "${AWS::Region}",
+                  "period": 900,
+                  "stat": "Sum",
+                  "title": "Successful requests",
+                  "yAxis": {
+                    "left": {
+                      "label": "",
+                      "showUnits": false,
+                      "min": 0,
+                      "max": 100
+                    },
+                    "right": {
+                      "showUnits": false
+                    }
+                  },
+                  "setPeriodToTimeRange": true,
+                  "legend": {
+                    "position": "bottom"
+                  },
+                  "liveData": false
+                }
+              }
+            ]
+          }
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      DashboardName: !Sub
+        - ${Env}-di-ticf-cri-stub-dashboard
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+
+  TicfCriStubApiExecutionLogSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    DependsOn:
+      - TicfCriStubApiStage
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${TicfCriStubApi}/${StageName}
+        - StageName: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+    Condition: IsSplunkEnabled
+
+  TicfCriStubApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt TicfCriStubApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            httpMethod: $context.httpMethod
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+            integrationStatus: $context.integration.integrationStatus
+            ip: $context.identity.sourceIp
+            protocol: $context.protocol
+            requestId: $context.requestId
+            requestTime: $context.requestTime
+            resourcePath: $context.resourcePath
+            responseLength: $context.responseLength
+            status: $context.status
+            userAgent: $context.identity.userAgent
+      CacheClusterEnabled: false
+      DeploymentId: !Ref TicfCriStubDeployment
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+          ResourcePath: /*
+      RestApiId: !Ref TicfCriStubApi
+      StageName: !If
+        - UseSubEnvironment
+        - !Ref SubEnvironment
+        - !Ref Environment
+      TracingEnabled: true
+
+  TicfCriStubDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref TicfCriStubApi
+
+  TicfCriStubLambdaAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref TicfCriStubLambdaFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  TicfCriStubLambdaAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    DependsOn: TicfCriStubLambdaScalableTarget
+    Properties:
+      PolicyName: !Sub
+        - LambdaProvisionedConcurrency:${Env}-ticf-cri-stub-lambda
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      PolicyType: TargetTrackingScaling
+      ResourceId: !Join
+        - ":"
+        - - function
+          - !Select
+            - 6
+            - !Split
+              - ":"
+              - !GetAtt TicfCriStubLambdaFunction.Arn
+          - active
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
+        TargetValue: !FindInMap
+          - EnvironmentConfiguration
+          - !Ref Environment
+          - lambdaAutoscalingTargetValue
+          - DefaultValue: "0.6"
+    Condition: NotSubEnvironment
+
+  TicfCriStubLambdaErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - ${AlarmThreshold} or more number of errors have occurred in the ${Env}-ticf-cri-stub-lambda function.
+        - AlarmThreshold: !FindInMap
+            - EnvironmentConfiguration
+            - !Ref Environment
+            - lambdaLogAlarmThreshold
+            - DefaultValue: 5
+          Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      AlarmName: !Sub
+        - ${Env}-ticf-cri-stub-alarm
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-ticf-cri-stub-error-count
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - lambdaLogAlarmThreshold
+        - DefaultValue: 5
+
+  TicfCriStubLambdaErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-ticf-cri-stub-errors
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref TicfCriStubLambdaLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-ticf-cri-stub-error-count
+            - Env: !If
+                - UseSubEnvironment
+                - !Ref SubEnvironment
+                - !Ref Environment
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  TicfCriStubLambdaErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-ticf-cri-stub-lambda.
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+          ErrorRateThreshold: !FindInMap
+            - EnvironmentConfiguration
+            - !Ref Environment
+            - lambdaLogAlarmErrorRateThreshold
+            - DefaultValue: 10
+      AlarmName: !Sub
+        - ${Env}-ticf-cri-stub-error-rate-alarm
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Expression: (m2/m1)*100
+          Id: e1
+          Label: Error Rate
+          ReturnData: true
+        - Id: m1
+          MetricStat:
+            Metric:
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-ticf-cri-stub-lambda
+                    - Env: !If
+                        - UseSubEnvironment
+                        - !Ref SubEnvironment
+                        - !Ref Environment
+              MetricName: Invocations
+              Namespace: AWS/Lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+          ReturnData: false
+        - Id: m2
+          MetricStat:
+            Metric:
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-ticf-cri-stub-lambda
+                    - Env: !If
+                        - UseSubEnvironment
+                        - !Ref SubEnvironment
+                        - !Ref Environment
+              MetricName: Errors
+              Namespace: AWS/Lambda
+            Period: 60
+            Stat: Sum
+            Unit: Count
+          ReturnData: false
+      Threshold: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - lambdaLogAlarmErrorRateThreshold
+        - DefaultValue: 10
+
+  TicfCriStubLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      AutoPublishAlias: active
+      CodeUri: ./ticf-cri-stub/build/distributions/ticf-cri-stub.zip
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub
+            - ${Env}
+            - Env: !If
+                - UseSubEnvironment
+                - !Ref SubEnvironment
+                - !Ref Environment
+      FunctionName: !Sub
+        - ${Env}-ticf-cri-stub-lambda
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      Handler: uk.gov.di.authentication.ticf.cri.stub.lambda.TICFCRIStubHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref TicfCriStubLambdaLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoticfstubsReadWriteAccessPolicy
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !ImportValue
+            Fn::Sub: ${VpcStackName}-PrivateSubnetIdA
+          - !ImportValue
+            Fn::Sub: ${VpcStackName}-PrivateSubnetIdB
+          - !ImportValue
+            Fn::Sub: ${VpcStackName}-PrivateSubnetIdC
+
+  TicfCriStubLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-ticf-cri-stub-lambda
+        - Env: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
+      RetentionInDays: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - cloudwatchLogRetentionInDays
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-TicfCriStubLambdaLogGroup
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/ticf-cri-stub.yaml
+
+  TicfCriStubLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt TicfCriStubLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  TicfCriStubLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Get*
+                Effect: Allow
+                Resource:
+                  - !GetAtt StubTicfCriTable.Arn
+                  - !Sub ${StubTicfCriTable.Arn}/index/*
+            Version: "2012-10-17"
+          PolicyName: DynamoDBAccess
+      RoleName: !Sub ${Environment}-ticf-cri-stub-lambda-role
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ticf-cri-stub
+
+  TicfCriStubLambdaScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: TicfCriStubLambdaFunctionAliasactive
+    Properties:
+      MaxCapacity: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - lambdaMaxConcurrency
+        - DefaultValue: 5
+      MinCapacity: !FindInMap
+        - EnvironmentConfiguration
+        - !Ref Environment
+        - lambdaMinConcurrency
+        - DefaultValue: 0
+      ResourceId: !Join
+        - ":"
+        - - function
+          - !Select
+            - 6
+            - !Split
+              - ":"
+              - !GetAtt TicfCriStubLambdaFunction.Arn
+          - active
+      RoleARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency
+      ScalableDimension: lambda:function:ProvisionedConcurrency
+      ServiceNamespace: lambda
+    Condition: NotSubEnvironment
+
+  TicfCriStubLambdaSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TicfCriStubLambdaLogGroup
+    Condition: IsSplunkEnabled
