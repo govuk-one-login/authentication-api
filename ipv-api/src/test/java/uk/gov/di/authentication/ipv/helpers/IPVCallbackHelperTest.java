@@ -31,6 +31,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -490,16 +491,19 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldGenerateAndSaveAuthorisationCode() {
-        OrchSessionItem orchSession = new OrchSessionItem(SESSION_ID).withAuthTime(AUTH_TIME);
+        OrchSessionItem orchSession =
+                new OrchSessionItem(SESSION_ID)
+                        .withAuthTime(AUTH_TIME)
+                        .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_ID);
+        var orchClientSession =
+                new OrchClientSessionItem(CLIENT_SESSION_ID)
+                        .withClientName(CLIENT_NAME)
+                        .withRpPairwiseId(RP_PAIRWISE_SUBJECT.getValue());
 
         helper.generateReturnCodeAuthenticationResponse(
                 generateAuthRequest(new OIDCClaimsRequest()),
-                CLIENT_SESSION_ID,
-                SESSION_ID,
                 orchSession,
-                CLIENT_NAME,
-                RP_PAIRWISE_SUBJECT,
-                TEST_INTERNAL_COMMON_SUBJECT_ID,
+                orchClientSession,
                 new UserInfo(new Subject()),
                 "127.0.0.1",
                 "a-persistent-session-id",
