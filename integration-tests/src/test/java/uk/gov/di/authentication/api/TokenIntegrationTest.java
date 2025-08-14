@@ -97,6 +97,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-id";
     private static final String DIFFERENT_CLIENT_ID = "different-test-id";
+    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
@@ -872,7 +873,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         AuthorizationCode code =
                 orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME);
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        TEST_EMAIL,
+                        AUTH_TIME,
+                        INTERNAL_PAIRWISE_SUBJECT_ID);
 
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(

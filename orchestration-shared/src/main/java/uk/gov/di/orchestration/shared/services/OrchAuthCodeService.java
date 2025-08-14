@@ -47,11 +47,6 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, String email, Long authTime) {
-        return generateAndSaveAuthorisationCode(clientId, clientSessionId, email, authTime, null);
-    }
-
-    public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientId,
             String clientSessionId,
             String email,
