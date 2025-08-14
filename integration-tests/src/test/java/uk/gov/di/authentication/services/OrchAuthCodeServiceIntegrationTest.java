@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 
 import java.time.Clock;
@@ -25,36 +24,43 @@ class OrchAuthCodeServiceIntegrationTest {
     protected static final OrchAuthCodeExtension orchAuthCodeExtension =
             new OrchAuthCodeExtension();
 
+    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
+
     @BeforeEach
     void setup() {
         orchAuthCodeExtension.setClock(Clock.systemUTC());
     }
 
     @Test
-    void shouldStoreOrchAuthCodeExchangeDataAgainstAuthCodeWithAllFieldsSet()
-            throws Json.JsonException {
+    void shouldStoreOrchAuthCodeExchangeDataAgainstAuthCodeWithAllFieldsSet() {
         var storedOrchAuthCodeItem =
                 orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        EMAIL,
+                        AUTH_TIME,
+                        INTERNAL_PAIRWISE_SUBJECT_ID);
 
         var authCode = storedOrchAuthCodeItem.getValue();
         var exchangeData = orchAuthCodeExtension.getExchangeDataForCode(authCode);
 
         assertTrue(exchangeData.isPresent());
 
-        AuthCodeExchangeData expectedAuthCodeExchangeData =
+        AuthCodeExchangeData expected =
                 new AuthCodeExchangeData()
                         .withClientId(CLIENT_ID)
                         .withClientSessionId(CLIENT_SESSION_ID)
                         .withEmail(EMAIL)
-                        .withAuthTime(AUTH_TIME);
+                        .withAuthTime(AUTH_TIME)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID);
 
-        assertEquals(expectedAuthCodeExchangeData.getClientId(), exchangeData.get().getClientId());
+        assertEquals(expected.getClientId(), exchangeData.get().getClientId());
+        assertEquals(expected.getClientSessionId(), exchangeData.get().getClientSessionId());
+        assertEquals(expected.getEmail(), exchangeData.get().getEmail());
+        assertEquals(expected.getAuthTime(), exchangeData.get().getAuthTime());
         assertEquals(
-                expectedAuthCodeExchangeData.getClientSessionId(),
-                exchangeData.get().getClientSessionId());
-        assertEquals(expectedAuthCodeExchangeData.getEmail(), exchangeData.get().getEmail());
-        assertEquals(expectedAuthCodeExchangeData.getAuthTime(), exchangeData.get().getAuthTime());
+                expected.getInternalPairwiseSubjectId(),
+                exchangeData.get().getInternalPairwiseSubjectId());
     }
 
     @Test
@@ -65,11 +71,14 @@ class OrchAuthCodeServiceIntegrationTest {
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButIsMarkedAsUsed()
-            throws Json.JsonException {
+    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButIsMarkedAsUsed() {
         var authCode =
                 orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        EMAIL,
+                        AUTH_TIME,
+                        INTERNAL_PAIRWISE_SUBJECT_ID);
 
         // Retrieve to mark auth code as "used".
         var exchangeDataFirstRetrieval =
@@ -84,12 +93,15 @@ class OrchAuthCodeServiceIntegrationTest {
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButTimeToLiveExpired()
-            throws Json.JsonException {
+    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButTimeToLiveExpired() {
         fixTime(Instant.parse("2025-01-02T01:00:00.000Z"));
         var authCode =
                 orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID, CLIENT_SESSION_ID, EMAIL, AUTH_TIME);
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        EMAIL,
+                        AUTH_TIME,
+                        INTERNAL_PAIRWISE_SUBJECT_ID);
 
         // Default expiry is 5 minutes (300 seconds)
         fixTime(Instant.parse("2025-01-02T01:05:00.000Z"));

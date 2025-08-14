@@ -48,6 +48,15 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientId, String clientSessionId, String email, Long authTime) {
+        return generateAndSaveAuthorisationCode(clientId, clientSessionId, email, authTime, null);
+    }
+
+    public AuthorizationCode generateAndSaveAuthorisationCode(
+            String clientId,
+            String clientSessionId,
+            String email,
+            Long authTime,
+            String internalPairwiseSubjectId) {
         LOG.info("Generating and saving authorisation code to orch auth code store");
 
         AuthorizationCode authorizationCode = new AuthorizationCode();
@@ -57,7 +66,8 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
                         .withClientId(clientId)
                         .withClientSessionId(clientSessionId)
                         .withEmail(email)
-                        .withAuthTime(authTime);
+                        .withAuthTime(authTime)
+                        .withInternalPairwiseSubjectId(internalPairwiseSubjectId);
 
         var itemTtl = nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
 
