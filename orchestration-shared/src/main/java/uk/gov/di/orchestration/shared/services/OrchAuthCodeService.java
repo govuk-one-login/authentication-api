@@ -54,10 +54,10 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
 
         var exchangeData =
                 new AuthCodeExchangeData()
-                        .setClientId(clientId)
-                        .setClientSessionId(clientSessionId)
-                        .setEmail(email)
-                        .setAuthTime(authTime);
+                        .withClientId(clientId)
+                        .withClientSessionId(clientSessionId)
+                        .withEmail(email)
+                        .withAuthTime(authTime);
 
         var itemTtl = nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
 

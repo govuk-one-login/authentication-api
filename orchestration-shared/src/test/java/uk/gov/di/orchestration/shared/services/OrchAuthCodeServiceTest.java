@@ -232,10 +232,10 @@ class OrchAuthCodeServiceTest {
 
     private AuthCodeExchangeData aAuthCodeExchangeDataEntity() {
         return new AuthCodeExchangeData()
-                .setClientId(CLIENT_ID)
-                .setClientSessionId(CLIENT_SESSION_ID)
-                .setEmail(EMAIL)
-                .setAuthTime(AUTH_TIME);
+                .withClientId(CLIENT_ID)
+                .withClientSessionId(CLIENT_SESSION_ID)
+                .withEmail(EMAIL)
+                .withAuthTime(AUTH_TIME);
     }
 
     private void assertGetItemCalledWithStronglyConsistentRead() {
