@@ -137,11 +137,6 @@ resource "aws_kms_alias" "ipv_reverification_request_signing_key_alias" {
   target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
 }
 
-resource "aws_kms_alias" "ipv_reverification_request_signing_key_secondary_alias" {
-  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_secondary"
-  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
-}
-
 data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"

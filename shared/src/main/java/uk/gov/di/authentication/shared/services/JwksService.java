@@ -71,17 +71,15 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getMfaResetJarSigningKeyAlias());
     }
 
-    public JWK getPublicMfaResetJarSecondaryJwkWithOpaqueId() {
-        String secondaryKeyAlias = configurationService.getMfaResetJarSecondarySigningKeyAlias();
+    public JWK getPublicMfaResetJarDeprecatedJwkWithOpaqueId() {
+        String deprecatedKeyAlias = configurationService.getMfaResetJarDeprecatedSigningKeyAlias();
 
-        if (secondaryKeyAlias == null) {
-            LOG.info(
-                    "IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_SECONDARY_ALIAS env var missing value, non-fatal as not primary.");
+        if (deprecatedKeyAlias == null) {
             return null;
         }
 
-        LOG.info("Retrieving MFA Reset JAR secondary signing public key");
-        return getPublicJWKWithKeyId(secondaryKeyAlias);
+        LOG.info("Retrieving MFA Reset JAR deprecated signing public key");
+        return getPublicJWKWithKeyId(deprecatedKeyAlias);
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
