@@ -42,3 +42,6 @@ auth-template.yaml
 .amazonq/
 
 specs-and-prompts/
+
+# ignore the rain merged template generated from the components yamls in ci/cloudformation/stubs/*
+stubs-template.yaml

@@ -4,7 +4,7 @@ set -euo pipefail
 # Ensure we're in the root directory of the repo
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
-environments=("authdev1" "authdev2" "dev")
+environments=("authdev1" "authdev2" "authdev3" "dev")
 
 # -------------
 # Prerequisites
@@ -22,7 +22,7 @@ fi
 function usage() {
   cat <<- USAGE
 Usage:
-    $0 [options] <environment>
+    $0 [options]
 
 Options:
     -b, --build                 run gradle and buildZip tasks
@@ -30,12 +30,8 @@ Options:
     -p, --prompt                prompt for confirmation before sam deploy
     -c, --clean                 run gradle clean before build
     -h, --help                  display this help message
-
-    -o, --oidc                  deploy the OIDC API
-    -x, --auth-external         deploy the auth-external API
-
-Arguments:
-    environment                 the environment to deploy to. Valid environments are: ${environments[*]}
+    -x, --authapi               deploy the Auth Int & ext API
+    -s  --Stubsapi              deploy the Stubs API
 
 Dependencies:
     AWS CLI, AWS SAM, rain
@@ -57,12 +53,12 @@ function sso_login() {
   fi
 }
 
-O_BUILD=0  # -b, --build
-O_CLEAN="" # -c, --clean
-O_DEPLOY=0 # -x, --auth-external
-
-POSITIONAL=()
-TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
+O_BUILD=0          # -b, --build
+O_CLEAN=""         # -c, --clean
+O_DEPLOYAUTHAPI=0  # -x, --auth-internal-external-api
+O_DEPLOYSTUBSAPI=0 # -s, --stubs-api
+AUTHAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
+STUBSAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/stubs-template.yaml}"
 SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
 CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
@@ -72,8 +68,8 @@ while [[ $# -gt 0 ]]; do
     --no-build) O_BUILD=0 ;;
     -p | --prompt) CONFIRM_CHANGESET_OPTION="--confirm-changeset" ;;
     -c | --clean) O_CLEAN="clean" ;;
-    -o | --oidc) O_DEPLOY=1 ;;
-    -x | --auth-external) O_DEPLOY=1 ;;
+    -x | --authapi) O_DEPLOYAUTHAPI=1 ;;
+    -s | --stubsapi) O_DEPLOYSTUBSAPI=1 ;;
     -h | --help)
       usage
       exit 0
@@ -82,24 +78,26 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 1
       ;;
-    *) POSITIONAL+=("$1") ;;
+    *)
+      echo "Error: Unknown argument: $1"
+      usage
+      exit 1
+      ;;
   esac
   shift
 done
 
-if [[ ${#POSITIONAL[@]} -gt 1 ]]; then
-  echo "Error: only 1 environment can be specified"
-  exit 1
-elif [[ ${#POSITIONAL[@]} -eq 0 ]]; then
-  echo "Error: Environment must be specified. Valid environments are: ${environments[*]}"
-  exit 1
-fi
-
-if [[ ! " ${environments[*]} " =~ ${POSITIONAL[0]} ]]; then
-  echo "Error: invalid environment specified: ${POSITIONAL[0]}"
-  exit 1
-fi
-ENVIRONMENT=${POSITIONAL[0]}
+echo "Select environment:"
+select env in "${environments[@]}"; do
+  if [[ -n ${env} ]]; then
+    ENVIRONMENT=${env}
+    break
+  else
+    echo "Invalid selection. Please try again."
+  fi
+done
+echo "You are going to deploy in ${ENVIRONMENT}"
+read -r -p "Press enter to continue or Ctrl+C to abort"
 echo "Environment: ${ENVIRONMENT}"
 
 if [[ ${O_BUILD} -eq 1 ]]; then
@@ -108,22 +106,56 @@ if [[ ${O_BUILD} -eq 1 ]]; then
   echo "done!"
 fi
 
-if [[ ${O_DEPLOY} -eq 1 ]]; then
+if [[ ${O_DEPLOYAUTHAPI} -eq 1 ]]; then
   sso_login
 
-  echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${TEMPLATE_FILE}"
+  echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${AUTHAPI_TEMPLATE_FILE}"
   # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${TEMPLATE_FILE}"
+  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AUTHAPI_TEMPLATE_FILE}"
 
   echo "Lint template file"
-  sam validate --lint --template-file="${TEMPLATE_FILE}"
+  sam validate --lint --template-file="${AUTHAPI_TEMPLATE_FILE}"
 
   echo "Running sam build on template file"
-  sam build --parallel --template-file="${TEMPLATE_FILE}"
+  sam build --parallel --template-file="${AUTHAPI_TEMPLATE_FILE}"
 
   sam deploy \
     --no-fail-on-empty-changeset \
     --config-env "${ENVIRONMENT}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYSTUBSAPI} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="devstubs"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1stubs"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2stubs"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3stubs"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/stubs templates into a single ${STUBSAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/stubs" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${STUBSAPI_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${STUBSAPI_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${STUBSAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
     --config-file "${SAMCONFIG_FILE}" \
     ${CONFIRM_CHANGESET_OPTION}
 

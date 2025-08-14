@@ -1,0 +1,462 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W1028
+        - W8003
+        - E1011
+        - W8001
+
+Description: >
+  Auth Stub's API template for backend
+
+Parameters:
+  VpcStackName:
+    Description: "The VPC stack name in the account"
+    Type: "String"
+
+  CodeSigningConfigArn:
+    Type: String
+    Description: Asserts that lambdas are signed when deployed.
+    Default: "none"
+
+  PermissionsBoundary:
+    Description: "The ARN of the permissions boundary to apply when creating IAM roles"
+    Type: String
+    Default: "nonenonenonenonenone"
+
+  Environment:
+    Description: "The name of the environment to deploy to"
+    Type: "String"
+    AllowedValues:
+      - build
+      - dev
+
+  EnableApiGatewayExecutionLogging:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Whether to enable logging of API gateway runs
+
+  SubEnvironment:
+    Type: String
+    Description: >
+      When deploying to dev, optionally configure which sub-environment to deploy to
+      i.e. authdev1, authdev2. This feature is not available for route-to-live environments
+    Default: "none"
+
+  LambdaDeploymentPreference:
+    Type: String
+    Description: Specifies the configuration to enable gradual Lambda deployments
+    Default: AllAtOnce
+
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
+
+Conditions:
+  EnableProvisionedConcurrency:
+    Fn::And:
+      - !Condition NotSubEnvironment
+      - Fn::Not:
+          - !Condition EnableSnapStart
+      - Fn::Not:
+          - Fn::Equals:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  lambdaMinConcurrency,
+                ]
+              - "0"
+
+  EnableLogging: !Equals [!Ref EnableApiGatewayExecutionLogging, "true"]
+
+  EnableSnapStart:
+    Fn::And:
+      - !Condition NotSubEnvironment
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              EnableSnapStart,
+            ]
+          - "Yes"
+
+  IsNotProduction:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
+  IsSplunkEnabled:
+    Fn::Equals:
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, IsSplunkEnabled]
+      - "Yes"
+
+  NotSubEnvironment:
+    Fn::Equals:
+      - !Ref SubEnvironment
+      - "none"
+
+  UseAlarmActions:
+    Fn::Equals:
+      - !FindInMap [EnvironmentConfiguration, !Ref Environment, UseAlarmActions]
+      - "Yes"
+
+  UseCodeSigning:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref CodeSigningConfigArn
+          - "none"
+
+  UsePermissionsBoundary:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref PermissionsBoundary
+          - "nonenonenonenonenone"
+
+  UseSubEnvironment:
+    Fn::And:
+      - Fn::Equals:
+          - !Ref Environment
+          - dev
+      - Fn::Not:
+          - Fn::Equals:
+              - !Ref SubEnvironment
+              - none
+
+  IsTracingAllowed: !Or
+    - !Equals [!Ref Environment, "build"]
+    - !Equals [!Ref Environment, "dev"]
+
+Mappings:
+  EnvironmentConfiguration:
+    authdev1:
+      dataStoreAccountId: 653994557586
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IsSplunkEnabled: "No"
+      lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
+    authdev2:
+      dataStoreAccountId: 653994557586
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IsSplunkEnabled: "No"
+      lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
+    dev:
+      dataStoreAccountId: 653994557586
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IsSplunkEnabled: "No"
+      lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
+    build:
+      dataStoreAccountId: 761723964695
+      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
+      cloudwatchLogRetentionInDays: 7
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IPVApiEnabled: true
+      IsSplunkEnabled: "Yes"
+      lambdaMinConcurrency: 0
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Architectures:
+      - x86_64
+    CodeSigningConfigArn: !If
+      - UseCodeSigning
+      - !Ref CodeSigningConfigArn
+      - !Ref AWS::NoValue
+    DeploymentPreference:
+      Type: !Ref LambdaDeploymentPreference
+      Role: !GetAtt CodeDeployServiceRole.Arn
+    Environment:
+      Variables:
+        ENVIRONMENT:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
+        DT_CONNECTION_AUTH_TOKEN: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
+        DT_CONNECTION_BASE_URL: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
+        DT_CLUSTER_ID: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
+        DT_LOG_COLLECTION_AUTH_TOKEN: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
+        DT_TENANT: !Sub
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
+        DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
+        OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING: "true"
+        JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
+    Layers:
+      - !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
+        - SecretArn:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              dynatraceSecretArn,
+            ]
+    MemorySize: 1536
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+    ProvisionedConcurrencyConfig: !If
+      - EnableProvisionedConcurrency
+      - ProvisionedConcurrentExecutions:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            lambdaMinConcurrency,
+            DefaultValue: 0,
+          ]
+      - !Ref AWS::NoValue
+    Runtime: java17
+    SnapStart:
+      ApplyOn: !If [EnableSnapStart, PublishedVersions, None]
+    Timeout: 30
+
+Resources:
+  MainKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Key that Lambda uses to encrypt and decrypt function's environment variables and logs
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+
+  # DynamoDB Table
+  StubTicfCriTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${Environment}-stub-ticf-cri"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: InternalPairwiseId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: InternalPairwiseId
+          KeyType: HASH
+      DeletionProtectionEnabled: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ticf-cri-stub
+
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
+
+  # IAM Role for Lambda
+  TicfCriStubLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${Environment}-ticf-cri-stub-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:Get*
+                Resource:
+                  - !GetAtt StubTicfCriTable.Arn
+                  - !Sub "${StubTicfCriTable.Arn}/index/*"
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ticf-cri-stub
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+        - Description: Allow outbound traffic to elasticache
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+        - DestinationPrefixListId: pl-b3a742da # See https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html
+          Description: Allow outgoing HTTPS requests to AWS DynamoDB route from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+  LambdaBasicExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for Lambda Basic Execution"
+      Path: !Sub
+        - /${Env}/ticf-cri-stub/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: LoggingFromLambda
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - arn:aws:logs:*:*:*
+          - Sid: ManagingVPCConnection
+            Effect: Allow
+            Action:
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+            Condition:
+              ArnLikeIfExists:
+                ec2:Vpc: !Sub
+                  - arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${VpcId}
+                  - VpcId:
+                      Fn::ImportValue: !Sub "${VpcStackName}-VpcId"
+          - Sid: XRay
+            Effect: Allow
+            Action: xray:*
+            Resource: "*"
+
+  DynamoticfstubsReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - "IAM policy for managing read and write permissions to the ${Env}-stub-ticf-cri table"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: !Sub
+        - /${Env}/ticf-cri-stub/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToDynamoTables
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-ticf-cri
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-ticf-cri/index/*
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
