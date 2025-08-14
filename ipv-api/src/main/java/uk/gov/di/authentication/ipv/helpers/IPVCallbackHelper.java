@@ -19,6 +19,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -152,12 +153,8 @@ public class IPVCallbackHelper {
 
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
-            String clientSessionId,
-            String sessionId,
             OrchSessionItem orchSession,
-            String clientName,
-            Subject rpPairwiseSubject,
-            String internalPairwiseSubjectId,
+            OrchClientSessionItem clientSession,
             UserInfo userIdentityUserInfo,
             String ipAddress,
             String persistentSessionId,
@@ -165,6 +162,10 @@ public class IPVCallbackHelper {
             String email,
             String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
+        var clientSessionId = clientSession.getClientSessionId();
+        var clientName = clientSession.getClientName();
+        var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
+        var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
         segmentedFunctionCall(
                 "saveIdentityClaims",
                 () ->
@@ -207,7 +208,7 @@ public class IPVCallbackHelper {
                 authRequest.getClientID().getValue(),
                 TxmaAuditUser.user()
                         .withGovukSigninJourneyId(clientSessionId)
-                        .withSessionId(sessionId)
+                        .withSessionId(orchSession.getSessionId())
                         .withUserId(internalPairwiseSubjectId)
                         .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)

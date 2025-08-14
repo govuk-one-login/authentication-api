@@ -426,12 +426,8 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(AuthenticationRequest.class),
-                        anyString(),
-                        anyString(),
                         any(OrchSessionItem.class),
-                        anyString(),
-                        any(Subject.class),
-                        anyString(),
+                        any(OrchClientSessionItem.class),
                         any(UserInfo.class),
                         anyString(),
                         anyString(),
@@ -509,12 +505,8 @@ class IPVCallbackHandlerTest {
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                             any(AuthenticationRequest.class),
-                            anyString(),
-                            anyString(),
                             any(OrchSessionItem.class),
-                            anyString(),
-                            any(Subject.class),
-                            anyString(),
+                            any(OrchClientSessionItem.class),
                             any(UserInfo.class),
                             anyString(),
                             anyString(),
@@ -608,12 +600,8 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(AuthenticationRequest.class),
-                        anyString(),
-                        anyString(),
                         any(OrchSessionItem.class),
-                        anyString(),
-                        any(Subject.class),
-                        anyString(),
+                        any(OrchClientSessionItem.class),
                         any(UserInfo.class),
                         anyString(),
                         anyString(),
@@ -632,12 +620,8 @@ class IPVCallbackHandlerTest {
         verify(ipvCallbackHelper)
                 .generateReturnCodeAuthenticationResponse(
                         any(AuthenticationRequest.class),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
                         any(OrchSessionItem.class),
-                        eq(CLIENT_NAME),
-                        any(Subject.class),
-                        anyString(),
+                        any(OrchClientSessionItem.class),
                         eq(userIdentityUserInfo),
                         anyString(),
                         eq(PERSISTENT_SESSION_ID),
