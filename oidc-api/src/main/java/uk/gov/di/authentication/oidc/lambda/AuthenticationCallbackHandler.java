@@ -515,7 +515,8 @@ public class AuthenticationCallbackHandler
                                 clientId,
                                 clientSessionId,
                                 userInfo.getEmailAddress(),
-                                orchSession.getAuthTime());
+                                orchSession.getAuthTime(),
+                                orchSession.getInternalCommonSubjectId());
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
