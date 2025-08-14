@@ -81,7 +81,6 @@ import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
-import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -404,7 +403,6 @@ public class AuthenticationCallbackHandler
                 orchSessionService.updateSession(orchSession);
                 orchClientSessionService.updateStoredClientSession(orchClientSession);
 
-                var docAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
                                 orchAccountState,
@@ -412,7 +410,6 @@ public class AuthenticationCallbackHandler
                                 orchClientSession.getClientName(),
                                 orchClientSession.getVtrList(),
                                 isTestJourney,
-                                docAppJourney,
                                 userInfo.getClaim(
                                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                                         String.class));
@@ -652,7 +649,6 @@ public class AuthenticationCallbackHandler
             String clientName,
             List<VectorOfTrust> vtrList,
             boolean isTestJourney,
-            boolean docAppJourney,
             String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -666,7 +662,7 @@ public class AuthenticationCallbackHandler
                                 "IsTest",
                                 Boolean.toString(isTestJourney),
                                 "IsDocApp",
-                                Boolean.toString(docAppJourney),
+                                "false",
                                 "ClientName",
                                 clientName));
 
