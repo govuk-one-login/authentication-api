@@ -107,6 +107,11 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key" {
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
 }
 
+resource "aws_kms_alias" "ipv_reverification_request_signing_key_v1_alias" {
+  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_v1"
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key.key_id
+}
+
 ## / ipv_reverification_request_signing_key - V1 ##
 
 ## ipv_reverification_request_signing_key - V2 ##
@@ -118,6 +123,11 @@ resource "aws_kms_key" "ipv_reverification_request_signing_key_v2" {
   customer_master_key_spec = "ECC_NIST_P256"
 
   policy = data.aws_iam_policy_document.ipv_reverification_request_signing_key_access_policy.json
+}
+
+resource "aws_kms_alias" "ipv_reverification_request_signing_key_v2_alias" {
+  name          = "alias/${var.environment}-ipv_reverification_request_signing_key_v2"
+  target_key_id = aws_kms_key.ipv_reverification_request_signing_key_v2.key_id
 }
 
 ## / ipv_reverification_request_signing_key - V2 ##
