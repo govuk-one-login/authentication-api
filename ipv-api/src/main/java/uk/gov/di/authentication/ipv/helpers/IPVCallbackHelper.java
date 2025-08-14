@@ -173,7 +173,11 @@ public class IPVCallbackHelper {
 
         var authCode =
                 orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        clientId, clientSessionId, email, orchSession.getAuthTime());
+                        clientId,
+                        clientSessionId,
+                        email,
+                        orchSession.getAuthTime(),
+                        internalPairwiseSubjectId);
 
         var authenticationResponse =
                 new AuthenticationSuccessResponse(

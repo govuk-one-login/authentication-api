@@ -241,7 +241,8 @@ class IPVCallbackHelperTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong()))
+                        anyLong(),
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(AUTH_CODE);
 
         when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
@@ -498,7 +499,7 @@ class IPVCallbackHelperTest {
                 orchSession,
                 CLIENT_NAME,
                 RP_PAIRWISE_SUBJECT,
-                "an-internal-pairwise-subject-id",
+                TEST_INTERNAL_COMMON_SUBJECT_ID,
                 new UserInfo(new Subject()),
                 "127.0.0.1",
                 "a-persistent-session-id",
@@ -547,11 +548,12 @@ class IPVCallbackHelperTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        eq(AUTH_TIME));
+                        eq(AUTH_TIME),
+                        eq(TEST_INTERNAL_COMMON_SUBJECT_ID));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
     }
 }
