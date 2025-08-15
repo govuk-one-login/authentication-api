@@ -183,6 +183,10 @@ subprojects {
                     version { strictly '[4.1.124.Final,4.2.0)' }
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
                 }
+
+                add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.12,)') {
+                    because 'CVE-2024-6763 is fixed in org.eclipse.jetty:jetty-http:12.0.12 and higher'
+                }
             }
         }
 
