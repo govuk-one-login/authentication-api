@@ -18,6 +18,14 @@ Parameters:
     Type: String
     Default: none
 
+  EnableApiGatewayExecutionLogging:
+    Description: Whether to enable logging of API gateway runs
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
+
   Environment:
     Description: The name of the environment to deploy to
     Type: String
@@ -93,6 +101,10 @@ Mappings:
       lambdaMinConcurrency: 0
 
 Conditions:
+  EnableLogging: !Equals
+    - !Ref EnableApiGatewayExecutionLogging
+    - "true"
+
   EnableProvisionedConcurrency: !And
     - !Condition NotSubEnvironment
     - !Not
@@ -125,6 +137,14 @@ Conditions:
       - !Ref Environment
       - IsSplunkEnabled
     - Yes
+
+  IsTracingAllowed: !Or
+    - !Equals
+      - !Ref Environment
+      - build
+    - !Equals
+      - !Ref Environment
+      - dev
 
   NotSubEnvironment: !Equals
     - !Ref SubEnvironment
@@ -408,6 +428,18 @@ Resources:
   TicfCriStubApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
+      Body:
+        info:
+          title: !Sub ${Environment}-di-ticf-cri-stub
+        openapi: 3.0.1
+        paths:
+          /auth:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                timeoutInMillis: 29000
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:${Environment}/invocations
       EndpointConfiguration:
         Types:
           - PRIVATE
@@ -457,7 +489,10 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-TicfCriStubApiAccessLogGroup
         - Key: Environment
-          Value: !Ref Environment
+          Value: !If
+            - UseSubEnvironment
+            - !Ref SubEnvironment
+            - !Ref Environment
         - Key: Source
           Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/ticf-stub-api.yaml
 
@@ -468,185 +503,6 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref TicfCriStubApiAccessLogGroup
     Condition: IsSplunkEnabled
-
-  TicfCriStubApiDashboard:
-    Type: AWS::CloudWatch::Dashboard
-    Properties:
-      DashboardBody: !Sub
-        - |
-          {
-            "start": "-PT336H",
-            "widgets": [
-              {
-                "height": 6,
-                "width": 12,
-                "y": 6,
-                "x": 0,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(m1, 0)",
-                        "label": "",
-                        "id": "e1",
-                        "region": "${AWS::Region}",
-                        "period": 900
-                      }
-                    ],
-                    [
-                      "AWS/ApiGateway",
-                      "Latency",
-                      "ApiName",
-                      "${Env}-di-ticf-cri-stub",
-                      {
-                        "id": "m1",
-                        "visible": false
-                      }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Average",
-                  "title": "Latency",
-                  "yAxis": {
-                    "left": {
-                      "label": "Millis",
-                      "showUnits": false,
-                      "min": 0
-                    },
-                    "right": {
-                      "showUnits": false
-                    }
-                  },
-                  "setPeriodToTimeRange": true,
-                  "legend": {
-                    "position": "bottom"
-                  },
-                  "liveData": false
-                }
-              },
-              {
-                "height": 6,
-                "width": 12,
-                "y": 0,
-                "x": 0,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(m1, 0)",
-                        "label": "",
-                        "id": "e1",
-                        "region": "${AWS::Region}",
-                        "period": 900
-                      }
-                    ],
-                    [
-                      "AWS/ApiGateway",
-                      "Count",
-                      "ApiName",
-                      "${Env}-di-ticf-cri-stub",
-                      {
-                        "id": "m1",
-                        "visible": false
-                      }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Sum",
-                  "title": "Requests (sum/hr)",
-                  "yAxis": {
-                    "left": {
-                      "label": "Requests",
-                      "showUnits": false
-                    },
-                    "right": {
-                      "showUnits": false
-                    }
-                  }
-                }
-              },
-              {
-                "height": 6,
-                "width": 12,
-                "y": 0,
-                "x": 12,
-                "type": "metric",
-                "properties": {
-                  "metrics": [
-                    [
-                      {
-                        "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
-                        "label": "",
-                        "id": "e2",
-                        "region": "${AWS::Region}",
-                        "period": 900
-                      }
-                    ],
-                    [
-                      "AWS/ApiGateway",
-                      "5XXError",
-                      "ApiName",
-                      "${Env}-di-ticf-cri-stub",
-                      {
-                        "id": "m1",
-                        "visible": false
-                      }
-                    ],
-                    [
-                      ".",
-                      "Count",
-                      ".",
-                      ".",
-                      {
-                        "id": "m2",
-                        "visible": false
-                      }
-                    ]
-                  ],
-                  "view": "timeSeries",
-                  "stacked": false,
-                  "region": "${AWS::Region}",
-                  "period": 900,
-                  "stat": "Sum",
-                  "title": "Successful requests",
-                  "yAxis": {
-                    "left": {
-                      "label": "",
-                      "showUnits": false,
-                      "min": 0,
-                      "max": 100
-                    },
-                    "right": {
-                      "showUnits": false
-                    }
-                  },
-                  "setPeriodToTimeRange": true,
-                  "legend": {
-                    "position": "bottom"
-                  },
-                  "liveData": false
-                }
-              }
-            ]
-          }
-        - Env: !If
-            - UseSubEnvironment
-            - !Ref SubEnvironment
-            - !Ref Environment
-      DashboardName: !Sub
-        - ${Env}-di-ticf-cri-stub-dashboard
-        - Env: !If
-            - UseSubEnvironment
-            - !Ref SubEnvironment
-            - !Ref Environment
 
   TicfCriStubApiExecutionLogSubscriptionFilter:
     Type: AWS::Logs::SubscriptionFilter
@@ -665,6 +521,7 @@ Resources:
 
   TicfCriStubApiStage:
     Type: AWS::ApiGateway::Stage
+    DependsOn: TicfCriStubLambdaFunction
     Properties:
       AccessLogSetting:
         DestinationArn: !GetAtt TicfCriStubApiAccessLogGroup.Arn

@@ -37,6 +37,12 @@ Parameters:
       - build
       - dev
 
+  EnableApiGatewayExecutionLogging:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Whether to enable logging of API gateway runs
+
   SubEnvironment:
     Type: String
     Description: >
@@ -68,6 +74,8 @@ Conditions:
                   lambdaMinConcurrency,
                 ]
               - "0"
+
+  EnableLogging: !Equals [!Ref EnableApiGatewayExecutionLogging, "true"]
 
   EnableSnapStart:
     Fn::And:
@@ -122,6 +130,10 @@ Conditions:
           - Fn::Equals:
               - !Ref SubEnvironment
               - none
+
+  IsTracingAllowed: !Or
+    - !Equals [!Ref Environment, "build"]
+    - !Equals [!Ref Environment, "dev"]
 
 Mappings:
   EnvironmentConfiguration:
