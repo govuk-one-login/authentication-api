@@ -84,6 +84,11 @@ subprojects {
                 classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
                     because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
                 }
+
+                classpath('io.netty:netty-codec-http2') {
+                    version { strictly '[4.1.124.Final,4.2.0)' }
+                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
             }
         }
     }
