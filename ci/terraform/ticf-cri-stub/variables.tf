@@ -89,8 +89,15 @@ variable "auth_new_account_id" {
   default     = ""
 }
 
+
 variable "new_auth_api_vpc_endpoint_id" {
   description = "The ID of the Execute API Gateway vpc endpoint in the new Auth account"
   type        = string
   default     = ""
+}
+
+variable "snapstart_enabled" {
+  description = "Whether to enable Lambda SnapStart for the lambda functions in this module. Only non-redis lambda functions will be controlled by this variable."
+  type        = bool
+  default     = true
 }

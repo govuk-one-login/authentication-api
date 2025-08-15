@@ -12,3 +12,6 @@ lambda_min_concurrency = 1
 
 # Account IDs
 auth_new_account_id = "058264536367"
+
+# Performance Tuning
+snapstart_enabled = true
