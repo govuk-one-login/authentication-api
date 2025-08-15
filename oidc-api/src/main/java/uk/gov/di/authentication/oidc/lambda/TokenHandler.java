@@ -54,7 +54,6 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -512,15 +511,7 @@ public class TokenHandler
                             orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
                                     clientRegistry.getSubjectType())));
 
-            userId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            dynamoService.getOrGenerateSalt(userProfile));
-
-            LOG.info(
-                    "is internalPairwiseSubjectId from authCodeExchangeData the same as that calculated from user profile: {}",
-                    Objects.equals(userId, authCodeExchangeData.getInternalPairwiseSubjectId()));
+            userId = authCodeExchangeData.getInternalPairwiseSubjectId();
 
             Subject internalPairwiseSubject = new Subject(userId);
             tokenResponse =

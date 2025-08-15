@@ -1492,7 +1492,8 @@ public class TokenHandlerTest {
                         .withEmail(TEST_EMAIL)
                         .withClientSessionId(CLIENT_SESSION_ID)
                         .withAuthTime(AUTH_TIME)
-                        .withClientId(clientId);
+                        .withClientId(clientId)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
         when(orchAuthCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
