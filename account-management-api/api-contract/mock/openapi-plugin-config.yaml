@@ -1,4 +1,4 @@
 plugin: openapi
-specFile: ../openapi_v2.symlink.yaml
+specFile: openapi_v2.symlink.yaml
 response:
   scriptFile: respond-with-examples-from-spec.groovy

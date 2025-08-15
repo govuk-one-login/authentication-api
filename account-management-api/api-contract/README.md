@@ -19,11 +19,24 @@ matching the requested resource path. The responses are stored in json files.
 
 # Running Imposter
 
-Run Imposter from the command line:
+Run Imposter from the command line (updated for v4.7.0):
 
 ```shell
-imposter up -r --engine-type=jvm
+# Recommended: Use the sync script to ensure latest OpenAPI spec
+cd mock
+./sync-and-run.sh
+
+# Or manually sync and run
+cd mock
+cp ../../../ci/terraform/account-management/openapi_v2.yaml openapi_v2.symlink.yaml
+imposter up
+
+# Alternative: Run directly if already synced
+cd mock
+imposter up
 ```
+
+**Note**: The configuration has been updated to work with Imposter v4.7.0 and all endpoints now function correctly, including the `/update-email` endpoint.
 
 # Checking Imposter Responses
 
@@ -43,7 +56,6 @@ http :8080/v1/mfa-methods/get-when-user-with-single-mfa-type-app
 # GET 400 error responses
 http :8080/v1/mfa-methods/get-when-user-not-found-or-no-match
 http :8080/v1/mfa-methods/get-when-new-method-management-api-not-available
-http :8080/v1/mfa-methods/get-when-500-error-retrieving-mfa-methods
 http :8080/v1/mfa-methods/get-when-account-management-api-unexpected-error
 http :8080/v1/mfa-methods/get-when-invalid-principal-in-request
 
@@ -78,7 +90,7 @@ http POST :8080/v1/mfa-methods/post-when-auth-app-mfa-already-exists
 http POST :8080/v1/mfa-methods/post-when-invalid-principal
 
 # POST 404 response
-http POST :8080/v1/mfa-methods/post-404-when-user-not-found-or-no-match
+http POST :8080/v1/mfa-methods/post-when-404-user-not-found-or-no-match
 
 # POST 500 response
 http POST :8080/v1/mfa-methods/post-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method
