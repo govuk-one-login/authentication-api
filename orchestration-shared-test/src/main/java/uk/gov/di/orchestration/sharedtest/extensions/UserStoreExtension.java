@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Optional;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -38,61 +37,19 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     private DynamoService dynamoService;
 
-    public String getPublicSubjectIdForEmail(String email) {
-        return dynamoService
-                .getUserProfileByEmailMaybe(email)
-                .map(UserProfile::getPublicSubjectID)
-                .orElseThrow();
-    }
-
     public void signUp(String email, String password) {
         signUp(email, password, new Subject());
     }
 
     public String signUp(String email, String password, Subject subject) {
-        return signUp(email, password, subject, false);
-    }
-
-    public String signUp(
-            String email, String password, Subject subject, String termsAndConditionsVersion) {
-        return signUp(
-                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 1);
-    }
-
-    public String signUp(String email, String password, Subject subject, boolean isTestUser) {
-        return signUp(email, password, subject, isTestUser, Optional.of("1.0"), 1);
-    }
-
-    private String signUp(
-            String email,
-            String password,
-            Subject subject,
-            boolean isTestUser,
-            Optional<String> termsAndConditionsVersion,
-            int accountVerified) {
         TermsAndConditions termsAndConditions =
-                termsAndConditionsVersion
-                        .map(
-                                v ->
-                                        new TermsAndConditions(
-                                                v, LocalDateTime.now(ZoneId.of("UTC")).toString()))
-                        .orElse(null);
-        dynamoService.signUp(
-                email, password, subject, termsAndConditions, isTestUser, accountVerified);
+                new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
+        dynamoService.signUp(email, password, subject, termsAndConditions, false, 1);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
     }
 
     public void addVerifiedPhoneNumber(String email, String phoneNumber) {
-        setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
-    }
-
-    public void setPhoneNumberAndVerificationStatus(
-            String email,
-            String phoneNumber,
-            boolean phoneNumberVerified,
-            boolean accountVerified) {
-        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                email, phoneNumber, phoneNumberVerified, accountVerified);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, phoneNumber, true, true);
     }
 
     public byte[] addSalt(String email) {
