@@ -82,6 +82,13 @@ public class AuditAssertionsHelper {
 
     public static List<String> assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
+        return assertTxmaAuditEventsReceived(queue, events, true);
+    }
+
+    public static List<String> assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue,
+            Collection<AuditableEvent> events,
+            boolean validateDeviceInformation) {
 
         var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
@@ -132,11 +139,13 @@ public class AuditAssertionsHelper {
                         unexpectedEvents, expectedTxmaEvents, namesOfSentEvents));
 
         // Check all sent events applied business rules, i.e. include a device_information section.
-        sentEvents.forEach(
-                sentEvent -> {
-                    var event = asJson(sentEvent);
-                    assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
-                });
+        if (validateDeviceInformation) {
+            sentEvents.forEach(
+                    sentEvent -> {
+                        var event = asJson(sentEvent);
+                        assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                    });
+        }
 
         return sentEvents;
     }

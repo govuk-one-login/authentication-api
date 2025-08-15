@@ -28,8 +28,6 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ISS;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -39,9 +37,8 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
 
     private static final Subject SUBJECT = new Subject();
 
-    private static final String EXTENSIONS_JOURNEY_TYPE =
-            "extensions." + AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-    private static final String EXTENSIONS_ISS = "extensions." + AUDIT_EVENT_EXTENSIONS_ISS;
+    private static final String EXTENSIONS_JOURNEY_TYPE = "extensions.journey_type";
+    private static final String EXTENSIONS_COMPONENT_ID = "component_id";
 
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
             new DynamoEmailCheckResultService(TEST_CONFIGURATION_SERVICE);
@@ -69,7 +66,8 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             var sessionId = IdGenerator.generate();
             authSessionExtension.addSession(sessionId);
 
-            Map<String, String> headers = createHeaders(sessionId);
+            Map<String, String> headers =
+                    constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
 
             var response =
                     makeRequest(
@@ -91,7 +89,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             Map<String, String> fraudCheckBypassedAttributes = new HashMap<>();
             fraudCheckBypassedAttributes.put(
                     EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
-            fraudCheckBypassedAttributes.put(EXTENSIONS_ISS, "AUTH");
+            fraudCheckBypassedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
             eventExpectations.put(
                     AUTH_EMAIL_FRAUD_CHECK_BYPASSED.name(), fraudCheckBypassedAttributes);
 
@@ -110,7 +108,8 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     unixTimePlusNDays(),
                     "test-reference");
 
-            Map<String, String> headers = createHeaders(sessionId);
+            Map<String, String> headers =
+                    constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
 
             var response =
                     makeRequest(
@@ -141,7 +140,8 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     unixTimePlusNDays(),
                     "test-reference");
 
-            Map<String, String> headers = createHeaders(sessionId);
+            Map<String, String> headers =
+                    constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
 
             var response =
                     makeRequest(
@@ -161,18 +161,11 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
         }
     }
 
-    private Map<String, String> createHeaders(String sessionId) {
-        Map<String, String> headers = new HashMap<>(CommonTestVariables.VALID_HEADERS);
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", CommonTestVariables.CLIENT_SESSION_ID);
-        return headers;
-    }
-
     private void verifyAuditEvents(
             List<AuditableEvent> expectedEvents,
             Map<String, Map<String, String>> eventExpectations) {
-        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
+        List<String> receivedEvents =
+                assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents, false);
 
         for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
             String eventName = eventEntry.getKey();

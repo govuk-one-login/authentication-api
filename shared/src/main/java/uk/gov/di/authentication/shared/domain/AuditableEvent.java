@@ -11,9 +11,6 @@ public interface AuditableEvent {
     String AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT = "attemptNoFailedAt";
     String AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE = "notification-type";
     String AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED = "MFACodeEntered";
-    String AUDIT_EVENT_EXTENSIONS_ISS = "iss";
-    String AUDIT_EVENT_EXTENSIONS_ASSESSMENT_CHECKED_AT_TIMESTAMP =
-            "assessment_checked_at_timestamp";
 
     AuditableEvent parseFromName(String name);
 }
