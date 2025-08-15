@@ -10,24 +10,14 @@ public class RefreshTokenStore {
     private String refreshToken;
 
     @Expose
-    @SerializedName("internal_subject_id")
-    private String internalSubjectId;
-
-    @Expose
     @SerializedName("internal_pairwise_subject_id")
     private String internalPairwiseSubjectId = "missing";
 
     public RefreshTokenStore() {}
 
-    public RefreshTokenStore(
-            String refreshToken, String internalSubjectId, String internalPairwiseSubjectId) {
+    public RefreshTokenStore(String refreshToken, String internalPairwiseSubjectId) {
         this.refreshToken = refreshToken;
-        this.internalSubjectId = internalSubjectId;
         this.internalPairwiseSubjectId = internalPairwiseSubjectId;
-    }
-
-    public String getInternalSubjectId() {
-        return internalSubjectId;
     }
 
     public String getInternalPairwiseSubjectId() {

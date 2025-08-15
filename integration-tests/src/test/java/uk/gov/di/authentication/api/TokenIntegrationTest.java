@@ -524,10 +524,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        refreshToken.getValue(),
-                        internalSubject.getValue(),
-                        internalPairwiseSubject.getValue());
+                new RefreshTokenStore(refreshToken.getValue(), internalPairwiseSubject.getValue());
         redis.addToRedis(
                 REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(),
                 objectMapper.writeValueAsString(tokenStore),
@@ -561,7 +558,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String redisResponse = redis.getFromRedis(REFRESH_TOKEN_PREFIX + jwtId);
         RefreshTokenStore refreshTokenStore =
                 objectMapper.readValue(redisResponse, RefreshTokenStore.class);
-        assertEquals(refreshTokenStore.getInternalSubjectId(), internalSubject.getValue());
         assertEquals(
                 refreshTokenStore.getInternalPairwiseSubjectId(),
                 internalPairwiseSubject.getValue());

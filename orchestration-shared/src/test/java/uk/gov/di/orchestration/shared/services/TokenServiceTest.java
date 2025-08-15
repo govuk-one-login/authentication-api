@@ -158,7 +158,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -176,7 +175,6 @@ class TokenServiceTest {
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
                         tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
                         INTERNAL_PAIRWISE_SUBJECT.getValue());
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
@@ -230,7 +228,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -267,7 +264,6 @@ class TokenServiceTest {
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
                         tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
                         INTERNAL_PAIRWISE_SUBJECT.getValue());
 
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
@@ -296,7 +292,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -324,7 +319,6 @@ class TokenServiceTest {
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
-                        INTERNAL_SUBJECT,
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
@@ -564,7 +558,6 @@ class TokenServiceTest {
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue(),
                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                         JOURNEY_ID);
         verify(redisConnectionService)

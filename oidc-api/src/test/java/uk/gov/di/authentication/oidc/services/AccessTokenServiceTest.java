@@ -55,7 +55,6 @@ class AccessTokenServiceTest {
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
-    private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final String JOURNEY_ID = "client-session-id";
@@ -122,7 +121,6 @@ class AccessTokenServiceTest {
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
                                         accessToken.getValue(),
-                                        INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                                         JOURNEY_ID)));
 
@@ -131,9 +129,6 @@ class AccessTokenServiceTest {
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
-        assertThat(
-                accessTokenInfo.getAccessTokenStore().getInternalSubjectId(),
-                equalTo(INTERNAL_SUBJECT.getValue()));
         assertThat(accessTokenInfo.getAccessTokenStore().getJourneyId(), equalTo(JOURNEY_ID));
         assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
@@ -152,7 +147,6 @@ class AccessTokenServiceTest {
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
                                         accessToken.getValue(),
-                                        INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                                         JOURNEY_ID)));
 
@@ -160,9 +154,6 @@ class AccessTokenServiceTest {
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
-        assertThat(
-                accessTokenInfo.getAccessTokenStore().getInternalSubjectId(),
-                equalTo(INTERNAL_SUBJECT.getValue()));
         assertThat(accessTokenInfo.getAccessTokenStore().getJourneyId(), equalTo(JOURNEY_ID));
         assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
@@ -258,7 +249,6 @@ class AccessTokenServiceTest {
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
                                         accessToken.getValue(),
-                                        INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                                         JOURNEY_ID)));
 
@@ -311,7 +301,6 @@ class AccessTokenServiceTest {
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
                                         createSignedAccessToken(null, false).getValue(),
-                                        INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue(),
                                         JOURNEY_ID)));
 

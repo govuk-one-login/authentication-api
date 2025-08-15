@@ -49,7 +49,6 @@ class UserInfoHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
     private static final String TOKEN = "token";
-    private static final String INTERNAL_SUBJECT_ID = "internal-subject-id";
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID = "internal-common-subject-id";
     private static final String JOURNEY_ID = "client-session-id";
     private static final Subject AUDIT_SUBJECT_ID = new Subject();
@@ -80,11 +79,7 @@ class UserInfoHandlerTest {
         when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
         when(accessTokenInfo.getAccessTokenStore())
                 .thenReturn(
-                        new AccessTokenStore(
-                                TOKEN,
-                                INTERNAL_SUBJECT_ID,
-                                TEST_INTERNAL_COMMON_SUBJECT_ID,
-                                JOURNEY_ID));
+                        new AccessTokenStore(TOKEN, TEST_INTERNAL_COMMON_SUBJECT_ID, JOURNEY_ID));
         when(configurationService.getEnvironment()).thenReturn("test");
     }
 

@@ -83,7 +83,6 @@ public class TokenService {
 
     public OIDCTokenResponse generateTokenResponse(
             String clientID,
-            Subject internalSubject,
             Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
             Subject rpPairwiseSubject,
@@ -101,7 +100,6 @@ public class TokenService {
                         () ->
                                 generateAndStoreAccessToken(
                                         clientID,
-                                        internalSubject,
                                         scopesForToken,
                                         rpPairwiseSubject,
                                         internalPairwiseSubject,
@@ -134,7 +132,6 @@ public class TokenService {
                             () ->
                                     generateAndStoreRefreshToken(
                                             clientID,
-                                            internalSubject,
                                             scopesForToken,
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
@@ -147,7 +144,6 @@ public class TokenService {
 
     public OIDCTokenResponse generateRefreshTokenResponse(
             String clientID,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPaiwiseSubject,
             Subject internalPairwiseSubject,
@@ -155,7 +151,6 @@ public class TokenService {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
-                        internalSubject,
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
@@ -165,7 +160,6 @@ public class TokenService {
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
                         clientID,
-                        internalSubject,
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
@@ -292,7 +286,6 @@ public class TokenService {
 
     private AccessToken generateAndStoreAccessToken(
             String clientId,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
@@ -343,7 +336,6 @@ public class TokenService {
                     objectMapper.writeValueAsString(
                             new AccessTokenStore(
                                     accessToken.getValue(),
-                                    internalSubject.getValue(),
                                     internalPairwiseSubject.getValue(),
                                     journeyId)),
                     configService.getAccessTokenExpiry());
@@ -356,7 +348,6 @@ public class TokenService {
 
     private RefreshToken generateAndStoreRefreshToken(
             String clientId,
-            Subject internalSubject,
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
@@ -381,10 +372,7 @@ public class TokenService {
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
         var store =
-                new RefreshTokenStore(
-                        refreshToken.getValue(),
-                        internalSubject.toString(),
-                        internalPairwiseSubject.toString());
+                new RefreshTokenStore(refreshToken.getValue(), internalPairwiseSubject.toString());
         try {
             redisConnectionService.saveWithExpiry(
                     redisKey,
