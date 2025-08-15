@@ -40,7 +40,6 @@ import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
@@ -84,7 +83,6 @@ public class TokenHandler
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
 
     private final TokenService tokenService;
-    private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final OrchClientSessionService orchClientSessionService;
@@ -99,7 +97,6 @@ public class TokenHandler
 
     public TokenHandler(
             TokenService tokenService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
             OrchAuthCodeService orchAuthCodeService,
             OrchClientSessionService orchClientSessionService,
@@ -109,7 +106,6 @@ public class TokenHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
         this.tokenService = tokenService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.orchClientSessionService = orchClientSessionService;
@@ -128,7 +124,6 @@ public class TokenHandler
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
@@ -150,7 +145,6 @@ public class TokenHandler
         this.redisConnectionService = redis;
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
