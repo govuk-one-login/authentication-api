@@ -184,7 +184,6 @@ public class TokenHandlerTest {
         handler =
                 new TokenHandler(
                         tokenService,
-                        dynamoService,
                         configurationService,
                         orchAuthCodeService,
                         orchClientSessionService,
