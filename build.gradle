@@ -74,8 +74,7 @@ subprojects {
                     because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2') {
-                    version { strictly '[4.1.124.Final,4.2.0)' }
+                classpath('io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
                 }
 
@@ -164,8 +163,7 @@ subprojects {
                     because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
                 }
 
-                add(conf.name, 'io.netty:netty-codec-http2') {
-                    version { strictly '[4.1.124.Final,4.2.0)' }
+                add(conf.name, 'io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
                 }
 
