@@ -21,7 +21,12 @@ public enum CloudwatchMetrics {
             "AccessTokenServiceConsistentReadQueryAttemptSuccess"),
     USER_SUBMITTED_CREDENTIAL("UserSubmittedCredential"),
     MFA_RESET_IPV_RESPONSE("MfaResetIpvResponse"),
-    MFA_RESET_AUTHORISATION_ERROR("ReverifyAuthorisationError");
+    MFA_RESET_AUTHORISATION_ERROR("ReverifyAuthorisationError"),
+    SMS_NOTIFICATION_SENT("SmsNotificationSent"),
+    EMAIL_NOTIFICATION_SENT("EmailNotificationSent"),
+    SMS_NOTIFICATION_ERROR("SmsNotificationError"),
+    EMAIL_NOTIFICATION_ERROR("EmailNotificationError");
+
     private String value;
 
     CloudwatchMetrics(String value) {

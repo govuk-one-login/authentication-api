@@ -13,7 +13,11 @@ public enum CloudwatchMetricDimensions {
     FAILURE_REASON("FailureReason"),
     IPV_RESPONSE("IpvResponse"),
     MFA_METHOD_TYPE("MfaMethodType"),
-    MFA_METHOD_PRIORITY_IDENTIFIER("MfaMethodPriorityIdentifier");
+    MFA_METHOD_PRIORITY_IDENTIFIER("MfaMethodPriorityIdentifier"),
+    APPLICATION("Application"),
+    NOTIFICATION_TYPE("NotificationType"),
+    COUNTRY("Country"),
+    NOTIFICATION_HTTP_ERROR("NotificationHttpError");
 
     private String value;
 
