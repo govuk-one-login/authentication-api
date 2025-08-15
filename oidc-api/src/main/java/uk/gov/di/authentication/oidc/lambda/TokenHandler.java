@@ -28,13 +28,11 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -42,7 +40,6 @@ import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
@@ -54,7 +51,6 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +83,6 @@ public class TokenHandler
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
 
     private final TokenService tokenService;
-    private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final OrchClientSessionService orchClientSessionService;
@@ -102,7 +97,6 @@ public class TokenHandler
 
     public TokenHandler(
             TokenService tokenService,
-            DynamoService dynamoService,
             ConfigurationService configurationService,
             OrchAuthCodeService orchAuthCodeService,
             OrchClientSessionService orchClientSessionService,
@@ -112,7 +106,6 @@ public class TokenHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
         this.tokenService = tokenService;
-        this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.orchClientSessionService = orchClientSessionService;
@@ -131,7 +124,6 @@ public class TokenHandler
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
@@ -153,7 +145,6 @@ public class TokenHandler
         this.redisConnectionService = redis;
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
-        this.dynamoService = new DynamoService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
@@ -496,33 +487,14 @@ public class TokenHandler
                                         null);
                             });
         } else {
-            UserProfile userProfile =
-                    dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
-            Subject rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
+            String rpPairwiseSubjectId =
+                    orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
+                            clientRegistry.getSubjectType());
+            Subject rpPairwiseSubject = new Subject(rpPairwiseSubjectId);
 
-            LOG.info(
-                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
-                    Objects.equals(
-                            rpPairwiseSubject.getValue(),
-                            orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
-                                    clientRegistry.getSubjectType())));
-
-            userId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
-                            dynamoService.getOrGenerateSalt(userProfile));
-
-            LOG.info(
-                    "is internalPairwiseSubjectId from authCodeExchangeData the same as that calculated from user profile: {}",
-                    Objects.equals(userId, authCodeExchangeData.getInternalPairwiseSubjectId()));
-
+            userId = authCodeExchangeData.getInternalPairwiseSubjectId();
             Subject internalPairwiseSubject = new Subject(userId);
+
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
