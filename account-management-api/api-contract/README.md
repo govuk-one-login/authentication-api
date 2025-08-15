@@ -137,4 +137,50 @@ http DELETE :8080/v1/mfa-methods/delete-when-mfa-method-not-found/id
 
 http DELETE :8080/v1/mfa-methods/delete-when-cannot-delete-default-priority-mfa-method/id
 
+#########################################################################################################
+# UPDATE EMAIL
+#########################################################################################################
+
+# POST 204 success response
+http POST :8080/update-email \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk" \
+  replacementEmailAddress="new.user@example.gov.uk" \
+  otp="123456"
+
+# POST 400 error responses
+http POST :8080/update-email/invalid-otp \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk" \
+  replacementEmailAddress="new.user@example.gov.uk" \
+  otp="000000"
+
+http POST :8080/update-email/invalid-email-format \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk" \
+  replacementEmailAddress="invalid-email" \
+  otp="123456"
+
+http POST :8080/update-email/email-addresses-match \
+  Content-Type:application/json \
+  existingEmailAddress="same.user@example.gov.uk" \
+  replacementEmailAddress="same.user@example.gov.uk" \
+  otp="123456"
+
+http POST :8080/update-email/account-with-email-exists \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk" \
+  replacementEmailAddress="existing.user@example.gov.uk" \
+  otp="123456"
+
+http POST :8080/update-email/account-does-not-exist \
+  Content-Type:application/json \
+  existingEmailAddress="nonexistent.user@example.gov.uk" \
+  replacementEmailAddress="new.user@example.gov.uk" \
+  otp="123456"
+
+http POST :8080/update-email/missing-parameters \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk"
+
 ```

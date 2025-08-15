@@ -22,3 +22,68 @@ resources:
     method: GET
     response:
       statusCode: 500
+  # Update Email Mock Endpoints
+  - path: "/update-email"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/update-email/invalid-otp"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1020,
+          "message": "Invalid OTP code"
+        }
+  - path: "/update-email/invalid-email-format"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1004,
+          "message": "Email address is in an incorrect format"
+        }
+  - path: "/update-email/email-addresses-match"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1019,
+          "message": "Email addresses are the same"
+        }
+  - path: "/update-email/account-with-email-exists"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1009,
+          "message": "An account with this email address already exists"
+        }
+  - path: "/update-email/account-does-not-exist"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1010,
+          "message": "An account with this email address does not exist"
+        }
+  - path: "/update-email/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
