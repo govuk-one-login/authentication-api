@@ -65,18 +65,21 @@ subprojects {
     buildscript {
         dependencies {
             constraints {
+                // Netty constraints
                 classpath('io.netty:netty-codec-http:[4.1.108.Final,)') {
                     because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
-                }
-
-                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
 
                 classpath('io.netty:netty-handler:[4.1.118.Final,)') {
                     because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
                 }
 
+                classpath('io.netty:netty-codec-http2') {
+                    version { strictly '[4.1.124.Final,4.2.0)' }
+                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
+
+                // Apache Commons constraints
                 classpath('commons-beanutils:commons-beanutils:[1.11.0,)') {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
@@ -85,9 +88,9 @@ subprojects {
                     because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2') {
-                    version { strictly '[4.1.124.Final,4.2.0)' }
-                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                // Other constraints
+                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
+                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
             }
         }
@@ -148,6 +151,7 @@ subprojects {
     dependencies {
         constraints {
             configurations.configureEach { conf ->
+                // Netty constraints
                 add(conf.name, 'io.netty:netty-codec-http:[4.1.108.Final,)') {
                     because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
                 }
@@ -156,6 +160,25 @@ subprojects {
                     because 'CVE-2024-47535 is fixed in io.netty:netty-common:4.1.115.Final and higher'
                 }
 
+                add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
+                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                }
+
+                add(conf.name, 'io.netty:netty-codec-http2') {
+                    version { strictly '[4.1.124.Final,4.2.0)' }
+                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
+
+                // Jetty constraints
+                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
+                    because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
+                }
+
+                add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.12,)') {
+                    because 'CVE-2024-6763 is fixed in org.eclipse.jetty:jetty-http:12.0.12 and higher'
+                }
+
+                // Jackson constraints
                 add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
                     because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
                 }
@@ -164,18 +187,7 @@ subprojects {
                     because 'CVE-2025-52999 is fixed in com.fasterxml.jackson.core:jackson-core:2.15.0 and higher'
                 }
 
-                add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
-                }
-
-                add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
-                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
-                }
-
-                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
-                    because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
-                }
-
+                // Apache Commons constraints
                 add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
@@ -184,13 +196,9 @@ subprojects {
                     because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
                 }
 
-                add(conf.name, 'io.netty:netty-codec-http2') {
-                    version { strictly '[4.1.124.Final,4.2.0)' }
-                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
-                }
-
-                add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.12,)') {
-                    because 'CVE-2024-6763 is fixed in org.eclipse.jetty:jetty-http:12.0.12 and higher'
+                // Other constraints
+                add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
+                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
             }
         }
