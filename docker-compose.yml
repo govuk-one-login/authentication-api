@@ -1,5 +1,3 @@
-version: "3.8"
-
 name: di-authentication-local
 
 # Services for running an authentication stack locally

@@ -13,6 +13,7 @@ dependencies {
 
     implementation project(path: ':shared')
     implementation project(':user-permissions')
+    implementation project(':audit-events')
 
     compileOnly configurations.lambda,
             configurations.sqs,
