@@ -117,6 +117,17 @@ paths:
                   value:
                     code: 1010
                     message: "An account with this email address does not exist"
+        "403":
+          description: Forbidden - Email address is denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailAddressDenied"
+              examples:
+                update-email-when-email-address-denied:
+                  value:
+                    code: 1089
+                    message: "Email address is denied"
       x-code-samples:
         - lang: shell
           label: cURL request example
@@ -1160,6 +1171,17 @@ components:
           example:
             code: 1010
             message: "An account with this email address does not exist"
+    EmailAddressDenied:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1089]
+          example:
+            code: 1089
+            message: "Email address is denied"
 
   securitySchemes:
     authorise-access-token:

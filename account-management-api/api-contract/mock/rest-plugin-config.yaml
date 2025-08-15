@@ -87,3 +87,13 @@ resources:
           "code": 1001,
           "message": "Request is missing parameters"
         }
+  - path: "/update-email/email-address-denied"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 403
+      staticData: |
+        {
+          "code": 1089,
+          "message": "Email address is denied"
+        }

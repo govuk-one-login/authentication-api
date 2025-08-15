@@ -183,4 +183,11 @@ http POST :8080/update-email/missing-parameters \
   Content-Type:application/json \
   existingEmailAddress="old.user@example.gov.uk"
 
+# POST 403 error response
+http POST :8080/update-email/email-address-denied \
+  Content-Type:application/json \
+  existingEmailAddress="old.user@example.gov.uk" \
+  replacementEmailAddress="denied.user@example.gov.uk" \
+  otp="123456"
+
 ```
