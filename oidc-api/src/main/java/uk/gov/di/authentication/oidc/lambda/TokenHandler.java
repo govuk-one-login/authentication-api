@@ -28,13 +28,11 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -495,25 +493,14 @@ public class TokenHandler
                                         null);
                             });
         } else {
-            UserProfile userProfile =
-                    dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
-            Subject rpPairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorURI());
-
-            LOG.info(
-                    "is correct pairwiseId for client the same on clientSession as calculated: {}",
-                    Objects.equals(
-                            rpPairwiseSubject.getValue(),
-                            orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
-                                    clientRegistry.getSubjectType())));
+            String rpPairwiseSubjectId =
+                    orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
+                            clientRegistry.getSubjectType());
+            Subject rpPairwiseSubject = new Subject(rpPairwiseSubjectId);
 
             userId = authCodeExchangeData.getInternalPairwiseSubjectId();
-
             Subject internalPairwiseSubject = new Subject(userId);
+
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",

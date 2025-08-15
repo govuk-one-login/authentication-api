@@ -98,6 +98,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLIENT_ID = "test-id";
     private static final String DIFFERENT_CLIENT_ID = "different-test-id";
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
+    private static final String RP_PAIRWISE_ID = "rp-pairwise-id";
+    private static final String PUBLIC_SUBJECT_ID = "public-subject-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
@@ -380,9 +382,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .toSuccessResponse()
                         .getTokens()
                         .getBearerAccessToken());
-        assertThat(
-                idTokenClaims.getSubject(),
-                equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
+        assertThat(idTokenClaims.getSubject(), equalTo(PUBLIC_SUBJECT_ID));
         assertThat(idTokenClaims.getClaim("auth_time"), equalTo(AUTH_TIME));
 
         AuditAssertionsHelper.assertTxmaAuditEventsReceived(
@@ -865,11 +865,13 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var authRequestParams = generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters();
         orchClientSessionExtension.storeClientSession(
                 new OrchClientSessionItem(
-                        CLIENT_SESSION_ID,
-                        authRequestParams,
-                        creationDate,
-                        vtrList,
-                        "client-name"));
+                                CLIENT_SESSION_ID,
+                                authRequestParams,
+                                creationDate,
+                                vtrList,
+                                "client-name")
+                        .withRpPairwiseId(RP_PAIRWISE_ID)
+                        .withPublicSubjectId(PUBLIC_SUBJECT_ID));
 
         AuthorizationCode code =
                 orchAuthCodeExtension.generateAndSaveAuthorisationCode(
