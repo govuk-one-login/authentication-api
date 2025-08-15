@@ -1498,11 +1498,12 @@ public class TokenHandlerTest {
                 .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
                 new OrchClientSessionItem(
-                        CLIENT_SESSION_ID,
-                        authRequestParams,
-                        clientSessionCreationTime,
-                        vtr,
-                        CLIENT_NAME);
+                                CLIENT_SESSION_ID,
+                                authRequestParams,
+                                clientSessionCreationTime,
+                                vtr,
+                                CLIENT_NAME)
+                        .withRpPairwiseId(RP_PAIRWISE_SUBJECT.getValue());
         Optional.ofNullable(docAppSubjectId)
                 .ifPresent(subject -> orchClientSession.setDocAppSubjectId(subject.getValue()));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
