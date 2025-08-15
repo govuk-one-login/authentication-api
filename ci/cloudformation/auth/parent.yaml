@@ -374,13 +374,13 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
@@ -393,22 +393,47 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       useStronglyConsistentReads: false
     production:
+      accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:172348255554:key/c61980c6-950e-42da-90ce-ef9a56491a9b
+      authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/cf8e9b5f-1511-4124-9025-9f98fbf30b01
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/65fad11d-d525-4fc1-a806-0b304b9dda36
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
+      clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       cloudwatchLogRetentionInDays: 30
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       customDocAppClaimEnabled: true
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      dataStoreAccountId: 172348255554
       docAppDomain: https://api.review-b.account.gov.uk
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      emailAcctCreationOtpCodeTtlDuration: 3600
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
       EnableSnapStart: "No"
       EnforceLambdaDeploymentOrder: "No"
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"
-      frontendBaseUrl: https://signin.account.gov.uk
+      frontendBaseUrl: https://apitest.signin.account.gov.uk
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
+      lambdaMinConcurrency: 3
+      lockoutCountTtl: 900
+      lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
+      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIh7xuVSWAZ8aW3ak20Ile5B9DfbP/87qEnLLTBZ/8lYCoKVdjMkS/IroHkPcS0laDQa/w0TAPDIqGtsHLI1Rw==
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
+      otpCodeTtlDuration: 900
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
+      reauthEnterEmailCountTtl: 3600
+      reducedLockoutDuration: 900
+      supportReauthSignoutEnabled: true
+      termsConditionsVersion: 1.13
       testClientsEnabled: false
       UseAlarmActions: "Yes"
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       useStronglyConsistentReads: false
   LambdaConfiguration:
     account-recovery:

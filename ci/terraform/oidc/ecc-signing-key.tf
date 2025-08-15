@@ -75,23 +75,19 @@ data "aws_iam_policy_document" "mfa_reset_signing_key_access_policy" {
     }
   }
 
-  dynamic "statement" {
-    for_each = var.auth_new_account_id == "" ? [] : [1]
+  statement {
+    sid    = "AllowCrossAccountAccess"
+    effect = "Allow"
 
-    content {
-      sid    = "AllowCrossAccountAccess"
-      effect = "Allow"
-
-      actions = [
-        "kms:GetPublicKey",
-        "kms:Sign"
-      ]
-      principals {
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
-      }
-      resources = ["*"]
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
     }
+    resources = ["*"]
   }
 }
 
@@ -153,22 +149,18 @@ data "aws_iam_policy_document" "ipv_reverification_request_signing_key_access_po
     }
   }
 
-  dynamic "statement" {
-    for_each = var.auth_new_account_id == "" ? [] : [1]
+  statement {
+    sid    = "AllowCrossAccountAccess"
+    effect = "Allow"
 
-    content {
-      sid    = "AllowCrossAccountAccess"
-      effect = "Allow"
-
-      actions = [
-        "kms:GetPublicKey",
-        "kms:Sign"
-      ]
-      principals {
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
-      }
-      resources = ["*"]
+    actions = [
+      "kms:GetPublicKey",
+      "kms:Sign"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
     }
+    resources = ["*"]
   }
 }
