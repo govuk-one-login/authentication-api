@@ -609,9 +609,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
 }
 
 locals {
-  restricted_environments    = ["production"]
-  allow_cross_account_access = !contains(local.restricted_environments, var.environment)
-  authorized_account_ids     = local.allow_cross_account_access ? [var.auth_new_account_id, var.orchestration_account_id] : [var.orchestration_account_id]
+  authorized_account_ids = [var.auth_new_account_id, var.orchestration_account_id]
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
@@ -723,63 +721,53 @@ resource "aws_dynamodb_table" "id_reverification_state" {
 ## These policies are used to allow cross-account access to the DynamoDB tables
 
 resource "aws_dynamodb_resource_policy" "user_credentials_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.user_credentials_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "common_passwords_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.common_passwords_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "account_modifiers_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.account_modifiers_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "access_token_store" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.access_token_store.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "auth_code_store" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.auth_code_store.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "email-check-result" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.email-check-result.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "authentication_attempt_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.authentication_attempt_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "auth_session_table" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.auth_session_table.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_combined_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "id_reverification_state" {
-  count        = local.allow_cross_account_access ? 1 : 0
   resource_arn = aws_dynamodb_table.id_reverification_state.arn
-  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json
+  policy       = data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json
 }
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
   #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
-  count = local.allow_cross_account_access ? 1 : 0
   statement {
     actions = [
       "dynamodb:BatchGetItem",
@@ -803,7 +791,6 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
 data "aws_iam_policy_document" "auth_cross_account_table_delete_item_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
   #checkov:skip=CKV_AWS_356:Ensure no IAM policies documents allow "*" as a statement's resource for restrict table actions
-  count = local.allow_cross_account_access ? 1 : 0
   statement {
     actions = [
       "dynamodb:DeleteItem"
@@ -818,9 +805,8 @@ data "aws_iam_policy_document" "auth_cross_account_table_delete_item_policy_docu
 }
 
 data "aws_iam_policy_document" "auth_cross_account_table_resource_combined_policy_document" {
-  count = local.allow_cross_account_access ? 1 : 0
   source_policy_documents = [
-    data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document[0].json,
-    data.aws_iam_policy_document.auth_cross_account_table_delete_item_policy_document[0].json
+    data.aws_iam_policy_document.auth_cross_account_table_resource_policy_document.json,
+    data.aws_iam_policy_document.auth_cross_account_table_delete_item_policy_document.json
   ]
 }
