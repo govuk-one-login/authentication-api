@@ -29,6 +29,9 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.ArrayList;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ASSESSMENT_CHECKED_AT_TIMESTAMP;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ISS;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -134,10 +137,12 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                 auditContext,
-                AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
                 AuditService.MetadataPair.pair(
-                        "assessment_checked_at_timestamp",
+                        AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue()),
+                AuditService.MetadataPair.pair(
+                        AUDIT_EVENT_EXTENSIONS_ASSESSMENT_CHECKED_AT_TIMESTAMP,
                         NowHelper.toUnixTimestamp(NowHelper.now())),
-                AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+                AuditService.MetadataPair.pair(
+                        AUDIT_EVENT_EXTENSIONS_ISS, AuditService.COMPONENT_ID));
     }
 }
