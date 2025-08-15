@@ -144,7 +144,11 @@ class DocAppCallbackHandlerTest {
     @BeforeEach
     void setUp() {
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        eq(null),
+                        eq(null)))
                 .thenReturn(AUTH_CODE);
 
         handler =
@@ -641,11 +645,11 @@ class DocAppCallbackHandlerTest {
     private void assertAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), eq(null));
+                        CLIENT_ID.getValue(), CLIENT_SESSION_ID, null, null, null);
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(any(), any(), any(), any());
+                .generateAndSaveAuthorisationCode(any(), any(), any(), any(), any());
     }
 }

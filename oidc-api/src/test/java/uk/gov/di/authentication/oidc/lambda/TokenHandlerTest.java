@@ -1489,10 +1489,10 @@ public class TokenHandlerTest {
             Subject docAppSubjectId) {
         AuthCodeExchangeData authCodeExchangeData =
                 new AuthCodeExchangeData()
-                        .setEmail(TEST_EMAIL)
-                        .setClientSessionId(CLIENT_SESSION_ID)
-                        .setAuthTime(AUTH_TIME)
-                        .setClientId(clientId);
+                        .withEmail(TEST_EMAIL)
+                        .withClientSessionId(CLIENT_SESSION_ID)
+                        .withAuthTime(AUTH_TIME)
+                        .withClientId(clientId);
         when(orchAuthCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.of(authCodeExchangeData));
         var orchClientSession =
@@ -1511,10 +1511,10 @@ public class TokenHandlerTest {
     private void setupNoClientSessions() {
         AuthCodeExchangeData authCodeExchangeData =
                 new AuthCodeExchangeData()
-                        .setEmail(TEST_EMAIL)
-                        .setClientSessionId(CLIENT_SESSION_ID)
-                        .setAuthTime(AUTH_TIME)
-                        .setClientId(CLIENT_ID);
+                        .withEmail(TEST_EMAIL)
+                        .withClientSessionId(CLIENT_SESSION_ID)
+                        .withAuthTime(AUTH_TIME)
+                        .withClientId(CLIENT_ID);
         when(orchAuthCodeService.getExchangeDataForCode(anyString()))
                 .thenReturn(Optional.of(authCodeExchangeData));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))

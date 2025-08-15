@@ -76,9 +76,13 @@ public class OrchAuthCodeExtension extends DynamoExtension implements AfterEachC
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(
-            String clientId, String clientSessionId, String email, Long authTime) {
+            String clientId,
+            String clientSessionId,
+            String email,
+            Long authTime,
+            String internalPairwiseSubjectId) {
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
-                clientId, clientSessionId, email, authTime);
+                clientId, clientSessionId, email, authTime, internalPairwiseSubjectId);
     }
 
     public Optional<AuthCodeExchangeData> getExchangeDataForCode(String code) {

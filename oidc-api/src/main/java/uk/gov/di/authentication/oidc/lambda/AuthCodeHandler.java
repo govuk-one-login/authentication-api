@@ -166,6 +166,7 @@ public class AuthCodeHandler
 
         Optional<String> emailOptional;
         Optional<String> subjectIdOptional;
+        Optional<String> internalCommonSubjectIdOptional;
         boolean isDocAppJourney;
         AuthenticationRequest authenticationRequest = null;
         OrchClientSessionItem orchClientSession;
@@ -204,9 +205,12 @@ public class AuthCodeHandler
                         Optional.of(
                                 authUserInfo.getStringClaim(
                                         AuthUserInfoClaims.LOCAL_ACCOUNT_ID.getValue()));
+                internalCommonSubjectIdOptional =
+                        Optional.of(orchSession.getInternalCommonSubjectId());
             } else {
                 emailOptional = Optional.empty();
                 subjectIdOptional = Optional.empty();
+                internalCommonSubjectIdOptional = Optional.empty();
             }
 
             client =
@@ -218,7 +222,13 @@ public class AuthCodeHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
 
-            authCode = generateAuthCode(clientID, emailOptional, clientSessionId, orchSession);
+            authCode =
+                    generateAuthCode(
+                            clientID,
+                            emailOptional,
+                            clientSessionId,
+                            orchSession.getAuthTime(),
+                            internalCommonSubjectIdOptional);
 
             authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -408,12 +418,14 @@ public class AuthCodeHandler
             ClientID clientID,
             Optional<String> emailOptional,
             String clientSessionId,
-            OrchSessionItem orchSession) {
+            Long authTime,
+            Optional<String> internalCommonSubjectId) {
 
         return orchAuthCodeService.generateAndSaveAuthorisationCode(
                 clientID.getValue(),
                 clientSessionId,
                 emailOptional.orElse(null),
-                orchSession.getAuthTime());
+                authTime,
+                internalCommonSubjectId.orElse(null));
     }
 }

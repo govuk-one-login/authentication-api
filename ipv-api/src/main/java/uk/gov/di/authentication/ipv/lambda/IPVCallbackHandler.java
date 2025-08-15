@@ -423,12 +423,8 @@ public class IPVCallbackHandler
                         var authenticationResponse =
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
-                                        clientSessionId,
-                                        sessionId,
                                         orchSession,
-                                        orchClientSession.getClientName(),
-                                        rpPairwiseSubject,
-                                        orchSession.getInternalCommonSubjectId(),
+                                        orchClientSession,
                                         userIdentityUserInfo,
                                         ipAddress,
                                         persistentId,

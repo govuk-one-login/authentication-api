@@ -265,7 +265,8 @@ class AuthCodeHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL),
-                        any(Long.class)))
+                        any(Long.class),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
@@ -311,8 +312,6 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
-
         var dimensions =
                 Map.of(
                         "Account",
@@ -336,7 +335,7 @@ class AuthCodeHandlerTest {
 
         verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+        assertAuthCodeSavedForAuthJourney();
     }
 
     private static Stream<CredentialTrustLevel> docAppTestParameters() {
@@ -365,7 +364,11 @@ class AuthCodeHandlerTest {
                         (ClientRegistry) any(), eq(REDIRECT_URI)))
                 .thenReturn(true);
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(null), any(Long.class)))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(null),
+                        any(Long.class),
+                        eq(null)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -420,8 +423,6 @@ class AuthCodeHandlerTest {
                         pair("authCode", authorizationCode),
                         pair("nonce", NONCE.getValue()));
 
-        assertAuthorisationCodeGeneratedAndSaved(null);
-
         var expectedDimensions =
                 Map.of(
                         "Account",
@@ -439,7 +440,7 @@ class AuthCodeHandlerTest {
 
         verify(cloudwatchMetricsService).incrementCounter("SignIn", expectedDimensions);
 
-        assertAuthorisationCodeGeneratedAndSaved(null);
+        assertAuthCodeSavedForDocAppJourney();
     }
 
     @Test
@@ -677,7 +678,11 @@ class AuthCodeHandlerTest {
         when(orchClientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(MEDIUM_LEVEL)));
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenThrow(new OrchAuthCodeException("Some error during auth code generation."));
 
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
@@ -687,7 +692,7 @@ class AuthCodeHandlerTest {
         assertThat(response, hasStatus(500));
         assertThat(response, hasBody("Internal server error"));
 
-        assertAuthorisationCodeGeneratedAndSaved(EMAIL);
+        assertAuthCodeSavedForAuthJourney();
     }
 
     @Test
@@ -717,7 +722,11 @@ class AuthCodeHandlerTest {
         // TODO: Stop here in new test.
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        eq(CLIENT_ID.getValue()), eq(CLIENT_SESSION_ID), eq(EMAIL), anyLong()))
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
                         eq(orchSession),
@@ -843,17 +852,29 @@ class AuthCodeHandlerTest {
                 .thenReturn(Optional.of(authUserInfo));
     }
 
-    private void assertAuthorisationCodeGeneratedAndSaved(String expectedEmail) {
+    private void assertAuthCodeSavedForDocAppJourney() {
         verify(orchAuthCodeService, times(1))
                 .generateAndSaveAuthorisationCode(
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
-                        eq(expectedEmail),
-                        anyLong());
+                        eq(null),
+                        anyLong(),
+                        eq(null));
+    }
+
+    private void assertAuthCodeSavedForAuthJourney() {
+        verify(orchAuthCodeService, times(1))
+                .generateAndSaveAuthorisationCode(
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL),
+                        anyLong(),
+                        eq(INTERNAL_COMMON_SUBJECT_ID));
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
+                .generateAndSaveAuthorisationCode(
+                        anyString(), anyString(), anyString(), anyLong(), anyString());
     }
 }
