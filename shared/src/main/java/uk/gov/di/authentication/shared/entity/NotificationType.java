@@ -7,7 +7,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum NotificationType implements TemplateAware {
+public enum NotificationType implements TemplateAware, NotifiableType {
     VERIFY_EMAIL(
             "VERIFY_EMAIL_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "VERIFY_EMAIL_TEMPLATE_ID_CY"),
@@ -111,6 +111,7 @@ public enum NotificationType implements TemplateAware {
         return isEmail;
     }
 
+    @Override
     public boolean isForPhoneNumber() {
         return isForPhoneNumber;
     }

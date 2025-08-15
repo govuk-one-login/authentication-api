@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
@@ -46,6 +48,8 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class NotificationHandlerTest {
@@ -63,6 +67,8 @@ public class NotificationHandlerTest {
     private final S3Client s3Client = mock(S3Client.class);
     private NotificationHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final String EXPECTED_REFERENCE =
             String.format(
@@ -71,20 +77,22 @@ public class NotificationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configService.getNotifyTestDestinations())
-                .thenReturn(List.of(CommonTestVariables.UK_MOBILE_NUMBER));
+        when(configService.getNotifyTestDestinations()).thenReturn(List.of(UK_MOBILE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
         when(configService.getGovUKAccountsURL()).thenReturn(GOV_UK_ACCOUNTS_URL);
-        handler = new NotificationHandler(notificationService, configService, s3Client);
+        when(configService.getEnvironment()).thenReturn("unit-test");
+        handler =
+                new NotificationHandler(
+                        notificationService, configService, s3Client, cloudwatchMetricsService);
     }
 
     @Test
     void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        SQSEvent sqsEvent = notifyRequestEvent(CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, VERIFY_EMAIL, "654321");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         var response = handler.handleRequest(sqsEvent, context);
@@ -93,22 +101,19 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", CommonTestVariables.EMAIL);
+        personalisation.put("email-address", EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        VERIFY_EMAIL,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, personalisation, VERIFY_EMAIL, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(VERIFY_EMAIL, EMAIL, false, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationEmailFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.EMAIL, PASSWORD_RESET_CONFIRMATION, null);
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, PASSWORD_RESET_CONFIRMATION, null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         var response = handler.handleRequest(sqsEvent, context);
@@ -119,21 +124,16 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        PASSWORD_RESET_CONFIRMATION,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, personalisation, PASSWORD_RESET_CONFIRMATION, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        PASSWORD_RESET_CONFIRMATION, EMAIL, false, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationSMSFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        var sqsEvent =
-                notifyRequestEvent(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        PASSWORD_RESET_CONFIRMATION_SMS,
-                        null);
+        var sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, PASSWORD_RESET_CONFIRMATION_SMS, null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         var response = handler.handleRequest(sqsEvent, context);
@@ -144,10 +144,13 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        UK_MOBILE_NUMBER,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION_SMS,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        PASSWORD_RESET_CONFIRMATION_SMS, UK_MOBILE_NUMBER, false, AUTHENTICATION);
     }
 
     @Test
@@ -159,8 +162,7 @@ public class NotificationHandlerTest {
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
         when(configService.getGovUKAccountsURL()).thenReturn(govUKAccountsUrl);
 
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -172,18 +174,16 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        ACCOUNT_CREATED_CONFIRMATION,
-                        EXPECTED_REFERENCE);
+                        EMAIL, personalisation, ACCOUNT_CREATED_CONFIRMATION, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        ACCOUNT_CREATED_CONFIRMATION, EMAIL, false, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(
-                        CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -194,22 +194,22 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        personalisation,
-                        VERIFY_PHONE_NUMBER,
-                        EXPECTED_REFERENCE);
+                        UK_MOBILE_NUMBER, personalisation, VERIFY_PHONE_NUMBER, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER, true, AUTHENTICATION);
     }
 
     @Test
     void shouldNotSendAnythingWhenATermsAndConditionsBulkEmail() throws Json.JsonException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.EMAIL, TERMS_AND_CONDITIONS_BULK_EMAIL, "");
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, TERMS_AND_CONDITIONS_BULK_EMAIL, "");
 
         var response = handler.handleRequest(sqsEvent, context);
 
         assertTrue(response.getBatchItemFailures().isEmpty());
 
         verifyNoInteractions(notificationService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -227,53 +227,60 @@ public class NotificationHandlerTest {
 
         assertEquals(
                 "Error when mapping message from queue to a NotifyRequest", exception.getMessage());
+
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
     void shouldReturnBatchFailureIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent = notifyRequestEvent(CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, VERIFY_EMAIL, "654321");
+        var notificationClientException = new NotificationClientException("test-exception-message");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", CommonTestVariables.EMAIL);
+        personalisation.put("email-address", EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
-        Mockito.doThrow(NotificationClientException.class)
+        Mockito.doThrow(notificationClientException)
                 .when(notificationService)
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        VERIFY_EMAIL,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, personalisation, VERIFY_EMAIL, EXPECTED_REFERENCE);
 
         var response = handler.handleRequest(sqsEvent, context);
 
         assertEquals(1, response.getBatchItemFailures().size());
         assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
+
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotificationError(
+                        VERIFY_EMAIL, EMAIL, false, AUTHENTICATION, notificationClientException);
     }
 
     @Test
     void shouldReturnBatchFailureIfNotifyIsUnableToSendText()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(
-                        CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        var notificationClientException = new NotificationClientException("test-exception-message");
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        Mockito.doThrow(NotificationClientException.class)
+        Mockito.doThrow(notificationClientException)
                 .when(notificationService)
                 .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        personalisation,
-                        VERIFY_PHONE_NUMBER,
-                        EXPECTED_REFERENCE);
+                        UK_MOBILE_NUMBER, personalisation, VERIFY_PHONE_NUMBER, EXPECTED_REFERENCE);
 
         var response = handler.handleRequest(sqsEvent, context);
 
         assertEquals(1, response.getBatchItemFailures().size());
         assertEquals(TEST_MESSAGE_ID, response.getBatchItemFailures().get(0).getItemIdentifier());
+
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotificationError(
+                        VERIFY_PHONE_NUMBER,
+                        UK_MOBILE_NUMBER,
+                        true,
+                        AUTHENTICATION,
+                        notificationClientException);
     }
 
     @Test
@@ -282,15 +289,9 @@ public class NotificationHandlerTest {
         var badCode = "123456";
         var goodCode = "456789";
 
-        var goodMessage1 =
-                notifyRequestMessage(
-                        CommonTestVariables.EMAIL, VERIFY_EMAIL, goodCode, "good-message-1");
-        var badMessage =
-                notifyRequestMessage(
-                        CommonTestVariables.EMAIL, VERIFY_EMAIL, badCode, "bad-message");
-        var goodMessage2 =
-                notifyRequestMessage(
-                        CommonTestVariables.EMAIL, VERIFY_EMAIL, goodCode, "good-message-2");
+        var goodMessage1 = notifyRequestMessage(EMAIL, VERIFY_EMAIL, goodCode, "good-message-1");
+        var badMessage = notifyRequestMessage(EMAIL, VERIFY_EMAIL, badCode, "bad-message");
+        var goodMessage2 = notifyRequestMessage(EMAIL, VERIFY_EMAIL, goodCode, "good-message-2");
 
         SQSEvent sqsEvent = new SQSEvent();
         sqsEvent.setRecords(List.of(goodMessage1, badMessage, goodMessage2));
@@ -300,32 +301,24 @@ public class NotificationHandlerTest {
         var badPersonalisation =
                 Map.<String, Object>of(
                         "validation-code", badCode,
-                        "email-address", CommonTestVariables.EMAIL,
+                        "email-address", EMAIL,
                         "contact-us-link", contactUsLinkUrl);
 
         var goodPersonalisation =
                 Map.<String, Object>of(
                         "validation-code", goodCode,
-                        "email-address", CommonTestVariables.EMAIL,
+                        "email-address", EMAIL,
                         "contact-us-link", contactUsLinkUrl);
 
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        badPersonalisation,
-                        VERIFY_EMAIL,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, badPersonalisation, VERIFY_EMAIL, EXPECTED_REFERENCE);
 
         var response = handler.handleRequest(sqsEvent, context);
 
         // Good messages are sent
         verify(notificationService, times(2))
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        goodPersonalisation,
-                        VERIFY_EMAIL,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, goodPersonalisation, VERIFY_EMAIL, EXPECTED_REFERENCE);
 
         // Bad message is included in a batch failure
         assertEquals(1, response.getBatchItemFailures().size());
@@ -337,9 +330,7 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(
-                        CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -350,23 +341,16 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        personalisation,
-                        VERIFY_PHONE_NUMBER,
-                        EXPECTED_REFERENCE);
+                        UK_MOBILE_NUMBER, personalisation, VERIFY_PHONE_NUMBER, EXPECTED_REFERENCE);
         var putObjectRequest =
-                PutObjectRequest.builder()
-                        .bucket(BUCKET_NAME)
-                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
-                        .build();
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(UK_MOBILE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, MFA_SMS, "654321");
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -376,18 +360,15 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        personalisation,
-                        MFA_SMS,
-                        EXPECTED_REFERENCE);
+                .sendText(UK_MOBILE_NUMBER, personalisation, MFA_SMS, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(MFA_SMS, UK_MOBILE_NUMBER, true, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, MFA_SMS, "654321");
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -397,25 +378,19 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        personalisation,
-                        MFA_SMS,
-                        EXPECTED_REFERENCE);
+                .sendText(UK_MOBILE_NUMBER, personalisation, MFA_SMS, EXPECTED_REFERENCE);
         var putObjectRequest =
-                PutObjectRequest.builder()
-                        .bucket(BUCKET_NAME)
-                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
-                        .build();
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(UK_MOBILE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(MFA_SMS, UK_MOBILE_NUMBER, true, AUTHENTICATION);
     }
 
     @Test
     void
             shouldSuccessfullyProcessAccountConfirmationRequestFromSQSQueueAndNotWriteOTPToS3WhenTestClient()
                     throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, ACCOUNT_CREATED_CONFIRMATION, null);
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -427,23 +402,19 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        ACCOUNT_CREATED_CONFIRMATION,
-                        EXPECTED_REFERENCE);
+                        EMAIL, personalisation, ACCOUNT_CREATED_CONFIRMATION, EXPECTED_REFERENCE);
         var putObjectRequest =
-                PutObjectRequest.builder()
-                        .bucket(BUCKET_NAME)
-                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
-                        .build();
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(UK_MOBILE_NUMBER).build();
         verify(s3Client, times(0)).putObject(eq(putObjectRequest), any(RequestBody.class));
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        ACCOUNT_CREATED_CONFIRMATION, EMAIL, false, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessPasswordResetWithCodeMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        SQSEvent sqsEvent =
-                notifyRequestEvent(CommonTestVariables.EMAIL, RESET_PASSWORD_WITH_CODE, "654321");
+        SQSEvent sqsEvent = notifyRequestEvent(EMAIL, RESET_PASSWORD_WITH_CODE, "654321");
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         var response = handler.handleRequest(sqsEvent, context);
@@ -452,23 +423,20 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", CommonTestVariables.EMAIL);
+        personalisation.put("email-address", EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(
-                        CommonTestVariables.EMAIL,
-                        personalisation,
-                        RESET_PASSWORD_WITH_CODE,
-                        EXPECTED_REFERENCE);
+                .sendEmail(EMAIL, personalisation, RESET_PASSWORD_WITH_CODE, EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(RESET_PASSWORD_WITH_CODE, EMAIL, false, AUTHENTICATION);
     }
 
     @Test
     void shouldSuccessfullyProcessVerifyChangeHowGetSecurityCodesMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         SQSEvent sqsEvent =
-                notifyRequestEvent(
-                        CommonTestVariables.EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "654321");
+                notifyRequestEvent(EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "654321");
 
         var response = handler.handleRequest(sqsEvent, context);
 
@@ -476,14 +444,17 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", CommonTestVariables.EMAIL);
+        personalisation.put("email-address", EMAIL);
 
         verify(notificationService)
                 .sendEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         personalisation,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         EXPECTED_REFERENCE);
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES, EMAIL, false, AUTHENTICATION);
     }
 
     private String buildContactUsUrl() {
