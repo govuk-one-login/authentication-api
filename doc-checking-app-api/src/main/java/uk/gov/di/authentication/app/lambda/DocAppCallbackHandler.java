@@ -298,7 +298,7 @@ public class DocAppCallbackHandler
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(
-                                clientId, clientSessionId, null, null);
+                                clientId, clientSessionId, null, null, null);
 
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(

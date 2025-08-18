@@ -425,18 +425,14 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        any(AuthenticationRequest.class),
+                        any(OrchSessionItem.class),
+                        any(OrchClientSessionItem.class),
+                        any(UserInfo.class),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
                         anyString()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
@@ -508,18 +504,14 @@ class IPVCallbackHandlerTest {
             when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                     .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
             when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                            any(),
-                            any(),
-                            any(),
-                            any(),
+                            any(AuthenticationRequest.class),
+                            any(OrchSessionItem.class),
+                            any(OrchClientSessionItem.class),
+                            any(UserInfo.class),
                             anyString(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
                             anyString()))
                     .thenReturn(
                             new AuthenticationSuccessResponse(
@@ -607,18 +599,14 @@ class IPVCallbackHandlerTest {
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        any(AuthenticationRequest.class),
+                        any(OrchSessionItem.class),
+                        any(OrchClientSessionItem.class),
+                        any(UserInfo.class),
                         anyString(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
                         anyString()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
@@ -631,13 +619,9 @@ class IPVCallbackHandlerTest {
 
         verify(ipvCallbackHelper)
                 .generateReturnCodeAuthenticationResponse(
-                        any(),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
+                        any(AuthenticationRequest.class),
                         any(OrchSessionItem.class),
-                        eq(CLIENT_NAME),
-                        any(Subject.class),
-                        anyString(),
+                        any(OrchClientSessionItem.class),
                         eq(userIdentityUserInfo),
                         anyString(),
                         eq(PERSISTENT_SESSION_ID),

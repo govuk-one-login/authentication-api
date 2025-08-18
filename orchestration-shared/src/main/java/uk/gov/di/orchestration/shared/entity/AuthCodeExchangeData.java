@@ -18,11 +18,15 @@ public class AuthCodeExchangeData {
     @SerializedName("authTime")
     private Long authTime;
 
+    @Expose
+    @SerializedName("internalPairwiseSubjectId")
+    private String internalPairwiseSubjectId;
+
     public String getClientSessionId() {
         return clientSessionId;
     }
 
-    public AuthCodeExchangeData setClientSessionId(String clientSessionId) {
+    public AuthCodeExchangeData withClientSessionId(String clientSessionId) {
         this.clientSessionId = clientSessionId;
         return this;
     }
@@ -31,7 +35,7 @@ public class AuthCodeExchangeData {
         return email;
     }
 
-    public AuthCodeExchangeData setEmail(String email) {
+    public AuthCodeExchangeData withEmail(String email) {
         this.email = email;
         return this;
     }
@@ -40,7 +44,7 @@ public class AuthCodeExchangeData {
         return authTime;
     }
 
-    public AuthCodeExchangeData setAuthTime(Long authTime) {
+    public AuthCodeExchangeData withAuthTime(Long authTime) {
         this.authTime = authTime;
         return this;
     }
@@ -49,8 +53,17 @@ public class AuthCodeExchangeData {
         return clientId;
     }
 
-    public AuthCodeExchangeData setClientId(String clientId) {
+    public AuthCodeExchangeData withClientId(String clientId) {
         this.clientId = clientId;
+        return this;
+    }
+
+    public String getInternalPairwiseSubjectId() {
+        return internalPairwiseSubjectId;
+    }
+
+    public AuthCodeExchangeData withInternalPairwiseSubjectId(String internalPairwiseSubjectId) {
+        this.internalPairwiseSubjectId = internalPairwiseSubjectId;
         return this;
     }
 }

@@ -110,7 +110,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -156,7 +155,6 @@ class AuthenticationCallbackHandlerTest {
     private static final Subject RP_PAIRWISE_ID = new Subject();
     private static final Subject PUBLIC_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
-    private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
     private static final Nonce RP_NONCE = new Nonce();
     private static final CredentialTrustLevel lowestCredentialTrustLevel =
@@ -238,7 +236,7 @@ class AuthenticationCallbackHandlerTest {
                         });
 
         when(orchAuthCodeService.generateAndSaveAuthorisationCode(
-                        anyString(), anyString(), anyString(), anyLong()))
+                        anyString(), anyString(), anyString(), anyLong(), anyString()))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
 
         handler =
@@ -699,7 +697,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong()))
+                        anyLong(),
+                        anyString()))
                 .thenThrow(new OrchAuthCodeException("Some generation error"));
 
         assertDoesNotThrow(() -> handler.handleRequest(event, CONTEXT));
@@ -709,7 +708,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong());
+                        anyLong(),
+                        anyString());
     }
 
     @Nested
@@ -1252,12 +1252,6 @@ class AuthenticationCallbackHandlerTest {
         return intervention;
     }
 
-    private APIGatewayProxyResponseEvent createIPVApiResponse() {
-
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, IPV_REDIRECT_URI.toString()), null);
-    }
-
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -1358,12 +1352,14 @@ class AuthenticationCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(TEST_EMAIL_ADDRESS),
-                        anyLong());
+                        anyLong(),
+                        anyString());
     }
 
     private void assertNoAuthorisationCodeGeneratedAndSaved() {
         verify(orchAuthCodeService, times(0))
-                .generateAndSaveAuthorisationCode(anyString(), anyString(), anyString(), anyLong());
+                .generateAndSaveAuthorisationCode(
+                        anyString(), anyString(), anyString(), anyLong(), anyString());
     }
 
     private void assertOrchSessionUpdated() {
@@ -1389,22 +1385,5 @@ class AuthenticationCallbackHandlerTest {
                 orchClientSessionCaptor
                         .getValue()
                         .getCorrectPairwiseIdGivenSubjectType(SubjectType.PUBLIC.toString()));
-    }
-
-    private void clientSessionWithCredentialTrustValue(CredentialTrustLevel credentialTrustLevel) {
-        var orchClientSessionWithCredentialTrustLevel =
-                createOrchClientSession(credentialTrustLevel);
-        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(orchClientSessionWithCredentialTrustLevel));
-    }
-
-    private OrchClientSessionItem createOrchClientSession(
-            CredentialTrustLevel credentialTrustLevel) {
-        return new OrchClientSessionItem(
-                CLIENT_SESSION_ID,
-                generateRPAuthRequestForClientSession().toParameters(),
-                null,
-                List.of(VectorOfTrust.of(credentialTrustLevel, LevelOfConfidence.LOW_LEVEL)),
-                CLIENT_NAME);
     }
 }
