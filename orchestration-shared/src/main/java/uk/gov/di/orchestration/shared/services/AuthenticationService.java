@@ -13,6 +13,4 @@ public interface AuthenticationService {
     UserProfile getUserProfileByEmail(String email);
 
     Optional<UserProfile> getUserProfileByEmailMaybe(String email);
-
-    byte[] getOrGenerateSalt(UserProfile userProfile);
 }
