@@ -35,6 +35,7 @@ repos:
           http-client.env.json|\
           package-lock.json|\
           .*provider.json|\
+          quality-gate.manifest.json|\
           account-management-api/api-contract(/.*)?$"
         files: ^.*\.(json|yml|yaml)$
 
