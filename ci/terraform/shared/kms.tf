@@ -359,22 +359,19 @@ data "aws_iam_policy_document" "cross_account_doc_app_auth_signing_key_policy" {
     }
   }
 
-  dynamic "statement" {
-    for_each = var.environment != "production" ? ["1"] : []
-    content {
-      sid    = "AllowAuthAccessToKmsDocAppSigningKey-${var.environment}"
-      effect = "Allow"
+  statement {
+    sid    = "AllowAuthAccessToKmsDocAppSigningKey-${var.environment}"
+    effect = "Allow"
 
-      actions = [
-        "kms:Sign",
-        "kms:GetPublicKey"
-      ]
-      resources = ["*"]
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey"
+    ]
+    resources = ["*"]
 
-      principals {
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
-      }
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
     }
   }
 }
@@ -634,32 +631,29 @@ data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy
     }
   }
 
-  dynamic "statement" {
-    for_each = var.environment != "production" ? ["1"] : []
-    content {
-      sid    = "Allow Auth access to dynamo table encryption key"
-      effect = "Allow"
+  statement {
+    sid    = "Allow Auth access to dynamo table encryption key"
+    effect = "Allow"
 
-      actions = [
-        "kms:Encrypt",
-        "kms:Decrypt",
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*",
-        "kms:CreateGrant",
-        "kms:DescribeKey",
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    principals {
+      type = "AWS"
+      identifiers = [
+        format(
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          var.auth_new_account_id
+        )
       ]
-      principals {
-        type = "AWS"
-        identifiers = [
-          format(
-            "arn:%s:iam::%s:root",
-            data.aws_partition.current.partition,
-            var.auth_new_account_id
-          )
-        ]
-      }
-      resources = ["*"]
     }
+    resources = ["*"]
   }
 }
 
@@ -733,22 +727,19 @@ data "aws_iam_policy_document" "pending_email_check_queue_encryption_key_access_
     }
   }
 
-  dynamic "statement" {
-    for_each = var.environment != "production" ? ["1"] : []
-    content {
-      sid    = "Allow Auth access to dynamo table encryption key"
-      effect = "Allow"
+  statement {
+    sid    = "Allow Auth access to dynamo table encryption key"
+    effect = "Allow"
 
-      actions = [
-        "kms:GenerateDataKey",
-        "kms:Decrypt"
-      ]
-      principals {
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
-      }
-      resources = ["*"]
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt"
+    ]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_new_account_id}:root"]
     }
+    resources = ["*"]
   }
   #checkov:skip=CKV_AWS_109:Root requires all kms:* actions access
   #checkov:skip=CKV_AWS_111:Root requires all kms:* actions access
@@ -825,32 +816,29 @@ data "aws_iam_policy_document" "auth_dynamo_table_encryption_key_access_policy" 
     }
   }
 
-  dynamic "statement" {
-    for_each = var.environment != "production" ? ["1"] : []
-    content {
-      sid    = "Allow Auth access to dynamo table encryption key"
-      effect = "Allow"
+  statement {
+    sid    = "Allow Auth access to dynamo table encryption key"
+    effect = "Allow"
 
-      actions = [
-        "kms:Encrypt",
-        "kms:Decrypt",
-        "kms:ReEncrypt*",
-        "kms:GenerateDataKey*",
-        "kms:CreateGrant",
-        "kms:DescribeKey",
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    principals {
+      type = "AWS"
+      identifiers = [
+        format(
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          var.auth_new_account_id
+        )
       ]
-      principals {
-        type = "AWS"
-        identifiers = [
-          format(
-            "arn:%s:iam::%s:root",
-            data.aws_partition.current.partition,
-            var.auth_new_account_id
-          )
-        ]
-      }
-      resources = ["*"]
     }
+    resources = ["*"]
   }
 }
 
@@ -890,28 +878,24 @@ data "aws_iam_policy_document" "authentication_encryption_key_access_policy_docu
     resources = ["*"]
   }
 
-  dynamic "statement" {
-    for_each = var.auth_new_account_id == "" ? [] : [1]
+  statement {
+    sid    = "AllowAccessToAuthenticationKmsEncryptionKey"
+    effect = "Allow"
 
-    content {
-      sid    = "AllowAccessToAuthenticationKmsEncryptionKey"
-      effect = "Allow"
-
-      actions = [
-        "kms:Decrypt*"
+    actions = [
+      "kms:Decrypt*"
+    ]
+    principals {
+      type = "AWS"
+      identifiers = [
+        format(
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          var.auth_new_account_id
+        )
       ]
-      principals {
-        type = "AWS"
-        identifiers = [
-          format(
-            "arn:%s:iam::%s:root",
-            data.aws_partition.current.partition,
-            var.auth_new_account_id
-          )
-        ]
-      }
-      resources = ["*"]
     }
+    resources = ["*"]
   }
 }
 
