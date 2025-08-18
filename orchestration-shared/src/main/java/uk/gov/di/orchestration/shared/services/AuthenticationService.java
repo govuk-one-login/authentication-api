@@ -14,8 +14,5 @@ public interface AuthenticationService {
 
     Optional<UserProfile> getUserProfileByEmailMaybe(String email);
 
-    void updatePhoneNumberAndAccountVerifiedStatus(
-            String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);
-
     byte[] getOrGenerateSalt(UserProfile userProfile);
 }

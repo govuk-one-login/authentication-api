@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -11,19 +10,11 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.orchestration.shared.entity.MFAMethodType;
-import uk.gov.di.orchestration.shared.entity.TermsAndConditions;
-import uk.gov.di.orchestration.shared.entity.User;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 
-import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -71,46 +62,6 @@ public class DynamoService implements AuthenticationService {
         warmUp();
     }
 
-    public User signUp(
-            String email,
-            String password,
-            Subject subject,
-            TermsAndConditions termsAndConditions,
-            boolean isTestUser,
-            int accountVerified) {
-        var dateTime = LocalDateTime.now().toString();
-        var hashedPassword = hashPassword(password);
-        var userCredentials =
-                new UserCredentials()
-                        .withEmail(email.toLowerCase(Locale.ROOT))
-                        .withSubjectID(subject.toString())
-                        .withPassword(hashedPassword)
-                        .withCreated(dateTime)
-                        .withUpdated(dateTime);
-
-        var userProfile =
-                new UserProfile()
-                        .withEmail(email.toLowerCase(Locale.ROOT))
-                        .withSubjectID(subject.toString())
-                        .withEmailVerified(true)
-                        .withAccountVerified(accountVerified)
-                        .withCreated(dateTime)
-                        .withUpdated(dateTime)
-                        .withPublicSubjectID((new Subject()).toString())
-                        .withTermsAndConditions(termsAndConditions)
-                        .withLegacySubjectID(null);
-        userProfile.setSalt(SaltHelper.generateNewSalt());
-
-        if (isTestUser) {
-            userCredentials.setTestUser(1);
-            userProfile.setTestUser(1);
-        }
-
-        dynamoUserCredentialsTable.putItem(userCredentials);
-        dynamoUserProfileTable.putItem(userProfile);
-        return new User(userProfile, userCredentials);
-    }
-
     @Override
     public UserProfile getUserProfileByEmail(String email) {
         if (email != null) {
@@ -140,56 +91,6 @@ public class DynamoService implements AuthenticationService {
         return SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
     }
 
-    @Override
-    public void updatePhoneNumberAndAccountVerifiedStatus(
-            String email,
-            String phoneNumber,
-            boolean phoneNumberVerified,
-            boolean accountVerified) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
-        var userProfile =
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withPhoneNumber(formattedPhoneNumber)
-                        .withPhoneNumberVerified(phoneNumberVerified)
-                        .withUpdated(dateTime)
-                        .withAccountVerified(accountVerified ? 1 : 0);
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-        var transactWriteBuilder =
-                TransactWriteItemsEnhancedRequest.builder()
-                        .addUpdateItem(dynamoUserProfileTable, userProfile);
-
-        Optional.ofNullable(userCredentials.getMfaMethods())
-                .flatMap(
-                        mf ->
-                                mf.stream()
-                                        .filter(
-                                                method ->
-                                                        method.getMfaMethodType()
-                                                                        .equals(
-                                                                                MFAMethodType
-                                                                                        .AUTH_APP
-                                                                                        .getValue())
-                                                                && method.isEnabled())
-                                        .findFirst())
-                .ifPresent(
-                        t -> {
-                            userCredentials
-                                    .setMfaMethod(t.withEnabled(false).withUpdated(dateTime))
-                                    .withUpdated(dateTime);
-                            transactWriteBuilder.addUpdateItem(
-                                    dynamoUserCredentialsTable, userCredentials);
-                        });
-        dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
-    }
-
     private UserProfile getUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
@@ -205,10 +106,6 @@ public class DynamoService implements AuthenticationService {
             throw new RuntimeException("No userCredentials found with query search");
         }
         return userProfile.get();
-    }
-
-    private static String hashPassword(String password) {
-        return Argon2EncoderHelper.argon2Hash(password);
     }
 
     private void warmUp() {
