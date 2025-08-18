@@ -6221,7 +6221,7 @@ Resources:
 
   #endregion
 
-  #region Client Rate Limit DynamoDB Table
+  #region Client Rate Limit
 
   ClientRateLimitTableEncryptionKey:
     Type: AWS::KMS::Key
@@ -6279,7 +6279,24 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRateLimitTable
+
+  ClientRateLimitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-client-rate-limit-alarm
+      AlarmDescription: !Sub "Client rate limiting has been hit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: test"
+      Namespace: Authentication
+      MetricName: RpRateLimitExceeded
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackEvents
   #endregion
+
   #region ClientRateLimitTable policies
   ClientRateLimitTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6306,6 +6323,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt ClientRateLimitTableEncryptionKey.Arn
   #endregion
+
   #region StateStorage policies
   StateStorageTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6369,6 +6387,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
+
   #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
