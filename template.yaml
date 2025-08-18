@@ -1836,8 +1836,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
