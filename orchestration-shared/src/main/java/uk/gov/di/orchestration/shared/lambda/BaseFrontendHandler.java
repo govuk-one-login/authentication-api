@@ -14,11 +14,9 @@ import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -49,7 +47,6 @@ public abstract class BaseFrontendHandler<T>
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final ClientService clientService;
-    protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final OrchSessionService orchSessionService;
     protected final OrchClientSessionService orchClientSessionService;
@@ -58,13 +55,11 @@ public abstract class BaseFrontendHandler<T>
             Class<T> clazz,
             ConfigurationService configurationService,
             ClientService clientService,
-            AuthenticationService authenticationService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.clientService = clientService;
-        this.authenticationService = authenticationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
     }
@@ -73,7 +68,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }
@@ -85,7 +79,6 @@ public abstract class BaseFrontendHandler<T>
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.clientService = new DynamoClientService(configurationService);
-        this.authenticationService = new DynamoService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
     }

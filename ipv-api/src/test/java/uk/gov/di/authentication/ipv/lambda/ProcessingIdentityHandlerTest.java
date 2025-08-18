@@ -33,7 +33,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -94,7 +93,6 @@ class ProcessingIdentityHandlerTest {
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -130,7 +128,6 @@ class ProcessingIdentityHandlerTest {
                         dynamoIdentityService,
                         accountInterventionService,
                         dynamoClientService,
-                        dynamoService,
                         configurationService,
                         auditService,
                         cloudwatchMetricsService,
