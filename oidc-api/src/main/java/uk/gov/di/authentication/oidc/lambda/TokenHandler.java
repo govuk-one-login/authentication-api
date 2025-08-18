@@ -517,6 +517,11 @@ public class TokenHandler
                             userProfile.getSubjectID(),
                             URI.create(configurationService.getInternalSectorURI()),
                             dynamoService.getOrGenerateSalt(userProfile));
+
+            LOG.info(
+                    "is internalPairwiseSubjectId from authCodeExchangeData the same as that calculated from user profile: {}",
+                    Objects.equals(userId, authCodeExchangeData.getInternalPairwiseSubjectId()));
+
             Subject internalPairwiseSubject = new Subject(userId);
             tokenResponse =
                     segmentedFunctionCall(
