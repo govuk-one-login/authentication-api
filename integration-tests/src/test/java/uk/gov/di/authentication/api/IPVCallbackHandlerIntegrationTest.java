@@ -37,17 +37,16 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
@@ -110,18 +109,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
-                    ipvStub,
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    externalTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue);
+                    ipvStub, externalTokenSigner, ipvPrivateKeyJwtSigner, spotQueue);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String SESSION_ID = "some-session-id";
@@ -133,9 +125,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String TEST_INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final String TEST_RP_SECTOR_HOST = "test.com";
 
-    private static byte[] salt;
     private static String base64EncodedSalt;
-    private static String internalCommonSubjectId;
     private static String rpPairwiseId;
 
     @BeforeEach
@@ -145,19 +135,18 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         txmaAuditQueue.clear();
         spotQueue.clear();
 
-        setupUserProfileAndUserCredentials();
         setupClientStore();
 
-        salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        var salt = SaltHelper.generateNewSalt();
         base64EncodedSalt = Base64.getEncoder().encodeToString(salt);
-        internalCommonSubjectId =
+        var internalCommonSubjectId =
                 calculatePairwiseIdentifier(
                         TEST_SUBJECT.getValue(), TEST_INTERNAL_SECTOR_HOST, salt);
         rpPairwiseId =
                 calculatePairwiseIdentifier(TEST_SUBJECT.getValue(), TEST_RP_SECTOR_HOST, salt);
 
         setupOrchSession(internalCommonSubjectId);
-        setupAuthUserInfoTable(internalCommonSubjectId, salt);
+        setupAuthUserInfoTable(internalCommonSubjectId);
     }
 
     @Test
@@ -293,7 +282,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldSendCorrectRawStringToSpot() throws Json.JsonException {
+    void shouldSendCorrectRawStringToSpot() {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -534,8 +523,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     @Test
-    void shouldBypassSPoTAndReturnAuthCodeIfIPVReturnsP0ButReturnCodeIsPresentAndRequested()
-            throws Json.JsonException {
+    void shouldBypassSPoTAndReturnAuthCodeIfIPVReturnsP0ButReturnCodeIsPresentAndRequested() {
         ipvStub.initWithInvalidLoCAndReturnCode();
 
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -593,8 +581,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @Test
     void
-            shouldBypassSPoTAndReturnAccessDeniedErrorIfIPVReturnsP0AndReturnCodeIsPresentButNotRequested()
-                    throws Json.JsonException {
+            shouldBypassSPoTAndReturnAccessDeniedErrorIfIPVReturnsP0AndReturnCodeIsPresentButNotRequested() {
         ipvStub.initWithInvalidLoCAndReturnCode();
 
         var sessionId = "some-session-id";
@@ -642,11 +629,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(REDIRECT_URI + "?error=access_denied"));
     }
 
-    private void setupUserProfileAndUserCredentials() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password", TEST_SUBJECT);
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-    }
-
     private void setupClientStore() {
         clientStore
                 .createClient()
@@ -666,7 +648,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withInternalCommonSubjectId(internalCommonSubjectId));
     }
 
-    private void setupAuthUserInfoTable(String internalCommonSubjectId, byte[] salt) {
+    private void setupAuthUserInfoTable(String internalCommonSubjectId) {
         var userInfo =
                 new UserInfo(
                         new JSONObject(
@@ -699,9 +681,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         public TestConfigurationService(
                 IPVStubExtension ipvStub,
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue) {

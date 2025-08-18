@@ -12,7 +12,6 @@ import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.TermsAndConditions;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -50,12 +49,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void addVerifiedPhoneNumber(String email, String phoneNumber) {
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, phoneNumber, true, true);
-    }
-
-    public byte[] addSalt(String email) {
-        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(email).orElseThrow();
-
-        return dynamoService.getOrGenerateSalt(userProfile);
     }
 
     @Override
