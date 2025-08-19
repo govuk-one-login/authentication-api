@@ -6,8 +6,7 @@ module "oidc_jwks_role" {
 
   policies_to_attach = [
     aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
-    aws_iam_policy.doc_app_auth_kms_policy.arn,
-    local.doc_app_credential_encryption_policy_arn
+    aws_iam_policy.doc_app_auth_kms_policy.arn
   ]
   extra_tags = {
     Service = "jwks.json"
