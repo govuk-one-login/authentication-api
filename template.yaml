@@ -4337,8 +4337,6 @@ Resources:
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
