@@ -12,7 +12,7 @@ Metadata:
         - E1011
 
 Description: >
-  Auth API template for backend
+  SAM template for deploying auth-external-api and auth-internal-api
 
 Parameters:
   VpcStackName:
