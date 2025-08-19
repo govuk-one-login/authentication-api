@@ -535,7 +535,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                         .withClientId(CLIENT_ID.getValue())
                                         .withClientName(CLIENT_NAME)
                                         .withIsSmokeTest(false)
-                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)
+                                        .withInternalCommonSubjectId(expectedCommonSubject)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
