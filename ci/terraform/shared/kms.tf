@@ -531,57 +531,6 @@ resource "aws_kms_alias" "common_passwords_table_encryption_key_alias" {
   target_key_id = aws_kms_key.common_passwords_table_encryption_key.key_id
 }
 
-resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
-  description              = "KMS encryption key for doc app credential table in DynamoDB"
-  deletion_window_in_days  = 30
-  key_usage                = "ENCRYPT_DECRYPT"
-  customer_master_key_spec = "SYMMETRIC_DEFAULT"
-  enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json
-}
-
-resource "aws_kms_alias" "doc_app_credential_table_encryption_key_alias" {
-  name          = "alias/${var.environment}-doc-app-credential-table-encryption-key"
-  target_key_id = aws_kms_key.doc_app_credential_table_encryption_key.key_id
-}
-
-data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryption_key_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  statement {
-    sid    = "AllowOrchAccessToKmsDocAppSigningKey-${var.environment}"
-    effect = "Allow"
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
-    }
-  }
-}
-
 resource "aws_kms_key" "client_registry_table_encryption_key" {
   description              = "KMS encryption key for client registry table in DynamoDB"
   deletion_window_in_days  = 30
