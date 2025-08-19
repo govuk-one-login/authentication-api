@@ -2615,8 +2615,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
