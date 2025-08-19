@@ -20,7 +20,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.12"
     id "org.sonarqube" version "6.2.0.5505"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.2.4'
+    id 'com.github.spotbugs' version '6.2.5'
 }
 
 apply plugin: "java"
