@@ -125,7 +125,6 @@ Mappings:
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
@@ -154,7 +153,6 @@ Mappings:
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
@@ -183,7 +181,6 @@ Mappings:
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
@@ -213,7 +210,6 @@ Mappings:
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
@@ -241,7 +237,6 @@ Mappings:
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
-      userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
@@ -5481,108 +5476,6 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !GetAtt DocAppCredentialTableEncryptionKey.Arn
-
-  UserProfileTableReadAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowUserProfileTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:DescribeStream
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
-          - Sid: AllowUserProfileTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                userProfileTableKeyArn,
-              ]
-
-  UserProfileTableWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowUserProfileTableWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-              - dynamodb:BatchWriteItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
-          - Sid: AllowUserProfileTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                userProfileTableKeyArn,
-              ]
 
   RpPublicKeyCacheTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
