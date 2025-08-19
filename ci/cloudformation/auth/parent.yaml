@@ -1915,7 +1915,7 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource: !Sub
-              - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key}}"
+              - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key_v2}}"
               - env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
