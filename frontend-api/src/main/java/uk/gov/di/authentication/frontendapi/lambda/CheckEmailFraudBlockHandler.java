@@ -86,8 +86,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
             var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
 
-            if (configurationService.isEmailCheckEnabled()
-                    && status.equals(EmailCheckResultStatus.PENDING)) {
+            if (status.equals(EmailCheckResultStatus.PENDING)) {
                 submitAuditEvent(input, userContext, request);
             }
 

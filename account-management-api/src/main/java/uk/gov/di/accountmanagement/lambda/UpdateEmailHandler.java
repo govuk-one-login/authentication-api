@@ -179,8 +179,7 @@ public class UpdateEmailHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             new ArrayList<>());
 
-            if (configurationService.isEmailCheckEnabled()
-                    && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
+            if (resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                         auditContext.withSubjectId(userProfile.getSubjectID()),

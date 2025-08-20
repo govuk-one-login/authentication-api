@@ -194,7 +194,6 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(configurationService.getEmailAccountCreationOtpCodeExpiry())
                 .thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
@@ -401,25 +400,6 @@ class SendNotificationHandlerTest {
                     verifyNoInteractions(pendingEmailCheckSqsClient);
                 }
             }
-        }
-
-        @ParameterizedTest
-        @MethodSource("notificationTypeAndJourneyTypeArgs")
-        void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled(
-                NotificationType notificationType, JourneyType journeyType) {
-            when(configurationService.isEmailCheckEnabled()).thenReturn(false);
-            usingValidSession();
-
-            var body =
-                    format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                            EMAIL, notificationType, journeyType);
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-
-            assertEquals(204, result.getStatusCode());
-            verifyNoInteractions(pendingEmailCheckSqsClient);
         }
 
         @ParameterizedTest

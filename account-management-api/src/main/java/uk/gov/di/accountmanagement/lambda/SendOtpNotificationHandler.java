@@ -326,36 +326,34 @@ public class SendOtpNotificationHandler
             String persistentSessionId,
             boolean isTestUserRequest)
             throws JsonException {
-        if (configurationService.isEmailCheckEnabled()) {
-            var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(email);
-            if (emailCheckResult.isEmpty()) {
-                var userId =
-                        input.getRequestContext()
-                                .getAuthorizer()
-                                .getOrDefault("principalId", AuditService.UNKNOWN)
-                                .toString();
-                UUID requestReference = UUID.randomUUID();
-                long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
-                pendingEmailCheckSqsClient.send(
-                        objectMapper.writeValueAsString(
-                                new PendingEmailCheckRequest(
-                                        userId,
-                                        requestReference,
-                                        email,
-                                        sessionId,
-                                        clientSessionId,
-                                        persistentSessionId,
-                                        IpAddressHelper.extractIpAddress(input),
-                                        JourneyType.ACCOUNT_MANAGEMENT,
-                                        timeOfInitialRequest,
-                                        isTestUserRequest)));
-                LOG.info(
-                        "Email address check requested for {} at {}",
-                        requestReference,
-                        timeOfInitialRequest);
-            } else {
-                LOG.info("Skipped request for new email address check. Result already cached");
-            }
+        var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(email);
+        if (emailCheckResult.isEmpty()) {
+            var userId =
+                    input.getRequestContext()
+                            .getAuthorizer()
+                            .getOrDefault("principalId", AuditService.UNKNOWN)
+                            .toString();
+            UUID requestReference = UUID.randomUUID();
+            long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
+            pendingEmailCheckSqsClient.send(
+                    objectMapper.writeValueAsString(
+                            new PendingEmailCheckRequest(
+                                    userId,
+                                    requestReference,
+                                    email,
+                                    sessionId,
+                                    clientSessionId,
+                                    persistentSessionId,
+                                    IpAddressHelper.extractIpAddress(input),
+                                    JourneyType.ACCOUNT_MANAGEMENT,
+                                    timeOfInitialRequest,
+                                    isTestUserRequest)));
+            LOG.info(
+                    "Email address check requested for {} at {}",
+                    requestReference,
+                    timeOfInitialRequest);
+        } else {
+            LOG.info("Skipped request for new email address check. Result already cached");
         }
     }
 

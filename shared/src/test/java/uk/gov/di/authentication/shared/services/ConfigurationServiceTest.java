@@ -181,11 +181,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isEmailCheckEnabledShouldDefault() {
-        assertFalse(configurationService.isEmailCheckEnabled());
-    }
-
-    @Test
     void isBulkUserEmailEmailSendingEnabledShouldDefault() {
         assertFalse(configurationService.isBulkUserEmailEmailSendingEnabled());
     }

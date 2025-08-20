@@ -95,7 +95,6 @@ class CheckEmailFraudBlockHandlerTest {
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationServiceMock.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configurationServiceMock.isEmailCheckEnabled()).thenReturn(true);
         when(authenticationServiceMock.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         when(authenticationServiceMock.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
