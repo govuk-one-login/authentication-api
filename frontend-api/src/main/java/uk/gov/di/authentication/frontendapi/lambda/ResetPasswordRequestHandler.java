@@ -12,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -41,7 +40,6 @@ import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
@@ -53,8 +51,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -196,7 +192,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(500, ErrorResponse.STORAGE_LAYER_ERROR);
             }
 
-            if (updatedPermissionResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
+            if (updatedPermissionResult.getSuccess()
+                    instanceof Decision.TemporarilyLockedOut lockedOut) {
                 lockUserOutOfPasswordReset(userContext);
                 return generateApiGatewayProxyErrorResponse(
                         400, mapForbiddenReasonToErrorResponse(lockedOut.forbiddenReason()));
@@ -218,10 +215,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     }
 
     private void lockUserOutOfPasswordReset(UserContext userContext) {
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeRequestBlockedKeyPrefix =
+                CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
         LOG.info("Setting block for email as user has requested too many OTPs");
         codeStorageService.saveBlockedForEmail(
                 userContext.getAuthSession().getEmailAddress(),
@@ -311,10 +306,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     LOG.error("Could not find user profile for reset password request");
                     yield generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
                 }
-                case UNKNOWN_MFA_IDENTIFIER -> {
-                    yield generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.INVALID_MFA_METHOD);
-                }
+                case UNKNOWN_MFA_IDENTIFIER -> generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.INVALID_MFA_METHOD);
             };
         }
 
@@ -354,10 +347,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     private ErrorResponse mapForbiddenReasonToErrorResponse(ForbiddenReason forbiddenReason) {
         return switch (forbiddenReason) {
-            case EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT -> ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
-            case EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT -> ErrorResponse.TOO_MANY_PW_RESET_REQUESTS;
-            case EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT -> ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
-            case EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT -> ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
+            case EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT -> ErrorResponse
+                    .BLOCKED_FOR_PW_RESET_REQUEST;
+            case EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT -> ErrorResponse
+                    .TOO_MANY_PW_RESET_REQUESTS;
+            case EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT -> ErrorResponse
+                    .TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
+            case EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT -> ErrorResponse
+                    .TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
             default -> ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
         };
     }

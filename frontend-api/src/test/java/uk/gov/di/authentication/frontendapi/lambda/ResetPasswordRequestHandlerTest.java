@@ -16,10 +16,8 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -44,7 +42,6 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
-import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,8 +80,6 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSIO
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -112,7 +107,8 @@ class ResetPasswordRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
-    private final PermissionDecisionManager permissionDecisionManager = mock(PermissionDecisionManager.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final Context context = mock(Context.class);
     private static final String CLIENT_ID = "test-client-id";
 
@@ -492,8 +488,12 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
             usingSessionWithPasswordResetCount(0);
             when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
-                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT, 0, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT,
+                                            0,
+                                            null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -506,8 +506,13 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             usingSessionWithPasswordResetCount(0);
             when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
-                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT, 0, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT,
+                                            0,
+                                            null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -523,8 +528,13 @@ class ResetPasswordRequestHandlerTest {
             // First call permits, second call (after increment) blocks
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(5)))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
-                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT, 6, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT,
+                                            6,
+                                            null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -557,8 +567,13 @@ class ResetPasswordRequestHandlerTest {
             when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
             usingSessionWithPasswordResetCount(6);
             when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
-                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT, 6, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT,
+                                            6,
+                                            null)));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
