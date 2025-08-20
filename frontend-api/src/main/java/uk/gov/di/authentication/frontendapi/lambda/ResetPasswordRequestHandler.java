@@ -35,6 +35,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -62,6 +66,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final MFAMethodsService mfaMethodsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -72,7 +77,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             CodeStorageService codeStorageService,
             AuditService auditService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -84,6 +90,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.mfaMethodsService = mfaMethodsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public ResetPasswordRequestHandler() {
@@ -101,6 +108,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     public ResetPasswordRequestHandler(
@@ -115,6 +124,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     @Override
@@ -138,12 +149,25 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
-            var userIsAlreadyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
+            var userPermissionContext =
+                    new UserPermissionContext(
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            null,
+                            request.getEmail(),
+                            userContext.getAuthSession());
 
-            if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
+            var permissionResult =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            if (permissionResult.isFailure()) {
+                LOG.error("Permission decision failed: {}", permissionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(500, ErrorResponse.STORAGE_LAYER_ERROR);
+            }
+
+            if (permissionResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
                 return generateApiGatewayProxyErrorResponse(
-                        400, userIsAlreadyLockedOutOfPasswordReset.get());
+                        400, mapForbiddenReasonToErrorResponse(lockedOut.forbiddenReason()));
             }
 
             var isTestClient =
@@ -155,13 +179,27 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             authSessionService.updateSession(
                     userContext.getAuthSession().incrementPasswordResetCount());
 
-            var userIsNewlyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
+            // Re-check permissions after incrementing counter
+            var updatedUserPermissionContext =
+                    new UserPermissionContext(
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            null,
+                            request.getEmail(),
+                            userContext.getAuthSession());
 
-            if (userIsNewlyLockedOutOfPasswordReset.isPresent()) {
+            var updatedPermissionResult =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, updatedUserPermissionContext);
+
+            if (updatedPermissionResult.isFailure()) {
+                LOG.error("Permission decision failed: {}", updatedPermissionResult.getFailure());
+                return generateApiGatewayProxyErrorResponse(500, ErrorResponse.STORAGE_LAYER_ERROR);
+            }
+
+            if (updatedPermissionResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
                 lockUserOutOfPasswordReset(userContext);
                 return generateApiGatewayProxyErrorResponse(
-                        400, userIsNewlyLockedOutOfPasswordReset.get());
+                        400, mapForbiddenReasonToErrorResponse(lockedOut.forbiddenReason()));
             }
 
             authSessionService.updateSession(
@@ -314,27 +352,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         }
     }
 
-    private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
-            String email, UserContext userContext) {
-        LOG.info("Validating Password Reset Count");
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestCount = userContext.getAuthSession().getPasswordResetCount();
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
-        }
-        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {
-            LOG.info("Code is blocked for email as user has requested too many OTPs");
-            return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-        }
-        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
-            LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
-        }
-        return Optional.empty();
+    private ErrorResponse mapForbiddenReasonToErrorResponse(ForbiddenReason forbiddenReason) {
+        return switch (forbiddenReason) {
+            case EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT -> ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+            case EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT -> ErrorResponse.TOO_MANY_PW_RESET_REQUESTS;
+            case EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT -> ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
+            case EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT -> ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED;
+            default -> ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+        };
     }
 
     private String serialiseNotifyRequest(Object request) {

@@ -40,6 +40,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -107,6 +112,7 @@ class ResetPasswordRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PermissionDecisionManager permissionDecisionManager = mock(PermissionDecisionManager.class);
     private final Context context = mock(Context.class);
     private static final String CLIENT_ID = "test-client-id";
 
@@ -137,7 +143,8 @@ class ResetPasswordRequestHandlerTest {
                     codeStorageService,
                     auditService,
                     authSessionService,
-                    mfaMethodsService);
+                    mfaMethodsService,
+                    permissionDecisionManager);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -170,6 +177,9 @@ class ResetPasswordRequestHandlerTest {
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
+        // Default behavior: permit requests
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
     }
 
     @Nested
@@ -481,13 +491,9 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
             usingSessionWithPasswordResetCount(0);
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-            when(codeStorageService.isBlockedForEmail(
-                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
-                    .thenReturn(true);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_REQUEST_LIMIT, 0, null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -499,13 +505,9 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             usingSessionWithPasswordResetCount(0);
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-            when(codeStorageService.isBlockedForEmail(
-                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
-                    .thenReturn(true);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_SUBMISSION_LIMIT, 0, null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -518,13 +520,11 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsNewlyBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             when(configurationService.getCodeMaxRetries()).thenReturn(6);
             usingSessionWithPasswordResetCount(5);
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-            when(codeStorageService.isBlockedForEmail(
-                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
-                    .thenReturn(false);
+            // First call permits, second call (after increment) blocks
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(5)))
+                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT, 6, null)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -556,6 +556,9 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
             when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
             usingSessionWithPasswordResetCount(6);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(
+                            ForbiddenReason.EXCEEDED_PASSWORD_RESET_CODE_REQUEST_LIMIT, 6, null)));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
@@ -577,6 +580,19 @@ class ResetPasswordRequestHandlerTest {
             verifyNoInteractions(awsSqsClient);
             verifyNoInteractions(codeStorageService);
             verifyNoInteractions(auditService);
+        }
+
+        @Test
+        void shouldReturn500IfPermissionDecisionManagerFails() {
+            usingSessionWithPasswordResetCount(0);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(500, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
+            verifyNoInteractions(awsSqsClient);
         }
     }
 
