@@ -195,11 +195,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
                 }
-
-                @Override
-                public boolean isEmailCheckEnabled() {
-                    return true;
-                }
             };
 
     protected static final ConfigurationService
