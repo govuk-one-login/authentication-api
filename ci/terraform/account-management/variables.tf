@@ -170,12 +170,6 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
-}
-
 variable "legacy_account_deletion_topic_arn" {
   type        = string
   description = "SNS ARN for the account deletion topic owned by Home for use with the manual account deletion lambda. A dev topic is created if this value is not provided."

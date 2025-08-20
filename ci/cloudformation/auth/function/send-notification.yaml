@@ -62,7 +62,6 @@ Resources:
               Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           REDIS_KEY: "session"
-          SUPPORT_EMAIL_CHECK_ENABLED: true
           SUPPORT_REAUTH_SIGNOUT_ENABLED:
             !FindInMap [
               EnvironmentConfiguration,

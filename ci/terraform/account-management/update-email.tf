@@ -27,12 +27,11 @@ module "update_email" {
   path_part       = "update-email"
   endpoint_method = ["POST"]
   handler_environment_variables = {
-    ENVIRONMENT                 = var.environment
-    EMAIL_QUEUE_URL             = aws_sqs_queue.email_queue.id
-    REDIS_KEY                   = local.redis_key
-    TXMA_AUDIT_QUEUE_URL        = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI         = var.internal_sector_uri
-    SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
+    ENVIRONMENT          = var.environment
+    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
+    REDIS_KEY            = local.redis_key
+    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest"
 
