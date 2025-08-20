@@ -91,7 +91,8 @@ class CheckReAuthUserHandlerTest {
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL_USED_TO_SIGN_IN)
                     .withClientId(CLIENT_ID)
-                    .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST);
+                    .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)
+                    .withInternalCommonSubjectId(TEST_SUBJECT_ID);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
@@ -204,7 +205,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        testAuditContextWithAuditEncoded,
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         pair("incorrect_email_attempt_count", 1),
                         pair("user_supplied_email", EMAIL_USED_TO_SIGN_IN, true));
@@ -340,7 +341,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        testAuditContextWithAuditEncoded,
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         pair("incorrect_email_attempt_count", 3),
                         pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true));
@@ -368,7 +369,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        testAuditContextWithAuditEncoded,
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         pair("incorrect_email_attempt_count", 3),
                         pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true),
@@ -398,7 +399,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        testAuditContextWithAuditEncoded,
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         pair("incorrect_email_attempt_count", 1),
                         pair("user_supplied_email", EMAIL_USED_TO_SIGN_IN, true));

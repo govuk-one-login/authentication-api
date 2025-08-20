@@ -79,6 +79,7 @@ class StartHandlerTest {
 
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
+    private static final String TEST_SUBJECT_ID = "test_subject_id";
     private static final String TEST_RP_PAIRWISE_ID = "test_rp_pairwise_id";
     private static final String TEST_PREVIOUS_SIGN_IN_JOURNEY_ID = "test_journey_id";
     private static final String TEST_RP_SUBJECT_ID_HOST = "example.com";
@@ -152,7 +153,7 @@ class StartHandlerTest {
             throws Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -169,8 +170,8 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
-                        AUDIT_CONTEXT,
-                        pair("internalSubjectId", AuditService.UNKNOWN));
+                        AUDIT_CONTEXT.withSubjectId(TEST_SUBJECT_ID),
+                        pair("internalSubjectId", TEST_SUBJECT_ID));
     }
 
     @Test
@@ -179,7 +180,7 @@ class StartHandlerTest {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
 
         var body =
                 makeRequestBody(
@@ -198,19 +199,19 @@ class StartHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
-                        AUDIT_CONTEXT,
-                        pair("internalSubjectId", AuditService.UNKNOWN));
-        verify(auditService)
-                .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withSubjectId(TEST_SUBJECT_ID),
                         pair("previous_govuk_signin_journey_id", TEST_PREVIOUS_SIGN_IN_JOURNEY_ID),
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                         Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
+                        AUDIT_CONTEXT.withSubjectId(TEST_SUBJECT_ID),
+                        pair("internalSubjectId", TEST_SUBJECT_ID));
     }
 
     @Test
@@ -227,7 +228,7 @@ class StartHandlerTest {
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
@@ -244,7 +245,7 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
@@ -258,7 +259,7 @@ class StartHandlerTest {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
 
         var headers = headersWithReauthenticate("true");
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
@@ -271,17 +272,21 @@ class StartHandlerTest {
         assertThat(result, hasStatus(200));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
-                        pair("internalSubjectId", AuditService.UNKNOWN));
-        verify(auditService)
-                .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                        AUDIT_CONTEXT
+                                .withSubjectId(TEST_SUBJECT_ID)
+                                .withTxmaAuditEncoded(Optional.empty()));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                         Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
+                        AUDIT_CONTEXT
+                                .withSubjectId(TEST_SUBJECT_ID)
+                                .withTxmaAuditEncoded(Optional.empty()),
+                        pair("internalSubjectId", TEST_SUBJECT_ID));
     }
 
     @Test
@@ -289,7 +294,7 @@ class StartHandlerTest {
         withNoUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -314,7 +319,7 @@ class StartHandlerTest {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        useValidSession();
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -339,7 +344,7 @@ class StartHandlerTest {
             throws Json.JsonException {
         withUserProfilePresent();
         var isAuthenticated = true;
-        usingValidSession();
+        useValidSession();
         var userStartInfo =
                 new UserStartInfo(false, false, isAuthenticated, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -401,13 +406,13 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
-        when(userProfile.getSubjectID()).thenReturn("testSubjectId");
+        when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
         var isAuthenticated = true;
-        usingValidSession();
+        useValidSession();
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
 
@@ -419,7 +424,7 @@ class StartHandlerTest {
         verify(auditService, times(1))
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                        AUDIT_CONTEXT,
+                        AUDIT_CONTEXT.withSubjectId(TEST_SUBJECT_ID),
                         AuditService.MetadataPair.pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         AuditService.MetadataPair.pair(
                                 "incorrect_email_attempt_count", expectedEmailAttemptCount),
@@ -443,10 +448,13 @@ class StartHandlerTest {
         return makeRequestBody(null, null, null, authenticated);
     }
 
-    private void usingValidSession() {
+    private void useValidSession() {
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(
-                        new AuthSessionItem().withSessionId(SESSION_ID).withClientId(CLIENT_ID));
+                        new AuthSessionItem()
+                                .withSessionId(SESSION_ID)
+                                .withClientId(CLIENT_ID)
+                                .withInternalCommonSubjectId(TEST_SUBJECT_ID));
     }
 
     private ClientStartInfo getClientStartInfo() {

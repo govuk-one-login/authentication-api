@@ -213,7 +213,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         getReauthFailureReasonFromCountTypes(exceedingCounts);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                        auditContext,
+                        auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(reauthCounts)
                                 .withFailureReason(failureReason)
@@ -266,7 +266,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     auditContext,
                     userProfile,
                     isReauthJourney,
-                    calculatedPairwiseId);
+                    calculatedPairwiseId,
+                    authSession);
         }
 
         return handleValidCredentials(
@@ -454,7 +455,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             UserProfile userProfile,
             boolean isReauthJourney,
-            String calculatedPairwiseId) {
+            String calculatedPairwiseId,
+            AuthSessionItem authSession) {
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
         incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
@@ -472,7 +474,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                        auditContext,
+                        auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(
                                         authenticationAttemptsService
