@@ -108,7 +108,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final URI RP_REDIRECT_URI = URI.create("https://rp-uri/redirect");
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PASSWORD = "password";
     private static final KeyPair RP_KEY_PAIR = generateRsaKeyPair();
     private static final KeyPair AUTH_ENCRYPTION_KEY_PAIR = generateRsaKeyPair();
     private static final String AUTH_PUBLIC_ENCRYPTION_KEY =
@@ -522,7 +521,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             .getSession(previousSessionId)
                             .orElseThrow()
                             .withBrowserSessionId(BROWSER_SESSION_ID));
-            registerUser();
 
             var response =
                     makeRequest(
@@ -573,7 +571,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldRedirectToLoginUriWhenUserHasPreviousSession() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
-            registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
             var response =
@@ -619,7 +616,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
-            registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
             var response =
@@ -664,7 +660,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors() {
             setupForAuthJourney();
             String sessionId = givenAnExistingSession();
-            registerUser();
 
             var response =
                     makeRequest(
@@ -716,7 +711,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
-            registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
             var response =
@@ -764,7 +758,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
-            registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
             var response =
@@ -814,7 +807,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() {
             setupForAuthJourney();
             String previousSessionId = givenAnExistingSession();
-            registerUser();
             withExistingOrchSessionAndBsid(previousSessionId);
 
             var response =
@@ -2205,10 +2197,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
         return response.getHeaders().get(ResponseHeaders.LOCATION);
-    }
-
-    private void registerUser() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {

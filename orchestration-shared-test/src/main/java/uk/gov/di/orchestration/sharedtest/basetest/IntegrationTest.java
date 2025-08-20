@@ -22,7 +22,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RedisExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
 import java.net.URI;
@@ -199,9 +198,6 @@ public class IntegrationTest {
 
     @RegisterExtension
     protected static final RedisExtension redis = new RedisExtension(TEST_CONFIGURATION_SERVICE);
-
-    @RegisterExtension
-    protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();

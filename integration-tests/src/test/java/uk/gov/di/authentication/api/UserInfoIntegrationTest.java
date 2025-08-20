@@ -67,14 +67,11 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
-    private static final String TEST_PASSWORD = "password-1";
     private static final String CLIENT_ID = "client-id-one";
     private static final String APP_CLIENT_ID = "app-client-id-one";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Subject PUBLIC_SUBJECT = new Subject();
-    private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final String JOURNEY_ID = "client-session-id";
     private static final Scope DOC_APP_SCOPES =
@@ -452,8 +449,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             identityStore.addCoreIdentityJWT(
                     JOURNEY_ID, PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         clientStore
                 .createClient()
                 .withClientId(CLIENT_ID)

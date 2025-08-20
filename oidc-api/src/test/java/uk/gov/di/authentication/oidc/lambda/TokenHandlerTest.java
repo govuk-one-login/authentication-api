@@ -54,7 +54,6 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -63,7 +62,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -119,7 +117,6 @@ import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaK
 public class TokenHandlerTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String PHONE_NUMBER = "01234567890";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -155,7 +152,6 @@ public class TokenHandlerTest {
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
     private final Context context = mock(Context.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenService tokenService = mock(TokenService.class);
     private final TokenValidationService tokenValidationService =
@@ -208,7 +204,6 @@ public class TokenHandlerTest {
     @MethodSource("validVectorValues")
     void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
-        UserProfile userProfile = generateUserProfile();
         KeyPair keyPair = generateRsaKeyPair();
         SignedJWT signedJWT =
                 generateIDToken(
@@ -280,7 +275,6 @@ public class TokenHandlerTest {
     void shouldReturn400ForTokenRequestIfClientIdInAuthCodeIsDifferentFromRequestParams()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -342,7 +336,6 @@ public class TokenHandlerTest {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -565,7 +558,6 @@ public class TokenHandlerTest {
     void shouldReturn400IfClientSessionIsNotValid()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -752,7 +744,6 @@ public class TokenHandlerTest {
         void shouldReturn200IfCodeChallengeAndVerifierIsCorrect()
                 throws JOSEException, TokenAuthInvalidException {
             KeyPair keyPair = generateRsaKeyPair();
-            UserProfile userProfile = generateUserProfile();
             SignedJWT signedJWT =
                     generateIDToken(
                             CLIENT_ID,
@@ -1070,7 +1061,6 @@ public class TokenHandlerTest {
         void shouldNotValidateCodeIfCodeChallengeAndCodeVerifierDoesNotExist()
                 throws JOSEException, TokenAuthInvalidException {
             KeyPair keyPair = generateRsaKeyPair();
-            UserProfile userProfile = generateUserProfile();
             SignedJWT signedJWT =
                     generateIDToken(
                             CLIENT_ID,
@@ -1204,7 +1194,6 @@ public class TokenHandlerTest {
     void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         DOC_APP_CLIENT_ID.getValue(),
@@ -1285,7 +1274,6 @@ public class TokenHandlerTest {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -1345,7 +1333,6 @@ public class TokenHandlerTest {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -1406,7 +1393,6 @@ public class TokenHandlerTest {
     void shouldReturn500ForTokenRequestIfOrchAuthCodeGetExchangeDataThrowsException()
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
-        UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
@@ -1509,19 +1495,6 @@ public class TokenHandlerTest {
                 .thenReturn(Optional.of(authCodeExchangeData));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL)
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withSubjectID(INTERNAL_SUBJECT.getValue())
-                .withCreated(LocalDateTime.now().toString())
-                .withUpdated(LocalDateTime.now().toString())
-                .withPublicSubjectID(new Subject().getValue())
-                .withSalt(SALT);
     }
 
     private SignedJWT createSignedRefreshToken() throws JOSEException {

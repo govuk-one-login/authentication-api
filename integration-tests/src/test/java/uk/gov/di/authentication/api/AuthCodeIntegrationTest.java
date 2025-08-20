@@ -85,7 +85,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private String sessionID;
 
     @BeforeEach
-    void setup() throws Json.JsonException {
+    void setup() {
         handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
         sessionID = IdGenerator.generate();
@@ -106,7 +106,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         orchClientSessionExtension.storeClientSession(orchClientSession);
-        userStore.signUp(EMAIL, "password");
         registerClient(new Scope(OIDCScopeValue.OPENID));
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionID);

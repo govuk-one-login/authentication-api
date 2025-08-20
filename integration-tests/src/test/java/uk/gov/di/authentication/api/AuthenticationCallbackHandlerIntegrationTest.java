@@ -53,11 +53,9 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
@@ -161,9 +159,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         configurationService =
                 new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
                         authExternalApiStub,
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
                         externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
@@ -802,8 +797,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             setupMaxAgeSession();
             setupPreviousSessions(DIFFERENT_INTERNAL_COMMON_SUBJECT_ID);
             setupPreviousClientsAndPreviousClientSessions();
-            // Sending back channel logouts requires a user store entry
-            userStore.signUp(TEST_EMAIL_ADDRESS, "");
 
             var response =
                     makeRequest(
@@ -841,7 +834,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             assertBackChannelLogoutsSent(PREVIOUS_CLIENTS_FOR_CLIENT_SESSION);
         }
 
-        private void setupMaxAgeSession() throws Json.JsonException {
+        private void setupMaxAgeSession() {
             stateStorageExtension.storeState(
                     AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID,
                     ORCH_TO_AUTH_STATE.getValue());
@@ -852,8 +845,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             .addClientSession(CLIENT_SESSION_ID));
         }
 
-        private void setupPreviousSessions(String internalCommonSubjectId)
-                throws Json.JsonException {
+        private void setupPreviousSessions(String internalCommonSubjectId) {
             var orchSession =
                     new OrchSessionItem(PREVIOUS_SESSION_ID)
                             .withInternalCommonSubjectId(internalCommonSubjectId)
@@ -1047,9 +1039,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         configurationService =
                 new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
                         authExternalApiStub,
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
                         externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
@@ -1061,7 +1050,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         txmaAuditQueue.clear();
     }
 
-    private void setupSession() throws Json.JsonException {
+    private void setupSession() {
         stateStorageExtension.storeState(
                 AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID, ORCH_TO_AUTH_STATE.getValue());
         setUpClientSession();
@@ -1087,9 +1076,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         public TestConfigurationService(
                 AuthExternalApiStubExtension authExternalApiStub,
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,

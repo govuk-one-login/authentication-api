@@ -1,12 +1,9 @@
 package uk.gov.di.orchestration.shared.helpers;
 
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jose4j.base64url.Base64Url;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -14,29 +11,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.stream.Collectors;
 
-import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
-
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
     private static final String PAIRWISE_PREFIX = "urn:fdc:gov.uk:2022:";
     private static final String WALLET_PAIRWISE_PREFIX = "urn:fdc:wallet.account.gov.uk:2024:";
-
-    public static Subject getSubject(
-            UserProfile userProfile,
-            ClientRegistry client,
-            AuthenticationService authenticationService,
-            String internalSectorURI) {
-        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
-            return new Subject(userProfile.getPublicSubjectID());
-        } else {
-            return new Subject(
-                    calculatePairwiseIdentifier(
-                            userProfile.getSubjectID(),
-                            getSectorIdentifierForClient(client, internalSectorURI),
-                            authenticationService.getOrGenerateSalt(userProfile)));
-        }
-    }
 
     public static String getSectorIdentifierForClient(
             ClientRegistry client, String internalSectorUri) {
