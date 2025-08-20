@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
@@ -15,10 +15,8 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -26,17 +24,13 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.ArrayList;
-import java.util.Optional;
-
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailFraudBlockRequest> {
 
     private static final Logger LOG = LogManager.getLogger(CheckEmailFraudBlockHandler.class);
 
-    private final AuditService auditService;
+    private final StructuredAuditService auditService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
 
     protected CheckEmailFraudBlockHandler(
@@ -44,7 +38,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             ClientService clientService,
             AuthenticationService authenticationService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
-            AuditService auditService,
+            StructuredAuditService auditService,
             AuthSessionService authSessionService) {
         super(
                 CheckEmailFraudBlockRequest.class,
@@ -60,7 +54,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         super(CheckEmailFraudBlockRequest.class, configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
+        this.auditService = new StructuredAuditService(configurationService);
     }
 
     public CheckEmailFraudBlockHandler() {
@@ -113,31 +107,21 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             CheckEmailFraudBlockRequest request) {
-
-        var sessionId =
-                RequestHeaderHelper.getHeaderValueOrElse(
-                        input.getHeaders(), SESSION_ID_HEADER, AuditService.UNKNOWN);
-
-        var auditContext =
-                new AuditContext(
+        var newAuditEvent =
+                AuthEmailFraudCheckBypassed.create(
                         userContext.getAuthSession().getClientId(),
-                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                        sessionId,
-                        AuditService.UNKNOWN,
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()),
-                        new ArrayList<>());
+                        new AuthEmailFraudCheckBypassed.User(
+                                StructuredAuditService.UNKNOWN,
+                                request.getEmail(),
+                                IpAddressHelper.extractIpAddress(input),
+                                PersistentIdHelper.extractPersistentIdFromHeaders(
+                                        input.getHeaders()),
+                                ClientSessionIdHelper.extractSessionIdFromHeaders(
+                                        input.getHeaders())),
+                        new AuthEmailFraudCheckBypassed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                NowHelper.toUnixTimestamp(NowHelper.now())));
 
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
-                auditContext,
-                AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
-                AuditService.MetadataPair.pair(
-                        "assessment_checked_at_timestamp",
-                        NowHelper.toUnixTimestamp(NowHelper.now())),
-                AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+        auditService.submitAuditEvent(newAuditEvent);
     }
 }

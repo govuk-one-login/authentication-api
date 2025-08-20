@@ -8,10 +8,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -22,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -30,11 +30,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.ArrayList;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -58,7 +58,7 @@ class CheckEmailFraudBlockHandlerTest {
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
-    private static AuditService auditServiceMock;
+    private static StructuredAuditService auditServiceMock;
     private static AuthenticationService authenticationServiceMock;
     private static Context contextMock;
     private static ConfigurationService configurationServiceMock;
@@ -77,7 +77,7 @@ class CheckEmailFraudBlockHandlerTest {
         contextMock = mock(Context.class);
         dbMock = mock(DynamoEmailCheckResultService.class);
         clientServiceMock = mock(ClientService.class);
-        auditServiceMock = mock(AuditService.class);
+        auditServiceMock = mock(StructuredAuditService.class);
         configurationServiceMock = mock(ConfigurationService.class);
         authenticationServiceMock = mock(AuthenticationService.class);
         clientRegistry = mock(ClientRegistry.class);
@@ -87,6 +87,8 @@ class CheckEmailFraudBlockHandlerTest {
 
     @BeforeEach
     void setup() {
+        Mockito.reset(auditServiceMock);
+
         var userProfile = generateUserProfile();
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -171,25 +173,23 @@ class CheckEmailFraudBlockHandlerTest {
             assertThat(result, hasStatus(200));
             assertThat(result, hasJsonBody(expectedResponse));
 
-            verify(auditServiceMock)
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
-                            new AuditContext(
-                                    CLIENT_ID,
-                                    CLIENT_SESSION_ID,
-                                    SESSION_ID,
-                                    AuditService.UNKNOWN,
-                                    EMAIL,
-                                    IP_ADDRESS,
-                                    AuditService.UNKNOWN,
-                                    DI_PERSISTENT_SESSION_ID,
-                                    Optional.of(ENCODED_DEVICE_DETAILS),
-                                    new ArrayList<>()),
-                            AuditService.MetadataPair.pair(
-                                    "journey_type", JourneyType.REGISTRATION.getValue()),
-                            AuditService.MetadataPair.pair(
-                                    "assessment_checked_at_timestamp", mockedTimestamp),
-                            AuditService.MetadataPair.pair("iss", "AUTH"));
+            ArgumentCaptor<AuthEmailFraudCheckBypassed> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthEmailFraudCheckBypassed.class);
+            verify(auditServiceMock).submitAuditEvent(auditEventCaptor.capture());
+
+            AuthEmailFraudCheckBypassed capturedEvent = auditEventCaptor.getValue();
+            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_BYPASSED"));
+            assertThat(capturedEvent.clientId(), is(CLIENT_ID));
+            assertThat(capturedEvent.user().email(), is(EMAIL));
+            assertThat(capturedEvent.user().ipAddress(), is(IP_ADDRESS));
+            assertThat(capturedEvent.user().persistentSessionId(), is(DI_PERSISTENT_SESSION_ID));
+            assertThat(capturedEvent.user().govukSigninJourneyId(), is(CLIENT_SESSION_ID));
+            assertThat(capturedEvent.user().userId(), is(StructuredAuditService.UNKNOWN));
+            assertThat(
+                    capturedEvent.extensions().journeyType(),
+                    is(JourneyType.REGISTRATION.getValue()));
+            assertThat(
+                    capturedEvent.extensions().assessmentCheckedAtTimestamp(), is(mockedTimestamp));
         }
     }
 
