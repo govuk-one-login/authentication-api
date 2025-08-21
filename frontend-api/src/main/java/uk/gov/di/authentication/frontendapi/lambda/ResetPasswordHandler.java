@@ -118,7 +118,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager();
-        this.userActionsManager = new UserActionsManager(codeStorageService);
+        this.userActionsManager = new UserActionsManager();
     }
 
     public ResetPasswordHandler(
@@ -137,7 +137,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager();
-        this.userActionsManager = new UserActionsManager(codeStorageService);
+        this.userActionsManager = new UserActionsManager();
     }
 
     @Override

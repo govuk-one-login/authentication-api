@@ -181,4 +181,82 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(0));
     }
+
+    @Test
+    void shouldReturn400WhenSessionIdMissing() {
+        String email = "joe.bloggs+7@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        userStore.signUp(email, password);
+        String sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        // Don't add email to session
+        String persistentSessionId = "test-persistent-id";
+        var clientSessionId = IdGenerator.generate();
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordRequest(email)),
+                        constructFrontendHeaders(sessionId, clientSessionId, persistentSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+    }
+
+    @Test
+    void shouldReturn400WhenEmailMismatchWithSession() {
+        String email = "joe.bloggs+8@digital.cabinet-office.gov.uk";
+        String differentEmail = "different@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        userStore.signUp(email, password);
+        String sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        authSessionStore.addEmailToSession(sessionId, email);
+        String persistentSessionId = "test-persistent-id";
+        var clientSessionId = IdGenerator.generate();
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordRequest(differentEmail)),
+                        constructFrontendHeaders(sessionId, clientSessionId, persistentSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+    }
+
+    @Test
+    void shouldReturn400WhenUserExceedsMaxPasswordResetRequestsOnSixthRequest() {
+        String email = "joe.bloggs+9@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        String phoneNumber = "01234567890";
+        userStore.signUp(email, password);
+        userStore.addVerifiedPhoneNumber(email, phoneNumber);
+        String sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        authSessionStore.addEmailToSession(sessionId, email);
+        String persistentSessionId = "test-persistent-id";
+        var clientSessionId = IdGenerator.generate();
+        registerClient(
+                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
+        authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
+
+        // Make exactly 6 requests - the 6th should return TOO_MANY_PW_RESET_REQUESTS
+        for (int i = 0; i < 6; i++) {
+            var response =
+                    makeRequest(
+                            Optional.of(new ResetPasswordRequest(email)),
+                            constructFrontendHeaders(
+                                    sessionId, clientSessionId, persistentSessionId),
+                            Map.of());
+
+            if (i < 5) {
+                assertThat(response, hasStatus(200));
+            } else {
+                // 6th request should return TOO_MANY_PW_RESET_REQUESTS
+                assertThat(response, hasStatus(400));
+                assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
+            }
+        }
+    }
 }

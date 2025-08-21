@@ -192,7 +192,7 @@ class PermissionDecisionManagerTest {
     private UserPermissionContext createUserContext(int passwordResetCount) {
         var authSession = new AuthSessionItem().withEmailAddress(EMAIL);
         for (int i = 0; i < passwordResetCount; i++) {
-            authSession.incrementPasswordResetCount();
+            authSession = authSession.incrementPasswordResetCount();
         }
 
         return new UserPermissionContext(

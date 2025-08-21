@@ -54,17 +54,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
             var codeRequestCount = userPermissionContext.authSessionItem().getPasswordResetCount();
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
-            if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
+            // Check Redis block first - return -1 to indicate Redis block exists
+            if (codeStorageService.isBlockedForEmail(
+                    userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                                codeRequestCount,
+                                -1, // Special value to indicate Redis block
                                 Instant.now()
                                         .plusSeconds(configurationService.getLockoutDuration())));
             }
 
-            if (codeStorageService.isBlockedForEmail(
-                    userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
+            // Check if count will exceed limit after increment (since ResetPasswordRequestHandler
+            // increments after this check)
+            if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
