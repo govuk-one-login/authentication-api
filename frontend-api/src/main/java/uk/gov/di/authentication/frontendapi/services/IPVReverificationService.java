@@ -223,6 +223,10 @@ public class IPVReverificationService {
                     LOG.warn(
                             "No RSA key found on the JWKS endpoint, falling back to retrieving the public key from the environment variables.",
                             e);
+                } catch (Exception e) {
+                    LOG.warn(
+                            "Unexpected error occurred when retrieving encryption JWK from the JWKS endpoint, falling back to retrieving the public key from the environment variables.",
+                            e);
                 }
             }
 
