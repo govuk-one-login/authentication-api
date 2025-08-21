@@ -176,3 +176,6 @@ performance_tuning = {
 }
 lambda_max_concurrency = 10
 lambda_min_concurrency = 3
+
+ipv_jwks_call_enabled = true
+ipv_jwks_url          = "https://api.identity.account.gov.uk/.well-known/jwks.json"
