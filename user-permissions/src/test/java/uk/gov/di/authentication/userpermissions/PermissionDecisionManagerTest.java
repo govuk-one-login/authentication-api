@@ -50,7 +50,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess(), "Expected Permitted decision");
+            var decision =
+                    assertInstanceOf(
+                            Decision.Permitted.class,
+                            result.getSuccess(),
+                            "Expected Permitted decision");
             assertEquals(0, decision.attemptCount());
         }
 
@@ -63,7 +67,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess(), "Expected Permitted decision");
+            var decision =
+                    assertInstanceOf(
+                            Decision.Permitted.class,
+                            result.getSuccess(),
+                            "Expected Permitted decision");
             assertEquals(3, decision.attemptCount());
         }
 
@@ -76,7 +84,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut = assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess(), "Expected TemporarilyLockedOut decision");
+            var lockedOut =
+                    assertInstanceOf(
+                            Decision.TemporarilyLockedOut.class,
+                            result.getSuccess(),
+                            "Expected TemporarilyLockedOut decision");
             assertEquals(
                     ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                     lockedOut.forbiddenReason());
@@ -98,7 +110,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut = assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess(), "Expected TemporarilyLockedOut decision");
+            var lockedOut =
+                    assertInstanceOf(
+                            Decision.TemporarilyLockedOut.class,
+                            result.getSuccess(),
+                            "Expected TemporarilyLockedOut decision");
             assertEquals(
                     ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                     lockedOut.forbiddenReason());
@@ -112,10 +128,15 @@ class PermissionDecisionManagerTest {
         void shouldReturnPermittedForNonPasswordResetJourney() {
             var userContext = createUserContext(0);
 
-            var result = permissionDecisionManager.canVerifyEmailOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifyEmailOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess(), "Expected Permitted decision");
+            var decision =
+                    assertInstanceOf(
+                            Decision.Permitted.class,
+                            result.getSuccess(),
+                            "Expected Permitted decision");
             assertEquals(0, decision.attemptCount());
         }
 
@@ -134,7 +155,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess(), "Expected Permitted decision");
+            var decision =
+                    assertInstanceOf(
+                            Decision.Permitted.class,
+                            result.getSuccess(),
+                            "Expected Permitted decision");
             assertEquals(0, decision.attemptCount());
         }
 
@@ -153,7 +178,11 @@ class PermissionDecisionManagerTest {
                             JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess(), "Expected result to be successful");
-            var lockedOut = assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess(), "Expected TemporarilyLockedOut decision");
+            var lockedOut =
+                    assertInstanceOf(
+                            Decision.TemporarilyLockedOut.class,
+                            result.getSuccess(),
+                            "Expected TemporarilyLockedOut decision");
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
