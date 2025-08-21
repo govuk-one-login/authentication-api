@@ -35,6 +35,9 @@ Parameters:
   LambdaDeploymentPreference:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
+  BackupTemplateStorageBucket:
+    Type: String
+    Default: https://backup-template-storage-templatebucket-747f3bzunrod.s3.eu-west-2.amazonaws.com
 
 Conditions:
   UsePermissionsBoundary:
@@ -7194,6 +7197,17 @@ Resources:
             Period: 60
             Stat: Average
   #endregion
+
+  #region Backup monitoring stack
+  BackupVaultMonitoring:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub ${BackupTemplateStorageBucket}/backup-vault-monitoring/template.yaml
+      Parameters:
+        Environment: !If [IsProduction, production, "non-prod"]
+        DeployChatBot: "Yes"
+        CreateChatBotRole: "Yes"
+        SlackChannelId: !If [IsProduction, "C072F1QUKQV", "C072WHLJRRP"]
 
   #endregion
 
