@@ -136,7 +136,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
-        this.permissionDecisionManager = new PermissionDecisionManager(codeStorageService);
+        this.permissionDecisionManager = new PermissionDecisionManager();
         this.userActionsManager = new UserActionsManager(codeStorageService);
     }
 
