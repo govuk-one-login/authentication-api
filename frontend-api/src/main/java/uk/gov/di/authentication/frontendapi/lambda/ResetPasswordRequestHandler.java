@@ -35,6 +35,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -49,7 +52,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
@@ -62,6 +64,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final MFAMethodsService mfaMethodsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -84,6 +87,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.mfaMethodsService = mfaMethodsService;
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     public ResetPasswordRequestHandler() {
@@ -101,6 +106,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     public ResetPasswordRequestHandler(
@@ -115,6 +122,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     @Override
@@ -317,23 +326,38 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestCount = userContext.getAuthSession().getPasswordResetCount();
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+        var userPermissionContext =
+                new UserPermissionContext(
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        null,
+                        email,
+                        userContext.getAuthSession());
+
+        var canSendResult =
+                permissionDecisionManager.canSendEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, userPermissionContext);
+
+        if (canSendResult.isSuccess()
+                && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+            var codeRequestCount = userContext.getAuthSession().getPasswordResetCount();
+            if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
+                return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+            } else {
+                LOG.info("Code is blocked for email as user has requested too many OTPs");
+                return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+            }
         }
-        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {
-            LOG.info("Code is blocked for email as user has requested too many OTPs");
-            return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-        }
-        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
+
+        var canVerifyResult =
+                permissionDecisionManager.canVerifyEmailOtp(
+                        JourneyType.PASSWORD_RESET, userPermissionContext);
+
+        if (canVerifyResult.isSuccess()
+                && canVerifyResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
             LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
             return Optional.of(ErrorResponse.TOO_MANY_INVALID_PW_RESET_CODES_ENTERED);
         }
+
         return Optional.empty();
     }
 
