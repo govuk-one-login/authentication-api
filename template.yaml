@@ -670,6 +670,101 @@ Resources:
           Value: ClientSessionTable
   #endregion
 
+  #region ClientRegistry DynamoDB Table
+  ClientRegistryTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Orchestration Client Registry DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+          - Sid: AllowKeyDecryptionAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AuthAccountId}:root
+                - AuthAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+
+  ClientRegistryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-client-registry
+      AttributeDefinitions:
+        - AttributeName: ClientID
+          AttributeType: S
+        - AttributeName: ClientName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ClientID
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ClientNameIndex
+          KeySchema:
+            - AttributeName: ClientName
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt ClientRegistryTableEncryptionKey.Arn
+        SSEType: KMS
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      DeletionProtectionEnabled: true
+      ResourcePolicy:
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: AllowClientRegistryTableReadAccessPolicy
+              Effect: Allow
+              Action:
+                - dynamodb:DescribeTable
+                - dynamodb:Get*
+              Resource: "*"
+              Principal:
+                AWS: !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+      Tags:
+        - Key: Name
+          Value: ClientRegistryTable
+  #endregion
+
   #region OrchIdentityCredentials DynamoDB Table
   OrchIdentityCredentialsTableEncryptionKey:
     Type: AWS::KMS::Key
