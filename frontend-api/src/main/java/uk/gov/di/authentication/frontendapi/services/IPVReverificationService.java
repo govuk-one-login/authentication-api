@@ -199,36 +199,42 @@ public class IPVReverificationService {
     }
 
     private RSAPublicKey getPublicKey() {
-        RSAPublicKey publicKey;
         try {
             LOG.info("Getting IPV Auth Encryption Public Key");
 
             if (configurationService.isIpvJwksCallEnabled()) {
-                RSAKey rsaKey =
-                        this.jwkSource
-                                .get(new JWKSelector(new JWKMatcher.Builder().build()), null)
-                                .stream()
-                                .filter(jwk -> jwk instanceof RSAKey)
-                                .map(jwk -> (RSAKey) jwk)
-                                .findFirst()
-                                .orElseThrow(() -> new KeySourceException("No RSA key found"));
+                LOG.info("Retrieving RSA JWK from IPV JWKS endpoint for IPV-auth encryption");
 
-                publicKey = rsaKey.toRSAPublicKey();
+                try {
+                    RSAKey rsaKey =
+                            this.jwkSource
+                                    .get(new JWKSelector(new JWKMatcher.Builder().build()), null)
+                                    .stream()
+                                    .filter(jwk -> jwk instanceof RSAKey)
+                                    .map(jwk -> (RSAKey) jwk)
+                                    .findFirst()
+                                    .orElseThrow(
+                                            () ->
+                                                    new KeySourceException(
+                                                            "No RSA key found on the JWKS endpoint"));
 
-            } else {
-                String ipvAuthEncryptionPublicKey =
-                        configurationService.getIPVAuthEncryptionPublicKey();
-                publicKey =
-                        new RSAKey.Builder(
-                                        (RSAKey)
-                                                JWK.parseFromPEMEncodedObjects(
-                                                        ipvAuthEncryptionPublicKey))
-                                .build()
-                                .toRSAPublicKey();
+                    return rsaKey.toRSAPublicKey();
+                } catch (KeySourceException e) {
+                    LOG.warn(
+                            "No RSA key found on the JWKS endpoint, falling back to retrieving the public key from the environment variables.",
+                            e);
+                }
             }
 
-            return publicKey;
+            LOG.info(
+                    "Using public key stored in the IPV_PUBLIC_ENCRYPTION_KEY env var for IPV-auth encryption.");
 
+            String ipvAuthEncryptionPublicKey =
+                    configurationService.getIPVAuthEncryptionPublicKey();
+            return new RSAKey.Builder(
+                            (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
+                    .build()
+                    .toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error retrieving or parsing public key", e);
             throw new IPVReverificationServiceException(e.getMessage());

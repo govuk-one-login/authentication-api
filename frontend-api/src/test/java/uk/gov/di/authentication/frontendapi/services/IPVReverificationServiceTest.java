@@ -63,6 +63,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -208,6 +209,38 @@ class IPVReverificationServiceTest {
             Approvals.settings().allowMultipleVerifyCallsForThisMethod();
             assertClaims(redirectUri);
         }
+    }
+
+    @Test
+    void shouldFallbackToEnvironmentVariablesWhenJWKSCallFails()
+            throws JOSEException, MalformedURLException {
+        when(configurationService.isIpvJwksCallEnabled()).thenReturn(true);
+        when(configurationService.getIpvJwksUrl()).thenReturn(new URL(TEST_IPV_JWKS_URL));
+        when(jwkSource.get(Mockito.any(JWKSelector.class), Mockito.isNull()))
+                .thenReturn(Collections.emptyList());
+
+        IPVReverificationService ipvReverificationService =
+                new IPVReverificationService(
+                        configurationService, nowClock, jwtService, tokenService, jwkSource);
+
+        String redirectUri =
+                ipvReverificationService.buildIpvReverificationRedirectUri(
+                        TEST_SUBJECT, TEST_CLIENT_SESSION_ID, STATE);
+
+        RSAPublicKey expectedPublicKey =
+                new RSAKey.Builder(
+                                (RSAKey) JWK.parseFromPEMEncodedObjects(constructTestPublicKey()))
+                        .build()
+                        .toRSAPublicKey();
+
+        verify(jwtService).signJWT(TEST_SIGNING_ALGORITHM, constructTestClaimSet(), TEST_KEY_ID);
+        verify(jwtService).encryptJWT(testSignedJwt, expectedPublicKey);
+        verify(tokenService).generateStorageTokenForMfaReset(TEST_SUBJECT);
+
+        assertNotNull(redirectUri);
+
+        // NOTE: Omitting testing of the redirectUri content and associated claims here - covered by
+        // other tests.
     }
 
     @Test
