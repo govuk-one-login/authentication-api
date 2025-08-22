@@ -9,11 +9,13 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -33,6 +35,7 @@ import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssert
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.NowHelper.unixTimePlusNDays;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -45,6 +48,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
+    DynamoEmailCheckResultService dynamoEmailCheckResultService =
+            new DynamoEmailCheckResultService(TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final EmailCheckResultExtension emailCheckResultExtension =
@@ -273,6 +278,32 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         Collections.emptyMap()));
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
+    }
+
+    @Test
+    void shouldReturn404IfEmailHasFailedExperianCheck() {
+        dynamoEmailCheckResultService.saveEmailCheckResult(
+                NEW_EMAIL_ADDRESS,
+                EmailCheckResultStatus.DENY,
+                unixTimePlusNDays(1),
+                "test-reference");
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
+        var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new UpdateEmailRequest(
+                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        requestParams);
+
+        assertThat(response, hasStatus(HttpStatus.SC_FORBIDDEN));
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {

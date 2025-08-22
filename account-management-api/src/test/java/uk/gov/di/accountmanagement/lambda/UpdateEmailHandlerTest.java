@@ -311,6 +311,27 @@ class UpdateEmailHandlerTest {
         assertEquals(updateEmailRequest.getReplacementEmailAddress(), NEW_EMAIL_ADDRESS);
     }
 
+    @Test
+    void shouldReturn403IfEmailCheckResultIsDeny() {
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+                .thenReturn(true);
+        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
+                .thenReturn(
+                        Optional.of(
+                                new EmailCheckResultStore()
+                                        .withEmail(NEW_EMAIL_ADDRESS)
+                                        .withStatus(EmailCheckResultStatus.DENY)));
+
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(403));
+        assertThat(result, hasJsonBody(ErrorResponse.EMAIL_ADDRESS_DENIED));
+    }
+
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
             String replacementEmail, String principalId) {
         var event = new APIGatewayProxyRequestEvent();
