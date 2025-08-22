@@ -39,7 +39,6 @@ Resources:
               lockoutCountTtl,
             ]
           REDIS_KEY: "session"
-          SUPPORT_EMAIL_CHECK_ENABLED: true
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [

@@ -627,12 +627,6 @@ variable "authorize_protected_subnet_enabled" {
   default     = false
 }
 
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
-}
-
 variable "send_storage_token_to_ipv_enabled" {
   default     = false
   type        = bool

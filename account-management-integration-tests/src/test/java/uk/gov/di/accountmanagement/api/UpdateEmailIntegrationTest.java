@@ -5,6 +5,7 @@ import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
@@ -83,7 +84,11 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
                         new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_UPDATE_EMAIL));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue,
+                List.of(
+                        AUTH_UPDATE_EMAIL,
+                        AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED));
     }
 
     @Test
@@ -142,7 +147,11 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
                         new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_UPDATE_EMAIL));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue,
+                List.of(
+                        AUTH_UPDATE_EMAIL,
+                        AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED));
     }
 
     @Test

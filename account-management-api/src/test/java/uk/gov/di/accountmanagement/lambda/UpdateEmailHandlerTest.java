@@ -115,7 +115,6 @@ class UpdateEmailHandlerTest {
                         auditService,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 

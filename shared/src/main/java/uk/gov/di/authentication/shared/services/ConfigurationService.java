@@ -205,12 +205,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
-    public boolean isEmailCheckEnabled() {
-        return System.getenv()
-                .getOrDefault("SUPPORT_EMAIL_CHECK_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)

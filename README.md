@@ -28,6 +28,9 @@ To run the integration tests in this repo, you can run the following command
 ./gradlew integration-tests:test
 ```
 
+If the tests aren't running in `account-management-integration-tests` refer to the [Local Running README](./local-running/README.md) and make sure
+you have the correct repositories up to date.
+
 ## Pre-commit hook
 
 The repo has config set up for a custom pre-commit hook in `.pre-commit-config.yaml`.

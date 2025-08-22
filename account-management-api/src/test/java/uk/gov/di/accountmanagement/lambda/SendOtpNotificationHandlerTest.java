@@ -161,7 +161,6 @@ class SendOtpNotificationHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
 
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
         when(configurationService.getEnvironment()).thenReturn("test-env");
@@ -312,24 +311,6 @@ class SendOtpNotificationHandlerTest {
                 }
             }
         }
-    }
-
-    @Test
-    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled() {
-        when(configurationService.isEmailCheckEnabled()).thenReturn(false);
-
-        var event = createEmptyEvent();
-
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-
-        var result = handler.handleRequest(event, context);
-
-        assertEquals(204, result.getStatusCode());
-
-        verifyNoInteractions(pendingEmailCheckSqsClient);
     }
 
     @Test

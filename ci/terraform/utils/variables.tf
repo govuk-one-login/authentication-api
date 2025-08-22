@@ -171,9 +171,3 @@ variable "email_check_results_sqs_queue_encryption_key_arn" {
   description = "ARN of the CMK used for server side encryption on the SQS email results check queue"
   type        = string
 }
-
-variable "support_email_check_enabled" {
-  default     = true
-  type        = bool
-  description = "Feature flag which toggles the Experian email check on and off"
-}

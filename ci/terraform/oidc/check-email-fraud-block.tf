@@ -37,7 +37,6 @@ module "check_email_fraud_block" {
     REDIS_KEY                     = var.environment == "production" ? local.redis_key : null
     LOCKOUT_DURATION              = var.lockout_duration
     LOCKOUT_COUNT_TTL             = var.lockout_count_ttl
-    SUPPORT_EMAIL_CHECK_ENABLED   = var.support_email_check_enabled
     USE_STRONGLY_CONSISTENT_READS = var.use_strongly_consistent_reads
   }
 

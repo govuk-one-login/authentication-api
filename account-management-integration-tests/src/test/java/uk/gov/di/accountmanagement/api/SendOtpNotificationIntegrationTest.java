@@ -10,13 +10,17 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +57,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                             .getExampleNumberForType("GB", MOBILE)
                             .getNationalNumber());
 
+    DynamoEmailCheckResultService dynamoEmailCheckResultService =
+            new DynamoEmailCheckResultService(TEST_CONFIGURATION_SERVICE);
+
     @RegisterExtension
     protected static final EmailCheckResultExtension emailCheckResultExtension =
             new EmailCheckResultExtension();
@@ -71,6 +78,11 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
             @Test
             void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
                 userStore.signUp(TEST_EMAIL, "password");
+                dynamoEmailCheckResultService.saveEmailCheckResult(
+                        TEST_NEW_EMAIL,
+                        EmailCheckResultStatus.ALLOW,
+                        unixTimePlusNDays(),
+                        "test-reference");
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
@@ -276,5 +288,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 assertNoTxmaAuditEventsReceived(txmaAuditQueue);
             }
         }
+    }
+
+    private long unixTimePlusNDays() {
+        return NowHelper.nowPlus(1, ChronoUnit.DAYS).toInstant().getEpochSecond();
     }
 }

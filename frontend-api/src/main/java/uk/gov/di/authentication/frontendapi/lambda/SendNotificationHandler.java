@@ -363,8 +363,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
 
-        if (configurationService.isEmailCheckEnabled()
-                && notificationType == NotificationType.VERIFY_EMAIL
+        if (notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {
 
             var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(destination);
