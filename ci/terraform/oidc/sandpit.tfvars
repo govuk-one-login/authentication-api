@@ -79,6 +79,7 @@ orch_environment                                   = "dev"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:816047645251:key/645669ba-b288-4b63-bfe1-9d8bde9956ec"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:816047645251:key/4cd7c551-128f-4579-99c2-a7f1bff64fb7"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:816047645251:key/97c19476-82ba-433f-8500-981857e7367e"
 
 cmk_for_back_channel_logout_enabled = true
 use_strongly_consistent_reads       = true
