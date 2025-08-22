@@ -553,7 +553,7 @@ resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
 
 resource "aws_dynamodb_resource_policy" "user_profile_table_policy" {
   resource_arn = aws_dynamodb_table.user_profile_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
+  policy       = data.aws_iam_policy_document.new_auth_cross_account_table_resource_policy_document.json
 }
 
 data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
@@ -571,6 +571,27 @@ data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
     effect = "Allow"
     principals {
       identifiers = local.authorized_account_ids
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_document" {
+  statement {
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.auth_new_account_id]
       type        = "AWS"
     }
     resources = ["*"]
