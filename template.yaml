@@ -5969,7 +5969,7 @@ Resources:
               - ssm:GetParameter
               - ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
