@@ -12,14 +12,12 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +26,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED;
+import static uk.gov.di.authentication.shared.helpers.NowHelper.unixTimePlusNDays;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -105,7 +104,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             dynamoEmailCheckResultService.saveEmailCheckResult(
                     CommonTestVariables.EMAIL,
                     EmailCheckResultStatus.ALLOW,
-                    unixTimePlusNDays(),
+                    unixTimePlusNDays(1),
                     "test-reference");
 
             Map<String, String> headers =
@@ -137,7 +136,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             dynamoEmailCheckResultService.saveEmailCheckResult(
                     CommonTestVariables.EMAIL,
                     EmailCheckResultStatus.DENY,
-                    unixTimePlusNDays(),
+                    unixTimePlusNDays(1),
                     "test-reference");
 
             Map<String, String> headers =
@@ -180,9 +179,5 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             expectation.verify(receivedEvents);
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
-    }
-
-    private long unixTimePlusNDays() {
-        return NowHelper.nowPlus(1, ChronoUnit.DAYS).toInstant().getEpochSecond();
     }
 }
