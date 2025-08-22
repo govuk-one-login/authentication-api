@@ -5465,20 +5465,22 @@ Resources:
               - dynamodb:Get*
               - dynamodb:Query
               - dynamodb:Scan
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+              - !GetAtt ClientRegistryTable.Arn
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
             Action:
@@ -5489,11 +5491,12 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                clientRegistryTableKeyArn,
-              ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  clientRegistryTableKeyArn,
+                ]
+              - !GetAtt ClientRegistryTableEncryptionKey.Arn
 
   ClientRegistryTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -5507,20 +5510,22 @@ Resources:
               - dynamodb:BatchWriteItem
               - dynamodb:UpdateItem
               - dynamodb:PutItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authAccountId,
-                  ]
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+              - !GetAtt ClientRegistryTable.Arn
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
             Action:
@@ -5531,11 +5536,12 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                clientRegistryTableKeyArn,
-              ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  clientRegistryTableKeyArn,
+                ]
+              - !GetAtt ClientRegistryTableEncryptionKey.Arn
 
   OrchDocAppCredentialTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
