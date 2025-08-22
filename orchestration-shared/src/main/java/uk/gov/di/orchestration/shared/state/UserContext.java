@@ -3,14 +3,12 @@ package uk.gov.di.orchestration.shared.state;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
-import uk.gov.di.orchestration.shared.entity.UserCredentials;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.util.Optional;
 
 public class UserContext {
     private final String sessionId;
-    private final Optional<UserCredentials> userCredentials;
     private final Optional<ClientRegistry> client;
     private final OrchClientSessionItem orchClientSession;
     private final SupportedLanguage userLanguage;
@@ -19,14 +17,12 @@ public class UserContext {
 
     protected UserContext(
             String sessionId,
-            Optional<UserCredentials> userCredentials,
             Optional<ClientRegistry> client,
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
             OrchSessionItem orchSession) {
         this.sessionId = sessionId;
-        this.userCredentials = userCredentials;
         this.client = client;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
@@ -36,10 +32,6 @@ public class UserContext {
 
     public String getSessionId() {
         return sessionId;
-    }
-
-    public Optional<UserCredentials> getUserCredentials() {
-        return userCredentials;
     }
 
     public Optional<ClientRegistry> getClient() {
@@ -76,7 +68,6 @@ public class UserContext {
 
     public static class Builder {
         private String sessionId;
-        private Optional<UserCredentials> userCredentials = Optional.empty();
         private Optional<ClientRegistry> client = Optional.empty();
         private OrchClientSessionItem orchClientSession;
         private SupportedLanguage userLanguage;
@@ -87,11 +78,6 @@ public class UserContext {
 
         public Builder withSessionId(String sessionId) {
             this.sessionId = sessionId;
-            return this;
-        }
-
-        public Builder withUserCredentials(Optional<UserCredentials> userCredentials) {
-            this.userCredentials = userCredentials;
             return this;
         }
 
@@ -127,7 +113,6 @@ public class UserContext {
         public UserContext build() {
             return new UserContext(
                     sessionId,
-                    userCredentials,
                     client,
                     orchClientSession,
                     userLanguage,
