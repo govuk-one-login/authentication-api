@@ -14,6 +14,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.helpers.NowHelper.unixTimePlusNDays;
 
 class DynamoEmailCheckResultServiceIntegrationTest {
 
@@ -51,9 +52,5 @@ class DynamoEmailCheckResultServiceIntegrationTest {
         var result = dynamoEmailCheckResultService.getEmailCheckStore(email);
 
         assertFalse(result.isPresent());
-    }
-
-    private long unixTimePlusNDays(Integer numberOfDays) {
-        return NowHelper.nowPlus(numberOfDays, ChronoUnit.DAYS).toInstant().getEpochSecond();
     }
 }
