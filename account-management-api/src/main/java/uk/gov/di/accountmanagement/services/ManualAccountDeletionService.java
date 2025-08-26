@@ -46,7 +46,7 @@ public class ManualAccountDeletionService {
                     Optional.empty(),
                     userProfile,
                     Optional.empty(),
-                    AccountDeletionReason.SUPPORT_INITIATED);
+                    AccountDeletionReason.SUPPORT_INITIATED); // TODO new reason here?
             var deletedAccountPayload =
                     SerializationService.getInstance()
                             .writeValueAsString(legacyAccountDeletionMessage);
