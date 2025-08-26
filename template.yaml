@@ -6286,7 +6286,8 @@ Resources:
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          DEPLOY_ENVIRONMENT: !Ref Environment
+          DEPLOY_ENVIRONMENT: production
+          PROD_ALERTS_ENABLED: true
       Policies:
         - Statement:
             - Sid: AllowGetParameters
