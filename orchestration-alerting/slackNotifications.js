@@ -73,7 +73,9 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
 
 const buildMessageRequest = async function (snsMessage, colorCode, snsMessageFooter) {
     const body = formatMessage(snsMessage, colorCode, snsMessageFooter);
-    if (process.env.DEPLOY_ENVIRONMENT === "integration" || process.env.DEPLOY_ENVIRONMENT === "dev" || process.env.DEPLOY_ENVIRONMENT === "staging") {
+    const isEnabledForNonProd = ["dev", "staging", "integration"].includes(process.env.DEPLOY_ENVIRONMENT);
+    const isEnabledForProd = process.env.PROD_ALERTS_ENABLED === "true" && process.env.DEPLOY_ENVIRONMENT === "production";
+    if (isEnabledForNonProd || isEnabledForProd) {
         body.channel = process.env.SLACK_CHANNEL_ID ||
             (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id"));
     }
