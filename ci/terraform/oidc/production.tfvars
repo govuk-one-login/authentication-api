@@ -56,6 +56,7 @@ orch_environment                                   = "production"
 orch_session_table_encryption_key_arn              = "arn:aws:kms:eu-west-2:533266965190:key/7ad27a55-9d21-47f2-be03-b61f2c9a8ce6"
 orch_client_session_table_encryption_key_arn       = "arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6"
 orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81"
+orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755"
 
 orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true

@@ -155,6 +155,7 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
     ]
     resources = [
       data.aws_dynamodb_table.client_registry_table.arn,
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-client-registry",
     ]
   }
 
@@ -169,7 +170,10 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.client_registry_encryption_key_arn]
+    resources = [
+      local.client_registry_encryption_key_arn,
+      var.orch_client_registry_table_encryption_key_arn
+    ]
   }
 }
 
