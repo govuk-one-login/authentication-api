@@ -6380,14 +6380,36 @@ Resources:
     Properties:
       AlarmName: !Sub ${Environment}-client-rate-limit-alarm
       AlarmDescription: !Sub "Client rate limiting has been hit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: test"
-      Namespace: Authentication
-      MetricName: RpRateLimitExceeded
-      Statistic: Sum
-      Period: 60
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      DatapointsToAlarm: 1
+      Metrics:
+        - Id: m1
+          Label: RpRateLimitExceeded
+          MetricStat:
+            Metric:
+              Namespace: Authentication/RpRateLimitExceeded
+              MetricName: RpRateLimitExceeded
+              Dimensions:
+                - Name: clientId
+                  Value: "*"
+                - Name: action
+                  Value: "*"
+                - Name: LogGroup
+                  Value: !Sub ${Environment}-AuthorisationFunction
+                - Name: ServiceName
+                  Value: !Sub ${Environment}-AuthorisationFunction
+                - Name: ServiceType
+                  Value: AWS::Lambda::Function
+            Period: 60
+            Stat: Sum
+          ReturnData: false
+        - Id: e1
+          Label: TotalRpRateLimitExceeded
+          Expression: SUM(m1)
+          ReturnData: true
       AlarmActions:
         - !Ref SlackEvents
   #endregion
