@@ -30,7 +30,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
-public class BulkRemoveAccountHandler implements RequestHandler<String, String> {
+public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRequest, String> {
     private static final Logger LOG = LogManager.getLogger(BulkRemoveAccountHandler.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final int BATCH_SIZE = 50;
@@ -78,15 +78,14 @@ public class BulkRemoveAccountHandler implements RequestHandler<String, String> 
     }
 
     @Override
-    public String handleRequest(String input, Context context) {
+    public String handleRequest(BulkUserDeleteRequest input, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
 
         try {
             LOG.info("BulkRemoveAccountHandler received request");
-            BulkUserDeleteRequest request =
-                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+            BulkUserDeleteRequest request = input;
 
             if (request.reference() == null || request.reference().trim().isEmpty()) {
                 throw new IllegalArgumentException("Reference cannot be null or empty");
