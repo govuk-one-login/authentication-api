@@ -59,6 +59,16 @@ public class AccountDeletionService {
             Optional<String> txmaAuditEncoded,
             AccountDeletionReason reason)
             throws Json.JsonException {
+        removeAccount(input, userProfile, txmaAuditEncoded, reason, true);
+    }
+
+    public void removeAccount(
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            Optional<String> txmaAuditEncoded,
+            AccountDeletionReason reason,
+            boolean sendNotification)
+            throws Json.JsonException {
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -71,16 +81,18 @@ public class AccountDeletionService {
         LOG.info("Deleting user account");
         dynamoDeleteService.deleteAccount(email, internalCommonSubjectIdentifier.getValue());
 
-        try {
-            LOG.info("User account removed. Adding message to SQS queue");
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            email,
-                            NotificationType.DELETE_ACCOUNT,
-                            LocaleHelper.SupportedLanguage.EN);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-        } catch (Exception e) {
-            LOG.error("Failed to send account deletion email: ", e);
+        if (sendNotification) {
+            try {
+                LOG.info("User account removed. Adding notification message to SQS queue");
+                NotifyRequest notifyRequest =
+                        new NotifyRequest(
+                                email,
+                                NotificationType.DELETE_ACCOUNT,
+                                LocaleHelper.SupportedLanguage.EN);
+                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            } catch (Exception e) {
+                LOG.error("Failed to send account deletion email: ", e);
+            }
         }
 
         String persistentSessionID = AuditService.UNKNOWN;
