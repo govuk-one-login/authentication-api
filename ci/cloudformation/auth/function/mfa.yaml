@@ -82,6 +82,14 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
+        - !If
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              testClientsEnabled,
+            ]
+          - !Ref TestClientEmailAllowListSecretAccessPolicy
+          - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
