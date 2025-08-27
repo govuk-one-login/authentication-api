@@ -4851,7 +4851,10 @@ Resources:
       AlarmDescription: !Sub "${Environment} backchannel logout DLQ has 5 or more messages.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsProduction
+          - !Ref ProdSlackEvents
+          - !Ref SlackEvents
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
