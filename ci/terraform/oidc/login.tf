@@ -1,3 +1,6 @@
+// ATO-1878: This duplicate role will be deleted in a future PR.
+// We can only do this once we are sure it is completely unused
+// to prevent a ZDD issue during the deployment window
 module "frontend_api_login_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -30,8 +33,6 @@ module "frontend_api_login_role" {
   }
 }
 
-# ATO-1878: This is a duplicate of the above role however it has a combined
-# read/write/delete policy for the authentication attempts table
 module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
   source      = "../modules/lambda-role"
   environment = var.environment
@@ -55,8 +56,8 @@ module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
     aws_iam_policy.dynamo_authentication_attempt_read_write_delete_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_write_policy.arn
   ]
-  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20)
-  // Ticket raised to request quota increase (ATO-1056)
+  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20).
+  // This also applies for the combined read/write/delete policy for the authentication attempts table
   extra_tags = {
     Service = "login"
   }
@@ -106,7 +107,7 @@ module "login" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_login_role.arn
+  lambda_role_arn                        = module.frontend_api_login_role_with_combined_auth_attempts_table_policies.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
