@@ -439,7 +439,7 @@ Resources:
                 httpMethod: POST
                 timeoutInMillis: 29000
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:${Environment}/invocations
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:active/invocations
       EndpointConfiguration:
         Types:
           - PRIVATE

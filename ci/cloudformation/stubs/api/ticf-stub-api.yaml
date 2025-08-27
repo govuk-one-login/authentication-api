@@ -38,7 +38,7 @@ Resources:
               x-amazon-apigateway-integration:
                 type: aws_proxy
                 httpMethod: POST
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:${Environment}/invocations"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:active/invocations"
                 timeoutInMillis: 29000
 
   TicfCriStubDeployment:
