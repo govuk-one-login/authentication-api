@@ -6386,29 +6386,13 @@ Resources:
       TreatMissingData: notBreaching
       DatapointsToAlarm: 1
       Metrics:
-        - Id: m1
-          Label: RpRateLimitExceeded
-          MetricStat:
-            Metric:
-              Namespace: Authentication/RpRateLimitExceeded
-              MetricName: RpRateLimitExceeded
-              Dimensions:
-                - Name: clientId
-                  Value: "*"
-                - Name: action
-                  Value: "*"
-                - Name: LogGroup
-                  Value: !Sub ${Environment}-AuthorisationFunction
-                - Name: ServiceName
-                  Value: !Sub ${Environment}-AuthorisationFunction
-                - Name: ServiceType
-                  Value: AWS::Lambda::Function
-            Period: 60
-            Stat: Sum
+        - Id: s1
+          Expression: 'SEARCH(''{Authentication,clientId,action} MetricName="RpRateLimitExceeded"'', ''Sum'', 300)'
+          Label: "All Client Rate Limits Exceeded"
           ReturnData: false
-        - Id: e1
-          Label: TotalRpRateLimitExceeded
-          Expression: SUM(m1)
+        - Id: m1
+          Expression: "SUM(s1)"
+          Label: "Total Client Rate Limit Exceeded"
           ReturnData: true
       AlarmActions:
         - !Ref SlackEvents
