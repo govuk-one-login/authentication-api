@@ -31,6 +31,11 @@ public class ManualAccountDeletionService {
     }
 
     public DeletedAccountIdentifiers manuallyDeleteAccount(UserProfile userProfile) {
+        return manuallyDeleteAccount(userProfile, true);
+    }
+
+    public DeletedAccountIdentifiers manuallyDeleteAccount(
+            UserProfile userProfile, boolean sendNotification) {
         var accountIdentifiers =
                 new DeletedAccountIdentifiers(
                         userProfile.getPublicSubjectID(),
@@ -46,7 +51,8 @@ public class ManualAccountDeletionService {
                     Optional.empty(),
                     userProfile,
                     Optional.empty(),
-                    AccountDeletionReason.SUPPORT_INITIATED); // TODO new reason here?
+                    AccountDeletionReason.SUPPORT_INITIATED, // TODO new reason here?
+                    sendNotification);
             var deletedAccountPayload =
                     SerializationService.getInstance()
                             .writeValueAsString(legacyAccountDeletionMessage);
