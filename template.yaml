@@ -6375,30 +6375,25 @@ Resources:
         - Key: Name
           Value: ClientRateLimitTable
 
-  ClientRateLimitMetricFilter:
-    Type: AWS::Logs::MetricFilter
-    Properties:
-      FilterName: !Sub ${Environment}-client-rate-limit-filter
-      FilterPattern: '{($.message = "Client with ID * has exceeded rate limit. Current count: *. Limit *.")}'
-      LogGroupName: !Ref AuthorisationFunctionLogGroup
-      MetricTransformations:
-        - MetricName: !Sub ${Environment}-client-rate-limit-count
-          MetricNamespace: ClientRateLimitCount
-          MetricValue: 1
-
   ClientRateLimitAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-client-rate-limit-alarm
       AlarmDescription: !Sub "Client rate limiting has been hit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: test"
-      Namespace: ClientRateLimitCount
-      MetricName: !Sub ${Environment}-client-rate-limit-count
-      Statistic: Sum
-      Period: 60
       EvaluationPeriods: 1
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      DatapointsToAlarm: 1
+      Metrics:
+        - Id: s1
+          Expression: SEARCH('{Authentication,clientId,action} MetricName=\"RpRateLimitExceeded\"', 'Sum', 60)
+          Label: "All Client Rate Limits Exceeded"
+          ReturnData: false
+        - Id: m1
+          Expression: SUM(METRICS())
+          Label: "Total Client Rate Limit Exceeded"
+          ReturnData: true
       AlarmActions:
         - !Ref SlackEvents
   #endregion
