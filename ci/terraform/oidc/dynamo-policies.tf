@@ -155,7 +155,6 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
     ]
     resources = [
       data.aws_dynamodb_table.client_registry_table.arn,
-      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-client-registry",
     ]
   }
 
@@ -172,7 +171,6 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
     ]
     resources = [
       local.client_registry_encryption_key_arn,
-      var.orch_client_registry_table_encryption_key_arn
     ]
   }
 }
@@ -740,6 +738,42 @@ data "aws_iam_policy_document" "dynamo_orch_identity_credentials_cross_account_r
   }
 }
 
+data "aws_iam_policy_document" "dynamo_orch_client_registry_cross_account_read_access_policy_document" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      "arn:aws:dynamodb:eu-west-2:${var.orch_account_id}:table/${var.orch_environment}-client-registry",
+    ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [
+      var.orch_client_registry_table_encryption_key_arn
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_id_reverification_state_write_policy_document" {
   statement {
     sid    = "AllowWrite"
@@ -1095,6 +1129,16 @@ resource "aws_iam_policy" "dynamo_orch_identity_credentials_cross_account_read_a
   description = "IAM policy for managing read permissions to the orch identity credentials table"
 
   policy = data.aws_iam_policy_document.dynamo_orch_identity_credentials_cross_account_read_access_policy_document[count.index].json
+}
+
+resource "aws_iam_policy" "dynamo_orch_client_registry_cross_account_read_access_policy" {
+  count = var.is_orch_stubbed ? 0 : 1
+
+  name_prefix = "dynamo-orch-client-registry-cross-account-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the orch client registry table"
+
+  policy = data.aws_iam_policy_document.dynamo_orch_client_registry_cross_account_read_access_policy_document[count.index].json
 }
 
 resource "aws_iam_policy" "dynamo_id_reverification_state_write_policy" {
