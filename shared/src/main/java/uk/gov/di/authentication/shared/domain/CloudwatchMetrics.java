@@ -25,7 +25,8 @@ public enum CloudwatchMetrics {
     SMS_NOTIFICATION_SENT("SmsNotificationSent"),
     EMAIL_NOTIFICATION_SENT("EmailNotificationSent"),
     SMS_NOTIFICATION_ERROR("SmsNotificationError"),
-    EMAIL_NOTIFICATION_ERROR("EmailNotificationError");
+    EMAIL_NOTIFICATION_ERROR("EmailNotificationError"),
+    SMS_LIMIT_EXCEEDED("SmsLimitExceeded");
 
     private String value;
 

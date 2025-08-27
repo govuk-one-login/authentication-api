@@ -457,6 +457,28 @@ public class NotificationHandlerTest {
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES, EMAIL, false, AUTHENTICATION);
     }
 
+    @Test
+    void shouldEmitSmsLimitExceededMetricWhen429ResponseReceived()
+            throws Json.JsonException, NotificationClientException {
+        NotificationClientException exception = mock(NotificationClientException.class);
+        when(exception.getHttpResult()).thenReturn(429);
+
+        Mockito.doThrow(exception).when(notificationService).sendText(any(), any(), any(), any());
+
+        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "123456");
+
+        var response = handler.handleRequest(sqsEvent, context);
+
+        assertEquals(1, response.getBatchItemFailures().size());
+
+        verify(cloudwatchMetricsService)
+                .emitSmsLimitExceededMetric(
+                        VERIFY_PHONE_NUMBER, true, AUTHENTICATION, "INTERNATIONAL");
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotificationError(
+                        VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER, true, AUTHENTICATION, exception);
+    }
+
     private String buildContactUsUrl() {
         return buildURI(configService.getFrontendBaseUrl(), configService.getContactUsLinkRoute())
                 .toString();

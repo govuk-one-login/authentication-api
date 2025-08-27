@@ -32,6 +32,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_HTTP_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.SMS_DESTINATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
@@ -41,6 +42,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOT
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_LIMIT_EXCEEDED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SMS_NOTIFICATION_SENT;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -295,6 +297,19 @@ public class CloudwatchMetricsService {
             metricName = EMAIL_NOTIFICATION_SENT.getValue();
         }
         incrementCounter(metricName, dimensions);
+    }
+
+    public void emitSmsLimitExceededMetric(
+            NotifiableType notificationType,
+            Boolean isTestDestination,
+            Application application,
+            String destinationType) {
+        var dimensions =
+                getNotificationBaseMetricDimensions(
+                        notificationType, isTestDestination, application);
+        dimensions.put(SMS_DESTINATION_TYPE.getValue(), destinationType);
+
+        incrementCounter(SMS_LIMIT_EXCEEDED.getValue(), dimensions);
     }
 
     private HashMap<String, String> getNotificationBaseMetricDimensions(

@@ -194,12 +194,27 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                     "Error sending with Notify using NotificationType: {}, reference: {}",
                     request.getNotificationType(),
                     reference);
+
+            if (e.getHttpResult() == 429 && isPhoneNotification(request.getNotificationType())) {
+                String destinationType =
+                        maybeGetCountry(request.getDestination())
+                                .map(country -> "GB".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
+                                .orElse("UNKNOWN");
+
+                cloudwatchMetricsService.emitSmsLimitExceededMetric(
+                        request.getNotificationType(),
+                        isTestDestination,
+                        AUTHENTICATION,
+                        destinationType);
+            }
+
             cloudwatchMetricsService.emitMetricForNotificationError(
                     request.getNotificationType(),
                     request.getDestination(),
                     isTestDestination,
                     AUTHENTICATION,
                     e);
+
             if (isPhoneNotification(request.getNotificationType())) {
                 throw new RuntimeException(
                         String.format(

@@ -5,6 +5,8 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
@@ -18,6 +20,7 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -257,6 +260,46 @@ class CloudwatchMetricsServiceTest {
 
             verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
         }
+
+        @ParameterizedTest
+        @MethodSource("smsLimitExceededTestData")
+        void shouldEmitSmsLimitExceededMetricWithCorrectDestinationType(SmsLimitTestData testData) {
+            var spyService =
+                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
+
+            spyService.emitSmsLimitExceededMetric(
+                    testData.notificationType(),
+                    testData.isTest(),
+                    testData.application(),
+                    testData.destinationType());
+
+            var expectedDimensions =
+                    Map.of(
+                            "Environment", "test",
+                            "Application", testData.application().getValue(),
+                            "NotificationType", testData.notificationType().toString(),
+                            "IsTest", Boolean.toString(testData.isTest()),
+                            "SmsDestinationType", testData.destinationType());
+
+            verify(spyService).incrementCounter("SmsLimitExceeded", expectedDimensions);
+        }
+
+        static Stream<SmsLimitTestData> smsLimitExceededTestData() {
+            return Stream.of(
+                    new SmsLimitTestData(
+                            NotificationType.MFA_SMS, false, Application.AUTHENTICATION, "UK"),
+                    new SmsLimitTestData(
+                            NotificationType.VERIFY_PHONE_NUMBER,
+                            true,
+                            Application.AUTHENTICATION,
+                            "INTERNATIONAL"));
+        }
+
+        record SmsLimitTestData(
+                NotificationType notificationType,
+                boolean isTest,
+                Application application,
+                String destinationType) {}
     }
 
     private static ConfigurationService configurationWithEnvironment(String test) {

@@ -68,6 +68,46 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
   alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
 }
 
+resource "aws_cloudwatch_metric_alarm" "domestic_sms_limit_exceeded_alarm" {
+  alarm_name          = "${var.environment}-${var.environment == "production" ? "P1-" : ""}domestic-sms-limit-exceeded-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "SmsLimitExceeded"
+  namespace           = "Authentication"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "2"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Environment        = var.environment
+    SmsDestinationType = "DOMESTIC"
+  }
+
+  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}Domestic SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}"
+  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "international_sms_limit_exceeded_alarm" {
+  alarm_name          = "${var.environment}-${var.environment == "production" ? "P1-" : ""}international-sms-limit-exceeded-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "SmsLimitExceeded"
+  namespace           = "Authentication"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "2"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Environment        = var.environment
+    SmsDestinationType = "INTERNATIONAL"
+  }
+
+  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}International SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}"
+  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+}
+
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_oidc_blocked_request_cloudwatch_alarm" {
