@@ -6387,13 +6387,9 @@ Resources:
       DatapointsToAlarm: 1
       Metrics:
         - Id: s1
-          Expression: SEARCH('{Authentication,clientId,action} MetricName=\"RpRateLimitExceeded\"', 'Sum', 60)
-          Label: "All Client Rate Limits Exceeded"
+          Expression: SUM(SEARCH('{Authentication,clientId,action} MetricName=\"RpRateLimitExceeded\"', 'Sum', 60))
+          Label: TotalRpRateLimitExceeded
           Period: 60
-          ReturnData: false
-        - Id: m1
-          Expression: SUM(METRICS())
-          Label: "Total Client Rate Limit Exceeded"
           ReturnData: true
       AlarmActions:
         - !Ref SlackEvents
