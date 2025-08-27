@@ -1,7 +1,7 @@
-module "account_management_manually_delete_account_role" {
+module "account_management_bulk_remove_account_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "account-management-manually-delete-account-role"
+  role_name   = "account-management-bulk-remove-account-role"
   vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
@@ -16,14 +16,14 @@ module "account_management_manually_delete_account_role" {
     aws_iam_policy.legacy_account_deletion_topic.arn
   ]
   extra_tags = {
-    Service = "manually-delete-account"
+    Service = "bulk-remove-account"
   }
 }
 
-resource "aws_lambda_function" "manually_delete_account_lambda" {
-  function_name = replace("${var.environment}-manually-delete-account-lambda", ".", "")
-  role          = module.account_management_manually_delete_account_role.arn
-  handler       = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
+resource "aws_lambda_function" "bulk_remove_account_lambda" {
+  function_name = replace("${var.environment}-bulk-remove-account-lambda", ".", "")
+  role          = module.account_management_bulk_remove_account_role.arn
+  handler       = "uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler::handleRequest"
   timeout       = 30
   publish       = true
 
@@ -48,30 +48,30 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
       EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
       TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
       INTERNAl_SECTOR_URI               = var.internal_sector_uri
-      LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
+      LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.bulk_remove_account_deletion_topic_arn
     }
   }
 
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   runtime     = "java17"
 
-  depends_on = [module.account_management_manually_delete_account_role]
+  depends_on = [module.account_management_bulk_remove_account_role]
 }
 
-resource "aws_cloudwatch_log_group" "manually_delete_account_lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.manually_delete_account_lambda.function_name}"
+resource "aws_cloudwatch_log_group" "bulk_remove_account_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.bulk_remove_account_lambda.function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
 
   depends_on = [
-    aws_lambda_function.manually_delete_account_lambda
+    aws_lambda_function.bulk_remove_account_lambda
   ]
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
+resource "aws_cloudwatch_log_subscription_filter" "bulk_remove_account_log_subscription" {
   count           = length(var.logging_endpoint_arns)
-  name            = "manually_delete_account-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.manually_delete_account_lambda_log_group.name
+  name            = "bulk_remove_account-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.bulk_remove_account_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -80,27 +80,26 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   }
 }
 
-
-data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
+data "aws_iam_policy_document" "invoke_bulk_remove_account_lambda" {
   statement {
-    sid       = "permitInvokeLambda"
+    sid       = "permitInvokeBulkRemoveAccountLambda"
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
-    resources = [aws_lambda_function.manually_delete_account_lambda.arn]
+    resources = [aws_lambda_function.bulk_remove_account_lambda.arn]
 
   }
 }
 
-resource "aws_iam_policy" "invoke_account_deletion_lambda" {
-  count       = local.should_create_account_deletion_policy ? 1 : 0
-  name        = "manual-account-deletion-user-policy"
+resource "aws_iam_policy" "invoke_bulk_remove_account_lambda" {
+  count       = local.should_create_bulk_remove_account_policy ? 1 : 0
+  name        = "bulk-remove-account-user-policy"
   path        = "/control-tower/am/"
-  description = "Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions"
-  policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
+  description = "Policy for use in Control Tower to be attached to the role assumed by support users to bulk account deletions"
+  policy      = data.aws_iam_policy_document.invoke_bulk_remove_account_lambda.json
 }
 
 locals {
-  mock_topic_arn                        = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
-  account_deletion_topic_arn            = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
-  should_create_account_deletion_policy = contains(["production", "integration", "staging"], var.environment)
+  bulk_remove_mock_topic_arn                        = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
+  bulk_remove_account_deletion_topic_arn            = coalesce(var.legacy_account_deletion_topic_arn, local.bulk_remove_mock_topic_arn)
+  should_create_bulk_remove_account_policy = contains(["production", "integration", "staging"], var.environment)
 }
