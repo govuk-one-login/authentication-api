@@ -1931,8 +1931,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
@@ -2149,8 +2147,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
@@ -2710,8 +2706,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
@@ -3755,8 +3749,6 @@ Resources:
             - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
@@ -4438,8 +4430,6 @@ Resources:
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
-        - !Ref UserProfileTableReadAccessPolicy
-        - !Ref UserProfileTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy

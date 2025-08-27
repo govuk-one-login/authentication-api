@@ -613,7 +613,7 @@ resource "aws_kms_key" "user_profile_table_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
 
-  policy = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
+  policy = data.aws_iam_policy_document.auth_dynamo_table_encryption_key_access_policy.json
 
 }
 
