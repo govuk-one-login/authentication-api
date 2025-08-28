@@ -65,7 +65,47 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
     QueueName = aws_sqs_queue.spot_request_queue.name
   }
   alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 60 seconds. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
-  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+  alarm_actions     = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "domestic_sms_quota_warning" {
+  alarm_name          = "${var.environment}-domestic-sms-quota-warning"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "DomesticSmsSent"
+  namespace           = "Authentication"
+  period              = "86400" # 24 hours in seconds
+  statistic           = "Sum"
+  threshold           = "300000"
+  alarm_description   = "Early warning alarm for domestic SMS quota - triggers when daily volume exceeds 300,000"
+  alarm_actions       = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
+  ok_actions          = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Environment        = var.environment
+    SmsDestinationType = "DOMESTIC"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "international_sms_quota_warning" {
+  alarm_name          = "${var.environment}-international-sms-quota-warning"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "InternationalSmsSent"
+  namespace           = "Authentication"
+  period              = "86400" # 24 hours in seconds
+  statistic           = "Sum"
+  threshold           = "4000"
+  alarm_description   = "Early warning alarm for international SMS quota - triggers when daily volume exceeds 4000"
+  alarm_actions       = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
+  ok_actions          = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    Environment        = var.environment
+    SmsDestinationType = "INTERNATIONAL"
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "domestic_sms_limit_exceeded_alarm" {
@@ -85,7 +125,7 @@ resource "aws_cloudwatch_metric_alarm" "domestic_sms_limit_exceeded_alarm" {
   }
 
   alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}Domestic SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
-  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+  alarm_actions     = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "international_sms_limit_exceeded_alarm" {
@@ -105,7 +145,7 @@ resource "aws_cloudwatch_metric_alarm" "international_sms_limit_exceeded_alarm" 
   }
 
   alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}International SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
-  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+  alarm_actions     = [var.environment == "production" ? aws_sns_topic.auth_pagerduty_alerts.arn : local.slack_event_sns_topic_arn]
 }
 
 

@@ -749,3 +749,9 @@ variable "ipv_jwks_call_enabled" {
   type    = bool
   default = false
 }
+
+variable "pagerduty_p1_alerts_endpoint" {
+  type        = string
+  default     = ""
+  description = "PagerDuty webhook endpoint for P1 alerts"
+}
