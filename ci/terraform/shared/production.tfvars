@@ -21,3 +21,6 @@ orch_stub_deployed                   = false
 redis_node_size              = "cache.m4.xlarge"
 provision_dynamo             = false
 provision_test_client_secret = false
+
+# Dynamo Configuration
+enable_user_profile_stream = true
