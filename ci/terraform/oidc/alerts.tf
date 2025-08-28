@@ -84,7 +84,7 @@ resource "aws_cloudwatch_metric_alarm" "domestic_sms_limit_exceeded_alarm" {
     SmsDestinationType = "DOMESTIC"
   }
 
-  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}Domestic SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}"
+  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}Domestic SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
   alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
 }
 
@@ -104,7 +104,7 @@ resource "aws_cloudwatch_metric_alarm" "international_sms_limit_exceeded_alarm" 
     SmsDestinationType = "INTERNATIONAL"
   }
 
-  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}International SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}"
+  alarm_description = "${var.environment == "production" ? "CRITICAL: " : ""}International SMS daily limit exceeded (${var.environment}). 2+ 429 responses from Notify. ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
   alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
 }
 
