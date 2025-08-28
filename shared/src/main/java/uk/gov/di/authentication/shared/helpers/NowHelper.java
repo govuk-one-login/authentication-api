@@ -29,6 +29,10 @@ public class NowHelper {
         return date.toInstant().getEpochSecond();
     }
 
+    public static long unixTimePlusNDays(int days) {
+        return nowPlus(days, ChronoUnit.DAYS).toInstant().getEpochSecond();
+    }
+
     public static class NowClock {
         private final Clock clock;
 
