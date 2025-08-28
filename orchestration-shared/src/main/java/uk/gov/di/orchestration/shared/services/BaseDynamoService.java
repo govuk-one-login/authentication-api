@@ -18,6 +18,7 @@ import uk.gov.di.orchestration.shared.helpers.TableNameHelper;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
@@ -127,6 +128,15 @@ public class BaseDynamoService<T> {
 
     private void warmUp() {
         dynamoTable.describeTable();
+    }
+
+    public Stream<T> queryTableStream(String partitionKey) {
+        var queryConditional =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(partitionKey).build());
+        return dynamoTable
+                .query(QueryEnhancedRequest.builder().queryConditional(queryConditional).build())
+                .stream()
+                .flatMap(page -> page.items().stream());
     }
 
     public QueryResponse query(QueryRequest request) {
