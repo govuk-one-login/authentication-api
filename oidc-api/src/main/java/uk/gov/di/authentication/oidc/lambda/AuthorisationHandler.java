@@ -427,6 +427,9 @@ public class AuthorisationHandler
             LOG.warn("Error recording state length, continuing: ", e);
         }
 
+        cloudwatchMetricsService.incrementCounter(
+                "orchAuthorizeRequestCount", Map.of("clientName", client.getClientName()));
+
         boolean reauthRequested =
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
                         && authRequest.getPrompt() != null
