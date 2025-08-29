@@ -97,3 +97,5 @@ orch_identity_credentials_table_encryption_key_arn = "arn:aws:kms:eu-west-2:8160
 orch_client_registry_table_encryption_key_arn      = "arn:aws:kms:eu-west-2:816047645251:key/97c19476-82ba-433f-8500-981857e7367e"
 
 cmk_for_back_channel_logout_enabled = true
+
+auth_new_account_id = "975050272416"
