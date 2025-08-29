@@ -240,7 +240,7 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.2"
 
         lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.7.1.RELEASE"
+                "io.lettuce:lettuce-core:6.8.0.RELEASE"
 
         libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.12"
 
