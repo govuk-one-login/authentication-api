@@ -177,7 +177,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_API_KEY            = var.notify_api_key
       NOTIFY_URL                = var.notify_url
       NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations
-      SMOKETEST_SMS_BUCKET_NAME = contains(["dev", "build", "staging", "integration"], var.environment) ? "${var.environment}-smoke-new-test-sms-codes" : local.sms_bucket_name
+      SMOKETEST_SMS_BUCKET_NAME = "${var.environment}-smoke-new-test-sms-codes"
       JAVA_TOOL_OPTIONS         = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       ENVIRONMENT               = var.environment
     })
@@ -242,20 +242,16 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
       "${data.aws_s3_bucket.smoketest_sms_bucket.arn}/*",
     ]
   }
-  dynamic "statement" {
-    # This is only required for the new smoketest bucket, which is used to test the new SMS codes feature.
-    for_each = var.environment != "production" ? ["1"] : []
-    content {
-      sid    = "AllowAccessToNewSmokestestBucket"
-      effect = "Allow"
+  statement {
+    sid    = "AllowAccessToNewSmokestestBucket"
+    effect = "Allow"
 
-      actions = [
-        "s3:PutObject",
-      ]
-      resources = [
-        "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes/*",
-        "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes",
-      ]
-    }
+    actions = [
+      "s3:PutObject",
+    ]
+    resources = [
+      "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes/*",
+      "arn:aws:s3:::${var.environment}-smoke-new-test-sms-codes",
+    ]
   }
 }
