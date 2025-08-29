@@ -422,7 +422,7 @@ public class AuthorisationHandler
             cloudwatchMetricsService.putEmbeddedValue(
                     "rpStateLength",
                     authRequest.getState().getValue().length(),
-                    Map.of("clientId", authRequest.getClientID().getValue()));
+                    Map.of("clientId", clientId, "clientName", client.getClientName()));
         } catch (Exception e) {
             LOG.warn("Error recording state length, continuing: ", e);
         }
