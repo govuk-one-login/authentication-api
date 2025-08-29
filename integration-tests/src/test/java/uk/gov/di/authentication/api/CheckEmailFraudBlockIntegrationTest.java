@@ -105,7 +105,9 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     CommonTestVariables.EMAIL,
                     EmailCheckResultStatus.ALLOW,
                     unixTimePlusNDays(1),
-                    "test-reference");
+                    "test-reference",
+                    CommonTestVariables.JOURNEY_ID,
+                    CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
 
             Map<String, String> headers =
                     constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
@@ -137,7 +139,9 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     CommonTestVariables.EMAIL,
                     EmailCheckResultStatus.DENY,
                     unixTimePlusNDays(1),
-                    "test-reference");
+                    "test-reference",
+                    CommonTestVariables.JOURNEY_ID,
+                    CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
 
             Map<String, String> headers =
                     constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);

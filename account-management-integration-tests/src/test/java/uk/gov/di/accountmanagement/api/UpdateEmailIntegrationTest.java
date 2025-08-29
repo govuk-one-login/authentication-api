@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -286,7 +287,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 NEW_EMAIL_ADDRESS,
                 EmailCheckResultStatus.DENY,
                 unixTimePlusNDays(1),
-                "test-reference");
+                "test-reference",
+                CommonTestVariables.JOURNEY_ID,
+                CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
