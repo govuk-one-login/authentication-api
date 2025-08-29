@@ -36,7 +36,6 @@ module "start" {
     TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
     CUSTOM_DOC_APP_CLAIM_ENABLED            = var.custom_doc_app_claim_enabled
     DOC_APP_DOMAIN                          = var.doc_app_domain
-    REDIS_KEY                               = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT                             = var.environment
     HEADERS_CASE_INSENSITIVE                = "false"
     IDENTITY_ENABLED                        = var.ipv_api_enabled
@@ -60,9 +59,9 @@ module "start" {
   lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.frontend_api_start_role.arn
