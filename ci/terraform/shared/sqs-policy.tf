@@ -40,3 +40,28 @@ resource "aws_sqs_queue_policy" "pending_email_check_queue_subscription" {
 
   policy = data.aws_iam_policy_document.pending_email_check_queue_subscription_policy_document.json
 }
+
+data "aws_iam_policy_document" "pending_email_check_dlq_policy_document" {
+  statement {
+    effect = "Allow"
+    sid    = "AllowCrossAccountSendMessageToDLQ"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_check_account_id}:root"]
+    }
+
+    actions = [
+      "sqs:SendMessage"
+    ]
+
+    resources = [
+      aws_sqs_queue.pending_email_check_dead_letter_queue.arn
+    ]
+  }
+}
+
+resource "aws_sqs_queue_policy" "pending_email_check_dlq_policy" {
+  queue_url = aws_sqs_queue.pending_email_check_dead_letter_queue.id
+  policy    = data.aws_iam_policy_document.pending_email_check_dlq_policy_document.json
+}
