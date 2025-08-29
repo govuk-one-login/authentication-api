@@ -13,19 +13,16 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -38,7 +35,6 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
 
     private final AuthenticationService authenticationService;
     private final ManualAccountDeletionService manualAccountDeletionService;
-    private final Json objectMapper = SerializationService.getInstance();
 
     public BulkRemoveAccountHandler(
             AuthenticationService authenticationService,
@@ -79,30 +75,15 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
     }
 
     @Override
-    public String handleRequest(BulkUserDeleteRequest input, Context context) {
+    public String handleRequest(BulkUserDeleteRequest request, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
 
         try {
             LOG.info("BulkRemoveAccountHandler received request");
-            BulkUserDeleteRequest request = input;
 
-            if (request.reference() == null || request.reference().trim().isEmpty()) {
-                throw new IllegalArgumentException("Reference cannot be null or empty");
-            }
-
-            if (request.emails() == null || request.emails().isEmpty()) {
-                throw new IllegalArgumentException("Email list cannot be null or empty");
-            }
-
-            if (request.createdAfter() == null) {
-                throw new IllegalArgumentException("createdAfter cannot be null");
-            }
-
-            if (request.createdBefore() == null) {
-                throw new IllegalArgumentException("createdBefore cannot be null");
-            }
+            validateRequest(request);
 
             String reference = request.reference();
             LOG.info("Processing bulk deletion request with reference: {}", reference);
@@ -118,7 +99,6 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
                     emailsToProcess.size(),
                     reference);
 
-            // Process emails in batches
             while (!emailsToProcess.isEmpty()) {
                 List<String> batch = new ArrayList<>();
                 for (int i = 0; i < BATCH_SIZE && !emailsToProcess.isEmpty(); i++) {
@@ -152,6 +132,24 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
         }
     }
 
+    private static void validateRequest(BulkUserDeleteRequest request) {
+        if (request.reference() == null || request.reference().trim().isEmpty()) {
+            throw new IllegalArgumentException("Reference cannot be null or empty");
+        }
+
+        if (request.emails() == null || request.emails().isEmpty()) {
+            throw new IllegalArgumentException("Email list cannot be null or empty");
+        }
+
+        if (request.createdAfter() == null) {
+            throw new IllegalArgumentException("createdAfter cannot be null");
+        }
+
+        if (request.createdBefore() == null) {
+            throw new IllegalArgumentException("createdBefore cannot be null");
+        }
+    }
+
     private void processBatch(
             List<String> batch,
             BulkUserDeleteRequest request,
@@ -166,32 +164,33 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
                 String normalizedEmail = email.toLowerCase().trim();
                 LOG.info("Processing deletion for email (reference: {})", reference);
 
-                Optional<UserProfile> userProfileOpt =
-                        authenticationService.getUserProfileByEmailMaybe(normalizedEmail);
+                authenticationService
+                        .getUserProfileByEmailMaybe(normalizedEmail)
+                        .ifPresentOrElse(
+                                userProfile -> {
+                                    if (isWithinDateRange(userProfile, request)) {
+                                        var accountIdentifiers =
+                                                manualAccountDeletionService.manuallyDeleteAccount(
+                                                        userProfile,
+                                                        AccountDeletionReason
+                                                                .BULK_SUPPORT_INITIATED,
+                                                        false);
+                                        LOG.info(
+                                                "Successfully deleted account for email (reference: {}). Identifiers: {}",
+                                                reference,
+                                                accountIdentifiers);
+                                        processedEmails.add(normalizedEmail);
 
-                if (userProfileOpt.isEmpty()) {
-                    LOG.warn("User not found with email");
-                    notFoundEmails.add(normalizedEmail);
-                    continue;
-                }
-
-                UserProfile userProfile = userProfileOpt.get();
-
-                if (!isWithinDateRange(userProfile, request)) {
-                    LOG.info("User filtered out - creation date outside specified range");
-                    filteredOutEmails.add(normalizedEmail);
-                    continue;
-                }
-
-                var accountIdentifiers =
-                        manualAccountDeletionService.manuallyDeleteAccount(
-                                userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
-                LOG.info(
-                        "Successfully deleted account for email (reference: {}). Identifiers: {}",
-                        reference,
-                        accountIdentifiers);
-                processedEmails.add(normalizedEmail);
-
+                                    } else {
+                                        LOG.info(
+                                                "User filtered out - creation date outside specified range");
+                                        filteredOutEmails.add(normalizedEmail);
+                                    }
+                                },
+                                () -> {
+                                    LOG.warn("User not found with email");
+                                    notFoundEmails.add(normalizedEmail);
+                                });
             } catch (Exception e) {
                 LOG.error("Failed to delete account for email", e);
                 failedEmails.add(email);
@@ -205,19 +204,10 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
             LOG.warn("User has no creation date, excluding from deletion");
             return false;
         }
-
         try {
             LocalDateTime createdDate = LocalDateTime.parse(createdDateStr, DATE_FORMATTER);
-
-            if (createdDate.isBefore(request.createdAfter())) {
-                return false;
-            }
-
-            if (createdDate.isAfter(request.createdBefore())) {
-                return false;
-            }
-
-            return true;
+            return createdDate.isBefore(request.createdBefore())
+                    && createdDate.isAfter(request.createdAfter());
         } catch (DateTimeParseException e) {
             LOG.warn("Invalid creation date format for user, excluding from deletion");
             return false;
