@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
@@ -153,7 +154,9 @@ class BulkRemoveAccountHandlerTest {
             assertTrue(result.contains("Failed: 0"));
             assertTrue(result.contains("Not found: 0"));
             assertTrue(result.contains("Filtered out: 0"));
-            verify(manualAccountDeletionService).manuallyDeleteAccount(userProfile);
+            verify(manualAccountDeletionService)
+                    .manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
         }
 
         @Test
@@ -230,7 +233,8 @@ class BulkRemoveAccountHandlerTest {
             UserProfile userProfile = createUserProfile("test@example.com", "2024-06-01T10:00:00");
             when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
                     .thenReturn(Optional.of(userProfile));
-            when(manualAccountDeletionService.manuallyDeleteAccount(userProfile))
+            when(manualAccountDeletionService.manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false))
                     .thenThrow(new RuntimeException("Database error"));
 
             String result = handler.handleRequest(request, context);
@@ -239,7 +243,9 @@ class BulkRemoveAccountHandlerTest {
             assertTrue(result.contains("Failed: 1"));
             assertTrue(result.contains("Not found: 0"));
             assertTrue(result.contains("Filtered out: 0"));
-            verify(manualAccountDeletionService).manuallyDeleteAccount(userProfile);
+            verify(manualAccountDeletionService)
+                    .manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
         }
     }
 
