@@ -148,5 +148,3 @@ lambda_min_concurrency = 1
 
 ipv_jwks_call_enabled = true
 ipv_jwks_url          = "https://api.identity.integration.account.gov.uk/.well-known/jwks.json"
-
-# pagerduty_alerts_endpoint is set elsewhere
