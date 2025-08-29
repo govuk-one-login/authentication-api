@@ -236,3 +236,8 @@ output "auth_session_table_encryption_key_arn" {
 output "id_reverification_state_key_arn" {
   value = aws_kms_key.id_reverification_state_table_encryption_key.arn
 }
+
+output "test_client_allow_list_secret_access_policy_arn" {
+  count = var.provision_test_client_secret ? 1 : 0
+  value = aws_iam_policy.test_client_allow_list_secret_policy[0].arn
+}

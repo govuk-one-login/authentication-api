@@ -4,7 +4,7 @@ module "frontend_api_verify_mfa_code_role" {
   role_name   = "frontend-api-verify-mfa-code-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
@@ -22,7 +22,7 @@ module "frontend_api_verify_mfa_code_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.experian_phone_check_sqs_queue_policy_arn
-  ]
+  ], var.test_clients_enabled ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "verify-mfa-code"
   }
