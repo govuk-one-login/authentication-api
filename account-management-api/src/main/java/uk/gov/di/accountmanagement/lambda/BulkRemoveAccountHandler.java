@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
@@ -183,7 +184,8 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
                 }
 
                 var accountIdentifiers =
-                        manualAccountDeletionService.manuallyDeleteAccount(userProfile);
+                        manualAccountDeletionService.manuallyDeleteAccount(
+                                userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
                 LOG.info(
                         "Successfully deleted account for email (reference: {}). Identifiers: {}",
                         reference,
