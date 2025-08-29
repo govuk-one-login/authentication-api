@@ -440,6 +440,7 @@ Resources:
         - AttributeName: SessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchSessionTableEncryptionKey.Arn
@@ -549,6 +550,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt AuthUserInfoTableEncryptionKey.Arn
@@ -618,6 +620,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt ClientSessionTableEncryptionKey.Arn
@@ -815,6 +818,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
@@ -895,6 +899,7 @@ Resources:
         - AttributeName: keyId
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt RpPublicKeyTableEncryptionKey.Arn
@@ -950,6 +955,7 @@ Resources:
         - AttributeName: PrefixedSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt StateStorageTableEncryptionKey.Arn
@@ -1007,6 +1013,7 @@ Resources:
         - AttributeName: SubjectID
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt DocAppCredentialTableEncryptionKey.Arn
@@ -6153,6 +6160,7 @@ Resources:
         - AttributeName: AuthCode
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
@@ -6251,6 +6259,7 @@ Resources:
         - AttributeName: PeriodStartTime
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt ClientRateLimitTableEncryptionKey.Arn
