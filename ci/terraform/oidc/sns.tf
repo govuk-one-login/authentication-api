@@ -11,7 +11,7 @@ data "aws_iam_policy_document" "auth_pagerduty_alerts_policy_document" {
       identifiers = ["cloudwatch.amazonaws.com"]
     }
     actions   = ["SNS:Publish"]
-    resources = [aws_sns_topic.auth_pagerduty_al.arn]
+    resources = [aws_sns_topic.auth_pagerduty_alerts.arn]
   }
 
   statement {
