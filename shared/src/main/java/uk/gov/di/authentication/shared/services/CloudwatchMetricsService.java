@@ -53,6 +53,8 @@ import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGet
 public class CloudwatchMetricsService {
 
     private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
+    public static final String INTERNATIONAL_SMS_DESTINATION = "INTERNATIONAL";
+    public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
 
     private final ConfigurationService configurationService;
 
@@ -271,7 +273,10 @@ public class CloudwatchMetricsService {
             var countryCode = maybeGetCountry(destination).orElse("INVALID");
             dimensions.put(COUNTRY.getValue(), countryCode);
 
-            var smsDestinationType = "44".equals(countryCode) ? "DOMESTIC" : "INTERNATIONAL";
+            var smsDestinationType =
+                    "44".equals(countryCode)
+                            ? DOMESTIC_SMS_DESTINATION
+                            : INTERNATIONAL_SMS_DESTINATION;
             dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
 
             metricName = SMS_NOTIFICATION_ERROR.getValue();
@@ -289,7 +294,7 @@ public class CloudwatchMetricsService {
     public void emitMetricForNotification(
             NotifiableType notificationType,
             String destination,
-            Boolean isTestDestination,
+            boolean isTestDestination,
             Application application) {
         String metricName;
         var dimensions =
@@ -300,7 +305,10 @@ public class CloudwatchMetricsService {
             var countryCode = maybeGetCountry(destination).orElse("INVALID");
             dimensions.put(COUNTRY.getValue(), countryCode);
 
-            var smsDestinationType = "44".equals(countryCode) ? "DOMESTIC" : "INTERNATIONAL";
+            var smsDestinationType =
+                    "44".equals(countryCode)
+                            ? DOMESTIC_SMS_DESTINATION
+                            : INTERNATIONAL_SMS_DESTINATION;
             dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
 
             metricName = SMS_NOTIFICATION_SENT.getValue();
@@ -312,7 +320,7 @@ public class CloudwatchMetricsService {
                 quotaDimensions.put(ENVIRONMENT.getValue(), configurationService.getEnvironment());
                 quotaDimensions.put(APPLICATION.getValue(), application.getValue());
 
-                if ("INTERNATIONAL".equals(smsDestinationType)) {
+                if (INTERNATIONAL_SMS_DESTINATION.equals(smsDestinationType)) {
                     incrementCounter(INTERNATIONAL_SMS_SENT.getValue(), quotaDimensions);
                 } else {
                     incrementCounter(DOMESTIC_SMS_SENT.getValue(), quotaDimensions);
