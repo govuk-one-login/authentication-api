@@ -35,6 +35,10 @@ Parameters:
   LambdaDeploymentPreference:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
+  MinErrorThreshold:
+    Type: Number
+    Description: Minimum number of errors before error rate alarms can be triggered
+    Default: 4
 
 Conditions:
   UsePermissionsBoundary:
@@ -1107,7 +1111,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1268,7 +1272,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1420,7 +1424,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1568,7 +1572,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1813,7 +1817,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2020,7 +2024,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2234,7 +2238,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2395,7 +2399,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2795,7 +2799,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3016,7 +3020,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3146,7 +3150,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3439,7 +3443,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3643,7 +3647,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3834,7 +3838,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4011,7 +4015,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4186,7 +4190,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4518,7 +4522,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4717,7 +4721,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4925,7 +4929,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
