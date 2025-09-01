@@ -6,15 +6,6 @@ export AWS_PAGER=""
 function loginAws() {
   export AWS_REGION=eu-west-2
   case $1 in
-    dev)
-      export AWS_PROFILE=di-orchestration-dev-admin
-      ;;
-    build)
-      export AWS_PROFILE=di-orchestration-build-admin
-      ;;
-    staging)
-      export AWS_PROFILE=di-orchestration-staging-admin
-      ;;
     integration)
       export AWS_PROFILE=di-orchestration-integration-admin
       ;;

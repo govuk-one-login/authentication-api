@@ -9,7 +9,7 @@
   },
   {
     "Key": "Environment",
-    "Value": "dev"
+    "Value": "integration"
   },
   {
     "Key": "Owner",
