@@ -11,6 +11,7 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest
       Environment:
         Variables:
+          FORCE_UPDATE: "2024-12-19-001 - 2"
           AUTH_ISSUER_CLAIM: "auth"
           AUTH_ISSUER_CLAIM_FOR_EVCS:
             !FindInMap [

@@ -129,6 +129,8 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     ipvReverificationService.buildIpvReverificationRedirectUri(
                             internalCommonSubjectId, clientSessionId, authenticationState);
 
+            LOG.info("Successfully generated IPV reverification request URI: {}", ipvReverificationRequestURI);
+
             idReverificationStateService.store(
                     authenticationState.getValue(),
                     request.orchestrationRedirectUrl(),

@@ -235,12 +235,15 @@ public class IPVReverificationService {
 
             String ipvAuthEncryptionPublicKey =
                     configurationService.getIPVAuthEncryptionPublicKey();
+
+            LOG.info("Found public key: {}", ipvAuthEncryptionPublicKey);
+
             return new RSAKey.Builder(
                             (RSAKey) JWK.parseFromPEMEncodedObjects(ipvAuthEncryptionPublicKey))
                     .build()
                     .toRSAPublicKey();
         } catch (JOSEException e) {
-            LOG.error("Error retrieving or parsing public key", e);
+            LOG.error("JOSE Error retrieving or parsing public key", e);
             throw new IPVReverificationServiceException(e.getMessage());
         } catch (MissingEnvVariableException e) {
             LOG.error("Missing environment variable IPV Auth Encryption Public Key", e);
