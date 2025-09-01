@@ -15,7 +15,8 @@ The parameters for the template should be configured in a file at `<env>/paramet
 resources should be configured in a file at `<env>/tags.json`.
 
 The list of permitted environments is set up in the script. The script will automatically log in to the correct AWS
-account and then create or update the Cloudformation stack using the parameters and tags provided.
+account and then create or update the Cloudformation stack using the parameters and tags provided. Only integration and
+production have been setup as those are the environments that have backup enabled.
 
 If you have not done so already, your AWS profiles will need to be configured.
 
