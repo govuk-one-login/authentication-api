@@ -53,7 +53,8 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
         var legacyAccountDeletionSnsClient =
                 new AwsSnsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getLegacyAccountDeletionTopicArn());
+                        configurationService.getLegacyAccountDeletionTopicArn(),
+                        configurationService.getSnsEndpointUri());
         var auditService = new AuditService(configurationService);
         var dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDeletionService =
