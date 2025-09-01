@@ -23,6 +23,7 @@ dependencies {
     testImplementation project(":shared-test"), noXray
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
     testImplementation 'net.javacrumbs.json-unit:json-unit-assertj:4.1.1'
+    testImplementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
@@ -41,6 +42,7 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
+    environment "SNS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
