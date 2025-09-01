@@ -427,8 +427,16 @@ public class AuthorisationHandler
             LOG.warn("Error recording state length, continuing: ", e);
         }
 
+        var isDocAppJourney =
+                DocAppUserHelper.isDocCheckingAppUser(
+                        authRequest.toParameters(), Optional.of(client));
         cloudwatchMetricsService.incrementCounter(
-                "orchAuthorizeRequestCount", Map.of("clientName", client.getClientName()));
+                "orchAuthorizeRequestCount",
+                Map.of(
+                        "clientName",
+                        client.getClientName(),
+                        "isDocAppJourney",
+                        Boolean.toString(isDocAppJourney)));
 
         boolean reauthRequested =
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
@@ -453,9 +461,7 @@ public class AuthorisationHandler
                         vtrList,
                         client.getClientName());
 
-        if (DocAppUserHelper.isDocCheckingAppUser(
-                authRequest.toParameters(), Optional.of(client))) {
-
+        if (isDocAppJourney) {
             return handleDocAppJourney(
                     orchSessionOptional,
                     orchClientSession,
