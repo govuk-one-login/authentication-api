@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.util.Objects;
@@ -177,6 +178,31 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
+            var userPermissionContext =
+                    new UserPermissionContext(
+                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            null,
+                            request.getEmail(),
+                            userContext.getAuthSession());
+
+            // Check if user will exceed limit - PermissionDecisionManager handles the business
+            // logic
+            var canSendResult =
+                    permissionDecisionManager.canSendEmailOtpNotification(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            if (canSendResult.isSuccess()
+                    && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut
+                    && lockedOut.forbiddenReason()
+                            == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+                // This request will reach the limit - increment count and return
+                // TOO_MANY_PW_RESET_REQUESTS
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, userPermissionContext);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+            }
+
             var userIsAlreadyLockedOutOfPasswordReset =
                     hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
 
@@ -191,38 +217,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
-            var userPermissionContext =
-                    new UserPermissionContext(
-                            userContext.getAuthSession().getInternalCommonSubjectId(),
-                            null,
-                            request.getEmail(),
-                            userContext.getAuthSession());
-
-            // Leaving this logic here as this handler will be updated to use a backing store rather
-            // than the session
-            // and the way the business rules for lockouts are followed can be improved.
-            // Check if user will be locked out after incrementing counter
-            var currentCount = userContext.getAuthSession().getPasswordResetCount();
-            if (currentCount + 1 >= configurationService.getCodeMaxRetries()) {
-                // User will hit the limit after increment - return TOO_MANY_PW_RESET_REQUESTS and
-                // set block
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
-            }
-
-            // User hasn't hit limit yet - increment counter normally
+            // Call the action to increment the count
             userActionsManager.sentEmailOtpNotification(
                     JourneyType.PASSWORD_RESET, userPermissionContext);
-
-            var userIsNewlyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
-
-            if (userIsNewlyLockedOutOfPasswordReset.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, userIsNewlyLockedOutOfPasswordReset.get());
-            }
 
             authSessionService.updateSession(
                     userContext
@@ -377,14 +374,20 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         if (canSendResult.isSuccess()
                 && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
+
             var codeRequestCount = lockedOut.attemptCount();
-            // If count is -1, it means Redis block exists (subsequent requests after limit reached)
-            if (codeRequestCount == -1) {
+            if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
                 LOG.info("Code is blocked for email as user has requested too many OTPs");
                 return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-            } else if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-                // First time hitting the limit (6th request)
-                return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+            } else if (lockedOut.forbiddenReason()
+                    == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+                // Check if this is the first time hitting the limit (count == maxRetries)
+                // vs subsequent requests (count == 0 after reset)
+                if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
+                    return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+                } else {
+                    return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
+                }
             }
         }
 

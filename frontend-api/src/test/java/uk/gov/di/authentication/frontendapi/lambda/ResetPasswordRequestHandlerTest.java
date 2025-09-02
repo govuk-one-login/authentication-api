@@ -40,7 +40,9 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -458,7 +460,12 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
             usingSessionWithPasswordResetCount(0);
             when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(null, -1, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
+                                            0,
+                                            Instant.now())));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -471,7 +478,13 @@ class ResetPasswordRequestHandlerTest {
         void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             usingSessionWithPasswordResetCount(0);
             when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(null, 0, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                            0,
+                                            Instant.now())));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -487,7 +500,13 @@ class ResetPasswordRequestHandlerTest {
             // First call returns permitted, second call (after increment) returns locked out
             when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(5)))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(null, 6, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                            6,
+                                            Instant.now())));
             when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(0)));
 
@@ -520,7 +539,13 @@ class ResetPasswordRequestHandlerTest {
             when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
             usingSessionWithPasswordResetCount(6);
             when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
-                    .thenReturn(Result.success(new Decision.TemporarilyLockedOut(null, 6, null)));
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                            6,
+                                            Instant.now())));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
