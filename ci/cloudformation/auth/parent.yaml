@@ -145,6 +145,7 @@ Conditions:
           - Fn::Equals:
               - !Ref SubEnvironment
               - none
+
   ProvisionTestClientSecret:
     !Or [
       !And [
@@ -160,6 +161,19 @@ Conditions:
         !Equals [!Ref Environment, "staging"],
       ],
     ]
+
+  AllowTestClientSecretAccess:
+    Fn::And:
+      - !Condition ProvisionTestClientSecret
+      - Fn::Equals:
+          - Fn::FindInMap:
+              - EnvironmentConfiguration
+              - Fn::If:
+                  - UseSubEnvironment
+                  - !Ref SubEnvironment
+                  - !Ref Environment
+              - testClientsEnabled
+          - true
 
   UseOrchdataAccess:
     !Or [
