@@ -1031,7 +1031,69 @@ Resources:
         - Key: Name
           Value: DocAppCredentialTable
 
-  #endregion
+    #endregion
+
+    #region Jwks Cache DynamoDB Table
+
+  JwksCacheTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Jwks Cache DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  JwksCacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Jwks-Cache
+      AttributeDefinitions:
+        - AttributeName: JwksUrl
+          AttributeType: S
+        - AttributeName: KeyId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: JwksUrl
+          KeyType: HASH
+        - AttributeName: KeyId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt JwksCacheTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: JwksCacheTable
+
+    #endregion
 
   #region Fetch JWKS Lambda
 
@@ -5999,6 +6061,30 @@ Resources:
             Action: lambda:InvokeFunction
             Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction:latest
 
+  JwksCacheTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowJwksCacheTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt JwksCacheTable.Arn
+          - Sid: AllowJwksCacheTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt JwksCacheTable.Arn
+          - Sid: AllowJwksCacheTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt JwksCacheTableEncryptionKey.Arn
   #endregion
 
   #region Slack notifications
