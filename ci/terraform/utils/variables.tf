@@ -183,4 +183,3 @@ variable "international_sms_quota_threshold" {
   type        = string
   default     = "5000"
 }
-
