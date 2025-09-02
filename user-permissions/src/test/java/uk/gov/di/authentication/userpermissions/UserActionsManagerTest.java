@@ -101,6 +101,40 @@ class UserActionsManagerTest {
     }
 
     @Test
+    void sentEmailOtpNotificationShouldHandleExactlyMaxRetries() {
+        var sessionWithExactMaxCount = authSession;
+        for (int i = 0; i < 6; i++) {
+            sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
+        }
+        var contextWithExactMaxCount = new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
+
+        var result =
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, contextWithExactMaxCount);
+
+        var expectedBlockedKey =
+                CODE_REQUEST_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getCodeRequestType(
+                                RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        verify(codeStorageService).saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
+        verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
+        assertTrue(result.isSuccess());
+    }
+
+    @Test
+    void passwordResetShouldHandleDifferentJourneyTypes() {
+        var result =
+                userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
+
+        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+        verify(codeStorageService)
+                .deleteBlockForEmail(
+                        EMAIL,
+                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+        assertTrue(result.isSuccess());
+    }
+
+    @Test
     void allNoOpMethodsShouldReturnSuccessWithNull() {
         var journeyType = JourneyType.SIGN_IN;
         var context = userPermissionContext;
