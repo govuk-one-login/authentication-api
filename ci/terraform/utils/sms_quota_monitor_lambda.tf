@@ -31,17 +31,26 @@ module "sms_quota_monitor_lambda_role" {
 }
 
 resource "aws_lambda_function" "sms_quota_monitor_lambda" {
-  function_name = "${var.environment}-sms-quota-monitor-lambda"
-  role          = module.sms_quota_monitor_lambda_role.arn
-  handler       = "uk.gov.di.authentication.utils.lambda.SmsQuotaMonitorHandler::handleRequest"
-  timeout       = 300
-  memory_size   = 512
-  runtime       = "java17"
-  publish       = true
+  function_name                  = "${var.environment}-sms-quota-monitor-lambda"
+  role                           = module.sms_quota_monitor_lambda_role.arn
+  handler                        = "uk.gov.di.authentication.utils.lambda.SmsQuotaMonitorHandler::handleRequest"
+  timeout                        = 300
+  memory_size                    = 512
+  reserved_concurrent_executions = 1
+  runtime                        = "java17"
+  publish                        = true
+
+  kms_key_arn             = local.lambda_env_vars_encryption_kms_key_arn
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
+
+  vpc_config {
+    security_group_ids = [local.authentication_egress_security_group_id]
+    subnet_ids         = local.authentication_private_subnet_ids
+  }
 
   environment {
     variables = {
@@ -50,12 +59,16 @@ resource "aws_lambda_function" "sms_quota_monitor_lambda" {
       INTERNATIONAL_SMS_QUOTA_THRESHOLD = var.international_sms_quota_threshold
     }
   }
+
+  tracing_config {
+    mode = "Active"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "sms_quota_monitor_lambda_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.sms_quota_monitor_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
-  retention_in_days = var.cloudwatch_log_retention
+  retention_in_days = 365
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "sms_quota_monitor_log_subscription" {
