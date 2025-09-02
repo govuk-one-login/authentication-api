@@ -17,9 +17,9 @@ import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -118,9 +118,7 @@ class PermissionDecisionManagerTest {
                             Decision.TemporarilyLockedOut.class,
                             result.getSuccess(),
                             "Expected TemporarilyLockedOut decision");
-            assertEquals(
-                    ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                    lockedOut.forbiddenReason());
+            assertEquals(ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, lockedOut.forbiddenReason());
         }
     }
 
@@ -199,10 +197,15 @@ class PermissionDecisionManagerTest {
         void shouldReturnPermittedWhenNotBlocked() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
-            when(codeStorageService.isBlockedForEmail(EMAIL, CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET))
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET))
                     .thenReturn(false);
 
-            var result = permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, userContext);
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -213,20 +216,29 @@ class PermissionDecisionManagerTest {
         void shouldReturnLockedOutWhenBlocked() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
-            when(codeStorageService.isBlockedForEmail(EMAIL, CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET))
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET))
                     .thenReturn(true);
 
-            var result = permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, userContext);
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isSuccess());
-            var lockedOut = assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
-            assertEquals(ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT, lockedOut.forbiddenReason());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
             assertEquals(5, lockedOut.attemptCount());
         }
 
         @Test
         void shouldReturnErrorWhenUserContextIsNull() {
-            var result = permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, null);
+            var result =
+                    permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, null);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
@@ -234,9 +246,12 @@ class PermissionDecisionManagerTest {
 
         @Test
         void shouldReturnErrorWhenEmailAddressIsNull() {
-            var userContext = new UserPermissionContext("subject", "pairwise", null, new AuthSessionItem());
+            var userContext =
+                    new UserPermissionContext("subject", "pairwise", null, new AuthSessionItem());
 
-            var result = permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, userContext);
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
@@ -255,9 +270,13 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnStorageErrorWhenExceptionThrown() {
             var userContext = createUserContext(0);
-            doThrow(new RuntimeException("Storage error")).when(codeStorageService).getIncorrectPasswordCount(EMAIL);
+            doThrow(new RuntimeException("Storage error"))
+                    .when(codeStorageService)
+                    .getIncorrectPasswordCount(EMAIL);
 
-            var result = permissionDecisionManager.canReceivePassword(JourneyType.PASSWORD_RESET, userContext);
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
@@ -270,10 +289,12 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnPermittedWhenNotBlocked() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(0L);
 
-            var result = permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -284,14 +305,19 @@ class PermissionDecisionManagerTest {
         void shouldReturnLockedOutWhenBlocked() {
             var userContext = createUserContext(0);
             long blockTtl = 1234567890L;
-            when(codeStorageService.getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(blockTtl);
 
-            var result = permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
-            var lockedOut = assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
-            assertEquals(ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT, lockedOut.forbiddenReason());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
             assertEquals(0, lockedOut.attemptCount());
         }
 
@@ -299,9 +325,11 @@ class PermissionDecisionManagerTest {
         void shouldReturnStorageErrorWhenExceptionThrown() {
             var userContext = createUserContext(0);
             doThrow(new RuntimeException("Storage error"))
-                    .when(codeStorageService).getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
+                    .when(codeStorageService)
+                    .getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
-            var result = permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
@@ -315,7 +343,9 @@ class PermissionDecisionManagerTest {
         void canReceiveEmailAddressShouldAlwaysReturnPermitted() {
             var userContext = createUserContext(0);
 
-            var result = permissionDecisionManager.canReceiveEmailAddress(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canReceiveEmailAddress(
+                            JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -326,7 +356,9 @@ class PermissionDecisionManagerTest {
         void canSendSmsOtpNotificationShouldAlwaysReturnPermitted() {
             var userContext = createUserContext(0);
 
-            var result = permissionDecisionManager.canSendSmsOtpNotification(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canSendSmsOtpNotification(
+                            JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -337,7 +369,8 @@ class PermissionDecisionManagerTest {
         void canVerifySmsOtpShouldAlwaysReturnPermitted() {
             var userContext = createUserContext(0);
 
-            var result = permissionDecisionManager.canVerifySmsOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifySmsOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -348,7 +381,8 @@ class PermissionDecisionManagerTest {
         void canStartJourneyShouldAlwaysReturnPermitted() {
             var userContext = createUserContext(0);
 
-            var result = permissionDecisionManager.canStartJourney(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canStartJourney(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -358,7 +392,8 @@ class PermissionDecisionManagerTest {
         @Test
         void canVerifyOtpShouldDelegateToCanVerifyAuthAppOtp() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(0L);
 
             var result = permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userContext);

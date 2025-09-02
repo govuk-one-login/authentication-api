@@ -54,20 +54,19 @@ public class PermissionDecisionManager implements PermissionDecisions {
             var codeRequestCount = userPermissionContext.authSessionItem().getPasswordResetCount();
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
-            // Check Redis block first - return -1 to indicate Redis block exists
+            // Check Redis block first - use different ForbiddenReason instead of -1
             if (codeStorageService.isBlockedForEmail(
                     userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
-                                -1, // Special value to indicate Redis block
+                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
+                                0, // Use 0 instead of -1
                                 Instant.now()
                                         .plusSeconds(configurationService.getLockoutDuration())));
             }
 
-            // Check if count will exceed limit after increment (since ResetPasswordRequestHandler
-            // increments after this check)
-            if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
+            // Check if count will reach limit after increment
+            if (codeRequestCount >= configurationService.getCodeMaxRetries() - 1) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
@@ -133,8 +132,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                 attemptCount,
-                                Instant.now().plusSeconds(3600) // placeholder TTL
-                                ));
+                                Instant.now()
+                                        .plusSeconds(configurationService.getLockoutDuration())));
             }
 
             return Result.success(new Decision.Permitted(attemptCount));

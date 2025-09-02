@@ -106,7 +106,8 @@ class UserActionsManagerTest {
         for (int i = 0; i < 6; i++) {
             sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
         }
-        var contextWithExactMaxCount = new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
+        var contextWithExactMaxCount =
+                new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
 
         var result =
                 userActionsManager.sentEmailOtpNotification(
@@ -123,8 +124,7 @@ class UserActionsManagerTest {
 
     @Test
     void passwordResetShouldHandleDifferentJourneyTypes() {
-        var result =
-                userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
+        var result = userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
 
         verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
         verify(codeStorageService)
