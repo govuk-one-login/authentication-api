@@ -34,7 +34,7 @@ ext {
         aws_lambda_events_version: "3.16.1",
         gson: "2.13.1",
         java_parser: "3.27.0",
-        jetbrains_annotations: "26.0.2",
+        jetbrains_annotations: "26.0.2-1",
         jgit: "6.10.1.202505221210-r",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.4.1",
