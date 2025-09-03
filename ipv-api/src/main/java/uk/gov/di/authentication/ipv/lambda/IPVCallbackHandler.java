@@ -235,29 +235,24 @@ public class IPVCallbackHandler
                                             new IPVCallbackNoSessionException(
                                                     "ClientSession not found"));
 
-            if (configurationService.isEnhancedCrossBrowserHandlingEnabled()) {
-                var mismatchedEntity =
-                        crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                                input.getQueryStringParameters(), clientSessionId);
+            var mismatchedEntity =
+                    crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            input.getQueryStringParameters(), clientSessionId);
 
-                if (mismatchedEntity.isPresent()) {
+            if (mismatchedEntity.isPresent()) {
 
-                    var authRequestFromStateDerivedRP =
-                            AuthenticationRequest.parse(
-                                    mismatchedEntity
-                                            .get()
-                                            .getClientSession()
-                                            .getAuthRequestParams());
-                    attachLogFieldToLogs(
-                            CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
+                var authRequestFromStateDerivedRP =
+                        AuthenticationRequest.parse(
+                                mismatchedEntity.get().getClientSession().getAuthRequestParams());
+                attachLogFieldToLogs(
+                        CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
 
-                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                            authRequestFromStateDerivedRP,
-                            mismatchedEntity.get().getErrorObject(),
-                            false,
-                            mismatchedEntity.get().getClientSessionId(),
-                            AuditService.UNKNOWN);
-                }
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                        authRequestFromStateDerivedRP,
+                        mismatchedEntity.get().getErrorObject(),
+                        false,
+                        mismatchedEntity.get().getClientSessionId(),
+                        AuditService.UNKNOWN);
             }
 
             var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
