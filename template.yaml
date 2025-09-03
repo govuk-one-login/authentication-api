@@ -4853,7 +4853,7 @@ Resources:
       AlarmActions:
         - !If
           - IsProduction
-          - !Ref ProdSlackEvents
+          - !Ref OrchProdSlackEvents
           - !Ref SlackEvents
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
@@ -6142,15 +6142,15 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
-  ProdSlackEvents:
+  OrchProdSlackEvents:
     Condition: IsProduction
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: "Slack Alerts for production"
       TopicName: production-slack-events
-      KmsMasterKeyId: !GetAtt ProdSlackEventsKey.Arn
+      KmsMasterKeyId: !GetAtt OrchProdSlackEventsKey.Arn
 
-  ProdSlackEventsKey:
+  OrchProdSlackEventsKey:
     Condition: IsProduction
     Type: AWS::KMS::Key
     Properties:
@@ -6206,18 +6206,18 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
-  ProdSlackEventsPolicy:
+  OrchProdSlackEventsPolicy:
     Condition: IsProduction
     Type: AWS::SNS::TopicPolicy
     Properties:
       Topics:
-        - !Ref ProdSlackEvents
+        - !Ref OrchProdSlackEvents
       PolicyDocument:
         Version: 2012-10-17
         Statement:
           - Action: sns:Publish
             Effect: Allow
-            Resource: !Ref ProdSlackEvents
+            Resource: !Ref OrchProdSlackEvents
             Principal:
               Service:
                 - cloudwatch.amazonaws.com
@@ -6265,15 +6265,15 @@ Resources:
           Properties:
             Topic: !Ref SlackEvents
 
-  ProdSlackNotificationsFunction:
+  OrchProdSlackNotificationsFunction:
     Condition: IsProduction
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: ProdSlackNotificationsFunction doesn't need vpc configuration
+    # checkov:skip=CKV_AWS_117: OrchProdSlackNotificationsFunction doesn't need vpc configuration
     IgnoreGlobals: "*"
     Properties:
       AutoPublishAlias: latest
-      FunctionName: !Sub ${Environment}-ProdSlackNotificationsFunction
+      FunctionName: !Sub ${Environment}-OrchProdSlackNotificationsFunction
       PermissionsBoundary: !If
         - UsePermissionsBoundary
         - !Ref PermissionsBoundary
@@ -6305,7 +6305,7 @@ Resources:
         SNS:
           Type: SNS
           Properties:
-            Topic: !Ref ProdSlackEvents
+            Topic: !Ref OrchProdSlackEvents
 
   SlackNotificationsPermission:
     Type: AWS::Lambda::Permission
@@ -6316,15 +6316,15 @@ Resources:
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Ref SlackEvents
 
-  ProdSlackNotificationsPermission:
+  OrchProdSlackNotificationsPermission:
     Condition: IsProduction
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref ProdSlackNotificationsFunction
+      FunctionName: !Ref OrchProdSlackNotificationsFunction
       Action: lambda:InvokeFunction
       Principal: sns.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Ref ProdSlackEvents
+      SourceArn: !Ref OrchProdSlackEvents
 
   #endregion
 
