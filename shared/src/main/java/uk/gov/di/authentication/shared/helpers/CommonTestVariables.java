@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.helpers;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -24,6 +25,7 @@ public class CommonTestVariables {
     public static final String CLIENT_NAME = "client-name";
     public static final String CLIENT_ID = "client-id";
     public static final String INTERNAL_COMMON_SUBJECT_ID = "urn:some:subject:identifier";
+    public static final String JOURNEY_ID = "journey-id";
     public static final Map<String, String> VALID_HEADERS =
             Map.ofEntries(
                     Map.entry(
@@ -67,4 +69,17 @@ public class CommonTestVariables {
                     UK_MOBILE_NUMBER,
                     PriorityIdentifier.BACKUP,
                     "backup-sms-identifier");
+
+    public static final Object EMAIL_CHECK_RESPONSE_TEST_DATA =
+            Map.of(
+                    "testString",
+                    "testValue1",
+                    "testNumber",
+                    456,
+                    "testBoolean",
+                    true,
+                    "testArray",
+                    List.of("testItem1", "testItem2"),
+                    "testObject",
+                    Map.of("testNestedString", "testNestedValue", "testNestedNumber", 789));
 }
