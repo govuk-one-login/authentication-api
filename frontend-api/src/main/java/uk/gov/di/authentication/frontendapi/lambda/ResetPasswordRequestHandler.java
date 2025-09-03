@@ -195,12 +195,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut
                     && lockedOut.forbiddenReason()
                             == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-                // This request will reach the limit - increment count and return
-                // TOO_MANY_PW_RESET_REQUESTS
+                // This request will reach the limit - increment count and return appropriate error
                 userActionsManager.sentEmailOtpNotification(
                         JourneyType.PASSWORD_RESET, userPermissionContext);
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
+                var errorResponse =
+                        lockedOut.isFirstTimeLimit()
+                                ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
+                                : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+                return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
             var userIsAlreadyLockedOutOfPasswordReset =
@@ -375,19 +377,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         if (canSendResult.isSuccess()
                 && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut) {
 
-            var codeRequestCount = lockedOut.attemptCount();
             if (lockedOut.forbiddenReason() == ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST) {
                 LOG.info("Code is blocked for email as user has requested too many OTPs");
                 return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
             } else if (lockedOut.forbiddenReason()
                     == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-                // Check if this is the first time hitting the limit (count == maxRetries)
-                // vs subsequent requests (count == 0 after reset)
-                if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-                    return Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS);
-                } else {
-                    return Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
-                }
+                return lockedOut.isFirstTimeLimit()
+                        ? Optional.of(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS)
+                        : Optional.of(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST);
             }
         }
 

@@ -62,17 +62,21 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
                                 0, // Use 0 instead of -1
                                 Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration())));
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
             }
 
             // Check if count will reach limit after increment
             if (codeRequestCount >= configurationService.getCodeMaxRetries() - 1) {
+                boolean isFirstTime =
+                        (codeRequestCount == configurationService.getCodeMaxRetries() - 1);
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                                 codeRequestCount,
                                 Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration())));
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                isFirstTime));
             }
 
             return Result.success(new Decision.Permitted(codeRequestCount));
@@ -97,7 +101,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                                 0,
                                 Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration())));
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
             }
         }
 
@@ -133,7 +138,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                 attemptCount,
                                 Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration())));
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
             }
 
             return Result.success(new Decision.Permitted(attemptCount));
@@ -177,7 +183,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
                                 0,
-                                Instant.ofEpochSecond(ttl)));
+                                Instant.ofEpochSecond(ttl),
+                                false));
             }
 
             return Result.success(new Decision.Permitted(0));

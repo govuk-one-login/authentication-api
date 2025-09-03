@@ -96,6 +96,28 @@ class PermissionDecisionManagerTest {
                     ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                     lockedOut.forbiddenReason());
             assertEquals(6, lockedOut.attemptCount());
+            assertEquals(false, lockedOut.isFirstTimeLimit());
+        }
+
+        @Test
+        void shouldReturnLockedOutWithFirstTimeFlagWhenReachingLimitForFirstTime() {
+            var userContext = createUserContext(5); // maxRetries - 1
+
+            var result =
+                    permissionDecisionManager.canSendEmailOtpNotification(
+                            JourneyType.PASSWORD_RESET, userContext);
+
+            assertTrue(result.isSuccess(), "Expected result to be successful");
+            var lockedOut =
+                    assertInstanceOf(
+                            Decision.TemporarilyLockedOut.class,
+                            result.getSuccess(),
+                            "Expected TemporarilyLockedOut decision");
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(5, lockedOut.attemptCount());
+            assertEquals(true, lockedOut.isFirstTimeLimit());
         }
 
         @Test

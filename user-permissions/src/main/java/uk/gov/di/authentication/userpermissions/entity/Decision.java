@@ -9,6 +9,9 @@ public sealed interface Decision permits Decision.Permitted, Decision.Temporaril
     record Permitted(int attemptCount) implements Decision {}
 
     record TemporarilyLockedOut(
-            ForbiddenReason forbiddenReason, int attemptCount, Instant lockedUntil)
+            ForbiddenReason forbiddenReason,
+            int attemptCount,
+            Instant lockedUntil,
+            boolean isFirstTimeLimit)
             implements Decision {}
 }

@@ -465,7 +465,8 @@ class ResetPasswordRequestHandlerTest {
                                     new Decision.TemporarilyLockedOut(
                                             ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
                                             0,
-                                            Instant.now())));
+                                            Instant.now(),
+                                            false)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -484,7 +485,8 @@ class ResetPasswordRequestHandlerTest {
                                             ForbiddenReason
                                                     .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                                             0,
-                                            Instant.now())));
+                                            Instant.now(),
+                                            false)));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -506,7 +508,8 @@ class ResetPasswordRequestHandlerTest {
                                             ForbiddenReason
                                                     .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                                             6,
-                                            Instant.now())));
+                                            Instant.now(),
+                                            true)));
             when(permissionDecisionManager.canVerifyEmailOtp(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(0)));
 
@@ -545,12 +548,55 @@ class ResetPasswordRequestHandlerTest {
                                             ForbiddenReason
                                                     .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                                             6,
-                                            Instant.now())));
+                                            Instant.now(),
+                                            false)));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn400WithTooManyRequestsWhenFirstTimeLimit() {
+            when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+            usingSessionWithPasswordResetCount(5);
+            when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                            5,
+                                            Instant.now(),
+                                            true)));
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
 
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_PW_RESET_REQUESTS));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn400WithBlockedWhenSubsequentRequest() {
+            when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+            usingSessionWithPasswordResetCount(6);
+            when(permissionDecisionManager.canSendEmailOtpNotification(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                                            6,
+                                            Instant.now(),
+                                            false)));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST));
             verifyNoInteractions(awsSqsClient);
         }
 
