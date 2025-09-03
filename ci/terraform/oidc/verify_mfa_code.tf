@@ -106,7 +106,7 @@ module "verify_mfa_code" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_verify_mfa_code_role.arn
+  lambda_role_arn                        = module.frontend_api_verify_mfa_code_role_with_combined_auth_attempts_policy.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
