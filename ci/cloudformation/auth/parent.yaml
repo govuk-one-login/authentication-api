@@ -332,8 +332,8 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 3
-      lambdaMaxConcurrency: 10
+      # lambdaMinConcurrency: 3
+      # lambdaMaxConcurrency: 10
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
@@ -374,8 +374,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 3
+      # lambdaMaxConcurrency: 10
+      # lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
@@ -417,8 +417,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 3
+      # lambdaMaxConcurrency: 10
+      # lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
@@ -515,14 +515,7 @@ Globals:
         JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     KmsKeyArn: !GetAtt MainKmsKey.Arn
     Layers:
-      - !Sub
-        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
-        - SecretArn:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              dynatraceSecretArn,
-            ]
+      - arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_313_36_20250507-184408_with_collector_java:1
     MemorySize: 1536
     PermissionsBoundary: !If
       - UsePermissionsBoundary
