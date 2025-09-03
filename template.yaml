@@ -4851,7 +4851,10 @@ Resources:
       AlarmDescription: !Sub "${Environment} backchannel logout DLQ has 5 or more messages.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsProduction
+          - !Ref OrchProdSlackEvents
+          - !Ref SlackEvents
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
@@ -6139,6 +6142,52 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
+  OrchProdSlackEvents:
+    Condition: IsProduction
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "Slack Alerts for production"
+      TopicName: production-slack-events
+      KmsMasterKeyId: !GetAtt OrchProdSlackEventsKey.Arn
+
+  OrchProdSlackEventsKey:
+    Condition: IsProduction
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key used to encrypt prod Slack events topic
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource: "*"
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
   SlackEventsPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
@@ -6150,6 +6199,25 @@ Resources:
           - Action: sns:Publish
             Effect: Allow
             Resource: !Ref SlackEvents
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  OrchProdSlackEventsPolicy:
+    Condition: IsProduction
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref OrchProdSlackEvents
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource: !Ref OrchProdSlackEvents
             Principal:
               Service:
                 - cloudwatch.amazonaws.com
@@ -6181,11 +6249,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           DEPLOY_ENVIRONMENT: !Ref Environment
-      Events:
-        SNS:
-          Type: SNS
-          Properties:
-            Topic: !Ref SlackEvents
       Policies:
         - Statement:
             - Sid: AllowGetParameters
@@ -6196,6 +6259,53 @@ Resources:
               Resource:
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref SlackEvents
+
+  OrchProdSlackNotificationsFunction:
+    Condition: IsProduction
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: OrchProdSlackNotificationsFunction doesn't need vpc configuration
+    IgnoreGlobals: "*"
+    Properties:
+      AutoPublishAlias: latest
+      FunctionName: !Sub ${Environment}-OrchProdSlackNotificationsFunction
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      CodeSigningConfigArn: !If
+        - UseCodeSigning
+        - !Ref CodeSigningConfigArn
+        - !Ref AWS::NoValue
+      CodeUri: ./orchestration-alerting
+      Handler: slackNotifications.handler
+      ReservedConcurrentExecutions: 1
+      Runtime: "nodejs20.x"
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          DEPLOY_ENVIRONMENT: production
+          ORCH_PROD_ALERTS_ENABLED: true
+      Policies:
+        - Statement:
+            - Sid: AllowGetParameters
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameter"
+                - "ssm:GetParameters"
+              Resource:
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref OrchProdSlackEvents
 
   SlackNotificationsPermission:
     Type: AWS::Lambda::Permission
@@ -6205,6 +6315,16 @@ Resources:
       Principal: sns.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Ref SlackEvents
+
+  OrchProdSlackNotificationsPermission:
+    Condition: IsProduction
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OrchProdSlackNotificationsFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Ref OrchProdSlackEvents
 
   #endregion
 
