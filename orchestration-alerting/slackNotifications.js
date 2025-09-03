@@ -49,7 +49,7 @@ const buildMessageRequest = async function (
     process.env.DEPLOY_ENVIRONMENT,
   );
   const isEnabledForProd =
-    process.env.PROD_ALERTS_ENABLED === "true" &&
+    process.env.ORCH_PROD_ALERTS_ENABLED === "true" &&
     process.env.DEPLOY_ENVIRONMENT === "production";
   if (isEnabledForNonProd || isEnabledForProd) {
     body.channel =
