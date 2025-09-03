@@ -430,13 +430,20 @@ public class AuthorisationHandler
         var isDocAppJourney =
                 DocAppUserHelper.isDocCheckingAppUser(
                         authRequest.toParameters(), Optional.of(client));
+        var isIdentityJourney =
+                identityRequired(
+                        authRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
         cloudwatchMetricsService.incrementCounter(
                 "orchAuthorizeRequestCount",
                 Map.of(
                         "clientName",
                         client.getClientName(),
                         "isDocAppJourney",
-                        Boolean.toString(isDocAppJourney)));
+                        Boolean.toString(isDocAppJourney),
+                        "isIdentityJourney",
+                        Boolean.toString(isIdentityJourney)));
 
         boolean reauthRequested =
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
