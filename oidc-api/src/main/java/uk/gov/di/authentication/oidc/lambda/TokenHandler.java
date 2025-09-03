@@ -62,6 +62,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_GRANT_CODE;
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
 import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
@@ -283,7 +284,8 @@ public class TokenHandler
                 new HashMap<>(
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
-                                CLIENT.getValue(), clientRegistry.getClientID()));
+                                CLIENT.getValue(), clientRegistry.getClientID(),
+                                CLIENT_NAME.getValue(), clientRegistry.getClientName()));
         cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
