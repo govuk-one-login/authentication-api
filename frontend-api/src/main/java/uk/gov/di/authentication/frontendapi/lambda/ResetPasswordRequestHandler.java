@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -185,32 +186,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             request.getEmail(),
                             userContext.getAuthSession());
 
-            // Check if user will exceed limit - PermissionDecisionManager handles the business
-            // logic
-            var canSendResult =
-                    permissionDecisionManager.canSendEmailOtpNotification(
-                            JourneyType.PASSWORD_RESET, userPermissionContext);
-
-            if (canSendResult.isSuccess()
-                    && canSendResult.getSuccess() instanceof Decision.TemporarilyLockedOut lockedOut
-                    && lockedOut.forbiddenReason()
-                            == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
-                // This request will reach the limit - increment count and return appropriate error
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
-                var errorResponse =
-                        lockedOut.isFirstTimeLimit()
-                                ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
-                                : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
-                return generateApiGatewayProxyErrorResponse(400, errorResponse);
-            }
-
-            var userIsAlreadyLockedOutOfPasswordReset =
-                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
-
-            if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, userIsAlreadyLockedOutOfPasswordReset.get());
+            var permissionCheckResult = checkUserPermissions(request.getEmail(), userContext);
+            if (permissionCheckResult.isFailure()) {
+                return permissionCheckResult.getFailure();
             }
 
             var isTestClient =
@@ -358,6 +336,55 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> checkUserPermissions(
+            String email, UserContext userContext) {
+        var userPermissionContext =
+                new UserPermissionContext(
+                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        null,
+                        email,
+                        userContext.getAuthSession());
+
+        var canSendResult =
+                permissionDecisionManager.canSendEmailOtpNotification(
+                        JourneyType.PASSWORD_RESET, userPermissionContext);
+
+        if (canSendResult.isSuccess()) {
+            var decision = canSendResult.getSuccess();
+            if (decision instanceof Decision.TemporarilyLockedOut lockedOut) {
+                var result = handleTemporarilyLockedOut(lockedOut, userPermissionContext);
+                if (result.isFailure()) {
+                    return result;
+                }
+            }
+        }
+
+        var userIsAlreadyLockedOutOfPasswordReset =
+                hasUserExceededMaxAllowedRequests(email, userContext);
+        if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            400, userIsAlreadyLockedOutOfPasswordReset.get()));
+        }
+
+        return Result.success(null);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> handleTemporarilyLockedOut(
+            Decision.TemporarilyLockedOut lockedOut, UserPermissionContext userPermissionContext) {
+        if (lockedOut.forbiddenReason()
+                == ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT) {
+            userActionsManager.sentEmailOtpNotification(
+                    JourneyType.PASSWORD_RESET, userPermissionContext);
+            var errorResponse =
+                    lockedOut.isFirstTimeLimit()
+                            ? ErrorResponse.TOO_MANY_PW_RESET_REQUESTS
+                            : ErrorResponse.BLOCKED_FOR_PW_RESET_REQUEST;
+            return Result.failure(generateApiGatewayProxyErrorResponse(400, errorResponse));
+        }
+        return Result.success(null);
     }
 
     private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
