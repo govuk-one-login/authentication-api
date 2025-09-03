@@ -6303,7 +6303,7 @@ Resources:
 
   #endregion
 
-  #region Client Rate Limit DynamoDB Table
+  #region Client Rate Limit
 
   ClientRateLimitTableEncryptionKey:
     Type: AWS::KMS::Key
@@ -6362,7 +6362,35 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRateLimitTable
+
+  ClientRateLimitMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-client-rate-limit-filter
+      FilterPattern: '{($.message = "Client with ID * has exceeded rate limit. Current count: *. Limit *")}'
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-client-rate-limit-count
+          MetricNamespace: ClientRateLimitCount
+          MetricValue: 1
+
+  ClientRateLimitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-client-rate-limit-alarm
+      AlarmDescription: !Sub "1 or more clients have hit their rate limit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/h4DKTQE"
+      Namespace: ClientRateLimitCount
+      MetricName: !Sub ${Environment}-client-rate-limit-count
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackEvents
   #endregion
+
   #region ClientRateLimitTable policies
   ClientRateLimitTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6389,6 +6417,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt ClientRateLimitTableEncryptionKey.Arn
   #endregion
+
   #region StateStorage policies
   StateStorageTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6452,6 +6481,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
+
   #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
