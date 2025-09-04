@@ -222,6 +222,11 @@ public class IPVCallbackHelper {
 
         cloudwatchMetricsService.incrementSignInByClient(
                 orchSession.getIsNewAccount(), clientId, clientName, isTestJourney);
+        cloudwatchMetricsService.incrementCounter(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", clientName,
+                        "clientId", clientId));
 
         authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
