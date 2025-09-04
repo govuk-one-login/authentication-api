@@ -1,4 +1,4 @@
-name: di-authentication-local
+name: di-auth-shared
 
 # Services for running an authentication stack locally
 # N.B. any changes to the localstack/redis/dynamodb containers must be reflected in
@@ -44,56 +44,6 @@ services:
       timeout: 1m
     ports:
       - 8000:8000
-    networks:
-      - di-authentication-api-net
-
-  orchestration-stub:
-    image: orch-stub-local:latest
-    container_name: orch-stub-local
-    build:
-      context: ../authentication-stubs/orchestration-stub
-      dockerfile: Dockerfile
-    env_file: ../authentication-stubs/orchestration-stub/.env.local
-    environment:
-      AUTHENTICATION_BACKEND_URL: http://host.docker.internal:4402/
-    ports:
-      - "4400:4400"
-    networks:
-      - di-authentication-api-net
-
-  authentication-frontend:
-    image: authentication-frontend-local:latest
-    container_name: authentication-frontend-local
-    build:
-      context: ../authentication-frontend
-      dockerfile: dev.Dockerfile
-    env_file: ../authentication-frontend/.env.local
-    environment:
-      FRONTEND_API_BASE_URL: http://host.docker.internal:4402/
-    command: "node --enable-source-maps --inspect=0.0.0.0:5401 dist/server.js"
-    ports:
-      - "4401:4401"
-      - "5401:5401"
-    networks:
-      - di-authentication-api-net
-
-  authentication-api:
-    image: authentication-api-local:latest
-    container_name: authentication-api-local
-    build:
-      context: .
-      dockerfile: local-running/Dockerfile
-    depends_on:
-      aws:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      dynamodb:
-        condition: service_healthy
-    env_file: local-running/.env.local
-    ports:
-      - "4402:4402"
-      - "5402:5402"
     networks:
       - di-authentication-api-net
 

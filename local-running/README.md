@@ -30,7 +30,7 @@ at the same level as `authentication-api`, and the containers will be built from
 
 ### Basic usage
 
-The simplest way is to run `docker compose up` in the repository root. This will spin up a number of containers:
+The simplest way is to run `docker compose up` in this directory. This will spin up a number of containers:
 
 - `aws` - Localstack instance for SSM, KMS, and SQS dependencies
 - `redis` - Redis container for remaining redis dependencies
