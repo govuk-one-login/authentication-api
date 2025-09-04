@@ -83,7 +83,7 @@ public class JwksCacheService extends BaseDynamoService<JwksCacheItem> {
         return new JwksCacheItem(jwksUrl.toString(), key, ttl);
     }
 
-    public void storeKey(JwksCacheItem jwksCacheItem) {
+    private void storeKey(JwksCacheItem jwksCacheItem) {
         try {
             put(jwksCacheItem);
         } catch (Exception e) {
@@ -92,7 +92,7 @@ public class JwksCacheService extends BaseDynamoService<JwksCacheItem> {
         }
     }
 
-    public Optional<JwksCacheItem> getEncryptionKey(String jwksUrl) {
+    private Optional<JwksCacheItem> getEncryptionKey(String jwksUrl) {
         Optional<JwksCacheItem> jwksCacheItem =
                 queryTableStream(jwksUrl)
                         .filter(item -> KeyUse.ENCRYPTION.getValue().equals(item.getKeyUse()))
