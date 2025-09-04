@@ -21,3 +21,7 @@ jobs:
 
       - name: Perform dependency review
         uses: actions/dependency-review-action@595b5aeba73380359d98a5e087f648dbb0edce1b # v4.7.3
+        with:
+          # These exceptions should be rare and well justified
+          # - GHSA-qh8g-58pp-2wxh see https://github.com/govuk-one-login/authentication-api/pull/7105
+          allow-ghsas: GHSA-qh8g-58pp-2wxh
