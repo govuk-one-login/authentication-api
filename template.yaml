@@ -68,7 +68,6 @@ Conditions:
     ]
   IsDevOrBuild:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
-  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
   IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
   IsNotDevOrProd:
     !Not [
@@ -83,6 +82,7 @@ Conditions:
       !Equals [!Ref Environment, production],
     ]
   IsProduction: !Equals [!Ref Environment, production]
+  IsNotProduction: !Not [!Condition IsProduction]
   UseStronglyConsistentReads:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -1238,7 +1238,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
       AlarmName: !Sub ${Environment}-fetchjwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -1256,7 +1259,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1399,7 +1405,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -1417,7 +1426,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1551,7 +1563,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-trustmark-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -1569,7 +1584,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -1696,7 +1714,10 @@ Resources:
         - false
         - true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -1717,7 +1738,10 @@ Resources:
         - false
         - true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 25
@@ -1944,7 +1968,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-doc-app-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -1962,7 +1989,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2151,7 +2181,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-token-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -2169,7 +2202,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2365,7 +2401,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
       AlarmName: !Sub ${Environment}-logout-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -2383,7 +2422,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2526,7 +2568,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
       AlarmName: !Sub ${Environment}-global-logout-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -2544,7 +2589,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2642,7 +2690,10 @@ Resources:
       AlarmDescription: !Sub "${Environment} global logout test DLQ has a message.ACCOUNT: di-orchestration-${Environment}."
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
@@ -2927,7 +2978,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-authentication-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -2945,7 +2999,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -2995,7 +3052,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Assuming no intervention and continuing with user journey. ACCOUNT: di-orchestration-${Environment}"
       AlarmName: !Sub ${Environment}-authentication-callback-ais-error-fail-open-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3022,7 +3082,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Aborting user journey - P1 alarm. ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/l/cp/7Z2cm5rQ"
       AlarmName: !Sub ${Environment}-authentication-callback-ais-error-abort-p1-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3148,7 +3211,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-jwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3166,7 +3232,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3296,7 +3365,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3568,7 +3640,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/PADNHwE"
       AlarmName: !Sub ${Environment}-authorisation-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3586,7 +3661,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3772,7 +3850,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-userinfo-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3790,7 +3871,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -3963,7 +4047,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-auth-code-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -3981,7 +4068,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -4644,7 +4734,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-ipv-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -4662,7 +4755,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -4843,7 +4939,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-spot-response-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -4861,7 +4960,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -5054,7 +5156,10 @@ Resources:
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -5072,7 +5177,10 @@ Resources:
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 10
@@ -6178,6 +6286,7 @@ Resources:
   #region Slack notifications
 
   SlackEvents:
+    Condition: IsNotProduction
     Type: AWS::SNS::Topic
     Properties:
       DisplayName: !Sub "Slack Alerts for ${Environment}"
@@ -6185,12 +6294,14 @@ Resources:
       KmsMasterKeyId: !GetAtt SlackEventsKey.Arn
 
   SlackEventsKeyAlias:
+    Condition: IsNotProduction
     Type: AWS::KMS::Alias
     Properties:
       AliasName: alias/slackEventsKey
       TargetKeyId: !Ref SlackEventsKey
 
   SlackEventsKey:
+    Condition: IsNotProduction
     Type: AWS::KMS::Key
     Properties:
       Description: Key used to encrypt Slack events topic
@@ -6274,6 +6385,7 @@ Resources:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
   SlackEventsPolicy:
+    Condition: IsNotProduction
     Type: AWS::SNS::TopicPolicy
     Properties:
       Topics:
@@ -6311,6 +6423,7 @@ Resources:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
   SlackNotificationsFunction:
+    Condition: IsNotProduction
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: SlackNotificationsFunction doesn't need vpc configuration
@@ -6392,6 +6505,7 @@ Resources:
             Topic: !Ref OrchProdSlackEvents
 
   SlackNotificationsPermission:
+    Condition: IsNotProduction
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref SlackNotificationsFunction
@@ -6592,7 +6706,10 @@ Resources:
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
       AlarmActions:
-        - !Ref SlackEvents
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref AWS::NoValue
   #endregion
 
   #region ClientRateLimitTable policies
@@ -7422,6 +7539,9 @@ Resources:
 Outputs:
   SlackEventsArn:
     Description: "ARN of the SlackEvents SNS topic"
-    Value: !Ref SlackEvents
+    Value: !If
+      - IsNotProduction
+      - !Ref SlackEvents
+      - !Ref OrchProdSlackEvents
     Export:
       Name: !Sub "${AWS::StackName}-SlackEventsArn"
