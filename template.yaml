@@ -113,6 +113,7 @@ Mappings:
       authApiId: "dfwubyergf"
       authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
+      newauthAccountId: "975050272416"
       authEnvironment: sandpit
       serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
@@ -141,6 +142,7 @@ Mappings:
       authApiId: "6of9f4amvg"
       authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
+      newauthAccountId: "058264536367"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
@@ -169,6 +171,7 @@ Mappings:
       authApiId: "1rvwudxmbk"
       authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
+      newauthAccountId: "851725205974"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
@@ -198,6 +201,7 @@ Mappings:
       authApiId: "k2skqhxed6"
       authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
+      newauthAccountId: "211125600642"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
@@ -225,6 +229,7 @@ Mappings:
       authApiId: "s4gj268zy6"
       authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
+      newauthAccountId: "211125303002"
       authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
@@ -408,17 +413,26 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
-          - Sid: AllowKeyEncryptDecryptActions
+          - Sid: AllowKeyEncryptDecryptActionstoAuthAccount
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
               - kms:Encrypt
@@ -468,28 +482,46 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowOrchSessionTableCrossAccountDeleteAccess
               Effect: Allow
               Action:
                 - dynamodb:DeleteItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowOrchSessionTableCrossAccountWriteAccess
               Effect: Allow
               Action:
@@ -497,14 +529,23 @@ Resources:
                 - dynamodb:UpdateItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
 
   #endregion
 
@@ -601,14 +642,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -645,28 +695,46 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowClientSessionTableDeleteAccessPolicy
               Effect: Allow
               Action:
                 - dynamodb:DeleteItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
       Tags:
         - Key: Name
           Value: ClientSessionTable
@@ -704,14 +772,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -754,14 +831,23 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
       Tags:
         - Key: Name
           Value: ClientRegistryTable
@@ -799,14 +885,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -846,14 +941,23 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
   #endregion
 
   #region RP Public Key DynamoDB Table
