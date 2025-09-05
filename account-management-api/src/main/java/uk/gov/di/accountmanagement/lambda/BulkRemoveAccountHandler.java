@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
+import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -28,7 +29,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
-public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRequest, String> {
+public class BulkRemoveAccountHandler
+        implements RequestHandler<BulkUserDeleteRequest, BulkUserDeleteResponse> {
     private static final Logger LOG = LogManager.getLogger(BulkRemoveAccountHandler.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final int BATCH_SIZE = 50;
@@ -76,7 +78,7 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
     }
 
     @Override
-    public String handleRequest(BulkUserDeleteRequest request, Context context) {
+    public BulkUserDeleteResponse handleRequest(BulkUserDeleteRequest request, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
@@ -116,7 +118,7 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
                         filteredOutEmails);
             }
 
-            String result =
+            String resultMessage =
                     String.format(
                             "Bulk deletion completed for reference %s. Processed: %d, Failed: %d, Not found: %d, Filtered out: %d",
                             reference,
@@ -125,8 +127,14 @@ public class BulkRemoveAccountHandler implements RequestHandler<BulkUserDeleteRe
                             notFoundEmails.size(),
                             filteredOutEmails.size());
 
-            LOG.info(result);
-            return result;
+            LOG.info(resultMessage);
+            return new BulkUserDeleteResponse(
+                    resultMessage,
+                    reference,
+                    processedEmails.size(),
+                    failedEmails.size(),
+                    notFoundEmails.size(),
+                    filteredOutEmails.size());
         } catch (Exception e) {
             LOG.error("Unexpected error during bulk deletion", e);
             throw new RuntimeException("Bulk deletion failed", e);
