@@ -48,8 +48,8 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
 
     @Override
     public Void handleRequest(ScheduledEvent input, Context context) {
-        var today = LocalDate.now(ZoneId.of("Europe/London"));
-        var startOfDay = today.atStartOfDay(ZoneId.of("Europe/London")).toInstant();
+        var today = LocalDate.now(ZoneId.of("UTC"));
+        var startOfDay = today.atStartOfDay(ZoneId.of("UTC")).toInstant();
         var now = Instant.now();
 
         var domesticSmsCount = getSmsCountSinceMidnight("DomesticSmsSent", startOfDay, now);
@@ -68,6 +68,7 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
     }
 
     private double getSmsCountSinceMidnight(String metricName, Instant start, Instant end) {
+        var periodSeconds = (int) java.time.Duration.between(start, end).getSeconds();
         var request =
                 GetMetricStatisticsRequest.builder()
                         .namespace("Authentication")
@@ -79,12 +80,15 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
                                         .build())
                         .startTime(start)
                         .endTime(end)
-                        .period(300)
+                        .period(periodSeconds)
                         .statistics(Statistic.SUM)
                         .build();
 
         var response = cloudWatchClient.getMetricStatistics(request);
-        return response.datapoints().stream().mapToDouble(datapoint -> datapoint.sum()).sum();
+        return response.datapoints().stream()
+                .findFirst()
+                .map(datapoint -> datapoint.sum())
+                .orElse(0.0);
     }
 
     private void emitQuotaWarningMetric(String metricName, double value) {
