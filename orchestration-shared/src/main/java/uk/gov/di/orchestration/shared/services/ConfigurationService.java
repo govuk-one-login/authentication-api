@@ -305,6 +305,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("IPV_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
     }
 
+    public int getJwkCacheExpirationInSeconds() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+    }
+
     public String getInternalSectorURI() {
         return System.getenv("INTERNAl_SECTOR_URI");
     }
