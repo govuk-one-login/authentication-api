@@ -35,7 +35,7 @@ ext {
         gson: "2.13.1",
         java_parser: "3.27.0",
         jetbrains_annotations: "26.0.2-1",
-        jgit: "6.10.1.202505221210-r",
+        jgit: "7.3.0.202506031305-r",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "10.4.2",
         junit: "5.13.4",
