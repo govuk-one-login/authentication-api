@@ -313,7 +313,6 @@ class IPVCallbackHandlerTest {
                                 "",
                                 Map.of(ResponseHeaders.LOCATION, accessDeniedURI.toString()),
                                 null));
-        when(configService.isEnhancedCrossBrowserHandlingEnabled()).thenReturn(true);
     }
 
     @Test
