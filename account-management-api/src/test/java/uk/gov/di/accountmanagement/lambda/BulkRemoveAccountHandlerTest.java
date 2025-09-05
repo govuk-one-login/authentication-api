@@ -96,29 +96,6 @@ class BulkRemoveAccountHandlerTest {
                             .getMessage()
                             .contains("Email list cannot be null or empty"));
         }
-
-        //        @Test
-        //        @DisplayName("Should throw exception when date format is invalid")
-        //        void shouldThrowExceptionWhenDateFormatIsInvalid() throws Json.JsonException {
-        //            String input =
-        //                    """
-        //                {
-        //                    "reference": "TEST_REF",
-        //                    "emails": ["test@example.com"],
-        //                    "created_after": "invalid-date",
-        //                    "created_before": "2024-12-31T23:59:59"
-        //                }
-        //                """;
-        //            BulkUserDeleteRequest request = objectMapper.readValue(input,
-        // BulkUserDeleteRequest.class);
-        //
-        //            RuntimeException exception =
-        //                    assertThrows(
-        //                            RuntimeException.class, () -> handler.handleRequest(request,
-        // context));
-        //
-        //            assertTrue(exception.getMessage().contains("Bulk deletion failed"));
-        //        }
     }
 
     @Nested
