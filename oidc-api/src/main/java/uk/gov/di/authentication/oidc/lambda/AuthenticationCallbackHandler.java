@@ -530,6 +530,9 @@ public class AuthenticationCallbackHandler
                         clientId,
                         orchClientSession.getClientName(),
                         isTestJourney);
+                cloudwatchMetricsService.incrementCounter(
+                        "orchAuthJourneyCompleted",
+                        Map.of("clientName", client.getClientName(), "clientId", clientId));
 
                 LOG.info("Successfully processed request");
 
