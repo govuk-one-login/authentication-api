@@ -159,12 +159,6 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
   ]
 }
 
-resource "aws_api_gateway_base_path_mapping" "api" {
-  api_id      = aws_api_gateway_rest_api.di_account_management_api.id
-  stage_name  = aws_api_gateway_stage.stage.stage_name
-  domain_name = local.account_management_api_fqdn
-}
-
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name

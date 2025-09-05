@@ -1,13 +1,3 @@
-resource "aws_ssm_parameter" "at_internal_am_api" {
-  name  = "/acceptance-tests/${var.environment}/INTERNAL_AM_API"
-  type  = "String"
-  value = "https://${local.account_management_api_fqdn}/"
-}
-
-import {
-  to = aws_ssm_parameter.at_internal_am_api
-  id = "/acceptance-tests/${var.environment}/INTERNAL_AM_API"
-}
 
 resource "aws_ssm_parameter" "at_email_verify_code" {
   name  = "/acceptance-tests/${var.environment}/EMAIL_VERIFY_CODE"
