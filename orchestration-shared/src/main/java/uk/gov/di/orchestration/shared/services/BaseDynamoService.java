@@ -18,6 +18,7 @@ import uk.gov.di.orchestration.shared.helpers.TableNameHelper;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
@@ -111,11 +112,15 @@ public class BaseDynamoService<T> {
     }
 
     public List<T> queryIndex(String indexName, String partition) {
-        QueryConditional q =
+        QueryConditional queryConditional =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(partition).build());
         return dynamoTable
                 .index(indexName)
-                .query(QueryEnhancedRequest.builder().queryConditional(q).build())
+                .query(
+                        QueryEnhancedRequest.builder()
+                                .consistentRead(useConsistentReads)
+                                .queryConditional(queryConditional)
+                                .build())
                 .stream()
                 .flatMap(page -> page.items().stream())
                 .toList();
@@ -127,6 +132,19 @@ public class BaseDynamoService<T> {
 
     private void warmUp() {
         dynamoTable.describeTable();
+    }
+
+    public Stream<T> queryTableStream(String partitionKey) {
+        QueryConditional queryConditional =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(partitionKey).build());
+        return dynamoTable
+                .query(
+                        QueryEnhancedRequest.builder()
+                                .consistentRead(useConsistentReads)
+                                .queryConditional(queryConditional)
+                                .build())
+                .stream()
+                .flatMap(page -> page.items().stream());
     }
 
     public QueryResponse query(QueryRequest request) {
