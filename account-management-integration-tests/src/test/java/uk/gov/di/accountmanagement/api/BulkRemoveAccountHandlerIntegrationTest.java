@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
+import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
@@ -14,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BulkRemoveAccountHandlerIntegrationTest
-        extends HandlerIntegrationTest<BulkUserDeleteRequest, String> {
+        extends HandlerIntegrationTest<BulkUserDeleteRequest, BulkUserDeleteResponse> {
 
     private static final String EMAIL_1 = "user1@example.com";
     private static final String EMAIL_2 = "user2@example.com";
@@ -49,7 +50,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
                         LocalDateTime.of(2024, 1, 1, 0, 0),
                         LocalDateTime.of(2024, 12, 31, 23, 59));
 
-        String result = handler.handleRequest(request, context);
+        BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
         // Verify correct users were deleted
         assertFalse(userStore.userExists(EMAIL_1));
@@ -57,9 +58,9 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertTrue(userStore.userExists(EMAIL_3)); // Not in deletion list
 
         // Verify result message
-        assertTrue(result.contains("Processed: 2"));
-        assertTrue(result.contains("Not found: 1"));
-        assertTrue(result.contains("TEST_REF_001"));
+        assertTrue(result.message().contains("Processed: 2"));
+        assertTrue(result.message().contains("Not found: 1"));
+        assertTrue(result.message().contains("TEST_REF_001"));
     }
 
     @Test
@@ -76,12 +77,12 @@ public class BulkRemoveAccountHandlerIntegrationTest
                         LocalDateTime.of(2020, 1, 1, 0, 0),
                         LocalDateTime.of(2020, 12, 31, 23, 59));
 
-        String result = handler.handleRequest(request, context);
+        BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
         // User should still exist (filtered out)
         assertTrue(userStore.userExists(EMAIL_1));
-        assertTrue(result.contains("Filtered out: 1"));
-        assertTrue(result.contains("Processed: 0"));
+        assertTrue(result.message().contains("Filtered out: 1"));
+        assertTrue(result.message().contains("Processed: 0"));
     }
 
     @Test
@@ -130,7 +131,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
                         LocalDateTime.of(2024, 1, 1, 0, 0),
                         LocalDateTime.of(2024, 12, 31, 23, 59));
 
-        String result = handler.handleRequest(request, context);
+        BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
         // Verify specified users were deleted
         for (String email : emailsToDelete) {
@@ -141,7 +142,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertTrue(userStore.userExists("user4@example.com"));
         assertTrue(userStore.userExists("user60@example.com"));
 
-        assertTrue(result.contains("Processed: 6"));
-        assertTrue(result.contains("Failed: 0"));
+        assertTrue(result.message().contains("Processed: 6"));
+        assertTrue(result.message().contains("Failed: 0"));
     }
 }

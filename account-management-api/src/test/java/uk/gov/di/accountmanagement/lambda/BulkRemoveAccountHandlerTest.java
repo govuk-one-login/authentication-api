@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
+import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -148,12 +149,12 @@ class BulkRemoveAccountHandlerTest {
             when(manualAccountDeletionService.manuallyDeleteAccount(userProfile))
                     .thenReturn(identifiers);
 
-            String result = handler.handleRequest(request, context);
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.contains("Processed: 1"));
-            assertTrue(result.contains("Failed: 0"));
-            assertTrue(result.contains("Not found: 0"));
-            assertTrue(result.contains("Filtered out: 0"));
+            assertTrue(result.message().contains("Processed: 1"));
+            assertTrue(result.message().contains("Failed: 0"));
+            assertTrue(result.message().contains("Not found: 0"));
+            assertTrue(result.message().contains("Filtered out: 0"));
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
                             userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
@@ -179,12 +180,12 @@ class BulkRemoveAccountHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
                     .thenReturn(Optional.of(userProfile));
 
-            String result = handler.handleRequest(request, context);
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.contains("Processed: 0"));
-            assertTrue(result.contains("Failed: 0"));
-            assertTrue(result.contains("Not found: 0"));
-            assertTrue(result.contains("Filtered out: 1"));
+            assertTrue(result.message().contains("Processed: 0"));
+            assertTrue(result.message().contains("Failed: 0"));
+            assertTrue(result.message().contains("Not found: 0"));
+            assertTrue(result.message().contains("Filtered out: 1"));
             verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
         }
 
@@ -206,12 +207,12 @@ class BulkRemoveAccountHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe("nonexistent@example.com"))
                     .thenReturn(Optional.empty());
 
-            String result = handler.handleRequest(request, context);
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.contains("Processed: 0"));
-            assertTrue(result.contains("Failed: 0"));
-            assertTrue(result.contains("Not found: 1"));
-            assertTrue(result.contains("Filtered out: 0"));
+            assertTrue(result.message().contains("Processed: 0"));
+            assertTrue(result.message().contains("Failed: 0"));
+            assertTrue(result.message().contains("Not found: 1"));
+            assertTrue(result.message().contains("Filtered out: 0"));
             verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
         }
 
@@ -237,12 +238,12 @@ class BulkRemoveAccountHandlerTest {
                             userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false))
                     .thenThrow(new RuntimeException("Database error"));
 
-            String result = handler.handleRequest(request, context);
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.contains("Processed: 0"));
-            assertTrue(result.contains("Failed: 1"));
-            assertTrue(result.contains("Not found: 0"));
-            assertTrue(result.contains("Filtered out: 0"));
+            assertTrue(result.message().contains("Processed: 0"));
+            assertTrue(result.message().contains("Failed: 1"));
+            assertTrue(result.message().contains("Not found: 0"));
+            assertTrue(result.message().contains("Filtered out: 0"));
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
                             userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
