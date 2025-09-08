@@ -89,7 +89,8 @@ class ExampleSmsVerificationHandlerTest {
         ForbiddenReason reason = ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
         when(permissionDecisions.canVerifySmsOtp(any(), any()))
                 .thenReturn(
-                        Result.success(new Decision.TemporarilyLockedOut(reason, 5, lockedUntil)));
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(reason, 5, lockedUntil, false)));
 
         // When
         String result = handler.handle(CORRECT_OTP);

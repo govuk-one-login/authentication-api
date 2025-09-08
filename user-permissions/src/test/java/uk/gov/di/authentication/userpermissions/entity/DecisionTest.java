@@ -24,11 +24,28 @@ class DecisionTest {
         Instant lockedUntil = Instant.now().plusSeconds(300);
 
         // When
-        Decision decision = new Decision.TemporarilyLockedOut(reason, 5, lockedUntil);
+        Decision decision = new Decision.TemporarilyLockedOut(reason, 5, lockedUntil, false);
 
         // Then
         assertEquals(5, decision.attemptCount());
         assertEquals(reason, ((Decision.TemporarilyLockedOut) decision).forbiddenReason());
         assertEquals(lockedUntil, ((Decision.TemporarilyLockedOut) decision).lockedUntil());
+        assertEquals(false, ((Decision.TemporarilyLockedOut) decision).isFirstTimeLimit());
+    }
+
+    @Test
+    void shouldCreateTemporarilyLockedOutDecisionWithFirstTimeLimit() {
+        // Given
+        ForbiddenReason reason = ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT;
+        Instant lockedUntil = Instant.now().plusSeconds(300);
+
+        // When
+        Decision decision = new Decision.TemporarilyLockedOut(reason, 5, lockedUntil, true);
+
+        // Then
+        assertEquals(5, decision.attemptCount());
+        assertEquals(reason, ((Decision.TemporarilyLockedOut) decision).forbiddenReason());
+        assertEquals(lockedUntil, ((Decision.TemporarilyLockedOut) decision).lockedUntil());
+        assertEquals(true, ((Decision.TemporarilyLockedOut) decision).isFirstTimeLimit());
     }
 }
