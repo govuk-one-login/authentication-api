@@ -167,7 +167,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
       authApiId: "1rvwudxmbk"
-      authExternalApiId: "rr86yg3r28"
+      authExternalApiId: "8ttd794ay4"
       authAccountId: "758531536632"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
