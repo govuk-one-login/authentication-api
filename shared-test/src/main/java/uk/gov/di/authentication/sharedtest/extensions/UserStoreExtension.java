@@ -102,6 +102,32 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return signUp(email, password, subject, isTestUser, Optional.of("1.0"), 1);
     }
 
+    public String signUpWithCreationDate(
+            String email, String password, Subject subject, String creationDate) {
+        String publicSubjectId = signUp(email, password, subject);
+        setUserCreationDate(email, creationDate);
+        return publicSubjectId;
+    }
+
+    public void setUserCreationDate(String email, String creationDate) {
+        var userProfileTableName =
+                TableNameHelper.getFullTableName(
+                        "user-profile", ConfigurationService.getInstance());
+        var dynamoDbEnhancedClient =
+                DynamoClientHelper.createDynamoEnhancedClient(ConfigurationService.getInstance());
+        var dynamoUserProfileTable =
+                dynamoDbEnhancedClient.table(
+                        userProfileTableName, TableSchema.fromBean(UserProfile.class));
+
+        UserProfile userProfile =
+                dynamoUserProfileTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        if (userProfile != null) {
+            userProfile.setCreated(creationDate);
+            dynamoUserProfileTable.updateItem(userProfile);
+        }
+    }
+
     private String signUp(
             String email,
             String password,

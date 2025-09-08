@@ -469,6 +469,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
+    public String getSnsEndpointUri() {
+        return System.getenv("SNS_ENDPOINT");
+    }
+
     public String getTermsAndConditionsVersion() {
         return System.getenv("TERMS_CONDITIONS_VERSION");
     }
