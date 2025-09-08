@@ -7599,8 +7599,10 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
       OKActions:
         - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} IPV handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-pagerduty-ipv-handback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
@@ -7646,8 +7648,10 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
       OKActions:
         - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} Doc app callback handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       AlarmName: !Sub ${Environment}-pagerduty-doc-app-handback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
