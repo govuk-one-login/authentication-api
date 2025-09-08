@@ -104,7 +104,7 @@ public class BulkRemoveAccountHandler
 
             while (!emailsToProcess.isEmpty()) {
                 List<String> batch = new ArrayList<>();
-                for (int i = 0; i < BATCH_SIZE && !emailsToProcess.isEmpty(); i++) {
+                for (int i = 1; i <= BATCH_SIZE && !emailsToProcess.isEmpty(); i++) {
                     batch.add(emailsToProcess.remove(0));
                 }
 
@@ -215,8 +215,15 @@ public class BulkRemoveAccountHandler
         }
         try {
             LocalDateTime createdDate = LocalDateTime.parse(createdDateStr, DATE_FORMATTER);
-            return createdDate.isBefore(request.createdBefore())
-                    && createdDate.isAfter(request.createdAfter());
+            if (createdDate.isBefore(request.createdAfter())) {
+                LOG.warn("User created before deletion window, excluding from deletion");
+                return false;
+            } else if (createdDate.isAfter(request.createdBefore())) {
+                LOG.warn("User created after deletion window, excluding from deletion");
+                return false;
+            } else {
+                return true;
+            }
         } catch (DateTimeParseException e) {
             LOG.warn("Invalid creation date format for user, excluding from deletion");
             return false;

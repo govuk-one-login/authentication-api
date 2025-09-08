@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
@@ -17,6 +19,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -128,41 +131,44 @@ class BulkRemoveAccountHandlerTest {
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.message().contains("Processed: 1"));
-            assertTrue(result.message().contains("Failed: 0"));
-            assertTrue(result.message().contains("Not found: 0"));
-            assertTrue(result.message().contains("Filtered out: 0"));
+            assertCounts(result, 1, 0, 0, 0);
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
                             userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
         }
 
-        @Test
-        @DisplayName("Should filter out user created before date range")
-        void shouldFilterOutUserCreatedBeforeDateRange() throws Json.JsonException {
+        @ParameterizedTest
+        @CsvSource({
+            "2024-05-15T12:00:00, 2024-06-01T00:00:00, 2024-12-31T23:59:59",
+            "2023-12-31T23:59:59, 2024-01-01T00:00:00, 2024-12-31T23:59:59",
+            "2025-01-01T00:00:00, 2024-01-01T00:00:00, 2024-12-31T23:59:59"
+        })
+        @DisplayName("Should filter out user created outside date range")
+        void shouldFilterOutUserCreatedOutsideDateRange(
+                String userCreatedDate, String createdAfter, String createdBefore)
+                throws Json.JsonException {
             String input =
-                    """
+                    String.format(
+                            """
                 {
                     "reference": "TEST_REF",
                     "emails": ["test@example.com"],
-                    "created_after": "2024-06-01T00:00:00",
-                    "created_before": "2024-12-31T23:59:59"
+                    "created_after": "%s",
+                    "created_before": "%s"
                 }
-                """;
+                """,
+                            createdAfter, createdBefore);
             BulkUserDeleteRequest request =
                     objectMapper.readValue(input, BulkUserDeleteRequest.class);
 
-            UserProfile userProfile = createUserProfile("test@example.com", "2024-05-15T12:00:00");
+            UserProfile userProfile = createUserProfile("test@example.com", userCreatedDate);
 
             when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
                     .thenReturn(Optional.of(userProfile));
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.message().contains("Processed: 0"));
-            assertTrue(result.message().contains("Failed: 0"));
-            assertTrue(result.message().contains("Not found: 0"));
-            assertTrue(result.message().contains("Filtered out: 1"));
+            assertCounts(result, 0, 0, 0, 1);
             verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
         }
 
@@ -186,10 +192,7 @@ class BulkRemoveAccountHandlerTest {
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.message().contains("Processed: 0"));
-            assertTrue(result.message().contains("Failed: 0"));
-            assertTrue(result.message().contains("Not found: 1"));
-            assertTrue(result.message().contains("Filtered out: 0"));
+            assertCounts(result, 0, 0, 1, 0);
             verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
         }
 
@@ -217,14 +220,23 @@ class BulkRemoveAccountHandlerTest {
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-            assertTrue(result.message().contains("Processed: 0"));
-            assertTrue(result.message().contains("Failed: 1"));
-            assertTrue(result.message().contains("Not found: 0"));
-            assertTrue(result.message().contains("Filtered out: 0"));
+            assertCounts(result, 0, 1, 0, 0);
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
                             userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
         }
+    }
+
+    private void assertCounts(
+            BulkUserDeleteResponse result,
+            int processed,
+            int failed,
+            int notFound,
+            int filteredOut) {
+        assertEquals(processed, result.numberProcessed());
+        assertEquals(failed, result.numberFailed());
+        assertEquals(notFound, result.numberNotFound());
+        assertEquals(filteredOut, result.numberFilteredOut());
     }
 
     private UserProfile createUserProfile(String email, String createdDate) {

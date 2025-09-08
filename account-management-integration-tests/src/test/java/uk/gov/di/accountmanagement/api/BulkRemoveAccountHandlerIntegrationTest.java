@@ -3,17 +3,21 @@ package uk.gov.di.accountmanagement.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
@@ -25,7 +29,8 @@ public class BulkRemoveAccountHandlerIntegrationTest
     private static final String EMAIL_1 = "user1@example.com";
     private static final String EMAIL_2 = "user2@example.com";
     private static final String EMAIL_3 = "user3@example.com";
-    private static final String EMAIL_4 = "nonexistent@example.com";
+    private static final String EMAIL_4 = "user4@example.com";
+    private static final String EMAIL_5 = "user5@example.com";
     private static final String PASSWORD = "password123";
 
     @BeforeEach
@@ -37,8 +42,76 @@ public class BulkRemoveAccountHandlerIntegrationTest
     }
 
     @Test
-    void shouldDeleteUsersWithinDateRangeAndLeaveOthersUntouched() {
-        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2024-06-15T12:00:00");
+    void shouldDeleteUsersWithinDateRange() {
+        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2023-12-15T12:00:00");
+        userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
+        userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
+        userStore.signUpWithCreationDate(EMAIL_4, PASSWORD, new Subject(), "2024-08-10T14:15:00");
+        userStore.signUpWithCreationDate(EMAIL_5, PASSWORD, new Subject(), "2025-01-01T14:15:00");
+
+        assertTrue(userStore.userExists(EMAIL_1));
+        assertTrue(userStore.userExists(EMAIL_2));
+        assertTrue(userStore.userExists(EMAIL_3));
+        assertTrue(userStore.userExists(EMAIL_4));
+        assertTrue(userStore.userExists(EMAIL_5));
+
+        var request =
+                new BulkUserDeleteRequest(
+                        "TEST_REF_001",
+                        List.of(EMAIL_1, EMAIL_2, EMAIL_3, EMAIL_4, EMAIL_5),
+                        LocalDateTime.of(2024, 1, 1, 0, 0),
+                        LocalDateTime.of(2024, 12, 31, 23, 59));
+
+        BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+        assertTrue(userStore.userExists(EMAIL_1));
+        assertFalse(userStore.userExists(EMAIL_2));
+        assertFalse(userStore.userExists(EMAIL_3));
+        assertFalse(userStore.userExists(EMAIL_4));
+        assertTrue(userStore.userExists(EMAIL_5));
+
+        assertEquals(3, result.numberProcessed());
+        assertEquals(2, result.numberFilteredOut());
+        assertTrue(result.message().contains("TEST_REF_001"));
+
+        assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
+    }
+
+    @Test
+    void shouldFilterOutUsersOutsideDateRangeWithEdgeCases() {
+        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2019-12-31T23:59:59");
+        userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2020-01-01T00:00:00");
+        userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2020-12-31T23:59:59");
+        userStore.signUpWithCreationDate(EMAIL_4, PASSWORD, new Subject(), "2021-01-01T00:00:00");
+
+        assertTrue(userStore.userExists(EMAIL_1));
+        assertTrue(userStore.userExists(EMAIL_2));
+        assertTrue(userStore.userExists(EMAIL_3));
+        assertTrue(userStore.userExists(EMAIL_4));
+
+        var request =
+                new BulkUserDeleteRequest(
+                        "TEST_REF_002",
+                        List.of(EMAIL_1, EMAIL_2, EMAIL_3, EMAIL_4),
+                        LocalDateTime.of(2020, 1, 1, 0, 0, 0),
+                        LocalDateTime.of(2020, 12, 31, 23, 59, 59));
+
+        BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+        assertTrue(userStore.userExists(EMAIL_1));
+        assertFalse(userStore.userExists(EMAIL_2));
+        assertFalse(userStore.userExists(EMAIL_3));
+        assertTrue(userStore.userExists(EMAIL_4));
+
+        assertEquals(2, result.numberProcessed());
+        assertEquals(2, result.numberFilteredOut());
+
+        assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
+    }
+
+    @Test
+    void shouldNotDeleteUsersNotFoundInTheDatabase() {
+        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2024-04-07T12:00:00");
         userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
         userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
 
@@ -49,7 +122,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
         var request =
                 new BulkUserDeleteRequest(
                         "TEST_REF_001",
-                        List.of(EMAIL_1, EMAIL_2, EMAIL_4),
+                        List.of(EMAIL_1, EMAIL_2, EMAIL_3, EMAIL_4, EMAIL_5),
                         LocalDateTime.of(2024, 1, 1, 0, 0),
                         LocalDateTime.of(2024, 12, 31, 23, 59));
 
@@ -57,41 +130,15 @@ public class BulkRemoveAccountHandlerIntegrationTest
 
         assertFalse(userStore.userExists(EMAIL_1));
         assertFalse(userStore.userExists(EMAIL_2));
-        assertTrue(userStore.userExists(EMAIL_3));
+        assertFalse(userStore.userExists(EMAIL_3));
+        assertFalse(userStore.userExists(EMAIL_4));
+        assertFalse(userStore.userExists(EMAIL_5));
 
-        assertTrue(result.message().contains("Processed: 2"));
-        assertTrue(result.message().contains("Not found: 1"));
+        assertEquals(3, result.numberProcessed());
+        assertEquals(2, result.numberNotFound());
         assertTrue(result.message().contains("TEST_REF_001"));
 
-        List<String> receivedEvents =
-                assertTxmaAuditEventsReceived(
-                        txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT), false);
-        AuditEventExpectation expectation = new AuditEventExpectation(AUTH_DELETE_ACCOUNT.name());
-        expectation.withAttribute(
-                "extensions.account_deletion_reason",
-                AccountDeletionReason.BULK_SUPPORT_INITIATED.name());
-        expectation.verify(receivedEvents);
-    }
-
-    @Test
-    void shouldFilterOutUsersOutsideDateRange() {
-        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2019-06-15T12:00:00");
-        assertTrue(userStore.userExists(EMAIL_1));
-
-        var request =
-                new BulkUserDeleteRequest(
-                        "TEST_REF_002",
-                        List.of(EMAIL_1),
-                        LocalDateTime.of(2020, 1, 1, 0, 0),
-                        LocalDateTime.of(2020, 12, 31, 23, 59));
-
-        BulkUserDeleteResponse result = handler.handleRequest(request, context);
-
-        assertTrue(userStore.userExists(EMAIL_1));
-        assertTrue(result.message().contains("Filtered out: 1"));
-        assertTrue(result.message().contains("Processed: 0"));
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
     }
 
     @Test
@@ -112,6 +159,8 @@ public class BulkRemoveAccountHandlerIntegrationTest
                                     .getMessage()
                                     .contains("Email list cannot be null or empty"));
         }
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -150,18 +199,24 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertTrue(result.message().contains("Processed: 6"));
         assertTrue(result.message().contains("Failed: 0"));
 
-        List<String> receivedEvents =
-                assertTxmaAuditEventsReceived(
-                        txmaAuditQueue,
-                        List.of(
-                                AUTH_DELETE_ACCOUNT,
-                                AUTH_DELETE_ACCOUNT,
-                                AUTH_DELETE_ACCOUNT,
-                                AUTH_DELETE_ACCOUNT,
-                                AUTH_DELETE_ACCOUNT,
-                                AUTH_DELETE_ACCOUNT),
-                        false);
-        AuditEventExpectation expectation = new AuditEventExpectation(AUTH_DELETE_ACCOUNT.name());
+        assertEquals(6, result.numberProcessed());
+        assertEquals(0, result.numberFailed());
+
+        assertAuditEvents(
+                List.of(
+                        AUTH_DELETE_ACCOUNT,
+                        AUTH_DELETE_ACCOUNT,
+                        AUTH_DELETE_ACCOUNT,
+                        AUTH_DELETE_ACCOUNT,
+                        AUTH_DELETE_ACCOUNT,
+                        AUTH_DELETE_ACCOUNT));
+    }
+
+    private static void assertAuditEvents(Collection<AuditableEvent> events) {
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, events, false);
+        AuditEventExpectation expectation =
+                new AuditEventExpectation(
+                        AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT.name());
         expectation.withAttribute(
                 "extensions.account_deletion_reason",
                 AccountDeletionReason.BULK_SUPPORT_INITIATED.name());
