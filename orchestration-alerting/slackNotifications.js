@@ -20,6 +20,20 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
     account = runbookSplit[0];
   }
   var description = descriptionAndAccount[0];
+  if (snsMessage.AlarmName.includes("pagerduty")) {
+    if (snsMessage.NewStateValue === "ALARM") {
+      description =
+        description +
+        "\n\nThis has triggered a PagerDuty alert for the following service:" +
+        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
+    }
+    if (snsMessage.NewStateValue === "OK") {
+      description =
+        description +
+        "\n\nThis has resolved the associated PagerDuty alert for the following service:" +
+        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
+    }
+  }
   var fields = [
     {
       title: "Status",
@@ -65,7 +79,8 @@ const buildMessageRequest = async function (
     "integration",
     "production",
   ].includes(process.env.DEPLOY_ENVIRONMENT);
-  const isPagerDutyAlarm = snsMessage.AlarmDescription.includes("PagerDuty");
+  const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
+  const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
   if (isPagerDutyAlarm && isEnabledForProd) {
     body.channel =
       process.env.SLACK_CHANNEL_ID ||
