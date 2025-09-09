@@ -170,6 +170,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("DOC_APP_JWKS_URL");
     }
 
+    public URL getDocAppJwksUrl() {
+        return getURLOrThrow("DOC_APP_JWKS_URL");
+    }
+
     public int getDocAppJwkCacheExpirationInSeconds() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
@@ -299,6 +303,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public int getIPVJwkCacheExpirationInSeconds() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("IPV_JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
+    }
+
+    public int getJwkCacheExpirationInSeconds() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
     }
 
     public String getInternalSectorURI() {

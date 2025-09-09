@@ -2915,6 +2915,7 @@ Resources:
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
             - true
@@ -3580,6 +3581,7 @@ Resources:
             - true
             - false
           DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -4673,6 +4675,7 @@ Resources:
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
             - true
