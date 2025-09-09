@@ -219,7 +219,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
                         AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT.name());
         expectation.withAttribute(
                 "extensions.account_deletion_reason",
-                AccountDeletionReason.BULK_SUPPORT_INITIATED.name());
+                AccountDeletionReason.SECURITY_INITIATED.name());
         expectation.verify(receivedEvents);
     }
 }
