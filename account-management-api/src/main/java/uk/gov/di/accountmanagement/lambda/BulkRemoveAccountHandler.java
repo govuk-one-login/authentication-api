@@ -181,8 +181,7 @@ public class BulkRemoveAccountHandler
                                         var accountIdentifiers =
                                                 manualAccountDeletionService.manuallyDeleteAccount(
                                                         userProfile,
-                                                        AccountDeletionReason
-                                                                .BULK_SUPPORT_INITIATED,
+                                                        AccountDeletionReason.SECURITY_INITIATED,
                                                         false);
                                         LOG.info(
                                                 "Successfully deleted account for email (reference: {}). Identifiers: {}",

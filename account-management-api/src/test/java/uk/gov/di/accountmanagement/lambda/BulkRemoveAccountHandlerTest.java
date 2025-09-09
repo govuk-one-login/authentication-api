@@ -134,7 +134,7 @@ class BulkRemoveAccountHandlerTest {
             assertCounts(result, 1, 0, 0, 0);
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
-                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false);
         }
 
         @ParameterizedTest
@@ -215,7 +215,7 @@ class BulkRemoveAccountHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
                     .thenReturn(Optional.of(userProfile));
             when(manualAccountDeletionService.manuallyDeleteAccount(
-                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false))
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false))
                     .thenThrow(new RuntimeException("Database error"));
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
@@ -223,7 +223,7 @@ class BulkRemoveAccountHandlerTest {
             assertCounts(result, 0, 1, 0, 0);
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
-                            userProfile, AccountDeletionReason.BULK_SUPPORT_INITIATED, false);
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false);
         }
     }
 
