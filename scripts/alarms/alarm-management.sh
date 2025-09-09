@@ -4,7 +4,7 @@ set -euo pipefail
 declare DIR
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 readonly DIR
-readonly -a ENVIRONMENTS=("authdev1" "authdev2" "authdev3" "dev")
+readonly -a ENVIRONMENTS=("authdev1" "authdev2" "authdev3" "dev" "production")
 
 declare -A ALARMS
 declare ENVIRONMENT ALARM_NAME METRIC_NAME NAMESPACE THRESHOLD SMS_TYPE EMAIL_ADDRESSES
@@ -50,6 +50,8 @@ select_environment() {
 setup_aws() {
   if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
     export AWS_PROFILE="di-auth-development-admin"
+  elif [[ ${ENVIRONMENT} == "production" ]]; then
+    export AWS_PROFILE="di-auth-production-admin"
   else
     export AWS_PROFILE="gds-di-development-admin"
   fi
@@ -67,6 +69,8 @@ sns_subscribe() {
 
   if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
     account_id="653994557586"
+  elif [[ ${ENVIRONMENT} == "production" ]]; then
+    account_id="216552277552" # Update with actual production account ID
   else
     account_id="216552277552"
   fi
@@ -126,6 +130,8 @@ sns_unsubscribe() {
 
   if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
     account_id="653994557586"
+  elif [[ ${ENVIRONMENT} == "production" ]]; then
+    account_id="216552277552" # Update with actual production account ID
   else
     account_id="216552277552"
   fi
@@ -158,10 +164,38 @@ sns_unsubscribe() {
 
 # Test Alarm functionality
 init_alarms() {
-  ALARMS["${ENVIRONMENT}-domestic-sms-quota-early-warning-alarm"]="DomesticSmsSent:Authentication:20000:DOMESTIC"
-  ALARMS["${ENVIRONMENT}-international-sms-quota-early-warning-alarm"]="InternationalSmsSent:Authentication:5000:INTERNATIONAL"
-  ALARMS["${ENVIRONMENT}-domestic-sms-limit-exceeded-alarm"]="SmsLimitExceeded:Authentication:2:DOMESTIC"
-  ALARMS["${ENVIRONMENT}-international-sms-limit-exceeded-alarm"]="SmsLimitExceeded:Authentication:2:INTERNATIONAL"
+  # SMS Daily Quotas
+  local domestic_daily_quota=500000
+  local international_daily_quota=6000
+
+  # Early Warning Thresholds (60% of daily quotas)
+  local domestic_quota_threshold=$((domestic_daily_quota * 60 / 100))           # 300,000
+  local international_quota_threshold=$((international_daily_quota * 60 / 100)) # 3,600
+
+  # Limit Exceeded Thresholds (100% of daily quotas)
+  local domestic_limit_threshold=${domestic_daily_quota}           # 500,000
+  local international_limit_threshold=${international_daily_quota} # 6,000
+
+  # Dynamically discover alarm names to handle P1 prefixes
+  local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
+
+  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
+  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
+  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
+  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
+
+  if [[ -n ${domestic_quota_alarm} ]]; then
+    ALARMS["${domestic_quota_alarm}"]="DomesticSmsQuotaEarlyWarning:Authentication:${domestic_quota_threshold}:DOMESTIC"
+  fi
+  if [[ -n ${international_quota_alarm} ]]; then
+    ALARMS["${international_quota_alarm}"]="InternationalSmsQuotaEarlyWarning:Authentication:${international_quota_threshold}:INTERNATIONAL"
+  fi
+  if [[ -n ${domestic_limit_alarm} ]]; then
+    ALARMS["${domestic_limit_alarm}"]="SmsLimitExceeded:Authentication:${domestic_limit_threshold}:DOMESTIC"
+  fi
+  if [[ -n ${international_limit_alarm} ]]; then
+    ALARMS["${international_limit_alarm}"]="SmsLimitExceeded:Authentication:${international_limit_threshold}:INTERNATIONAL"
+  fi
 }
 
 select_alarm() {
@@ -256,7 +290,7 @@ test_alarm() {
   test_value=$((THRESHOLD + 100))
   echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to trigger ${ALARM_NAME}"
   # Use different dimensions based on metric type
-  if [[ ${METRIC_NAME} == "DomesticSmsSent" || ${METRIC_NAME} == "InternationalSmsSent" ]]; then
+  if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
     # SMS quota metrics use only Environment dimension for total count
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
@@ -301,6 +335,16 @@ test_alarm() {
 
     if [[ ${new_state} == "ALARM" ]]; then
       echo "✅ SUCCESS: Alarm triggered as expected!"
+
+      # For early warning alarms, send negative value to deactivate
+      if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
+        local deactivate_value=$((test_value * -1))
+        echo "Sending negative value ${deactivate_value} to deactivate alarm..."
+        aws cloudwatch put-metric-data \
+          --namespace "${NAMESPACE}" \
+          --metric-data "MetricName=${METRIC_NAME},Value=${deactivate_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
+        echo "Deactivation metric sent. Alarm should return to OK state in next evaluation period."
+      fi
       break
     else
       echo "⏳ Alarm has not activated yet (Current state: ${new_state})"
@@ -339,6 +383,8 @@ show_info() {
 
   if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
     account_id="653994557586"
+  elif [[ ${ENVIRONMENT} == "production" ]]; then
+    account_id="216552277552" # Update with actual production account ID
   else
     account_id="216552277552"
   fi

@@ -6,7 +6,7 @@ resource "aws_cloudwatch_metric_alarm" "domestic_sms_quota_early_warning_alarm" 
   namespace           = "Authentication"
   period              = "60"
   statistic           = "Sum"
-  threshold           = "1"
+  threshold           = "300000"
   alarm_description   = "Domestic SMS usage trending towards quota limit in ${var.environment}. ACCOUNT: ${local.aws_account_alias}"
   alarm_actions       = ["arn:aws:sns:eu-west-2:653994557586:authdev1-slack-events"]
 
@@ -23,7 +23,7 @@ resource "aws_cloudwatch_metric_alarm" "international_sms_quota_early_warning_al
   namespace           = "Authentication"
   period              = "60"
   statistic           = "Sum"
-  threshold           = "1"
+  threshold           = "3600"
   alarm_description   = "International SMS usage trending towards quota limit in ${var.environment}. ACCOUNT: ${local.aws_account_alias}"
   alarm_actions       = ["arn:aws:sns:eu-west-2:653994557586:authdev1-slack-events"]
 
