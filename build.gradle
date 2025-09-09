@@ -29,7 +29,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.32.19",
+        aws_sdk_v2_version: "2.33.4",
         aws_lambda_core_version: "1.4.0",
         aws_lambda_events_version: "3.16.1",
         gson: "2.13.1",
@@ -66,8 +66,12 @@ subprojects {
         dependencies {
             constraints {
                 // Netty constraints
-                classpath('io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                classpath('io.netty:netty-codec-http:[4.1.125.Final,)') {
+                    because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
+                }
+
+                classpath('io.netty:netty-common:[4.1.118.Final,4.2)') {
+                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
                 classpath('io.netty:netty-handler:[4.1.118.Final,)') {
@@ -76,6 +80,10 @@ subprojects {
 
                 classpath('io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
+
+                classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
                 }
 
                 // Apache Commons constraints
@@ -151,12 +159,12 @@ subprojects {
         constraints {
             configurations.configureEach { conf ->
                 // Netty constraints
-                add(conf.name, 'io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                add(conf.name, 'io.netty:netty-codec-http:[4.1.125.Final,)') {
+                    because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
                 }
 
-                add(conf.name, 'io.netty:netty-common:[4.1.115.Final,4.2)') {
-                    because 'CVE-2024-47535 is fixed in io.netty:netty-common:4.1.115.Final and higher'
+                add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
+                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
                 add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
@@ -165,6 +173,10 @@ subprojects {
 
                 add(conf.name, 'io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
+
+                add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
                 }
 
                 // Jetty constraints
