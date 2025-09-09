@@ -96,14 +96,6 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
-  IsEnhancedCrossBrowserHandlingEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -4593,10 +4585,6 @@ Resources:
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
-            - true
-            - false
-          USE_ENHANCED_CROSS_BROWSER_HANDLING: !If
-            - IsEnhancedCrossBrowserHandlingEnabled
             - true
             - false
       Policies:
