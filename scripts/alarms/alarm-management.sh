@@ -61,21 +61,15 @@ setup_aws() {
 
 # SNS Subscribe functionality
 sns_subscribe() {
-  local email topic_arn account_id existing needs_confirmation subscription_output
+  local email topic_arn existing needs_confirmation subscription_output
 
   read -rp "Enter email address to subscribe: " email
 
   setup_aws
+  init_alarms
+  select_alarm
 
-  if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
-    account_id="653994557586"
-  elif [[ ${ENVIRONMENT} == "production" ]]; then
-    account_id="216552277552" # Update with actual production account ID
-  else
-    account_id="216552277552"
-  fi
-
-  topic_arn="arn:aws:sns:eu-west-2:${account_id}:${ENVIRONMENT}-slack-events"
+  topic_arn=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].AlarmActions[0]" --output text)
 
   echo "Checking for existing subscriptions..."
   existing=$(aws sns list-subscriptions-by-topic --topic-arn "${topic_arn}" --query "Subscriptions[?Endpoint=='${email}'].SubscriptionArn" --output text)
@@ -122,21 +116,15 @@ sns_subscribe() {
 
 # SNS Unsubscribe functionality
 sns_unsubscribe() {
-  local email topic_arn account_id existing
+  local email topic_arn existing
 
   read -rp "Enter email address to unsubscribe: " email
 
   setup_aws
+  init_alarms
+  select_alarm
 
-  if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
-    account_id="653994557586"
-  elif [[ ${ENVIRONMENT} == "production" ]]; then
-    account_id="216552277552" # Update with actual production account ID
-  else
-    account_id="216552277552"
-  fi
-
-  topic_arn="arn:aws:sns:eu-west-2:${account_id}:${ENVIRONMENT}-slack-events"
+  topic_arn=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].AlarmActions[0]" --output text)
 
   echo "Checking for existing subscriptions..."
   existing=$(aws sns list-subscriptions-by-topic --topic-arn "${topic_arn}" --query "Subscriptions[?Endpoint=='${email}'].SubscriptionArn" --output text)
@@ -179,10 +167,10 @@ init_alarms() {
   # Dynamically discover alarm names to handle P1 prefixes
   local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
 
-  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
-  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
-  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
-  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?contains(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
+  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
+  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
+  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
+  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
 
   if [[ -n ${domestic_quota_alarm} ]]; then
     ALARMS["${domestic_quota_alarm}"]="DomesticSmsQuotaEarlyWarning:Authentication:${domestic_quota_threshold}:DOMESTIC"
@@ -201,6 +189,12 @@ init_alarms() {
 select_alarm() {
   local -a alarm_names sorted_alarms
   local i selection
+
+  if [[ ${#ALARMS[@]} -eq 0 ]]; then
+    echo "❌ No alarms found for environment: ${ENVIRONMENT}"
+    echo "Please check that alarms exist and you have the correct AWS permissions."
+    exit 1
+  fi
 
   for alarm_name in "${!ALARMS[@]}"; do
     alarm_names+=("${alarm_name}")
@@ -372,26 +366,34 @@ test_alarm() {
 
 # Show Info functionality
 show_info() {
-  local account_id topic_arn subscription_count
-  local -a topics=("${ENVIRONMENT}-slack-events" "${ENVIRONMENT}-auth-pagerduty-alerts")
-  local -a alarm_names=()
+  local topic_arn subscription_count
+  local -a topics=()
 
   setup_aws
+  init_alarms
 
   echo "📧 SNS Topic Subscriptions (Environment: ${ENVIRONMENT:-none})"
   echo "============================================================="
 
-  if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
-    account_id="653994557586"
-  elif [[ ${ENVIRONMENT} == "production" ]]; then
-    account_id="216552277552" # Update with actual production account ID
-  else
-    account_id="216552277552"
+  if [[ ${#ALARMS[@]} -eq 0 ]]; then
+    echo "❌ No alarms found for environment: ${ENVIRONMENT}"
+    echo "Cannot display SNS topic information without alarms."
+    return
   fi
 
-  for topic_name in "${topics[@]}"; do
-    topic_arn="arn:aws:sns:eu-west-2:${account_id}:${topic_name}"
+  for alarm_name in "${!ALARMS[@]}"; do
+    local alarm_topics
+    alarm_topics=$(aws cloudwatch describe-alarms --alarm-names "${alarm_name}" --query "MetricAlarms[0].AlarmActions" --output text)
+    if [[ -n ${alarm_topics} && ${alarm_topics} != "None" ]]; then
+      for topic_arn in ${alarm_topics}; do
+        if [[ ! " ${topics[*]} " =~ ${topic_arn} ]]; then
+          topics+=("${topic_arn}")
+        fi
+      done
+    fi
+  done
 
+  for topic_arn in "${topics[@]}"; do
     echo "Topic: ${topic_arn}"
     subscription_count=$(aws sns list-subscriptions-by-topic --topic-arn "${topic_arn}" --query "length(Subscriptions)" --output text 2> /dev/null || echo "0")
 
@@ -407,14 +409,7 @@ show_info() {
   echo "🚨 Alarm States (Environment: ${ENVIRONMENT:-none})"
   echo "================================================="
 
-  alarm_names+=(
-    "${ENVIRONMENT}-domestic-sms-quota-early-warning-alarm"
-    "${ENVIRONMENT}-international-sms-quota-early-warning-alarm"
-    "${ENVIRONMENT}-domestic-sms-limit-exceeded-alarm"
-    "${ENVIRONMENT}-international-sms-limit-exceeded-alarm"
-  )
-
-  for alarm_name in "${alarm_names[@]}"; do
+  for alarm_name in "${!ALARMS[@]}"; do
     local state reason updated metric_name metric_value
     state=$(aws cloudwatch describe-alarms --alarm-names "${alarm_name}" --query "MetricAlarms[0].StateValue" --output text 2> /dev/null || echo "NOT_FOUND")
 
