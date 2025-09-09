@@ -49,6 +49,7 @@ public class DocAppAuthorisationService {
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final JwksCacheService jwksCacheService;
     private final StateStorageService stateStorageService;
     private final NowHelper.NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
@@ -60,11 +61,13 @@ public class DocAppAuthorisationService {
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
+            JwksCacheService jwksCacheService,
             StateStorageService stateStorageService,
             Clock clock) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
         this.nowClock = new NowHelper.NowClock(clock);
     }
@@ -73,10 +76,12 @@ public class DocAppAuthorisationService {
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
+            JwksCacheService jwksCacheService,
             StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
@@ -243,7 +248,9 @@ public class DocAppAuthorisationService {
     private JWK getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            return jwksService.getDocAppJwk();
+            var cachedDocAppJwk = jwksService.getDocAppJwk();
+            jwksCacheService.getOrGenerateDocAppJwksCacheItem();
+            return cachedDocAppJwk;
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKs URL", e);
             throw new DocAppAuthorisationServiceException(e);
