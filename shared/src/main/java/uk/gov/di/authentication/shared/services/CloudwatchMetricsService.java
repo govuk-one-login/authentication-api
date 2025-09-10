@@ -36,11 +36,9 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.DOMESTIC_SMS_SENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_NOTIFICATION_SENT;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.INTERNATIONAL_SMS_SENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_AUTHORISATION_ERROR;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_IPV_RESPONSE;
@@ -53,8 +51,6 @@ import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.maybeGet
 public class CloudwatchMetricsService {
 
     private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
-    public static final String INTERNATIONAL_SMS_DESTINATION = "INTERNATIONAL";
-    public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
 
     private final ConfigurationService configurationService;
 
@@ -270,15 +266,7 @@ public class CloudwatchMetricsService {
                         notificationType, isTestDestination, application);
 
         if (notificationType.isForPhoneNumber()) {
-            var countryCode = maybeGetCountry(destination).orElse("INVALID");
-            dimensions.put(COUNTRY.getValue(), countryCode);
-
-            var smsDestinationType =
-                    "44".equals(countryCode)
-                            ? DOMESTIC_SMS_DESTINATION
-                            : INTERNATIONAL_SMS_DESTINATION;
-            dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
-
+            dimensions.put(COUNTRY.getValue(), maybeGetCountry(destination).orElse("INVALID"));
             metricName = SMS_NOTIFICATION_ERROR.getValue();
         } else {
             metricName = EMAIL_NOTIFICATION_ERROR.getValue();
@@ -294,7 +282,7 @@ public class CloudwatchMetricsService {
     public void emitMetricForNotification(
             NotifiableType notificationType,
             String destination,
-            boolean isTestDestination,
+            Boolean isTestDestination,
             Application application) {
         String metricName;
         var dimensions =
@@ -302,34 +290,13 @@ public class CloudwatchMetricsService {
                         notificationType, isTestDestination, application);
 
         if (notificationType.isForPhoneNumber()) {
-            var countryCode = maybeGetCountry(destination).orElse("INVALID");
-            dimensions.put(COUNTRY.getValue(), countryCode);
-
-            var smsDestinationType =
-                    "44".equals(countryCode)
-                            ? DOMESTIC_SMS_DESTINATION
-                            : INTERNATIONAL_SMS_DESTINATION;
-            dimensions.put(SMS_DESTINATION_TYPE.getValue(), smsDestinationType);
-
+            dimensions.put(COUNTRY.getValue(), maybeGetCountry(destination).orElse("INVALID"));
             metricName = SMS_NOTIFICATION_SENT.getValue();
-            incrementCounter(metricName, dimensions);
 
-            // Emit additional metrics for SMS quota monitoring
-            if (!isTestDestination) {
-                var quotaDimensions = new HashMap<String, String>();
-                quotaDimensions.put(ENVIRONMENT.getValue(), configurationService.getEnvironment());
-                quotaDimensions.put(APPLICATION.getValue(), application.getValue());
-
-                if (INTERNATIONAL_SMS_DESTINATION.equals(smsDestinationType)) {
-                    incrementCounter(INTERNATIONAL_SMS_SENT.getValue(), quotaDimensions);
-                } else {
-                    incrementCounter(DOMESTIC_SMS_SENT.getValue(), quotaDimensions);
-                }
-            }
         } else {
             metricName = EMAIL_NOTIFICATION_SENT.getValue();
-            incrementCounter(metricName, dimensions);
         }
+        incrementCounter(metricName, dimensions);
     }
 
     public void emitSmsLimitExceededMetric(

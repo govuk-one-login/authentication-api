@@ -164,14 +164,9 @@ class CloudwatchMetricsServiceTest {
                             "Application", "Authentication",
                             "NotificationType", "VERIFY_PHONE_NUMBER",
                             "IsTest", "false",
-                            "Country", "44",
-                            "SmsDestinationType", "DOMESTIC");
+                            "Country", "44");
 
             verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
-            verify(spyService)
-                    .incrementCounter(
-                            "DomesticSmsSent",
-                            Map.of("Environment", "test", "Application", "Authentication"));
         }
 
         @Test
@@ -215,7 +210,6 @@ class CloudwatchMetricsServiceTest {
                             "NotificationType", "MFA_SMS",
                             "IsTest", "false",
                             "Country", "44",
-                            "SmsDestinationType", "DOMESTIC",
                             "NotificationHttpError", "400");
 
             verify(spyService).incrementCounter("SmsNotificationError", expectedDimensions);
@@ -246,33 +240,6 @@ class CloudwatchMetricsServiceTest {
         }
 
         @Test
-        void shouldEmitInternationalSmsNotificationSentMetricWithCorrectDimensions() {
-            var spyService =
-                    Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
-
-            spyService.emitMetricForNotification(
-                    NotificationType.VERIFY_PHONE_NUMBER,
-                    "+33123456789",
-                    false,
-                    Application.AUTHENTICATION);
-
-            var expectedDimensions =
-                    Map.of(
-                            "Environment", "test",
-                            "Application", "Authentication",
-                            "NotificationType", "VERIFY_PHONE_NUMBER",
-                            "IsTest", "false",
-                            "Country", "33",
-                            "SmsDestinationType", "INTERNATIONAL");
-
-            verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
-            verify(spyService)
-                    .incrementCounter(
-                            "InternationalSmsSent",
-                            Map.of("Environment", "test", "Application", "Authentication"));
-        }
-
-        @Test
         void shouldHandleInvalidPhoneNumberCountry() {
             var spyService =
                     Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
@@ -289,14 +256,9 @@ class CloudwatchMetricsServiceTest {
                             "Application", "Authentication",
                             "NotificationType", "VERIFY_PHONE_NUMBER",
                             "IsTest", "false",
-                            "Country", "INVALID",
-                            "SmsDestinationType", "INTERNATIONAL");
+                            "Country", "INVALID");
 
             verify(spyService).incrementCounter("SmsNotificationSent", expectedDimensions);
-            verify(spyService)
-                    .incrementCounter(
-                            "InternationalSmsSent",
-                            Map.of("Environment", "test", "Application", "Authentication"));
         }
 
         @ParameterizedTest

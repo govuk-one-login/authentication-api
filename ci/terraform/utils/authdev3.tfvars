@@ -20,9 +20,3 @@ performance_tuning = {
     timeout = 300
   }
 }
-
-auth_new_account_id = "653994557586"
-
-
-# SMS Quota Monitoring
-sms_quota_monitor_schedule_rate = "rate(1 minute)"

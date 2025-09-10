@@ -114,15 +114,8 @@ public class NotifyCallbackHandler
                 var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
-                var smsDestinationType = countryCode == 44 ? "DOMESTIC" : "INTERNATIONAL";
                 var additionalMetricsContext =
-                        Map.of(
-                                "SmsType",
-                                templateName,
-                                "CountryCode",
-                                String.valueOf(countryCode),
-                                "SmsDestinationType",
-                                smsDestinationType);
+                        Map.of("SmsType", templateName, "CountryCode", String.valueOf(countryCode));
                 incrementCounters("SmsSent", additionalMetricsContext, deliveryReceipt);
                 LOG.info("SMS callback request processed");
             } else if (deliveryReceipt.notificationType().equals("email")) {

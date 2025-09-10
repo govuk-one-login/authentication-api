@@ -6,6 +6,3 @@ bulk_user_email_included_terms_and_conditions = "1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7
 
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
-
-# SMS Quota Monitor
-sms_quota_monitor_schedule_rate = "rate(10 minutes)"

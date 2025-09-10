@@ -114,12 +114,10 @@ class NotifyCallbackHandlerTest {
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID, reference);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        var smsDestinationType = "44".equals(expectedCountryCode) ? "DOMESTIC" : "INTERNATIONAL";
         var expectedContext =
                 Map.ofEntries(
                         Map.entry("SmsType", VERIFY_PHONE_NUMBER.getTemplateAlias()),
                         Map.entry("CountryCode", expectedCountryCode),
-                        Map.entry("SmsDestinationType", smsDestinationType),
                         Map.entry("Environment", ENVIRONMENT),
                         Map.entry("NotifyStatus", status));
 

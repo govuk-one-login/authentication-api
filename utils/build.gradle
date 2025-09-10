@@ -16,8 +16,7 @@ dependencies {
     implementation project(":shared"),
             configurations.govuk_notify,
             configurations.nimbus,
-            configurations.xray,
-            "software.amazon.awssdk:cloudwatch:${rootProject.ext.dependencyVersions.aws_sdk_v2_version}"
+            configurations.xray
 
     runtimeOnly configurations.logging_runtime
 

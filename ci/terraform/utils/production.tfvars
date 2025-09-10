@@ -23,6 +23,3 @@ bulk_user_email_send_schedule_expression = "cron(0 10 5 OCT ? 2023)"
 # Logging
 logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
 cloudwatch_log_retention = 30
-
-# SMS Quota Monitor
-sms_quota_monitor_schedule_rate = "rate(10 minutes)"
