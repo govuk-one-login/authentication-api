@@ -44,7 +44,6 @@ locals {
   doc_app_auth_key_alias_name                 = data.terraform_remote_state.shared.outputs.doc_app_auth_signing_key_alias_name
   doc_app_auth_signing_key_arn                = data.terraform_remote_state.shared.outputs.doc_app_auth_signing_key_arn
   audit_signing_key_arn                       = data.terraform_remote_state.shared.outputs.audit_signing_key_arn
-  sms_bucket_name                             = data.terraform_remote_state.shared.outputs.sms_bucket_name
   lambda_env_vars_encryption_kms_key_arn      = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   events_topic_encryption_key_arn             = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
   redis_ssm_parameter_policy                  = data.terraform_remote_state.shared.outputs.redis_ssm_parameter_policy
