@@ -220,9 +220,9 @@ variable "ais_call_in_authenticate_enabled" {
 }
 
 variable "home_vpc_endpoint_id" {
-  description = "The execute API vpc endpoint ID of Home AWS account to give execute access on method mgmt API"
-  type        = string
-  default     = ""
+  description = "The execute API vpc endpoint IDs of Home AWS account to give execute access on method mgmt API"
+  type        = list(string)
+  default     = []
 }
 
 variable "am_api_fms_tag_value" {
