@@ -725,4 +725,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .getOrDefault("IPV_JWKS_CALL_ENABLED", String.valueOf(false))
                 .equals(FEATURE_SWITCH_ON);
     }
+
+    public double getDomesticSmsQuotaThreshold() {
+        return Double.parseDouble(
+                System.getenv().getOrDefault("DOMESTIC_SMS_QUOTA_THRESHOLD", "20000"));
+    }
+
+    public double getInternationalSmsQuotaThreshold() {
+        return Double.parseDouble(
+                System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "5000"));
+    }
 }
