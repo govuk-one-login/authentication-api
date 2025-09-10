@@ -21,12 +21,13 @@ module "account_management_manually_delete_account_role" {
 }
 
 resource "aws_lambda_function" "manually_delete_account_lambda" {
-  function_name = replace("${var.environment}-manually-delete-account-lambda", ".", "")
-  role          = module.account_management_manually_delete_account_role.arn
-  handler       = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
-  timeout       = 30
-  publish       = true
-
+  function_name                  = replace("${var.environment}-manually-delete-account-lambda", ".", "")
+  role                           = module.account_management_manually_delete_account_role.arn
+  handler                        = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
+  timeout                        = 30
+  publish                        = true
+  memory_size                    = 1536
+  reserved_concurrent_executions = 1
 
   s3_bucket               = aws_s3_bucket.source_bucket.bucket
   s3_key                  = aws_s3_object.account_management_api_release_zip.key
