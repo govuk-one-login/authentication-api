@@ -4,7 +4,7 @@ module "account_management_api_send_notification_role" {
   role_name   = "account-management-api-send-notification-role"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_client_registry_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -15,7 +15,8 @@ module "account_management_api_send_notification_role" {
     local.pending_email_check_queue_access_policy_arn,
     local.email_check_results_encryption_policy_arn,
     aws_iam_policy.check_email_fraud_block_read_dynamo_read_access_policy.arn,
-  ]
+
+  ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "send-otp-notification"
   }
