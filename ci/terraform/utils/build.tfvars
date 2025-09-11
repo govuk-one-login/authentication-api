@@ -18,3 +18,8 @@ bulk_user_email_batch_pause_duration  = 0
 
 # Logging
 logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+
+# SMS Quota Monitor
+sms_quota_monitor_schedule_rate   = "rate(10 minutes)"
+domestic_sms_quota_threshold      = "300000"
+international_sms_quota_threshold = "3600"

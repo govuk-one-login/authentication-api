@@ -18,3 +18,8 @@ bulk_user_email_batch_pause_duration  = 0
 
 # Sizing
 email_check_results_writer_provisioned_concurrency = 0
+
+# SMS Quota Monitor
+sms_quota_monitor_schedule_rate   = "rate(10 minutes)"
+domestic_sms_quota_threshold      = "300000"
+international_sms_quota_threshold = "3600"
