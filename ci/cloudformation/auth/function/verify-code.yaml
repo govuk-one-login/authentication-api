@@ -108,6 +108,11 @@ Resources:
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !If [
+            AllowTestClientSecretAccess,
+            !Ref TestClientEmailAllowListSecretAccessPolicy,
+            !Ref AWS::NoValue,
+          ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
