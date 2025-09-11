@@ -24,6 +24,7 @@ module "sms_quota_monitor_lambda_role" {
 
   environment = var.environment
   role_name   = "sms-quota-monitor-lambda-role"
+  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.sms_quota_monitor_cloudwatch_access.arn,
