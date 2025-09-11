@@ -44,7 +44,6 @@ locals {
   doc_app_auth_key_alias_name                 = data.terraform_remote_state.shared.outputs.doc_app_auth_signing_key_alias_name
   doc_app_auth_signing_key_arn                = data.terraform_remote_state.shared.outputs.doc_app_auth_signing_key_arn
   audit_signing_key_arn                       = data.terraform_remote_state.shared.outputs.audit_signing_key_arn
-  sms_bucket_name                             = data.terraform_remote_state.shared.outputs.sms_bucket_name
   lambda_env_vars_encryption_kms_key_arn      = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   events_topic_encryption_key_arn             = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
   redis_ssm_parameter_policy                  = data.terraform_remote_state.shared.outputs.redis_ssm_parameter_policy
@@ -69,7 +68,7 @@ locals {
   experian_phone_check_sqs_queue_id           = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_id
   experian_phone_check_sqs_queue_policy_arn   = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_policy_arn
   id_reverification_state_key_arn             = data.terraform_remote_state.shared.outputs.id_reverification_state_key_arn
-  secure_pipelines_environment                = var.environment == "sandpit" ? "dev" : var.environment
+  secure_pipelines_environment                = var.environment == "authdev3" ? "dev" : var.environment
 
   slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
   aws_account_alias         = data.terraform_remote_state.shared.outputs.aws_account_alias
