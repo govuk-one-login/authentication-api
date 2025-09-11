@@ -21,7 +21,7 @@ module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
     aws_iam_policy.dynamo_authentication_attempt_read_write_delete_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_write_policy.arn
     ],
-  var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
+  var.test_clients_enabled ? [] : [])
   // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20).
   // This also applies for the combined read/write/delete policy for the authentication attempts table
   extra_tags = {
