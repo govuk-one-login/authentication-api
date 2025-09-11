@@ -128,6 +128,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     notifyRequest);
             case CHANGED_DEFAULT_MFA -> sendChangedDefaultMFANotification(notifyRequest);
             case SWITCHED_MFA_METHODS -> sendSwitchedMFAMethodsNotification(notifyRequest);
+            case GLOBAL_LOGOUT -> sendGlobalLogoutNotification(notifyRequest);
         }
     }
 
@@ -217,6 +218,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 Collections.emptyMap(),
                 String.valueOf(NotificationType.SWITCHED_MFA_METHODS));
+    }
+
+    private void sendGlobalLogoutNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.GLOBAL_LOGOUT));
     }
 
     private void sendEmailNotification(

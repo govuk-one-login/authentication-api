@@ -78,6 +78,7 @@ variable "notify_template_map" {
     CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID                  = "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
     CHANGED_DEFAULT_MFA_TEMPLATE_ID                        = "ab62d5fa-79a8-4dba-beb0-283118d2450f"
     SWITCHED_MFA_METHODS_TEMPLATE_ID                       = "be78564b-b9a6-4b3d-b438-7b30e45caf54"
+    GLOBAL_LOGOUT_TEMPLATE_ID                              = "a92761ef-213b-4fb6-a53c-5912a931c159"
   }
 }
 
