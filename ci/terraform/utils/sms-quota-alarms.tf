@@ -8,7 +8,7 @@ resource "aws_cloudwatch_metric_alarm" "domestic_sms_quota_early_warning_alarm" 
   statistic           = "Sum"
   threshold           = "300000"
   alarm_description   = "Domestic SMS usage trending towards quota limit in ${var.environment}. ACCOUNT: ${local.aws_account_alias}"
-  alarm_actions       = ["arn:aws:sns:eu-west-2:653994557586:authdev1-slack-events"]
+  alarm_actions       = [var.environment == "production" ? "arn:aws:sns:eu-west-2:${data.aws_caller_identity.current.account_id}:production-pagerduty-p1-alerts" : local.slack_event_sns_topic_arn]
 
   dimensions = {
     Environment = var.environment
@@ -25,7 +25,7 @@ resource "aws_cloudwatch_metric_alarm" "international_sms_quota_early_warning_al
   statistic           = "Sum"
   threshold           = "3600"
   alarm_description   = "International SMS usage trending towards quota limit in ${var.environment}. ACCOUNT: ${local.aws_account_alias}"
-  alarm_actions       = ["arn:aws:sns:eu-west-2:653994557586:authdev1-slack-events"]
+  alarm_actions       = [var.environment == "production" ? "arn:aws:sns:eu-west-2:${data.aws_caller_identity.current.account_id}:production-pagerduty-p1-alerts" : local.slack_event_sns_topic_arn]
 
   dimensions = {
     Environment = var.environment
