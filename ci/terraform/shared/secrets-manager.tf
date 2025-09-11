@@ -20,3 +20,39 @@ resource "aws_secretsmanager_secret" "test_client_email_allow_list" {
   name       = "/${var.environment}/test-client-email-allow-list"
   kms_key_id = aws_kms_alias.test_client_secret_key_alias[0].target_key_id
 }
+
+data "aws_iam_policy_document" "test_client_allow_list_secret_policy" {
+  count = var.provision_test_client_secret ? 1 : 0
+  statement {
+    sid    = "AllowGetSecret"
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+
+    resources = [
+      aws_secretsmanager_secret.test_client_email_allow_list[0].arn
+    ]
+  }
+  statement {
+    sid    = "AllowDecryptOfSecretUsingKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+    ]
+
+    resources = [
+      aws_kms_alias.test_client_secret_key_alias[0].arn,
+      aws_kms_key.test_client_secret_key[0].arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "test_client_allow_list_secret_policy" {
+  count       = var.provision_test_client_secret ? 1 : 0
+  policy      = data.aws_iam_policy_document.test_client_allow_list_secret_policy[0].json
+  path        = "/${var.environment}/secret-access-policy/"
+  name_prefix = "test-client-allow-list"
+}
