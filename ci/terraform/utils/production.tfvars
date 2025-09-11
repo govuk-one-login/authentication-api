@@ -25,4 +25,6 @@ logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csl
 cloudwatch_log_retention = 30
 
 # SMS Quota Monitor
-sms_quota_monitor_schedule_rate = "rate(10 minutes)"
+sms_quota_monitor_schedule_rate   = "rate(10 minutes)"
+domestic_sms_quota_threshold      = "300000"
+international_sms_quota_threshold = "3600"
