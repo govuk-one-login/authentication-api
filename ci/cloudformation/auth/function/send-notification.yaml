@@ -94,11 +94,6 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref PendingEmailCheckQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        - !If [
-            AllowTestClientSecretAccess,
-            !Ref TestClientEmailAllowListSecretAccessPolicy,
-            !Ref AWS::NoValue,
-          ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

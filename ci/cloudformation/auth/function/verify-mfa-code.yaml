@@ -115,11 +115,6 @@ Resources:
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref ExperianPhoneCheckQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        - !If [
-            AllowTestClientSecretAccess,
-            !Ref TestClientEmailAllowListSecretAccessPolicy,
-            !Ref AWS::NoValue,
-          ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

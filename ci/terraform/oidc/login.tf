@@ -4,7 +4,7 @@ module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
   role_name   = "frontend-api-login-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = concat([
+  policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
@@ -20,8 +20,7 @@ module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_authentication_attempt_read_write_delete_policy.arn,
     aws_iam_policy.dynamo_auth_session_read_write_policy.arn
-    ],
-  var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
+  ]
   // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20).
   // This also applies for the combined read/write/delete policy for the authentication attempts table
   extra_tags = {
