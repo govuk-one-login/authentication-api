@@ -4,7 +4,7 @@ module "frontend_api_reset_password_role" {
   role_name   = "frontend-api-reset-password-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = concat([
+  policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
@@ -20,8 +20,8 @@ module "frontend_api_reset_password_role" {
     local.common_passwords_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_auth_session_read_policy.arn,
-    aws_iam_policy.dynamo_auth_session_write_policy.arn,
-  ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
+    aws_iam_policy.dynamo_auth_session_write_policy.arn
+  ]
   extra_tags = {
     Service = "reset-password"
   }
