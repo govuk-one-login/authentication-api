@@ -71,6 +71,8 @@ sns_subscribe() {
 
   topic_arn=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].AlarmActions[0]" --output text)
 
+  echo "Alarm: ${ALARM_NAME}"
+  echo "Topic ARN: ${topic_arn}"
   echo "Checking for existing subscriptions..."
   existing=$(aws sns list-subscriptions-by-topic --topic-arn "${topic_arn}" --query "Subscriptions[?Endpoint=='${email}'].SubscriptionArn" --output text)
   needs_confirmation=false
@@ -126,6 +128,8 @@ sns_unsubscribe() {
 
   topic_arn=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].AlarmActions[0]" --output text)
 
+  echo "Alarm: ${ALARM_NAME}"
+  echo "Topic ARN: ${topic_arn}"
   echo "Checking for existing subscriptions..."
   existing=$(aws sns list-subscriptions-by-topic --topic-arn "${topic_arn}" --query "Subscriptions[?Endpoint=='${email}'].SubscriptionArn" --output text)
 
@@ -152,6 +156,9 @@ sns_unsubscribe() {
 
 # Test Alarm functionality
 init_alarms() {
+  # Clear previous alarms to prevent cross-environment contamination
+  ALARMS=()
+
   # SMS Daily Quotas
   local domestic_daily_quota=500000
   local international_daily_quota=6000
@@ -167,10 +174,10 @@ init_alarms() {
   # Dynamically discover alarm names to handle P1 prefixes
   local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
 
-  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
-  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
-  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
-  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
+  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
+  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
+  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
+  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
 
   if [[ -n ${domestic_quota_alarm} ]]; then
     ALARMS["${domestic_quota_alarm}"]="DomesticSmsQuotaEarlyWarning:Authentication:${domestic_quota_threshold}:DOMESTIC"
