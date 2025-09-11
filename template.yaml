@@ -89,12 +89,6 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  IsRpRateLimitingEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
 
 Mappings:
@@ -3497,10 +3491,6 @@ Resources:
               orchToAuthKeyArn,
             ]
           REDIS_KEY: session
-          RP_RATE_LIMITING_ENABLED: !If
-            - IsRpRateLimitingEnabled
-            - true
-            - false
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
