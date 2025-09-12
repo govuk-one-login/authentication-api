@@ -21,4 +21,4 @@ otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
 #Vpc endpoint IDs
-home_vpc_endpoint_id = "vpce-087ac48f23f28a39b"
+home_vpc_endpoint_id = ["vpce-087ac48f23f28a39b"]
