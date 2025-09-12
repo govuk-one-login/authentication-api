@@ -20,7 +20,7 @@ module "frontend_api_verify_mfa_code_role_with_combined_auth_attempts_policy" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.experian_phone_check_sqs_queue_policy_arn
-  ], var.test_clients_enabled ? [] : [])
+  ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "verify-mfa-code"
   }

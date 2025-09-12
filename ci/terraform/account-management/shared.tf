@@ -9,18 +9,18 @@ data "terraform_remote_state" "shared" {
 }
 
 locals {
-  lambda_code_signing_configuration_arn       = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
-  account_modifiers_encryption_policy_arn     = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
-  common_passwords_encryption_policy_arn      = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
-  client_registry_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
-  user_profile_encryption_policy_arn          = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
-  user_credentials_kms_key_arn                = data.terraform_remote_state.shared.outputs.user_credentials_kms_key_arn
-  pending_email_check_queue_id                = data.terraform_remote_state.shared.outputs.pending_email_check_queue_id
-  pending_email_check_queue_access_policy_arn = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
-  client_registry_encryption_key_arn          = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
-  user_profile_kms_key_arn                    = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
-  email_check_results_encryption_policy_arn   = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
-  #   test_client_allow_list_secret_access_policy_arn = data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn
+  lambda_code_signing_configuration_arn           = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
+  account_modifiers_encryption_policy_arn         = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
+  common_passwords_encryption_policy_arn          = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
+  client_registry_encryption_policy_arn           = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
+  user_profile_encryption_policy_arn              = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
+  user_credentials_kms_key_arn                    = data.terraform_remote_state.shared.outputs.user_credentials_kms_key_arn
+  pending_email_check_queue_id                    = data.terraform_remote_state.shared.outputs.pending_email_check_queue_id
+  pending_email_check_queue_access_policy_arn     = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
+  client_registry_encryption_key_arn              = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
+  user_profile_kms_key_arn                        = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
+  email_check_results_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
+  test_client_allow_list_secret_access_policy_arn = var.test_clients_enabled ? data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn : null
 
 
   slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
