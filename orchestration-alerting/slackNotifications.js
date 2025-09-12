@@ -45,11 +45,11 @@ const buildMessageRequest = async function (
   snsMessageFooter,
 ) {
   const body = formatMessage(snsMessage, colorCode, snsMessageFooter);
-  if (
-    process.env.DEPLOY_ENVIRONMENT === "integration" ||
-    process.env.DEPLOY_ENVIRONMENT === "dev" ||
-    process.env.DEPLOY_ENVIRONMENT === "staging"
-  ) {
+  const isEnabledForNonProd = ["dev", "staging", "integration"].includes(
+    process.env.DEPLOY_ENVIRONMENT,
+  );
+  const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
+  if (isEnabledForNonProd || isEnabledForProd) {
     body.channel =
       process.env.SLACK_CHANNEL_ID ||
       (await getParameter(
