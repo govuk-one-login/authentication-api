@@ -68,7 +68,10 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
     }
 
     private double getSmsCountSinceMidnight(String metricName, Instant start, Instant end) {
-        var periodSeconds = (int) java.time.Duration.between(start, end).getSeconds();
+        var durationSeconds = (int) java.time.Duration.between(start, end).getSeconds();
+        var periodSeconds =
+                ((durationSeconds + 59) / 60) * 60; // Round up to nearest multiple of 60
+
         var request =
                 GetMetricStatisticsRequest.builder()
                         .namespace("Authentication")
