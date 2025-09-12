@@ -1,8 +1,8 @@
 package uk.gov.di.orchestration.shared.exceptions;
 
-public class OrchAuthCodeException extends RuntimeException {
+public class OrchAccessTokenException extends RuntimeException {
 
-    public OrchAuthCodeException(String message) {
+    public OrchAccessTokenException(String message) {
         super(message);
     }
 }

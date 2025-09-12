@@ -1,116 +1,114 @@
 package uk.gov.di.authentication.services;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
+import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAccessTokenExtension;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneId;
-
-import static java.time.Clock.fixed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class OrchAuthCodeServiceIntegrationTest {
+class OrchAccessTokenServiceIntegrationTest {
     private static final String CLIENT_ID = "test-client-id";
+    private static final String RP_PAIRWISE_ID = "test-rp-pairwise-id";
+    private static final String TOKEN = "test-token";
+    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "test-internal-pairwise-subject-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
-    private static final String EMAIL = "test-email";
-    private static final long AUTH_TIME = 12345L;
+    private static final String AUTH_CODE = "test-auth-code";
 
     @RegisterExtension
-    protected static final OrchAuthCodeExtension orchAuthCodeExtension =
-            new OrchAuthCodeExtension();
-
-    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
-
-    @BeforeEach
-    void setup() {
-        orchAuthCodeExtension.setClock(Clock.systemUTC());
-    }
+    protected static final OrchAccessTokenExtension orchAccessTokenExtension =
+            new OrchAccessTokenExtension();
 
     @Test
-    void shouldStoreOrchAuthCodeExchangeDataAgainstAuthCodeWithAllFieldsSet() {
-        var storedOrchAuthCodeItem =
-                orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        EMAIL,
-                        AUTH_TIME,
-                        INTERNAL_PAIRWISE_SUBJECT_ID);
+    void shouldStoreOrchAccessTokenWithAllFieldsSet() {
+        orchAccessTokenExtension.generateAndSaveAccessToken(
+                CLIENT_ID,
+                RP_PAIRWISE_ID,
+                TOKEN,
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                CLIENT_SESSION_ID,
+                AUTH_CODE);
+        var accessToken = orchAccessTokenExtension.getAccessToken(CLIENT_ID, RP_PAIRWISE_ID);
 
-        var authCode = storedOrchAuthCodeItem.getValue();
-        var exchangeData = orchAuthCodeExtension.getExchangeDataForCode(authCode);
-
-        assertTrue(exchangeData.isPresent());
-
-        AuthCodeExchangeData expected =
-                new AuthCodeExchangeData()
-                        .withClientId(CLIENT_ID)
-                        .withClientSessionId(CLIENT_SESSION_ID)
-                        .withEmail(EMAIL)
-                        .withAuthTime(AUTH_TIME)
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID);
-
-        assertEquals(expected.getClientId(), exchangeData.get().getClientId());
-        assertEquals(expected.getClientSessionId(), exchangeData.get().getClientSessionId());
-        assertEquals(expected.getEmail(), exchangeData.get().getEmail());
-        assertEquals(expected.getAuthTime(), exchangeData.get().getAuthTime());
+        assertTrue(accessToken.isPresent());
+        assertEquals(CLIENT_ID, accessToken.get().getClientId());
+        assertEquals(RP_PAIRWISE_ID, accessToken.get().getRpPairwiseId());
+        assertEquals(CLIENT_SESSION_ID, accessToken.get().getClientSessionId());
+        assertEquals(TOKEN, accessToken.get().getToken());
         assertEquals(
-                expected.getInternalPairwiseSubjectId(),
-                exchangeData.get().getInternalPairwiseSubjectId());
+                INTERNAL_PAIRWISE_SUBJECT_ID, accessToken.get().getInternalPairwiseSubjectId());
+        assertEquals(AUTH_CODE, accessToken.get().getAuthCode());
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemWithAuthCodeDoesNotExist() {
-        var exchangeData = orchAuthCodeExtension.getExchangeDataForCode("an-unknown-auth-code");
-
-        assertTrue(exchangeData.isEmpty());
+    void shouldReturnEmptyOptionalWhenNoAccessTokenExistsForClientId() {
+        orchAccessTokenExtension.generateAndSaveAccessToken(
+                CLIENT_ID,
+                RP_PAIRWISE_ID,
+                TOKEN,
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                CLIENT_SESSION_ID,
+                AUTH_CODE);
+        var accessToken =
+                orchAccessTokenExtension.getAccessToken("unknown client id", RP_PAIRWISE_ID);
+        assertTrue(accessToken.isEmpty());
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButIsMarkedAsUsed() {
-        var authCode =
-                orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        EMAIL,
-                        AUTH_TIME,
-                        INTERNAL_PAIRWISE_SUBJECT_ID);
-
-        // Retrieve to mark auth code as "used".
-        var exchangeDataFirstRetrieval =
-                orchAuthCodeExtension.getExchangeDataForCode(authCode.getValue());
-
-        // Retrieve again to check that the auth code has been marked as "used".
-        var exchangeDataSecondRetrieval =
-                orchAuthCodeExtension.getExchangeDataForCode(authCode.getValue());
-
-        assertTrue(exchangeDataFirstRetrieval.isPresent());
-        assertTrue(exchangeDataSecondRetrieval.isEmpty());
+    void shouldReturnEmptyOptionalWhenNoAccessTokenExistsForRpPairwiseId() {
+        orchAccessTokenExtension.generateAndSaveAccessToken(
+                CLIENT_ID,
+                RP_PAIRWISE_ID,
+                TOKEN,
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                CLIENT_SESSION_ID,
+                AUTH_CODE);
+        var accessToken =
+                orchAccessTokenExtension.getAccessToken(CLIENT_ID, "unknown rp pairwise id");
+        assertTrue(accessToken.isEmpty());
     }
 
     @Test
-    void shouldReturnEmptyOptionalWhenOrchAuthCodeItemExistsButTimeToLiveExpired() {
-        fixTime(Instant.parse("2025-01-02T01:00:00.000Z"));
-        var authCode =
-                orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        EMAIL,
-                        AUTH_TIME,
-                        INTERNAL_PAIRWISE_SUBJECT_ID);
-
-        // Default expiry is 5 minutes (300 seconds)
-        fixTime(Instant.parse("2025-01-02T01:05:00.000Z"));
-        var exchangeData = orchAuthCodeExtension.getExchangeDataForCode(authCode.getValue());
-
-        assertTrue(exchangeData.isEmpty());
+    void shouldReturnAccessTokenForAuthCode() {
+        orchAccessTokenExtension.generateAndSaveAccessToken(
+                CLIENT_ID,
+                RP_PAIRWISE_ID,
+                TOKEN,
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                CLIENT_SESSION_ID,
+                AUTH_CODE);
+        var accessToken = orchAccessTokenExtension.getAccessTokenForAuthCode(AUTH_CODE);
+        assertTrue(accessToken.isPresent());
+        assertEquals(CLIENT_ID, accessToken.get().getClientId());
+        assertEquals(RP_PAIRWISE_ID, accessToken.get().getRpPairwiseId());
+        assertEquals(CLIENT_SESSION_ID, accessToken.get().getClientSessionId());
+        assertEquals(TOKEN, accessToken.get().getToken());
+        assertEquals(
+                INTERNAL_PAIRWISE_SUBJECT_ID, accessToken.get().getInternalPairwiseSubjectId());
+        assertEquals(AUTH_CODE, accessToken.get().getAuthCode());
     }
 
-    private static void fixTime(Instant time) {
-        orchAuthCodeExtension.setClock(fixed(time, ZoneId.systemDefault()));
+    @Test
+    void shouldReturnEmptyOptionalWhenNoAccessTokenExistsForAuthCode() {
+        orchAccessTokenExtension.generateAndSaveAccessToken(
+                CLIENT_ID,
+                RP_PAIRWISE_ID,
+                TOKEN,
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                CLIENT_SESSION_ID,
+                AUTH_CODE);
+        var accessToken = orchAccessTokenExtension.getAccessTokenForAuthCode("unknown auth code");
+        assertTrue(accessToken.isEmpty());
+    }
+
+    @Test
+    void shouldThrowWhenFailingToGenerateAndSaveAccessToken() {
+        assertThrows(
+                OrchAccessTokenException.class,
+                () ->
+                        orchAccessTokenExtension.generateAndSaveAccessToken(
+                                null, null, null, null, null, null));
     }
 }

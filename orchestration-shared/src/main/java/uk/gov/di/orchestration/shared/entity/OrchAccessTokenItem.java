@@ -1,9 +1,12 @@
 package uk.gov.di.orchestration.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 
+@DynamoDbBean
 public class OrchAccessTokenItem {
 
     private static final String ATTRIBUTE_CLIENT_ID = "clientId";
@@ -93,6 +96,7 @@ public class OrchAccessTokenItem {
         return this;
     }
 
+    @DynamoDbSecondaryPartitionKey(indexNames = "authCode-index")
     @DynamoDbAttribute(ATTRIBUTE_AUTH_CODE)
     public String getAuthCode() {
         return authCode;
