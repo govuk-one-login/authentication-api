@@ -33,6 +33,7 @@ import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
@@ -52,6 +53,7 @@ public class IPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
+    private final JwksCacheService jwksCacheService;
     private final StateStorageService stateStorageService;
     private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
@@ -64,6 +66,7 @@ public class IPVAuthorisationService {
                 configurationService,
                 kmsConnectionService,
                 new JwksService(configurationService, kmsConnectionService),
+                new JwksCacheService(configurationService),
                 new StateStorageService(configurationService),
                 new NowClock(Clock.systemUTC()));
     }
@@ -72,11 +75,13 @@ public class IPVAuthorisationService {
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
             JwksService jwksService,
+            JwksCacheService jwksCacheService,
             StateStorageService stateStorageService,
             NowClock nowClock) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
         this.jwksService = jwksService;
+        this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
         this.nowClock = nowClock;
     }
@@ -246,7 +251,9 @@ public class IPVAuthorisationService {
 
     private JWK getJwkFromJwksEndpoint() {
         LOG.info("Getting IPV Encryption JWK via JWKS endpoint");
-        return jwksService.getIpvJwk();
+        var cachedIPVJwk = jwksService.getIpvJwk();
+        jwksCacheService.getOrGenerateIpvJwksCacheItem();
+        return cachedIPVJwk;
     }
 
     private RSAPublicKey getRsaPublicKeyFromJwk(JWK ipvAuthEncryptionPublicKey) {

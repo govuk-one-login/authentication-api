@@ -52,6 +52,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
@@ -143,6 +144,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
     @RegisterExtension public static final JwksExtension ipvJwksExtension = new JwksExtension();
+
+    @RegisterExtension
+    public static final JwksCacheExtension jwksCacheExtension = new JwksCacheExtension();
 
     protected static ConfigurationService configurationService;
 

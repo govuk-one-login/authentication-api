@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
@@ -121,6 +122,7 @@ public class DocAppCallbackHandler
                         configurationService,
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService),
+                        new JwksCacheService(configurationService),
                         new StateStorageService(configurationService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
@@ -145,6 +147,7 @@ public class DocAppCallbackHandler
                         configurationService,
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService),
+                        new JwksCacheService(configurationService),
                         new StateStorageService(configurationService));
         this.tokenService =
                 new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);

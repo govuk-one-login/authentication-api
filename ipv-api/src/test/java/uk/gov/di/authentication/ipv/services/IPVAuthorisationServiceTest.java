@@ -33,10 +33,12 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
@@ -87,12 +89,14 @@ class IPVAuthorisationServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
                     configurationService,
                     kmsConnectionService,
                     jwksService,
+                    jwksCacheService,
                     stateStorageService,
                     TestClockHelper.getInstance());
     private PrivateKey privateKey;
@@ -116,9 +120,11 @@ class IPVAuthorisationServiceTest {
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(KEY_ID)
                         .build();
-        when(configurationService.getIPVJwksUrl())
-                .thenReturn(new URL("http://localhost/.well-known/jwks.json"));
+        var jwksUrl = new URL("http://localhost/.well-known/jwks.json");
+        when(configurationService.getIPVJwksUrl()).thenReturn(jwksUrl);
         when(jwksService.getIpvJwk()).thenReturn(rsaKey);
+        when(jwksCacheService.getOrGenerateIpvJwksCacheItem())
+                .thenReturn(new JwksCacheItem(jwksUrl.toString(), rsaKey, 300));
         when(configurationService.getIPVTokenSigningKeyAlias()).thenReturn(IPV_SIGNING_KEY_ID);
         when(jwksService.getPublicIpvTokenJwkWithOpaqueId())
                 .thenReturn(

@@ -73,6 +73,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -183,6 +184,7 @@ public class AuthorisationHandler
         this.configurationService = configurationService;
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var jwksCacheService = new JwksCacheService(configurationService);
         var stateStorageService = new StateStorageService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.crossBrowserOrchestrationService =
@@ -205,6 +207,7 @@ public class AuthorisationHandler
                         configurationService,
                         kmsConnectionService,
                         jwksService,
+                        jwksCacheService,
                         stateStorageService);
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
         this.cloudwatchMetricsService = cloudwatchMetricService;
@@ -232,12 +235,14 @@ public class AuthorisationHandler
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var jwksService = new JwksService(configurationService, kmsConnectionService);
+        var jwksCacheService = new JwksCacheService(configurationService);
         var stateStorageService = new StateStorageService(configurationService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
                         kmsConnectionService,
                         jwksService,
+                        jwksCacheService,
                         stateStorageService);
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
         this.cloudwatchMetricsService = cloudwatchMetricService;

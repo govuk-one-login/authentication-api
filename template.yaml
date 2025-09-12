@@ -2094,8 +2094,7 @@ Resources:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref InvokeFetchJwksHandlerPolicy
-        - !Ref RpPublicKeyCacheTableReadAccessPolicy
-        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
+        - !Ref RpPublicKeyCacheTableReadWriteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
         - !Ref OrchAuthCodeTableReadAccessPolicy
@@ -2876,6 +2875,7 @@ Resources:
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
         - !Ref StateStorageTableReadWriteAccessPolicy
+        - !Ref JwksCacheTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3511,12 +3511,12 @@ Resources:
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref IpvCapacityAccessPolicy
         - !Ref InvokeFetchJwksHandlerPolicy
-        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
-        - !Ref RpPublicKeyCacheTableReadAccessPolicy
+        - !Ref RpPublicKeyCacheTableReadWriteAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableWriteAccessPolicy
         - !Ref StateStorageTableWriteAccessPolicy
         - !Ref ClientRateLimitTableReadWriteAccessPolicy
+        - !Ref JwksCacheTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -5736,7 +5736,7 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt DocAppCredentialTableEncryptionKey.Arn
 
-  RpPublicKeyCacheTableReadAccessPolicy:
+  RpPublicKeyCacheTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
@@ -5748,23 +5748,6 @@ Resources:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource: !GetAtt RpPublicKeyCacheTable.Arn
-          - Sid: AllowRpPublicKeyCacheTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
-
-  RpPublicKeyCacheTableWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
           - Sid: AllowRpPublicKeyCacheTableWriteAccess
             Effect: Allow
             Action:
@@ -6162,7 +6145,11 @@ Resources:
             Effect: Allow
             Action:
               - dynamodb:PutItem
-              - dynamodb:UpdateItem
+            Resource: !GetAtt JwksCacheTable.Arn
+          - Sid: AllowJwksCacheTableIndexQueryAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Query
             Resource: !GetAtt JwksCacheTable.Arn
           - Sid: AllowJwksCacheTableDecryptionAndEncryption
             Effect: Allow

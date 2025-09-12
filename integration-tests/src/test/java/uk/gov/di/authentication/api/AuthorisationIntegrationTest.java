@@ -47,6 +47,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
@@ -57,6 +58,7 @@ import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
@@ -124,6 +126,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
 
     @RegisterExtension
+    public static final JwksCacheExtension jwksCacheExtension = new JwksCacheExtension();
+
+    @RegisterExtension
     public static final KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
 
     @RegisterExtension
@@ -171,6 +176,21 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .setScheme("http")
                                 .build();
                     } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                @Override
+                public URL getDocAppJwksUrl() {
+                    try {
+                        return new URIBuilder()
+                                .setHost("localhost")
+                                .setPort(jwksExtension.getHttpPort())
+                                .setPath("/.well-known/jwks.json")
+                                .setScheme("http")
+                                .build()
+                                .toURL();
+                    } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
