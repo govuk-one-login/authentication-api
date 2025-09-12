@@ -160,7 +160,8 @@ public class UserInfoHandler
                             configurationService.isIdentityEnabled());
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
-            LOG.warn("AccessTokenException. Sending back UserInfoErrorResponse");
+            LOG.warn(
+                    "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());
             return generateApiGatewayProxyResponse(
                     401,
                     "",
