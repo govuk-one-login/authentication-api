@@ -167,9 +167,9 @@ init_alarms() {
   local domestic_quota_threshold=$((domestic_daily_quota * 60 / 100))           # 300,000
   local international_quota_threshold=$((international_daily_quota * 60 / 100)) # 3,600
 
-  # Limit Exceeded Thresholds (100% of daily quotas)
-  local domestic_limit_threshold=${domestic_daily_quota}           # 500,000
-  local international_limit_threshold=${international_daily_quota} # 6,000
+  # Limit Exceeded Thresholds (429 http status code responses from Notify)
+  local domestic_limit_threshold=2      # 2+ 429 http status code responses
+  local international_limit_threshold=2 # 2+ 429 http status code responses
 
   # Dynamically discover alarm names to handle P1 prefixes
   local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
@@ -287,42 +287,90 @@ test_alarm() {
     return
   fi
 
-  # Send test metric
-  test_value=$((THRESHOLD + 100))
-  echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to trigger ${ALARM_NAME}"
-  # Use different dimensions based on metric type
-  if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
-    # SMS quota metrics use only Environment dimension for total count
-    aws cloudwatch put-metric-data \
-      --namespace "${NAMESPACE}" \
-      --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
-  else
-    # Other metrics use Environment and SmsDestinationType dimensions
+  # Send test metrics
+  local sms_count_metric
+  if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" ]]; then
+    sms_count_metric="DomesticSmsSent"
+    test_value=$((THRESHOLD + 100))
+  elif [[ ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
+    sms_count_metric="InternationalSmsSent"
+    test_value=$((THRESHOLD + 100))
+  elif [[ ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
+    # For limit exceeded alarms, send metric directly (simulates 429 http status code responses from Notify)
+    test_value=$((THRESHOLD + 1)) # Send 3 for threshold of 2
+    echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to simulate 429 (rate limit exceeded) http status responses from Notify"
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
       --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=SmsDestinationType,Value=${SMS_TYPE}}]"
+    echo "${METRIC_NAME} metric data sent successfully!"
+    # Continue to alarm monitoring (don't return early)
   fi
-  echo "${METRIC_NAME} metric data sent successfully!"
 
-  # Verify metric
-  echo "Waiting 30 seconds for metric to be processed..."
+  # Only send SMS count metrics for quota warning alarms
+  if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
+    echo "Sending ${sms_count_metric} metric with value ${test_value} (threshold: ${THRESHOLD})"
+    aws cloudwatch put-metric-data \
+      --namespace "${NAMESPACE}" \
+      --metric-data "MetricName=${sms_count_metric},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
+    echo "${sms_count_metric} metric data sent successfully!"
+    echo "Waiting for scheduled SMS quota monitor lambda to process metrics (runs every 1 minute)..."
+  fi
+
+  # Verify metrics
+  echo "Waiting 30 seconds for metrics to be processed..."
   sleep 30
 
-  echo "Checking metric value..."
-  metric_value=$(aws cloudwatch get-metric-statistics \
-    --namespace "${NAMESPACE}" \
-    --metric-name "${METRIC_NAME}" \
-    --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=SmsDestinationType,Value="${SMS_TYPE}" \
-    --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
-    --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
-    --period 300 \
-    --statistics Sum \
-    --query "Datapoints[0].Sum" --output text)
+  if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
+    echo "Checking SMS count metric value..."
+    metric_value=$(aws cloudwatch get-metric-statistics \
+      --namespace "${NAMESPACE}" \
+      --metric-name "${sms_count_metric}" \
+      --dimensions Name=Environment,Value="${ENVIRONMENT}" \
+      --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
+      --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+      --period 300 \
+      --statistics Sum \
+      --query "Datapoints[0].Sum" --output text)
 
-  if [[ ${metric_value} != "None" && -n ${metric_value} ]]; then
-    echo "Current metric value: ${metric_value}"
+    if [[ ${metric_value} != "None" && -n ${metric_value} ]]; then
+      echo "Current ${sms_count_metric} value: ${metric_value}"
+    else
+      echo "${sms_count_metric} metric not yet available"
+    fi
+
+    echo "Checking warning metric value (generated by lambda)..."
+    warning_value=$(aws cloudwatch get-metric-statistics \
+      --namespace "${NAMESPACE}" \
+      --metric-name "${METRIC_NAME}" \
+      --dimensions Name=Environment,Value="${ENVIRONMENT}" \
+      --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
+      --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+      --period 300 \
+      --statistics Maximum \
+      --query "Datapoints[0].Maximum" --output text)
+
+    if [[ ${warning_value} != "None" && -n ${warning_value} ]]; then
+      echo "Current ${METRIC_NAME} value: ${warning_value}"
+    else
+      echo "${METRIC_NAME} metric not yet available (lambda may still be processing)"
+    fi
   else
-    echo "Metric value not yet available (may take a few minutes to appear)"
+    echo "Checking metric value..."
+    metric_value=$(aws cloudwatch get-metric-statistics \
+      --namespace "${NAMESPACE}" \
+      --metric-name "${METRIC_NAME}" \
+      --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=SmsDestinationType,Value="${SMS_TYPE}" \
+      --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
+      --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
+      --period 300 \
+      --statistics Sum \
+      --query "Datapoints[0].Sum" --output text)
+
+    if [[ ${metric_value} != "None" && -n ${metric_value} ]]; then
+      echo "Current metric value: ${metric_value}"
+    else
+      echo "Metric value not yet available (may take a few minutes to appear)"
+    fi
   fi
 
   # Wait for alarm
@@ -337,14 +385,38 @@ test_alarm() {
     if [[ ${new_state} == "ALARM" ]]; then
       echo "✅ SUCCESS: Alarm triggered as expected!"
 
-      # For early warning alarms, send negative value to deactivate
+      # For early warning alarms, send negative value to bring total below threshold
       if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
-        local deactivate_value=$((test_value * -1))
-        echo "Sending negative value ${deactivate_value} to deactivate alarm..."
+        local deactivate_value=$((-(THRESHOLD + 100)))
+        echo "Sending negative ${sms_count_metric} value ${deactivate_value} to deactivate alarm..."
         aws cloudwatch put-metric-data \
           --namespace "${NAMESPACE}" \
-          --metric-data "MetricName=${METRIC_NAME},Value=${deactivate_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
-        echo "Deactivation metric sent. Alarm should return to OK state in next evaluation period."
+          --metric-data "MetricName=${sms_count_metric},Value=${deactivate_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
+        echo "Deactivation metrics sent. Scheduled lambda will process on next run (every 1 minute)."
+      elif [[ ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
+        echo "Limit exceeded alarm will auto-deactivate when no new 429 (rate limit exceeded) responses occur (treat_missing_data=notBreaching)."
+        echo "Waiting for alarm to deactivate naturally..."
+      fi
+
+      # Wait for alarm deactivation
+      if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" || ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
+        echo "Monitoring alarm deactivation..."
+        local deactivation_wait_count=0
+        while [[ ${deactivation_wait_count} -lt 10 ]]; do
+          sleep 60
+          deactivation_wait_count=$((deactivation_wait_count + 1))
+          echo "Checking alarm state (attempt ${deactivation_wait_count}/10)..."
+          local current_alarm_state
+          current_alarm_state=$(aws cloudwatch describe-alarms --alarm-names "${ALARM_NAME}" --query "MetricAlarms[0].StateValue" --output text)
+          echo "Current alarm state: ${current_alarm_state}"
+
+          if [[ ${current_alarm_state} == "OK" ]]; then
+            echo "✅ SUCCESS: Alarm deactivated successfully!"
+            break
+          elif [[ ${deactivation_wait_count} -eq 10 ]]; then
+            echo "⚠️  Alarm has not deactivated after 10 minutes. This may be normal for some alarm types."
+          fi
+        done
       fi
       break
     else
