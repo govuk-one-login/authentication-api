@@ -141,7 +141,9 @@ public class UpdateEmailHandler
                 return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
             }
 
-            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
+            var accountWithReplacementEmailExists =
+                    dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress());
+            if (accountWithReplacementEmailExists) {
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.ACCT_WITH_EMAIL_EXISTS);
             }
@@ -154,14 +156,19 @@ public class UpdateEmailHandler
                                             new UserNotFoundException(
                                                     "User not found with given email"));
 
-            AtomicReference<EmailCheckResultStatus> resultStatus =
+            AtomicReference<EmailCheckResultStatus> emailCheckResultStatus =
                     new AtomicReference<>(EmailCheckResultStatus.PENDING);
             dynamoEmailCheckResultService
                     .getEmailCheckStore(updateInfoRequest.getReplacementEmailAddress())
-                    .ifPresent(result -> resultStatus.set(result.getStatus()));
+                    .ifPresent(result -> emailCheckResultStatus.set(result.getStatus()));
             LOG.info(
                     "UpdateEmailHandler: Experian email verification status: {}",
-                    resultStatus.get());
+                    emailCheckResultStatus.get());
+
+            if (emailCheckResultStatus.get() == EmailCheckResultStatus.DENY) {
+                return generateApiGatewayProxyErrorResponse(
+                        403, ErrorResponse.EMAIL_ADDRESS_DENIED);
+            }
 
             var auditContext =
                     new AuditContext(
@@ -179,7 +186,7 @@ public class UpdateEmailHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             new ArrayList<>());
 
-            if (resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
+            if (emailCheckResultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                         auditContext.withSubjectId(userProfile.getSubjectID()),

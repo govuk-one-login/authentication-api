@@ -1,11 +1,11 @@
 [
   {
     "ParameterKey": "AccessCrossAccountSQS",
-    "ParameterValue": "761723964695"
+    "ParameterValue": "653994557586"
   },
   {
     "ParameterKey": "AccessDynamoDBAccounts",
-    "ParameterValue": "761723964695"
+    "ParameterValue": "653994557586"
   },
   {
     "ParameterKey": "AllowedServiceOne",

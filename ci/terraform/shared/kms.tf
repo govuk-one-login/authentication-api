@@ -642,7 +642,6 @@ resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
   enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.pending_email_check_queue_encryption_key_access_policy.json
 }
 
 data "aws_iam_policy_document" "pending_email_check_queue_encryption_key_access_policy" {
@@ -698,6 +697,35 @@ data "aws_iam_policy_document" "pending_email_check_queue_encryption_key_access_
 resource "aws_kms_alias" "pending_email_check_queue_encryption_key_alias" {
   name          = "alias/${var.environment}-pending-email-check-queue-encryption-key"
   target_key_id = aws_kms_key.pending_email_check_queue_encryption_key.key_id
+}
+
+data "aws_iam_policy_document" "pending_email_check_combined_policy" {
+  source_policy_documents = [
+    data.aws_iam_policy_document.pending_email_check_queue_encryption_key_access_policy.json,
+    data.aws_iam_policy_document.allow_experian_to_pending_email_check_dlq_encryption_policy.json
+  ]
+}
+
+data "aws_iam_policy_document" "allow_experian_to_pending_email_check_dlq_encryption_policy" {
+  statement {
+    sid    = "AllowExperianToPendingEmailCheckDLQEncryption"
+    effect = "Allow"
+
+    actions = [
+      "kms:GenerateDataKey"
+    ]
+    resources = [aws_kms_key.pending_email_check_queue_encryption_key.arn]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.auth_check_account_id}:root"]
+    }
+  }
+}
+
+resource "aws_kms_key_policy" "pending_email_check_queue_policy" {
+  key_id = aws_kms_key.pending_email_check_queue_encryption_key.id
+  policy = data.aws_iam_policy_document.pending_email_check_combined_policy.json
 }
 
 resource "aws_kms_key" "authentication_attempt_encryption_key" {

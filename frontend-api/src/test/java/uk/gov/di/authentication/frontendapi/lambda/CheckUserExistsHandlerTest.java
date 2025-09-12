@@ -296,13 +296,15 @@ class CheckUserExistsHandlerTest {
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
-                            lockoutExpiry);
+                            lockoutExpiry,
+                            false);
             var passwordResetLockout =
                     new Decision.TemporarilyLockedOut(
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
-                            lockoutExpiry);
+                            lockoutExpiry,
+                            false);
 
             when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.SIGN_IN), any()))
                     .thenReturn(Result.success(signInLockout));
@@ -362,7 +364,8 @@ class CheckUserExistsHandlerTest {
                             uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                             5,
-                            java.time.Instant.now().plusSeconds(3600));
+                            java.time.Instant.now().plusSeconds(3600),
+                            false);
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(Result.success(lockedOutDecision));
 

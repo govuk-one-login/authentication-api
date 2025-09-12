@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -82,7 +83,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         TEST_NEW_EMAIL,
                         EmailCheckResultStatus.ALLOW,
                         unixTimePlusNDays(),
-                        "test-reference");
+                        "test-reference",
+                        CommonTestVariables.JOURNEY_ID,
+                        CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");

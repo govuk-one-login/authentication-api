@@ -1,7 +1,9 @@
 resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
-  count            = 1
-  event_source_arn = var.email_check_results_sqs_queue_arn
-  function_name    = aws_lambda_function.email_check_results_writer_lambda.arn
+  count                              = 1
+  event_source_arn                   = var.email_check_results_sqs_queue_arn
+  function_name                      = aws_lambda_function.email_check_results_writer_lambda.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
 
   depends_on = [
     aws_lambda_function.email_check_results_writer_lambda,

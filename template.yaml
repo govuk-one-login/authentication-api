@@ -35,6 +35,10 @@ Parameters:
   LambdaDeploymentPreference:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
+  MinErrorThreshold:
+    Type: Number
+    Description: Minimum number of errors before error rate alarms can be triggered
+    Default: 4
 
 Conditions:
   UsePermissionsBoundary:
@@ -92,51 +96,45 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
-  IsEnhancedCrossBrowserHandlingEnabled:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
-      authApiId: "dfwubyergf"
-      authExternalApiId: "48oqh70cm7"
-      authAccountId: "761723964695"
-      authEnvironment: sandpit
-      serviceDomain: sandpit.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/170fc24d-b278-49b0-a860-4fa1f3fa7a48
-      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8447683f-8800-4920-b4fe-1f410bf52ce0
-      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
-      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
+      authApiId: "9il43udl10"
+      authExternalApiId: "i5ib7bm0pe"
+      authAccountId: "653994557586"
+      newauthAccountId: "975050272416"
+      authEnvironment: authdev3
+      serviceDomain: authdev3.dev.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/cf42638b-73a6-498f-a56f-e7ec341c276b
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
       docAppClientId: orch-dev
-      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
-      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
-      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/055d799b-c648-4232-801b-c83aef0f2bd1
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:653994557586:key/3e5dd566-314a-4be8-8976-d8177824f959
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
-      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
-      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
-      ipvStubDomain: "ipvstub.oidc.sandpit.account.gov.uk"
+      ipvStubDomain: "ipvstub.oidc.authdev3.dev.account.gov.uk"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
       authApiId: "6of9f4amvg"
       authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
+      newauthAccountId: "058264536367"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
@@ -165,6 +163,7 @@ Mappings:
       authApiId: "1rvwudxmbk"
       authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
+      newauthAccountId: "851725205974"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
@@ -194,6 +193,7 @@ Mappings:
       authApiId: "k2skqhxed6"
       authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
+      newauthAccountId: "211125600642"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
@@ -221,6 +221,7 @@ Mappings:
       authApiId: "s4gj268zy6"
       authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
+      newauthAccountId: "211125303002"
       authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
@@ -404,17 +405,26 @@ Resources:
             Condition:
               ArnLike:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
-          - Sid: AllowKeyEncryptDecryptActions
+          - Sid: AllowKeyEncryptDecryptActionstoAuthAccount
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
               - kms:Encrypt
@@ -440,6 +450,7 @@ Resources:
         - AttributeName: SessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchSessionTableEncryptionKey.Arn
@@ -463,28 +474,46 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowOrchSessionTableCrossAccountDeleteAccess
               Effect: Allow
               Action:
                 - dynamodb:DeleteItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowOrchSessionTableCrossAccountWriteAccess
               Effect: Allow
               Action:
@@ -492,14 +521,23 @@ Resources:
                 - dynamodb:UpdateItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
 
   #endregion
 
@@ -549,6 +587,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt AuthUserInfoTableEncryptionKey.Arn
@@ -595,14 +634,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -618,6 +666,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt ClientSessionTableEncryptionKey.Arn
@@ -638,28 +687,46 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
             - Sid: AllowClientSessionTableDeleteAccessPolicy
               Effect: Allow
               Action:
                 - dynamodb:DeleteItem
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
       Tags:
         - Key: Name
           Value: ClientSessionTable
@@ -697,14 +764,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -747,17 +823,32 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
       Tags:
         - Key: Name
           Value: ClientRegistryTable
+        - !If
+          - IsIntegrationOrProduction
+          - Key: BackupFrequency
+            Value: Bihourly
+          - !Ref AWS::NoValue
+
   #endregion
 
   #region OrchIdentityCredentials DynamoDB Table
@@ -792,14 +883,23 @@ Resources:
           - Sid: AllowKeyDecryptionAccess
             Effect: Allow
             Principal:
-              AWS: !Sub
-                - arn:aws:iam::${AuthAccountId}:root
-                - AuthAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+              AWS:
+                - !Sub
+                  - arn:aws:iam::${AuthAccountId}:root
+                  - AuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        authAccountId,
+                      ]
+                - !Sub
+                  - arn:aws:iam::${NewAuthAccountId}:root
+                  - NewAuthAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        newauthAccountId,
+                      ]
             Action:
               - kms:Decrypt
             Resource: "*"
@@ -815,6 +915,7 @@ Resources:
         - AttributeName: ClientSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchIdentityCredentialsTableEncryptionKey.Arn
@@ -838,14 +939,23 @@ Resources:
                 - dynamodb:Get*
               Resource: "*"
               Principal:
-                AWS: !Sub
-                  - arn:aws:iam::${AuthAccountId}:root
-                  - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
-                      ]
+                AWS:
+                  - !Sub
+                    - arn:aws:iam::${AuthAccountId}:root
+                    - AuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ]
+                  - !Sub
+                    - arn:aws:iam::${NewAuthAccountId}:root
+                    - NewAuthAccountId:
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ]
   #endregion
 
   #region RP Public Key DynamoDB Table
@@ -895,6 +1005,7 @@ Resources:
         - AttributeName: keyId
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt RpPublicKeyTableEncryptionKey.Arn
@@ -950,6 +1061,7 @@ Resources:
         - AttributeName: PrefixedSessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt StateStorageTableEncryptionKey.Arn
@@ -1007,6 +1119,7 @@ Resources:
         - AttributeName: SubjectID
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt DocAppCredentialTableEncryptionKey.Arn
@@ -1020,7 +1133,69 @@ Resources:
         - Key: Name
           Value: DocAppCredentialTable
 
-  #endregion
+    #endregion
+
+    #region Jwks Cache DynamoDB Table
+
+  JwksCacheTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Jwks Cache DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  JwksCacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Jwks-Cache
+      AttributeDefinitions:
+        - AttributeName: JwksUrl
+          AttributeType: S
+        - AttributeName: KeyId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: JwksUrl
+          KeyType: HASH
+        - AttributeName: KeyId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt JwksCacheTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: JwksCacheTable
+
+    #endregion
 
   #region Fetch JWKS Lambda
 
@@ -1100,7 +1275,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1261,7 +1436,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1413,7 +1588,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1561,7 +1736,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -1806,7 +1981,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2013,7 +2188,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2227,7 +2402,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2388,7 +2563,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -2695,6 +2870,7 @@ Resources:
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
             - true
@@ -2788,7 +2964,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3009,7 +3185,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3139,7 +3315,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3339,6 +3515,7 @@ Resources:
             - true
             - false
           DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3432,7 +3609,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3636,7 +3813,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -3827,7 +4004,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4004,7 +4181,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4179,7 +4356,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4414,12 +4591,9 @@ Resources:
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           USE_STRONGLY_CONSISTENT_READS: !If
             - UseStronglyConsistentReads
-            - true
-            - false
-          USE_ENHANCED_CROSS_BROWSER_HANDLING: !If
-            - IsEnhancedCrossBrowserHandlingEnabled
             - true
             - false
       Policies:
@@ -4511,7 +4685,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4710,7 +4884,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -4918,7 +5092,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: m2/m1*100
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
           Label: Error Rate
         - Id: m1
           ReturnData: false
@@ -5988,6 +6162,30 @@ Resources:
             Action: lambda:InvokeFunction
             Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction:latest
 
+  JwksCacheTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowJwksCacheTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt JwksCacheTable.Arn
+          - Sid: AllowJwksCacheTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt JwksCacheTable.Arn
+          - Sid: AllowJwksCacheTableDecryptionAndEncryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+            Resource: !GetAtt JwksCacheTableEncryptionKey.Arn
   #endregion
 
   #region Slack notifications
@@ -6153,6 +6351,7 @@ Resources:
         - AttributeName: AuthCode
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt OrchAuthCodeTableEncryptionKey.Arn
@@ -6205,7 +6404,7 @@ Resources:
 
   #endregion
 
-  #region Client Rate Limit DynamoDB Table
+  #region Client Rate Limit
 
   ClientRateLimitTableEncryptionKey:
     Type: AWS::KMS::Key
@@ -6251,6 +6450,7 @@ Resources:
         - AttributeName: PeriodStartTime
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
       SSESpecification:
         SSEEnabled: true
         KMSMasterKeyId: !GetAtt ClientRateLimitTableEncryptionKey.Arn
@@ -6263,7 +6463,35 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRateLimitTable
+
+  ClientRateLimitMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-client-rate-limit-filter
+      FilterPattern: '{($.message = "Client with ID * has exceeded rate limit. Current count: *. Limit *")}'
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-client-rate-limit-count
+          MetricNamespace: ClientRateLimitCount
+          MetricValue: 1
+
+  ClientRateLimitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-client-rate-limit-alarm
+      AlarmDescription: !Sub "1 or more clients have hit their rate limit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/h4DKTQE"
+      Namespace: ClientRateLimitCount
+      MetricName: !Sub ${Environment}-client-rate-limit-count
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref SlackEvents
   #endregion
+
   #region ClientRateLimitTable policies
   ClientRateLimitTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6290,6 +6518,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt ClientRateLimitTableEncryptionKey.Arn
   #endregion
+
   #region StateStorage policies
   StateStorageTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6353,6 +6582,7 @@ Resources:
               - kms:Encrypt
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
+
   #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:

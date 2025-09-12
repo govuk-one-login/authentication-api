@@ -4,10 +4,6 @@ di-authentication-en-cy-mfa-sms
 
 Message:
 
-((validation-code)) is your GOV.UK One Login security code.
+((validation-code)) is your security code for GOV.UK One Login.
 
-It expires in 15 minutes.
-
-((validation-code)) yw eich cod diogelwch GOV.UK One Login.
-
-Mae'n dod i ben mewn 15 munud.
+((validation-code)) yw eich cod diogelwch ar gyfer GOV.UK One Login.

@@ -422,10 +422,28 @@ public class AuthorisationHandler
             cloudwatchMetricsService.putEmbeddedValue(
                     "rpStateLength",
                     authRequest.getState().getValue().length(),
-                    Map.of("clientId", authRequest.getClientID().getValue()));
+                    Map.of("clientId", clientId, "clientName", client.getClientName()));
         } catch (Exception e) {
             LOG.warn("Error recording state length, continuing: ", e);
         }
+
+        var isDocAppJourney =
+                DocAppUserHelper.isDocCheckingAppUser(
+                        authRequest.toParameters(), Optional.of(client));
+        var isIdentityJourney =
+                identityRequired(
+                        authRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
+        cloudwatchMetricsService.incrementCounter(
+                "orchAuthorizeRequestCount",
+                Map.of(
+                        "clientName",
+                        client.getClientName(),
+                        "isDocAppJourney",
+                        Boolean.toString(isDocAppJourney),
+                        "isIdentityJourney",
+                        Boolean.toString(isIdentityJourney)));
 
         boolean reauthRequested =
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
@@ -450,9 +468,7 @@ public class AuthorisationHandler
                         vtrList,
                         client.getClientName());
 
-        if (DocAppUserHelper.isDocCheckingAppUser(
-                authRequest.toParameters(), Optional.of(client))) {
-
+        if (isDocAppJourney) {
             return handleDocAppJourney(
                     orchSessionOptional,
                     orchClientSession,

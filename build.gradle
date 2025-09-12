@@ -18,9 +18,9 @@ buildscript {
 plugins {
     id "com.diffplug.spotless" version "7.2.1"
     id "com.avast.gradle.docker-compose" version "0.17.12"
-    id "org.sonarqube" version "6.2.0.5505"
+    id "org.sonarqube" version "6.3.1.5724"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.2.4'
+    id 'com.github.spotbugs' version '6.3.0'
 }
 
 apply plugin: "java"
@@ -29,15 +29,15 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.32.19",
-        aws_lambda_core_version: "1.3.0",
+        aws_sdk_v2_version: "2.33.4",
+        aws_lambda_core_version: "1.4.0",
         aws_lambda_events_version: "3.16.1",
         gson: "2.13.1",
         java_parser: "3.27.0",
-        jetbrains_annotations: "26.0.2",
-        jgit: "6.10.1.202505221210-r",
+        jetbrains_annotations: "26.0.2-1",
+        jgit: "7.3.0.202506031305-r",
         nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "10.4.1",
+        nimbusds_jwt_version: "10.4.2",
         junit: "5.13.4",
         xray: "2.19.0",
         pact: "4.6.17",
@@ -66,8 +66,12 @@ subprojects {
         dependencies {
             constraints {
                 // Netty constraints
-                classpath('io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                classpath('io.netty:netty-codec-http:[4.1.125.Final,)') {
+                    because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
+                }
+
+                classpath('io.netty:netty-common:[4.1.118.Final,4.2)') {
+                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
                 classpath('io.netty:netty-handler:[4.1.118.Final,)') {
@@ -76,6 +80,10 @@ subprojects {
 
                 classpath('io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                }
+
+                classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
                 }
 
                 // Apache Commons constraints
@@ -151,12 +159,12 @@ subprojects {
         constraints {
             configurations.configureEach { conf ->
                 // Netty constraints
-                add(conf.name, 'io.netty:netty-codec-http:[4.1.108.Final,)') {
-                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                add(conf.name, 'io.netty:netty-codec-http:[4.1.125.Final,)') {
+                    because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
                 }
 
-                add(conf.name, 'io.netty:netty-common:[4.1.115.Final,4.2)') {
-                    because 'CVE-2024-47535 is fixed in io.netty:netty-common:4.1.115.Final and higher'
+                add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
+                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
                 }
 
                 add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
@@ -167,13 +175,13 @@ subprojects {
                     because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
                 }
 
-                // Jetty constraints
-                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.17,12.1.0)') {
-                    because 'CVE-2025-1948 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.17 and higher'
+                add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
                 }
 
-                add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.12,)') {
-                    because 'CVE-2024-6763 is fixed in org.eclipse.jetty:jetty-http:12.0.12 and higher'
+                // Jetty constraints
+                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.25,12.1.0)') {
+                    because 'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
                 }
 
                 // Jackson constraints
@@ -240,9 +248,9 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.2"
 
         lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.7.1.RELEASE"
+                "io.lettuce:lettuce-core:6.8.1.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.12"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.13"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.17"
@@ -263,7 +271,7 @@ subprojects {
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.junit.platform:junit-platform-launcher",
-                "org.mockito:mockito-core:5.18.0",
+                "org.mockito:mockito-core:5.19.0",
                 "org.awaitility:awaitility:4.3.0",
                 "com.approvaltests:approvaltests:25.0.23",
                 configurations.hamcrest,
@@ -287,7 +295,7 @@ subprojects {
 
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
 
-        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.18.1-alpha"),
+        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.19.0-alpha"),
                 "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure",
                 "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }

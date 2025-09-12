@@ -82,7 +82,7 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           SMOKETEST_SMS_BUCKET_NAME: !Sub
-            - ${env}-smoke-test-sms-codes
+            - ${env}-smoke-new-test-sms-codes
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Events:

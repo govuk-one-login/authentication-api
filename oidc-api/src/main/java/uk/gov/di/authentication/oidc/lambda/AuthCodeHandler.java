@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -312,6 +313,11 @@ public class AuthCodeHandler
                     clientID.getValue(),
                     orchClientSession.getClientName(),
                     isTestJourney);
+            cloudwatchMetricsService.incrementCounter(
+                    "orchIdentityJourneyCompleted",
+                    Map.of(
+                            "clientName", client.getClientName(),
+                            "clientId", clientID.getValue()));
             authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
 
             LOG.info("Generating successful auth code response");

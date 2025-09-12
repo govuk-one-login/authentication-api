@@ -113,7 +113,7 @@ variable "enforce_code_signing" {
 }
 
 variable "enable_user_profile_stream" {
-  default     = true
+  default     = false
   type        = bool
   description = "Whether the User Profile DynamoDB table should have streaming turned on (this is consumed by Experian Phone Check lambda in a separate repo)"
 }

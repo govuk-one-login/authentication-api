@@ -197,7 +197,8 @@ class AuthCodeHandlerTest {
                         Optional.of(
                                 new ClientRegistry()
                                         .withClientID(CLIENT_ID.getValue())
-                                        .withSubjectType("pairwise")));
+                                        .withSubjectType("pairwise")
+                                        .withClientName(CLIENT_NAME)));
     }
 
     private static Stream<Arguments> upliftTestParameters() {

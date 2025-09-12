@@ -54,7 +54,7 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
             try {
                 processMessage(message);
             } catch (Json.JsonException e) {
-                LOG.error("Could not parse logout request payload", e);
+                LOG.warn("Could not parse logout request payload", e);
                 batchItemFailures.add(
                         new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
             } catch (RuntimeException e) {
