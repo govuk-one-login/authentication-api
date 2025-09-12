@@ -20,7 +20,7 @@ locals {
   client_registry_encryption_key_arn              = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn
   user_profile_kms_key_arn                        = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
   email_check_results_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
-  test_client_allow_list_secret_access_policy_arn = data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn
+  test_client_allow_list_secret_access_policy_arn = var.test_clients_enabled ? data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn : null
 
 
   slack_event_sns_topic_arn = data.terraform_remote_state.shared.outputs.slack_event_sns_topic_arn
