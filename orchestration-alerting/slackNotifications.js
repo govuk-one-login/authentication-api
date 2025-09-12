@@ -9,18 +9,31 @@ const getParameter = async (parameterName) => {
 };
 
 const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
-  var description = snsMessage.AlarmDescription.split("ACCOUNT:");
+  const descriptionAndAccount = snsMessage.AlarmDescription.split("ACCOUNT:");
   var account = snsMessage.AWSAccountId;
-  if (description.length > 1) {
-    account = description[1];
+  if (descriptionAndAccount.length > 1) {
+    account = descriptionAndAccount[1];
+  }
+  var description = descriptionAndAccount[0];
+  if (snsMessage.AlarmName.includes("pagerduty")) {
+    if (snsMessage.NewStateValue === "ALARM") {
+      description =
+        description +
+        "\nThis has triggered a PagerDuty alert for the following service:\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
+    }
+    if (snsMessage.NewStateValue === "OK") {
+      description =
+        description +
+        "\nThis has resolved the associated PagerDuty alert for the following service:\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
+    }
   }
   return {
     attachments: [
       {
-        fallback: description[0],
+        fallback: description,
         color: colorCode,
         title: snsMessage.AlarmName,
-        text: description[0],
+        text: description,
         fields: [
           {
             title: "Status",
@@ -49,7 +62,12 @@ const buildMessageRequest = async function (
     process.env.DEPLOY_ENVIRONMENT,
   );
   const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
-  if (isEnabledForNonProd || isEnabledForProd) {
+  const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
+  if (isPagerDutyAlarm && isEnabledForProd) {
+    body.channel =
+      process.env.SLACK_CHANNEL_ID ||
+      (await getParameter("pagerduty-slack-channel-id"));
+  } else if (isEnabledForNonProd || isEnabledForProd) {
     body.channel =
       process.env.SLACK_CHANNEL_ID ||
       (await getParameter(
