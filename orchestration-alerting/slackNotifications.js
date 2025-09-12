@@ -14,61 +14,29 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
   if (description.length > 1) {
     account = description[1];
   }
-  if (JSON.stringify(snsMessage).includes("ElastiCache")) {
-    return {
-      attachments: [
-        {
-          fallback:
-            Object.keys(snsMessage)[0] +
-            "for cluster: " +
-            Object.values(snsMessage)[0],
-          color: "#ff9966",
-          title: Object.values(snsMessage)[0] + "-notification",
-          text:
-            Object.keys(snsMessage)[0] +
-            " for cluster: " +
-            Object.values(snsMessage)[0],
-          fields: [
-            {
-              title: "Status",
-              value: "INFO",
-              short: false,
-            },
-            {
-              title: "Account",
-              value: account,
-              short: false,
-            },
-          ],
-          footer: snsMessageFooter,
-        },
-      ],
-    };
-  } else {
-    return {
-      attachments: [
-        {
-          fallback: description[0],
-          color: colorCode,
-          title: snsMessage.AlarmName,
-          text: description[0],
-          fields: [
-            {
-              title: "Status",
-              value: snsMessage.NewStateValue,
-              short: false,
-            },
-            {
-              title: "Account",
-              value: account,
-              short: false,
-            },
-          ],
-          footer: snsMessageFooter,
-        },
-      ],
-    };
-  }
+  return {
+    attachments: [
+      {
+        fallback: description[0],
+        color: colorCode,
+        title: snsMessage.AlarmName,
+        text: description[0],
+        fields: [
+          {
+            title: "Status",
+            value: snsMessage.NewStateValue,
+            short: false,
+          },
+          {
+            title: "Account",
+            value: account,
+            short: false,
+          },
+        ],
+        footer: snsMessageFooter,
+      },
+    ],
+  };
 };
 
 const buildMessageRequest = async function (
