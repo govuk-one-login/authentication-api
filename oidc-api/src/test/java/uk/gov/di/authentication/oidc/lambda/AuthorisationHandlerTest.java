@@ -259,6 +259,7 @@ class AuthorisationHandlerTest {
             format("%s=%s.%s", SESSION_COOKIE_NAME, SESSION_ID, CLIENT_ID.getValue());
 
     private AuthorisationHandler handler;
+    private ClientRegistry clientRegistry;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -277,7 +278,6 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
         when(configService.isIdentityEnabled()).thenReturn(true);
-        when(configService.isRpRateLimitingEnabled()).thenReturn(false);
         when(authFrontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(authFrontend.authorizeURI(Optional.empty(), Optional.empty()))
@@ -318,6 +318,10 @@ class AuthorisationHandlerTest {
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(orchClientSession.getDocAppSubjectId()).thenReturn("test-subject-id");
+        when(rateLimitService.getClientRateLimitDecision(any(ClientRateLimitConfig.class)))
+                .thenReturn(RateLimitDecision.UNDER_LIMIT_NO_ACTION);
+        clientRegistry = generateClientRegistry().withRateLimit(400);
+        when(clientService.getClient(anyString())).thenReturn(Optional.of(clientRegistry));
     }
 
     @Nested
@@ -1851,10 +1855,11 @@ class AuthorisationHandlerTest {
         @BeforeEach()
         void docAppSetup() throws ParseException, JOSEException {
 
-            var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
+            var docAppClientRegistry =
+                    generateClientRegistry().withClientType(ClientType.APP.getValue());
 
             when(clientService.getClient(CLIENT_ID.getValue()))
-                    .thenReturn(Optional.of(clientRegistry));
+                    .thenReturn(Optional.of(docAppClientRegistry));
 
             docAppSubjectIdHelperMock = mockStatic(DocAppSubjectIdHelper.class);
 
@@ -2377,7 +2382,6 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToRPWhenClientIsRateLimited() {
-            when(configService.isRpRateLimitingEnabled()).thenReturn(true);
             when(rateLimitService.getClientRateLimitDecision(any(ClientRateLimitConfig.class)))
                     .thenReturn(RateLimitDecision.OVER_LIMIT_RETURN_TO_RP);
 
@@ -2688,19 +2692,9 @@ class AuthorisationHandlerTest {
 
     @Nested
     class RPRateLimiting {
-        ClientRegistry clientRegistry;
-
-        @BeforeEach
-        void setup() {
-            when(configService.isRpRateLimitingEnabled()).thenReturn(true);
-            when(rateLimitService.getClientRateLimitDecision(any(ClientRateLimitConfig.class)))
-                    .thenReturn(RateLimitDecision.UNDER_LIMIT_NO_ACTION);
-            clientRegistry = generateClientRegistry().withRateLimit(400);
-            when(clientService.getClient(anyString())).thenReturn(Optional.of(clientRegistry));
-        }
 
         @Test
-        void shouldCallRateLimitServiceWhenFeatureFlagOn() {
+        void shouldCallRateLimitService() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
 

@@ -385,24 +385,22 @@ public class AuthorisationHandler
                     user);
         }
 
-        if (configurationService.isRpRateLimitingEnabled()) {
-            var rateLimitDecision =
-                    rateLimitService.getClientRateLimitDecision(
-                            ClientRateLimitConfig.fromClientRegistry(client));
+        var rateLimitDecision =
+                rateLimitService.getClientRateLimitDecision(
+                        ClientRateLimitConfig.fromClientRegistry(client));
 
-            if (rateLimitDecision.hasExceededRateLimit()) {
-                switch (rateLimitDecision.getAction()) {
-                    case RETURN_TO_RP -> {
-                        authRequestError =
-                                Optional.of(
-                                        new AuthRequestError(
-                                                OAuth2Error.TEMPORARILY_UNAVAILABLE,
-                                                authRequest.getRedirectionURI(),
-                                                authRequest.getState()));
-                    }
-                    case NONE -> {
-                        // continue
-                    }
+        if (rateLimitDecision.hasExceededRateLimit()) {
+            switch (rateLimitDecision.getAction()) {
+                case RETURN_TO_RP -> {
+                    authRequestError =
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.TEMPORARILY_UNAVAILABLE,
+                                            authRequest.getRedirectionURI(),
+                                            authRequest.getState()));
+                }
+                case NONE -> {
+                    // continue
                 }
             }
         }
