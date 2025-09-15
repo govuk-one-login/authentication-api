@@ -83,7 +83,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !If [
-            AllowTestClientSecretAccess,
+            ProvisionTestClientSecret,
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]

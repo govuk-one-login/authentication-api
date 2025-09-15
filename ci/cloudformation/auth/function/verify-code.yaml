@@ -109,7 +109,7 @@ Resources:
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !If [
-            AllowTestClientSecretAccess,
+            ProvisionTestClientSecret,
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]
