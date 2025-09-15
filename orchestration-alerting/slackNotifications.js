@@ -21,19 +21,19 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
   }
   var description = descriptionAndAccount[0];
   if (snsMessage.AlarmName.includes("pagerduty")) {
-      if (snsMessage.NewStateValue === "ALARM") {
-        description =
-          description +
-          "\n\nThis has triggered a PagerDuty alert for the following service:" +
-          "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
-      }
-      if (snsMessage.NewStateValue === "OK") {
-        description =
-          description +
-          "\n\nThis has resolved the associated PagerDuty alert for the following service:" +
-          "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
-      }
+    if (snsMessage.NewStateValue === "ALARM") {
+      description =
+        description +
+        "\n\nThis has triggered a PagerDuty alert for the following service:" +
+        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
     }
+    if (snsMessage.NewStateValue === "OK") {
+      description =
+        description +
+        "\n\nThis has resolved the associated PagerDuty alert for the following service:" +
+        "\n<https://governmentdigitalservice.pagerduty.com/service-directory/P5V7FN6|GOV.UK One Login - Orchestration - P1>";
+    }
+  }
   var fields = [
     {
       title: "Status",
@@ -100,6 +100,18 @@ const buildMessageRequest = async function (
   };
 };
 
+const sendAlertToSlack = async function (slackHookUrl, messageRequest) {
+  console.log("Sending alert to slack");
+  try {
+    // eslint-disable-next-line no-undef
+    const response = await fetch(slackHookUrl, messageRequest);
+    const message = await response.text();
+    console.log(message);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 // eslint-disable-next-line no-unused-vars
 const handler = async function (event, context) {
   console.log("Alert lambda triggered");
@@ -119,15 +131,7 @@ const handler = async function (event, context) {
     snsMessageFooter,
   );
 
-  console.log("Sending alert to slack");
-  try {
-    // eslint-disable-next-line no-undef
-    const response = await fetch(slackHookUrl, messageRequest);
-    const message = await response.text();
-    console.log(message);
-  } catch (error) {
-    console.log(error);
-  }
+  await module.exports.sendAlertToSlack(slackHookUrl, messageRequest);
 };
 
-module.exports = { handler };
+module.exports = { handler, sendAlertToSlack };

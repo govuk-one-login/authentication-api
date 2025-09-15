@@ -1,0 +1,12 @@
+{
+  "name": "orchestration-alerting",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest"
+  },
+  "description": "Package for sending slack alerts",
+  "devDependencies": {
+    "@aws-sdk/client-ssm": "3.721.0",
+    "jest": "^30.1.3"
+  }
+}
