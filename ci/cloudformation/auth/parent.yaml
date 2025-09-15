@@ -162,18 +162,35 @@ Conditions:
       ],
     ]
 
-  AllowTestClientSecretAccess:
+  AllowTestClientSecretAccessSubEnv:
     Fn::And:
       - !Condition ProvisionTestClientSecret
+      - !Condition UseSubEnvironment
       - Fn::Equals:
-          - Fn::FindInMap:
-              - EnvironmentConfiguration
-              - Fn::If:
-                  - UseSubEnvironment
-                  - !Ref SubEnvironment
-                  - !Ref Environment
-              - testClientsEnabled
-          - true
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref SubEnvironment,
+              testClientsEnabled,
+            ]
+          - "true"
+
+  AllowTestClientSecretAccessMainEnv:
+    Fn::And:
+      - !Condition ProvisionTestClientSecret
+      - !Condition NotSubEnvironment
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              testClientsEnabled,
+            ]
+          - "true"
+
+  AllowTestClientSecretAccess:
+    !Or [
+      !Condition AllowTestClientSecretAccessSubEnv,
+      !Condition AllowTestClientSecretAccessMainEnv,
+    ]
 
   UseOrchdataAccess:
     !Or [
