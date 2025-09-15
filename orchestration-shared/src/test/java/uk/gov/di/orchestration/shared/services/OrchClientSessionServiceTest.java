@@ -31,7 +31,7 @@ class OrchClientSessionServiceTest {
     private static final GetItemEnhancedRequest CLIENT_SESSION_GET_REQUEST =
             GetItemEnhancedRequest.builder()
                     .key(CLIENT_SESSION_ID_PARTITION_KEY)
-                    .consistentRead(false)
+                    .consistentRead(true)
                     .build();
     private final DynamoDbTable<OrchClientSessionItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);

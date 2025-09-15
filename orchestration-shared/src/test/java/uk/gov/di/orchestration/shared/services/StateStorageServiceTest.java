@@ -31,7 +31,7 @@ class StateStorageServiceTest {
     private static final Key STATE_PARTITION_KEY =
             Key.builder().partitionValue(PREFIXED_SESSION_ID).build();
     private static final GetItemEnhancedRequest STATE_GET_REQUEST =
-            GetItemEnhancedRequest.builder().key(STATE_PARTITION_KEY).consistentRead(false).build();
+            GetItemEnhancedRequest.builder().key(STATE_PARTITION_KEY).consistentRead(true).build();
     private final DynamoDbTable<StateItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
