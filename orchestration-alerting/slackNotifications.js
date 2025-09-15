@@ -65,7 +65,12 @@ const buildMessageRequest = async function (
     "integration",
     "production",
   ].includes(process.env.DEPLOY_ENVIRONMENT);
-  if (isNotBuildEnv) {
+  const isPagerDutyAlarm = snsMessage.AlarmDescription.includes("PagerDuty");
+  if (isPagerDutyAlarm && isEnabledForProd) {
+    body.channel =
+      process.env.SLACK_CHANNEL_ID ||
+      (await getParameter("pagerduty-slack-channel-id"));
+  } else if (isNotBuildEnv) {
     body.channel =
       process.env.SLACK_CHANNEL_ID ||
       (await getParameter(
