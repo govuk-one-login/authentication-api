@@ -36,7 +36,9 @@ repos:
           package-lock.json|\
           .*provider.json|\
           quality-gate.manifest.json|\
-          account-management-api/api-contract(/.*)?$"
+          account-management-api/api-contract(/.*)?|\
+          babel.config.json|\
+          jest.config.json$"
         files: ^.*\.(json|yml|yaml)$
 
   - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
