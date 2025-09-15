@@ -9,30 +9,44 @@ const getParameter = async (parameterName) => {
 };
 
 const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
-  var description = snsMessage.AlarmDescription.split("ACCOUNT:");
+  var descriptionAndAccount = snsMessage.AlarmDescription.split("ACCOUNT:");
+  var runbook = null;
   var account = snsMessage.AWSAccountId;
-  if (description.length > 1) {
-    account = description[1];
+  if (descriptionAndAccount.length > 1) {
+    const runbookSplit = descriptionAndAccount[1].split("Runbook: ");
+    if (runbookSplit.length > 1) {
+      runbook = runbookSplit[1];
+    }
+    account = runbookSplit[0];
+  }
+  var description = descriptionAndAccount[0];
+  var fields = [
+    {
+      title: "Status",
+      value: snsMessage.NewStateValue,
+      short: false,
+    },
+    {
+      title: "Account",
+      value: account,
+      short: false,
+    },
+  ];
+  if (runbook != null) {
+    fields.push({
+      title: "Runbook",
+      value: runbook,
+      short: false,
+    });
   }
   return {
     attachments: [
       {
-        fallback: description[0],
+        fallback: description,
         color: colorCode,
         title: snsMessage.AlarmName,
-        text: description[0],
-        fields: [
-          {
-            title: "Status",
-            value: snsMessage.NewStateValue,
-            short: false,
-          },
-          {
-            title: "Account",
-            value: account,
-            short: false,
-          },
-        ],
+        text: description,
+        fields: fields,
         footer: snsMessageFooter,
       },
     ],
