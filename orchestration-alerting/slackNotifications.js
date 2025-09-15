@@ -42,24 +42,24 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
     },
     {
       title: "Account",
-      value: account,
+      value: account.trim(),
       short: false,
     },
   ];
   if (runbook != null) {
     fields.push({
       title: "Runbook",
-      value: runbook,
+      value: runbook.trim(),
       short: false,
     });
   }
   return {
     attachments: [
       {
-        fallback: description,
+        fallback: description.trim(),
         color: colorCode,
         title: snsMessage.AlarmName,
-        text: description,
+        text: description.trim(),
         fields: fields,
         footer: snsMessageFooter,
       },
@@ -67,7 +67,7 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
   };
 };
 
-const buildMessageRequest = async function (
+const buildMessageRequestBody = async function (
   snsMessage,
   colorCode,
   snsMessageFooter,
@@ -92,17 +92,33 @@ const buildMessageRequest = async function (
         process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id",
       ));
   }
-  return {
+  return body;
+};
+
+export const sendAlertToSlack = async function (
+  slackHookUrl,
+  messageRequestBody,
+) {
+  console.log("Sending alert to slack");
+  const messageRequest = {
     method: "post",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(messageRequestBody),
   };
+  try {
+    // eslint-disable-next-line no-undef
+    const response = await fetch(slackHookUrl, messageRequest);
+    const message = await response.text();
+    console.log(message);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 // eslint-disable-next-line no-unused-vars
-const handler = async function (event, context) {
+export const handler = async function (event, context) {
   console.log("Alert lambda triggered");
   const slackHookUrl =
     process.env.SLACK_WEBHOOK_URL ||
@@ -114,21 +130,11 @@ const handler = async function (event, context) {
   if (snsMessage.NewStateValue === "OK") {
     colorCode = process.env.OK_COLOR || "#36a64f";
   }
-  const messageRequest = await buildMessageRequest(
+  const messageRequestBody = await buildMessageRequestBody(
     snsMessage,
     colorCode,
     snsMessageFooter,
   );
 
-  console.log("Sending alert to slack");
-  try {
-    // eslint-disable-next-line no-undef
-    const response = await fetch(slackHookUrl, messageRequest);
-    const message = await response.text();
-    console.log(message);
-  } catch (error) {
-    console.log(error);
-  }
+  await sendAlertToSlack(slackHookUrl, messageRequestBody);
 };
-
-module.exports = { handler };

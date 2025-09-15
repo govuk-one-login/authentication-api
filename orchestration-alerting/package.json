@@ -1,0 +1,18 @@
+{
+  "name": "orchestration-alerting",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest --silent"
+  },
+  "type": "module",
+  "description": "Package for sending slack alerts",
+  "devDependencies": {
+    "@aws-sdk/client-ssm": "3.721.0",
+    "jest": "^30.1.3"
+  },
+  "dependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@babel/preset-env": "^7.28.3",
+    "babel-plugin-explicit-exports-references": "^1.0.2"
+  }
+}
