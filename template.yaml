@@ -1115,9 +1115,9 @@ Resources:
         - Key: Name
           Value: DocAppCredentialTable
 
-    #endregion
+  #endregion
 
-    #region Jwks Cache DynamoDB Table
+  #region Jwks Cache DynamoDB Table
 
   JwksCacheTableEncryptionKey:
     Type: AWS::KMS::Key
@@ -1177,7 +1177,78 @@ Resources:
         - Key: Name
           Value: JwksCacheTable
 
-    #endregion
+  #endregion
+
+  #region Access Token DynamoDB Table
+
+  AccessTokenTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Access Token DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  AccessTokenTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Access-Token
+      AttributeDefinitions:
+        - AttributeName: ClientId
+          AttributeType: S
+        - AttributeName: RpPairwiseId
+          AttributeType: S
+        - AttributeName: AuthCode
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: AuthCodeIndex
+          KeySchema:
+            - AttributeName: AuthCode
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: ClientId
+          KeyType: HASH
+        - AttributeName: RpPairwiseId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt AccessTokenTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: AccessTokenTable
+
+  #endregion
 
   #region Fetch JWKS Lambda
 
