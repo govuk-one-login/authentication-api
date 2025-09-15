@@ -183,12 +183,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var journeyType =
-                request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
-        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+        JourneyType journeyType =
+                request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
+        var journeyTypeValue = journeyType != null ? journeyType.getValue() : "missing";
+        var isReauthJourney =
+                journeyTypeValue.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
+        attachLogFieldToLogs(JOURNEY_TYPE, journeyTypeValue);
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -285,7 +287,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userCredentials,
                 userProfile,
                 auditContext,
-                authSession);
+                authSession,
+                journeyType);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -307,7 +310,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserCredentials userCredentials,
             UserProfile userProfile,
             AuditContext auditContext,
-            AuthSessionItem authSessionItem) {
+            AuthSessionItem authSessionItem,
+            JourneyType journeyType) {
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -388,9 +392,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     checkMfaCodeBlocks(
                             userProfile.getEmail(),
                             MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType()),
-                            request.getJourneyType() != null
-                                    ? request.getJourneyType()
-                                    : JourneyType.SIGN_IN);
+                            journeyType);
 
             if (codeBlocks.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
