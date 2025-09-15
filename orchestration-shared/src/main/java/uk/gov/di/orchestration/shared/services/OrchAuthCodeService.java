@@ -40,7 +40,7 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
             DynamoDbTable<OrchAuthCodeItem> dynamoDbTable,
             ConfigurationService configurationService,
             Clock clock) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getAuthCodeExpiry();
         this.nowClock = new NowHelper.NowClock(clock);
         this.objectMapper = SerializationService.getInstance();

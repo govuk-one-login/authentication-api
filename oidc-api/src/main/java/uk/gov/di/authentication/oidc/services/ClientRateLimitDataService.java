@@ -32,18 +32,15 @@ public class ClientRateLimitDataService extends BaseDynamoService<SlidingWindowD
     }
 
     public ClientRateLimitDataService(
-            DynamoDbClient dynamoDbClient,
-            DynamoDbTable<SlidingWindowData> dynamoDbTable,
-            ConfigurationService configurationService) {
-        this(dynamoDbClient, dynamoDbTable, configurationService, Clock.systemUTC());
+            DynamoDbClient dynamoDbClient, DynamoDbTable<SlidingWindowData> dynamoDbTable) {
+        this(dynamoDbClient, dynamoDbTable, Clock.systemUTC());
     }
 
     public ClientRateLimitDataService(
             DynamoDbClient dynamoDbClient,
             DynamoDbTable<SlidingWindowData> dynamoDbTable,
-            ConfigurationService configurationService,
             Clock clock) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+        super(dynamoDbTable, dynamoDbClient);
         this.nowClock = new NowHelper.NowClock(clock);
     }
 

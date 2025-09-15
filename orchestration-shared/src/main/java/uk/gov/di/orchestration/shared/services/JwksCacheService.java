@@ -39,7 +39,7 @@ public class JwksCacheService extends BaseDynamoService<JwksCacheItem> {
             DynamoDbTable<JwksCacheItem> dynamoDbTable,
             ConfigurationService configurationService,
             Clock clock) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getJwkCacheExpirationInSeconds();
         this.configurationService = configurationService;
         this.nowClock = new NowHelper.NowClock(clock);

@@ -9,7 +9,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.oidc.entity.SlidingWindowData;
 import uk.gov.di.authentication.oidc.exceptions.ClientRateLimitDataException;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -39,13 +38,11 @@ class ClientRateLimitDataServiceTest {
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private final DynamoDbTable<SlidingWindowData> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private ClientRateLimitDataService clientRateLimitDataService;
 
     @BeforeEach
     void setup() {
-        clientRateLimitDataService =
-                new ClientRateLimitDataService(dynamoDbClient, table, configurationService);
+        clientRateLimitDataService = new ClientRateLimitDataService(dynamoDbClient, table);
     }
 
     @Test
