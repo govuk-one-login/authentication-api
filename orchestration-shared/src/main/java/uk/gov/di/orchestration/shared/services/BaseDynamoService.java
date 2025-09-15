@@ -100,11 +100,7 @@ public class BaseDynamoService<T> {
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(partition).build());
         return dynamoTable
                 .index(indexName)
-                .query(
-                        QueryEnhancedRequest.builder()
-                                .consistentRead(true)
-                                .queryConditional(queryConditional)
-                                .build())
+                .query(QueryEnhancedRequest.builder().queryConditional(queryConditional).build())
                 .stream()
                 .flatMap(page -> page.items().stream())
                 .toList();
