@@ -6431,6 +6431,7 @@ Resources:
               Resource:
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/pagerduty-slack-channel-id"
       Events:
         SNS:
           Type: SNS
@@ -6506,6 +6507,16 @@ Resources:
               StringEquals:
                 AWS:SourceAccount: !Ref AWS::AccountId
 
+  PagerDutySNSSubscription:
+    Condition: IsProduction
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:integrationURL}}"
+        - SecretArn: !Ref PagerDutyUrlSecret
+      Protocol: https
+      RawMessageDelivery: false
+      TopicArn: !Ref PagerDutyEvents
   #endregion
   #region OrchAuthCode DynamoDB Table
 
