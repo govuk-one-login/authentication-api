@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "ci/cloudformation/auth/**"
-      - "ci/openAPI/**"
-      - "auth-external-api/**"
-      - "frontend-api/**"
-      - "shared/**"
 
 env:
   AWS_REGION: eu-west-2
