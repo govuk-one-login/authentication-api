@@ -95,7 +95,7 @@ Resources:
         - !Ref PendingEmailCheckQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !If [
-            AllowTestClientSecretAccess,
+            ProvisionTestClientSecret,
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]

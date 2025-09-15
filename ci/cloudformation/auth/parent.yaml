@@ -155,41 +155,9 @@ Conditions:
           !Equals [!Ref SubEnvironment, "authdev2"],
         ],
       ],
-      !Or [
-        !Equals [!Ref Environment, "dev"],
-        !Equals [!Ref Environment, "build"],
-        !Equals [!Ref Environment, "staging"],
-      ],
-    ]
-
-  AllowTestClientSecretAccessSubEnv:
-    Fn::And:
-      - !Condition ProvisionTestClientSecret
-      - !Condition UseSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref SubEnvironment,
-              testClientsEnabled,
-            ]
-          - "true"
-
-  AllowTestClientSecretAccessMainEnv:
-    Fn::And:
-      - !Condition ProvisionTestClientSecret
-      - !Condition NotSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              testClientsEnabled,
-            ]
-          - "true"
-
-  AllowTestClientSecretAccess:
-    !Or [
-      !Condition AllowTestClientSecretAccessSubEnv,
-      !Condition AllowTestClientSecretAccessMainEnv,
+      !Equals [!Ref Environment, "dev"],
+      !Equals [!Ref Environment, "build"],
+      !Equals [!Ref Environment, "staging"],
     ]
 
   UseOrchdataAccess:
