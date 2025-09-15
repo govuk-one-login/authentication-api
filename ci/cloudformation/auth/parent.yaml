@@ -569,6 +569,7 @@ Globals:
             EnvironmentConfiguration,
             !Ref Environment,
             lambdaMinConcurrency,
+            DefaultValue: 0,
           ]
       - !Ref AWS::NoValue
     Runtime: java17
