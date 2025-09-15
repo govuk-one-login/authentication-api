@@ -44,11 +44,6 @@ class OrchAuthCodeServiceTest {
     private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST =
             GetItemEnhancedRequest.builder()
                     .key(AUTH_CODE_PARTITION_KEY)
-                    .consistentRead(false)
-                    .build();
-    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ =
-            GetItemEnhancedRequest.builder()
-                    .key(AUTH_CODE_PARTITION_KEY)
                     .consistentRead(true)
                     .build();
     private static final long AUTH_CODE_EXPIRY = 123L;
@@ -134,42 +129,6 @@ class OrchAuthCodeServiceTest {
         assertTrue(exchangeData.isEmpty());
 
         verify(table).getItem(AUTH_CODE_GET_REQUEST);
-        assertGetItemCalledWithStronglyConsistentRead();
-    }
-
-    @Test
-    void
-            shouldRetryGetOrchAuthCodeExchangeDataByAuthCodeWithStronglyConsistentReadOnceWhenItemNotFound()
-                    throws Json.JsonException {
-        var exchangeData = anAuthCodeExchangeDataEntity();
-        var exchangeDataSerialized = objectMapper.writeValueAsString(exchangeData);
-
-        OrchAuthCodeItem orchAuthCodeItem =
-                new OrchAuthCodeItem()
-                        .withAuthCode(AUTH_CODE)
-                        .withAuthCodeExchangeData(exchangeDataSerialized)
-                        .withIsUsed(false)
-                        .withTimeToLive(VALID_TTL);
-
-        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
-        when(table.getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ))
-                .thenReturn(orchAuthCodeItem);
-
-        var actualExchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
-
-        assertTrue(actualExchangeData.isPresent());
-
-        assertEquals(exchangeData.getClientId(), actualExchangeData.get().getClientId());
-        assertEquals(
-                exchangeData.getClientSessionId(), actualExchangeData.get().getClientSessionId());
-        assertEquals(exchangeData.getEmail(), actualExchangeData.get().getEmail());
-        assertEquals(exchangeData.getAuthTime(), actualExchangeData.get().getAuthTime());
-        assertEquals(
-                exchangeData.getInternalPairwiseSubjectId(),
-                actualExchangeData.get().getInternalPairwiseSubjectId());
-
-        verify(table).getItem(AUTH_CODE_GET_REQUEST);
-        assertGetItemCalledWithStronglyConsistentRead();
     }
 
     @Test
@@ -194,18 +153,6 @@ class OrchAuthCodeServiceTest {
         assertThrows(
                 OrchAuthCodeException.class,
                 () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
-    }
-
-    @Test
-    void shouldThrowWhenFailingToGetAuthCodeExchangeDataByAuthCodeWithStronglyConsistentRead() {
-        when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(null);
-        withFailedGetWithStronglyConsistentRead();
-
-        assertThrows(
-                OrchAuthCodeException.class,
-                () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
-
-        assertGetItemCalledWithStronglyConsistentRead();
     }
 
     @Test
@@ -248,10 +195,6 @@ class OrchAuthCodeServiceTest {
                 .withEmail(EMAIL)
                 .withAuthTime(AUTH_TIME)
                 .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID);
-    }
-
-    private void assertGetItemCalledWithStronglyConsistentRead() {
-        verify(table).getItem(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ);
     }
 
     private void withValidOrchAuthCode(AuthCodeExchangeData exchangeData)
@@ -306,15 +249,6 @@ class OrchAuthCodeServiceTest {
         doThrow(DynamoDbException.builder().message("Failed to get from table").build())
                 .when(table)
                 .getItem(eq(AUTH_CODE_GET_REQUEST));
-    }
-
-    private void withFailedGetWithStronglyConsistentRead() {
-        doThrow(
-                        DynamoDbException.builder()
-                                .message("Failed to get from table with strongly consistent read")
-                                .build())
-                .when(table)
-                .getItem(eq(AUTH_CODE_GET_REQUEST_WITH_CONSISTENT_READ));
     }
 
     private void withFailedUpdate() {

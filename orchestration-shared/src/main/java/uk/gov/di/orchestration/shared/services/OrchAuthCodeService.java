@@ -106,28 +106,10 @@ public class OrchAuthCodeService extends BaseDynamoService<OrchAuthCodeItem> {
 
         if (authCodeItem.isEmpty()) {
             LOG.info(
-                    "No orch auth code item found. Retrying with strongly consistent reads. Code: {}",
+                    "No orch auth code item found with strongly consistent reads enabled. Code: {}",
                     code);
 
-            try {
-                authCodeItem = getWithConsistentRead(code);
-            } catch (Exception e) {
-                logAndThrowOrchAuthCodeException(
-                        String.format(
-                                "Failed to get orch auth code item with strongly consistent reads. Code: %s",
-                                code),
-                        e);
-            }
-
-            if (authCodeItem.isEmpty()) {
-                LOG.info(
-                        "No orch auth code item found on retry with strongly consistent reads enabled. No further retries, returning. Code: {}",
-                        code);
-
-                return Optional.empty();
-            }
-
-            LOG.info("Orch auth code item found on retry with strongly consistent reads enabled.");
+            return Optional.empty();
         }
 
         Optional<OrchAuthCodeItem> unusedAuthCodeItem = authCodeItem.filter(c -> !c.getIsUsed());
