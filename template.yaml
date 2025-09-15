@@ -5852,6 +5852,58 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
 
+  AccessTokenTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessTokenTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub ${AccessTokenTable.Arn}/index/*
+              - !GetAtt AccessTokenTable.Arn
+          - Sid: AllowAccessTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt AccessTokenTableEncryptionKey.Arn
+
+  AccessTokenTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessTokenTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !GetAtt AccessTokenTable.Arn
+          - Sid: AllowAccessTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt AccessTokenTableEncryptionKey.Arn
+
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
