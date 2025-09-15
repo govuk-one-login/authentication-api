@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -151,6 +152,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -189,7 +192,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         commonPasswordsService,
                         authenticationAttemptsService,
                         authSessionService,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        permissionDecisionManager);
     }
 
     @ParameterizedTest

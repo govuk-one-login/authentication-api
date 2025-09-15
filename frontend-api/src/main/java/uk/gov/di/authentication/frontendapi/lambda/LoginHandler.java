@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -90,6 +91,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -102,7 +104,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             CommonPasswordsService commonPasswordsService,
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -117,6 +120,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -131,6 +135,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -145,6 +151,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(codeStorageService, configurationService);
     }
 
     public LoginHandler() {
