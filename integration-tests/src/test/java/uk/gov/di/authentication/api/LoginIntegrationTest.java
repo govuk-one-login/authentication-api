@@ -3,6 +3,7 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -92,288 +93,312 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
             new AuthenticationAttemptsStoreExtension();
 
-    @ParameterizedTest
-    @MethodSource("vectorOfTrust")
-    void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
-            CredentialTrustLevel level,
-            String termsAndConditionsVersion,
-            MFAMethodType mfaMethodType,
-            boolean mfaMethodVerified)
-            throws Json.JsonException {
-        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var password = "password-1";
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
-        authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
+    @Nested
+    class SuccessfulLoginScenarios {
 
-        userStore.signUp(email, password);
-        userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
-        if (mfaMethodType.equals(SMS)) {
-            userStore.setPhoneNumberAndVerificationStatus(
-                    email, "01234567890", mfaMethodVerified, mfaMethodVerified);
-        } else {
-            userStore.updateMFAMethod(
-                    email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
+        @ParameterizedTest
+        @MethodSource("vectorOfTrust")
+        void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
+                CredentialTrustLevel level,
+                String termsAndConditionsVersion,
+                MFAMethodType mfaMethodType,
+                boolean mfaMethodVerified)
+                throws Json.JsonException {
+            var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
+            authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
+            if (mfaMethodType.equals(SMS)) {
+                userStore.setPhoneNumberAndVerificationStatus(
+                        email, "01234567890", mfaMethodVerified, mfaMethodVerified);
+            } else {
+                userStore.updateMFAMethod(
+                        email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
+            }
+
+            var headers = validHeadersWithSessionId(sessionId);
+
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            headers,
+                            Map.of());
+            assertThat(response, hasStatus(200));
+
+            var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
+
+            assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
+            assertThat(
+                    loginResponse.latestTermsAndConditionsAccepted(),
+                    equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
+
+            var expectedMfaType =
+                    (mfaMethodType.equals(SMS) && !mfaMethodVerified) ? NONE : mfaMethodType;
+            assertThat(loginResponse.mfaMethodType(), equalTo(expectedMfaType));
+            assertThat(loginResponse.mfaMethodVerified(), equalTo(mfaMethodVerified));
+            assertTrue(
+                    Objects.nonNull(
+                            authSessionExtension
+                                    .getSession(sessionId)
+                                    .orElseThrow()
+                                    .getInternalCommonSubjectId()));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
         }
 
-        var headers = validHeadersWithSessionId(sessionId);
+        @ParameterizedTest
+        @MethodSource(
+                "vectorOfTrustWithVerifiedMethods") // We are only going to migrate verified mfa
+        // methods
+        void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrustsAndAMigratedUser(
+                CredentialTrustLevel level,
+                String termsAndConditionsVersion,
+                MFAMethodType mfaMethodType)
+                throws Json.JsonException {
+            var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
+            authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
 
-        var response =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response, hasStatus(200));
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
+            userStore.setMfaMethodsMigrated(email, true);
+            if (mfaMethodType.equals(SMS)) {
+                userStore.addMfaMethodSupportingMultiple(
+                        email,
+                        MFAMethod.smsMfaMethod(
+                                true,
+                                true,
+                                "01234567890",
+                                PriorityIdentifier.DEFAULT,
+                                "some-mfa-id"));
+            } else {
+                userStore.addMfaMethodSupportingMultiple(
+                        email,
+                        MFAMethod.authAppMfaMethod(
+                                "some-credential",
+                                true,
+                                true,
+                                PriorityIdentifier.DEFAULT,
+                                "some-mfa-id"));
+            }
 
-        var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
+            var headers = validHeadersWithSessionId(sessionId);
 
-        assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
-        assertThat(
-                loginResponse.latestTermsAndConditionsAccepted(),
-                equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            headers,
+                            Map.of());
+            assertThat(response, hasStatus(200));
 
-        var expectedMfaType =
-                (mfaMethodType.equals(SMS) && !mfaMethodVerified) ? NONE : mfaMethodType;
-        assertThat(loginResponse.mfaMethodType(), equalTo(expectedMfaType));
-        assertThat(loginResponse.mfaMethodVerified(), equalTo(mfaMethodVerified));
-        assertTrue(
-                Objects.nonNull(
-                        authSessionExtension
-                                .getSession(sessionId)
-                                .orElseThrow()
-                                .getInternalCommonSubjectId()));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
-    }
+            var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
 
-    @ParameterizedTest
-    @MethodSource(
-            "vectorOfTrustWithVerifiedMethods") // We are only going to migrate verified mfa methods
-    void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrustsAndAMigratedUser(
-            CredentialTrustLevel level,
-            String termsAndConditionsVersion,
-            MFAMethodType mfaMethodType)
-            throws Json.JsonException {
-        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var password = "password-1";
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRequestedCredentialStrengthToSession(sessionId, level);
-        authSessionExtension.addClientNameToSession(sessionId, CLIENT_NAME);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
+            assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
+            assertThat(
+                    loginResponse.latestTermsAndConditionsAccepted(),
+                    equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
-        userStore.signUp(email, password);
-        userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
-        userStore.setMfaMethodsMigrated(email, true);
-        if (mfaMethodType.equals(SMS)) {
-            userStore.addMfaMethodSupportingMultiple(
-                    email,
-                    MFAMethod.smsMfaMethod(
-                            true, true, "01234567890", PriorityIdentifier.DEFAULT, "some-mfa-id"));
-        } else {
-            userStore.addMfaMethodSupportingMultiple(
-                    email,
-                    MFAMethod.authAppMfaMethod(
-                            "some-credential",
-                            true,
-                            true,
-                            PriorityIdentifier.DEFAULT,
-                            "some-mfa-id"));
+            assertThat(loginResponse.mfaMethodType(), equalTo(mfaMethodType));
+            assertThat(loginResponse.mfaMethodVerified(), equalTo(true));
+            assertTrue(
+                    Objects.nonNull(
+                            authSessionExtension
+                                    .getSession(sessionId)
+                                    .orElseThrow()
+                                    .getInternalCommonSubjectId()));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
         }
 
-        var headers = validHeadersWithSessionId(sessionId);
+        private static Stream<Arguments> vectorOfTrust() {
+            return Stream.of(
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
+        }
 
-        var response =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response, hasStatus(200));
+        private static Stream<Arguments> vectorOfTrustWithVerifiedMethods() {
+            return Stream.of(
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP));
+        }
 
-        var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
+        @Test
+        void shouldUpdateAuthSessionStoreWithExistingAccountStateWhenSuccessful()
+                throws Json.JsonException {
+            var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+            var password = "password-1";
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
 
-        assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
-        assertThat(
-                loginResponse.latestTermsAndConditionsAccepted(),
-                equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
+            userStore.signUp(email, password);
+            userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
+            userStore.setPhoneNumberAndVerificationStatus(email, "01234567890", true, true);
 
-        assertThat(loginResponse.mfaMethodType(), equalTo(mfaMethodType));
-        assertThat(loginResponse.mfaMethodVerified(), equalTo(true));
-        assertTrue(
-                Objects.nonNull(
-                        authSessionExtension
-                                .getSession(sessionId)
-                                .orElseThrow()
-                                .getInternalCommonSubjectId()));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            validHeadersWithSessionId(sessionId),
+                            Map.of());
+            assertThat(response, hasStatus(200));
+            assertThat(
+                    authSessionExtension.getSession(sessionId).get().getIsNewAccount(),
+                    equalTo(AuthSessionItem.AccountState.EXISTING));
+        }
     }
 
-    private static Stream<Arguments> vectorOfTrust() {
-        return Stream.of(
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
-    }
+    @Nested
+    class InvalidCredentialsScenarios {
 
-    private static Stream<Arguments> vectorOfTrustWithVerifiedMethods() {
-        return Stream.of(
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP));
-    }
+        @Test
+        void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
+                throws Json.JsonException {
+            String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+            String password = "password-1";
+            userStore.signUp(email, "wrong-password");
 
-    @Test
-    void shouldUpdateAuthSessionStoreWithExistingAccountStateWhenSuccessful()
-            throws Json.JsonException {
-        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var password = "password-1";
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+            var headers = validHeadersWithSessionId(sessionId);
 
-        userStore.signUp(email, password);
-        userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
-        userStore.setPhoneNumberAndVerificationStatus(email, "01234567890", true, true);
-
-        var response =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        validHeadersWithSessionId(sessionId),
-                        Map.of());
-        assertThat(response, hasStatus(200));
-        assertThat(
-                authSessionExtension.getSession(sessionId).get().getIsNewAccount(),
-                equalTo(AuthSessionItem.AccountState.EXISTING));
-    }
-
-    @Test
-    void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
-            throws Json.JsonException {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
-
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
-        var headers = validHeadersWithSessionId(sessionId);
-
-        var response =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response, hasStatus(401));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CREDENTIALS));
-    }
-
-    @Test
-    void shouldCallLoginEndpoint6TimesAndReturn400WhenUserIdLockedOut() throws Json.JsonException {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
-        var headers = validHeadersWithSessionId(sessionId);
-
-        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
-
-        for (int i = 0; i < 5; i++) {
-            var response = makeRequest(Optional.of(request), headers, Map.of());
+            var response =
+                    makeRequest(
+                            Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                            headers,
+                            Map.of());
             assertThat(response, hasStatus(401));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CREDENTIALS));
         }
-
-        var response = makeRequest(Optional.of(request), headers, Map.of());
-        assertThat(response, hasStatus(400));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS));
     }
 
-    @Test
-    void shouldCallLoginEndpoint6TimesAndReturn400TwiceWhenUserIdLockedOut()
-            throws Json.JsonException {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
-        var sessionId = IdGenerator.generate();
-        authSessionExtension.addSession(sessionId);
-        authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-        authSessionExtension.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
-        var headers = validHeadersWithSessionId(sessionId);
+    @Nested
+    class AccountLockoutScenarios {
 
-        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+        @Test
+        void shouldCallLoginEndpoint6TimesAndReturn400WhenUserIdLockedOut()
+                throws Json.JsonException {
+            String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+            String password = "password-1";
+            userStore.signUp(email, "wrong-password");
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+            var headers = validHeadersWithSessionId(sessionId);
 
-        for (int i = 0; i < 5; i++) {
+            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+
+            for (int i = 0; i < 5; i++) {
+                var response = makeRequest(Optional.of(request), headers, Map.of());
+                assertThat(response, hasStatus(401));
+            }
+
             var response = makeRequest(Optional.of(request), headers, Map.of());
-            assertThat(response, hasStatus(401));
+            assertThat(response, hasStatus(400));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS));
         }
 
-        var response = makeRequest(Optional.of(request), headers, Map.of());
-        assertThat(response, hasStatus(400));
+        @Test
+        void shouldCallLoginEndpoint6TimesAndReturn400TwiceWhenUserIdLockedOut()
+                throws Json.JsonException {
+            String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+            String password = "password-1";
+            userStore.signUp(email, "wrong-password");
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+            var headers = validHeadersWithSessionId(sessionId);
 
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS,
-                        AUTH_INVALID_CREDENTIALS));
+            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+
+            for (int i = 0; i < 5; i++) {
+                var response = makeRequest(Optional.of(request), headers, Map.of());
+                assertThat(response, hasStatus(401));
+            }
+
+            var response = makeRequest(Optional.of(request), headers, Map.of());
+            assertThat(response, hasStatus(400));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS));
+        }
     }
 
     private Map<String, String> validHeadersWithSessionId(String sessionId) {
