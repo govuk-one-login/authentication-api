@@ -300,7 +300,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       frontendApiFMSTagValue: "authfrontendbuild"
-      frontendBaseUrl: https://signin.build.account.gov.uk
+      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnableSnapStart: "No"
