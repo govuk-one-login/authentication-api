@@ -1189,6 +1189,8 @@ Resources:
 
   AccessTokenTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
     Properties:
       Description: KMS encryption key for Access Token DynamoDB table
       EnableKeyRotation: true
@@ -1218,6 +1220,8 @@ Resources:
 
   AccessTokenTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
     Properties:
       TableName: !Sub ${Environment}-Access-Token
       AttributeDefinitions:
