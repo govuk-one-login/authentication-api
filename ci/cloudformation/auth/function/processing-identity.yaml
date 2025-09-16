@@ -40,6 +40,14 @@ Resources:
                   OrchAccountID,
                 ]
               OrchEnv: !Ref Environment
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
