@@ -430,6 +430,8 @@ Resources:
 
   OrchSessionTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Session
       AttributeDefinitions:
@@ -574,6 +576,8 @@ Resources:
 
   AuthUserInfoTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Auth-User-Info
       AttributeDefinitions:
@@ -659,6 +663,8 @@ Resources:
 
   ClientSessionTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Client-Session
       AttributeDefinitions:
@@ -791,6 +797,8 @@ Resources:
 
   ClientRegistryTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-client-registry
       AttributeDefinitions:
@@ -906,6 +914,8 @@ Resources:
 
   OrchIdentityCredentialsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Identity-Credentials
       AttributeDefinitions:
@@ -993,6 +1003,8 @@ Resources:
 
   RpPublicKeyCacheTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
     Properties:
       TableName: !Sub ${Environment}-RpPublicKeyCache
@@ -1056,6 +1068,8 @@ Resources:
 
   StateStorageTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-State-Storage
       AttributeDefinitions:
@@ -1116,6 +1130,8 @@ Resources:
 
   DocAppCredentialTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Orch-Doc-App-Credential
       AttributeDefinitions:
@@ -1176,6 +1192,8 @@ Resources:
 
   JwksCacheTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Jwks-Cache
       AttributeDefinitions:
@@ -4943,6 +4961,8 @@ Resources:
 
   BackChannelLogoutQueueEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for back channel logout queue and dlq
       PendingWindowInDays: 30
