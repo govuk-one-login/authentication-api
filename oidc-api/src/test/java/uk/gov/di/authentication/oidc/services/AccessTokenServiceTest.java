@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -54,6 +55,8 @@ class AccessTokenServiceTest {
             mock(RedisConnectionService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
+    private final OrchAccessTokenService orchAccessTokenService =
+            mock(OrchAccessTokenService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final Subject SUBJECT = new Subject("some-subject");
@@ -87,7 +90,10 @@ class AccessTokenServiceTest {
     void setUp() {
         validationService =
                 new AccessTokenService(
-                        redisConnectionService, clientService, tokenValidationService);
+                        redisConnectionService,
+                        clientService,
+                        tokenValidationService,
+                        orchAccessTokenService);
     }
 
     @AfterEach

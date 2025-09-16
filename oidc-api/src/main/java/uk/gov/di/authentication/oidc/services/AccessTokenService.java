@@ -13,13 +13,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
+import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -38,6 +41,7 @@ public class AccessTokenService {
     private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
+    private final OrchAccessTokenService orchAccessTokenService;
     private final Json objectMapper = SerializationService.getInstance();
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
@@ -45,10 +49,12 @@ public class AccessTokenService {
     public AccessTokenService(
             RedisConnectionService redisConnectionService,
             DynamoClientService clientService,
-            TokenValidationService tokenValidationService) {
+            TokenValidationService tokenValidationService,
+            OrchAccessTokenService orchAccessTokenService) {
         this.redisConnectionService = redisConnectionService;
         this.clientService = clientService;
         this.tokenValidationService = tokenValidationService;
+        this.orchAccessTokenService = orchAccessTokenService;
     }
 
     public AccessTokenInfo parse(String authorizationHeader, boolean identityEnabled)
@@ -114,6 +120,42 @@ public class AccessTokenService {
                 identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
             }
             var subject = signedJWT.getJWTClaimsSet().getSubject();
+
+            // FOR TESTING IN DEV
+            Optional<OrchAccessTokenItem> orchAccessTokenItem = Optional.empty();
+            try {
+                LOG.info(
+                        "Getting access token from dynamo for test-client and test-rp-pairwise-id");
+                orchAccessTokenItem =
+                        orchAccessTokenService.getAccessToken("test-client", "test-rp-pairwise-id");
+            } catch (OrchAccessTokenException ex) {
+                LOG.warn("Error getting access token from Dynamo");
+            }
+            if (orchAccessTokenItem.isEmpty()) {
+                LOG.info("Access token for test-client and test-rp-pairwise-id not found");
+            } else {
+                LOG.info(
+                        "Access token for test-client and test-rp-pairwise-id is {}",
+                        orchAccessTokenItem.get().getToken());
+            }
+
+            Optional<OrchAccessTokenItem> anotherOrchAccessTokenItem = Optional.empty();
+            try {
+                LOG.info("Getting access token from dynamo for test-auth-code");
+                anotherOrchAccessTokenItem =
+                        orchAccessTokenService.getAccessTokenForAuthCode("test-auth-code");
+            } catch (OrchAccessTokenException ex) {
+                LOG.warn("Error getting access token from Dynamo for auth code");
+            }
+            if (anotherOrchAccessTokenItem.isEmpty()) {
+                LOG.info("OrchAccessTokenItem for test-auth-code is not found");
+            } else {
+                LOG.info(
+                        "Access token for test-auth-code is {}",
+                        anotherOrchAccessTokenItem.get().getToken());
+            }
+            // -------------------
+
             var accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
                 LOG.warn(
