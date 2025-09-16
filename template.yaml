@@ -365,6 +365,8 @@ Resources:
       TargetKeyId: !Ref MainKmsKey
   MainKmsKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: Key used to encrypt Orchestration
       EnableKeyRotation: true
@@ -394,6 +396,8 @@ Resources:
 
   OrchSessionTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orch session DynamoDB table
       EnableKeyRotation: true
@@ -560,6 +564,8 @@ Resources:
 
   AuthUserInfoTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for AuthUserInfo DynamoDB table
       EnableKeyRotation: true
@@ -640,6 +646,8 @@ Resources:
   #region ClientSession DynamoDB Table
   ClientSessionTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for ClientSession DynamoDB table
       EnableKeyRotation: true
@@ -770,6 +778,8 @@ Resources:
   #region ClientRegistry DynamoDB Table
   ClientRegistryTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orchestration Client Registry DynamoDB table
       EnableKeyRotation: true
@@ -889,6 +899,8 @@ Resources:
   #region OrchIdentityCredentials DynamoDB Table
   OrchIdentityCredentialsTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for OrchIdentityCredentials DynamoDB table
       EnableKeyRotation: true
@@ -1052,6 +1064,8 @@ Resources:
 
   RpPublicKeyTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for RP public key DynamoDB table
       EnableKeyRotation: true
@@ -1115,6 +1129,8 @@ Resources:
 
   StateStorageTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Orchestration State storage DynamoDB table
       EnableKeyRotation: true
@@ -1173,6 +1189,8 @@ Resources:
 
   DocAppCredentialTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Doc App Credential DynamoDB table
       EnableKeyRotation: true
@@ -1251,6 +1269,8 @@ Resources:
 
   JwksCacheTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Jwks Cache DynamoDB table
       EnableKeyRotation: true
@@ -2742,6 +2762,8 @@ Resources:
   GlobalLogoutTestQueueEncryptionKey:
     Condition: IsDevOrBuild
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for global logout test queue and dlq
       PendingWindowInDays: 30
@@ -6384,6 +6406,8 @@ Resources:
   SlackEventsKey:
     Condition: IsNotProduction
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: Key used to encrypt Slack events topic
       EnableKeyRotation: true
@@ -6796,6 +6820,8 @@ Resources:
 
   OrchAuthCodeTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for OrchAuthCode DynamoDB table
       EnableKeyRotation: true
@@ -6891,6 +6917,8 @@ Resources:
 
   ClientRateLimitTableEncryptionKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Client Rate Limit DynamoDB table
       EnableKeyRotation: true
@@ -7429,6 +7457,8 @@ Resources:
 
   OrchIPVTokenSigningKmsKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS signing key for authentication to the IPV token endpoint
       PendingWindowInDays: 30
