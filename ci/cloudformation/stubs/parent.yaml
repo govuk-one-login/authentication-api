@@ -335,38 +335,6 @@ Resources:
           !Ref AWS::NoValue,
         ]
 
-  # IAM Role for Lambda
-  TicfCriStubLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${Environment}-ticf-cri-stub-lambda-role"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      Policies:
-        - PolicyName: DynamoDBAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:DescribeTable
-                  - dynamodb:Get*
-                Resource:
-                  - !GetAtt StubTicfCriTable.Arn
-                  - !Sub "${StubTicfCriTable.Arn}/index/*"
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Service
-          Value: ticf-cri-stub
-
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
