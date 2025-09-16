@@ -157,6 +157,16 @@ Mappings:
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       UseAlarmActions: "No"
+    authdev3:
+      dataStoreAccountId: 653994557586
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IsSplunkEnabled: "No"
+      lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
     dev:
       dataStoreAccountId: 653994557586
       frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
@@ -176,6 +186,7 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
