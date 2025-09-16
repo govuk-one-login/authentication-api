@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
@@ -71,9 +72,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             new SerializationService(
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
 
+    private CodeStorageService codeStorageService;
+
     @BeforeEach
     void setup() {
         handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        codeStorageService =
+                new CodeStorageService(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
 
         clientStore.registerClient(
@@ -370,6 +375,54 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTH_INVALID_CREDENTIALS,
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED));
+        }
+
+        @Test
+        void shouldReturn400WhenUserIsBlockedFromRequestingMfaCodes() {
+            String email = "joe.bloggs+mfa1@digital.cabinet-office.gov.uk";
+            String password = "password-1";
+            userStore.signUp(email, password);
+            userStore.addMfaMethod(email, MFAMethodType.SMS, true, true, "credential");
+
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+            var headers = validHeadersWithSessionId(sessionId);
+
+            codeStorageService.saveBlockedForEmail(email, "code-request-blocked:MFA_SIGN_IN", 900);
+
+            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+            var response = makeRequest(Optional.of(request), headers, Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasJsonBody(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS));
+        }
+
+        @Test
+        void shouldReturn400WhenUserIsBlockedFromEnteringMfaCodes() {
+            String email = "joe.bloggs+mfa2@digital.cabinet-office.gov.uk";
+            String password = "password-1";
+            userStore.signUp(email, password);
+            userStore.addMfaMethod(email, MFAMethodType.SMS, true, true, "credential");
+
+            var sessionId = IdGenerator.generate();
+            authSessionExtension.addSession(sessionId);
+            authSessionExtension.addEmailToSession(sessionId, email);
+            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
+            authSessionExtension.addRpSectorIdentifierHostToSession(
+                    sessionId, SECTOR_IDENTIFIER_HOST);
+            var headers = validHeadersWithSessionId(sessionId);
+
+            codeStorageService.saveBlockedForEmail(email, "code-blocked:MFA_SIGN_IN", 900);
+
+            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+            var response = makeRequest(Optional.of(request), headers, Map.of());
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         }
     }
 
