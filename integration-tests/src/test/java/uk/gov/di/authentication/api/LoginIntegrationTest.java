@@ -16,6 +16,7 @@ import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapter;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -50,6 +51,7 @@ import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -329,11 +331,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     class AccountLockoutScenarios {
 
         @Test
-        void shouldCallLoginEndpoint6TimesAndReturn400WhenUserIdLockedOut()
-                throws Json.JsonException {
+        void shouldLockoutUserAfter6AttemptsAndRejectValidCredentials() {
             String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-            String password = "password-1";
-            userStore.signUp(email, "wrong-password");
+            String correctPassword = "correct-password";
+            userStore.signUp(email, correctPassword);
             var sessionId = IdGenerator.generate();
             authSessionExtension.addSession(sessionId);
             authSessionExtension.addEmailToSession(sessionId, email);
@@ -342,62 +343,33 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     sessionId, SECTOR_IDENTIFIER_HOST);
             var headers = validHeadersWithSessionId(sessionId);
 
-            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+            var wrongRequest = new LoginRequest(email, "wrong-password", JourneyType.SIGN_IN);
 
             for (int i = 0; i < 5; i++) {
-                var response = makeRequest(Optional.of(request), headers, Map.of());
+                var response = makeRequest(Optional.of(wrongRequest), headers, Map.of());
                 assertThat(response, hasStatus(401));
             }
 
-            var response = makeRequest(Optional.of(request), headers, Map.of());
-            assertThat(response, hasStatus(400));
+            var sixthResponse = makeRequest(Optional.of(wrongRequest), headers, Map.of());
+            assertThat(sixthResponse, hasStatus(400));
+
+            var validRequest = new LoginRequest(email, correctPassword, JourneyType.SIGN_IN);
+            var validResponse = makeRequest(Optional.of(validRequest), headers, Map.of());
+
+            assertThat(validResponse, hasStatus(400));
+            assertThat(validResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
                     List.of(
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
+                            AUTH_INVALID_CREDENTIALS,
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS));
-        }
-
-        @Test
-        void shouldCallLoginEndpoint6TimesAndReturn400TwiceWhenUserIdLockedOut()
-                throws Json.JsonException {
-            String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-            String password = "password-1";
-            userStore.signUp(email, "wrong-password");
-            var sessionId = IdGenerator.generate();
-            authSessionExtension.addSession(sessionId);
-            authSessionExtension.addEmailToSession(sessionId, email);
-            authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    sessionId, SECTOR_IDENTIFIER_HOST);
-            var headers = validHeadersWithSessionId(sessionId);
-
-            var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
-
-            for (int i = 0; i < 5; i++) {
-                var response = makeRequest(Optional.of(request), headers, Map.of());
-                assertThat(response, hasStatus(401));
-            }
-
-            var response = makeRequest(Optional.of(request), headers, Map.of());
-            assertThat(response, hasStatus(400));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS));
+                            AUTH_ACCOUNT_TEMPORARILY_LOCKED));
         }
     }
 
