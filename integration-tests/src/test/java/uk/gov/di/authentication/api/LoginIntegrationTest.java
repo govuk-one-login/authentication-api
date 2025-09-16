@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -44,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
@@ -73,12 +76,21 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
 
     private CodeStorageService codeStorageService;
+    private AuthenticationAttemptsService authenticationAttemptsService;
 
     @BeforeEach
     void setup() {
-        handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler =
+                new LoginHandler(
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
         codeStorageService =
-                new CodeStorageService(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+                new CodeStorageService(
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
+        authenticationAttemptsService =
+                new AuthenticationAttemptsService(
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE);
         txmaAuditQueue.clear();
 
         clientStore.registerClient(
@@ -335,9 +347,15 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Nested
     class AccountLockoutScenarios {
 
-        @Test
-        void shouldLockoutUserAfter6AttemptsAndRejectValidCredentials() {
-            String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+        @ParameterizedTest
+        @EnumSource(
+                value = JourneyType.class,
+                names = {"SIGN_IN", "REAUTHENTICATION"})
+        void shouldLockoutUserAfter6AttemptsAndRejectValidCredentials(JourneyType journeyType) {
+            String email =
+                    "joe.bloggs+"
+                            + journeyType.name().toLowerCase()
+                            + "@digital.cabinet-office.gov.uk";
             String correctPassword = "correct-password";
             userStore.signUp(email, correctPassword);
             var sessionId = IdGenerator.generate();
@@ -348,7 +366,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     sessionId, SECTOR_IDENTIFIER_HOST);
             var headers = validHeadersWithSessionId(sessionId);
 
-            var wrongRequest = new LoginRequest(email, "wrong-password", JourneyType.SIGN_IN);
+            var wrongRequest = new LoginRequest(email, "wrong-password", journeyType);
 
             for (int i = 0; i < 5; i++) {
                 var response = makeRequest(Optional.of(wrongRequest), headers, Map.of());
@@ -357,12 +375,19 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var sixthResponse = makeRequest(Optional.of(wrongRequest), headers, Map.of());
             assertThat(sixthResponse, hasStatus(400));
+            assertThat(sixthResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
-            var validRequest = new LoginRequest(email, correctPassword, JourneyType.SIGN_IN);
+            var validRequest = new LoginRequest(email, correctPassword, journeyType);
             var validResponse = makeRequest(Optional.of(validRequest), headers, Map.of());
 
+            boolean isReauth = journeyType.equals(JourneyType.REAUTHENTICATION);
             assertThat(validResponse, hasStatus(400));
-            assertThat(validResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
+            assertThat(
+                    validResponse,
+                    hasJsonBody(
+                            isReauth
+                                    ? ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS
+                                    : ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
@@ -373,8 +398,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             AUTH_INVALID_CREDENTIALS,
                             AUTH_INVALID_CREDENTIALS,
                             AUTH_INVALID_CREDENTIALS,
-                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            AUTH_ACCOUNT_TEMPORARILY_LOCKED));
+                            isReauth ? AUTH_REAUTH_FAILED : AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                            isReauth ? AUTH_REAUTH_FAILED : AUTH_ACCOUNT_TEMPORARILY_LOCKED));
         }
 
         @Test
