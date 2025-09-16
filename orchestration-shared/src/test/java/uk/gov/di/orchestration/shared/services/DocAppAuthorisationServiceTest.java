@@ -35,10 +35,10 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -86,17 +86,18 @@ class DocAppAuthorisationServiceTest {
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
     private static final NowHelper.NowClock FIXED_NOW_HELPER = new NowHelper.NowClock(FIXED_CLOCK);
-    private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final JwksService jwksService = mock(JwksService.class);
+    private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
                     configurationService,
                     kmsConnectionService,
                     jwksService,
+                    jwksCacheService,
                     stateStorageService,
                     FIXED_CLOCK);
     private PrivateKey privateKey;
@@ -107,6 +108,7 @@ class DocAppAuthorisationServiceTest {
     @BeforeEach
     void setUp() throws MalformedURLException, KeySourceException {
         when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
+        when(configurationService.getDocAppJwksUrl()).thenReturn(JWKS_URL.toURL());
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(
@@ -242,6 +244,8 @@ class DocAppAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
         when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+        when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
+                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
@@ -297,6 +301,8 @@ class DocAppAuthorisationServiceTest {
             var pairwise = new Subject("pairwise-identifier");
             when(clientRegistry.isTestClient()).thenReturn(isTestClient);
             when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+            when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
+                    .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
 
             EncryptedJWT requestJWT;
 
@@ -328,6 +334,8 @@ class DocAppAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
 
         when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
+        when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
+                .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
                         state, pairwise.getValue(), clientRegistry, "client-session-id");
