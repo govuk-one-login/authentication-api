@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -37,6 +38,8 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -105,6 +108,8 @@ class LoginHandlerReauthenticationRedisTest {
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -151,6 +156,8 @@ class LoginHandlerReauthenticationRedisTest {
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -163,7 +170,8 @@ class LoginHandlerReauthenticationRedisTest {
                         commonPasswordsService,
                         null,
                         authSessionService,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        permissionDecisionManager);
     }
 
     @ParameterizedTest
@@ -176,8 +184,8 @@ class LoginHandlerReauthenticationRedisTest {
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
 
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
-                .thenReturn(maxRetriesAllowed - 1);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)));
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -191,7 +199,6 @@ class LoginHandlerReauthenticationRedisTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
-        verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
 

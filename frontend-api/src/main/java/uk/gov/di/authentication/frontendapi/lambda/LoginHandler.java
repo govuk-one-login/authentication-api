@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -30,7 +32,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -46,6 +47,10 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -58,7 +63,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.frontendapi.helpers.MfaMethodResponseConverterHelper.convertMfaMethodsToMfaMethodResponse;
-import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -90,6 +94,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -102,7 +107,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             CommonPasswordsService commonPasswordsService,
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -117,6 +123,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -131,6 +138,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(
+                        configurationService, codeStorageService, authenticationAttemptsService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -145,6 +155,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(
+                        configurationService, codeStorageService, authenticationAttemptsService);
     }
 
     public LoginHandler() {
@@ -175,12 +188,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var journeyType =
-                request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
-        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+        JourneyType journeyType =
+                request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
+        var journeyTypeValue = journeyType != null ? journeyType.getValue() : "missing";
+        var isReauthJourney =
+                journeyTypeValue.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
+        attachLogFieldToLogs(JOURNEY_TYPE, journeyTypeValue);
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -198,25 +213,46 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
-        if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
-            var reauthCounts =
-                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userProfile.getSubjectID(),
-                            calculatedPairwiseId,
-                            JourneyType.REAUTHENTICATION);
-            var exceedingCounts =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            reauthCounts, configurationService);
-            if (!exceedingCounts.isEmpty()) {
-                LOG.info("User has existing reauth block on counts {}", exceedingCounts);
-                ReauthFailureReasons failureReason =
-                        getReauthFailureReasonFromCountTypes(exceedingCounts);
+        UserPermissionContext userPermissionContext =
+                new UserPermissionContext(
+                        userProfile.getSubjectID(),
+                        calculatedPairwiseId,
+                        userProfile.getEmail(),
+                        null);
+
+        var decisionResult =
+                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+        if (!decisionResult.isSuccess()) {
+            DecisionError failure = decisionResult.getFailure();
+            LOG.error("Failure to get canReceivePassword decision due to {}", failure);
+            var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
+            return generateApiGatewayProxyErrorResponse(
+                    httpResponse.statusCode(), httpResponse.errorResponse());
+        }
+
+        var decision = decisionResult.getSuccess();
+        int incorrectPasswordCount = decision.attemptCount();
+
+        if (decision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
+            if (isReauthJourney) {
+                ReauthFailureReasons reauthFailureReason =
+                        ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                                temporarilyLockedOut.forbiddenReason());
+
+                // TODO possible simplification
+                // https://gds.slack.com/archives/C078ZSM6J6P/p1758121040046789
+                Map<CountType, Integer> reauthCounts =
+                        authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                userPermissionContext.internalSubjectId(),
+                                userPermissionContext.rpPairwiseId(),
+                                journeyType);
+
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(reauthCounts)
-                                .withFailureReason(failureReason)
+                                .withFailureReason(reauthFailureReason)
                                 .build());
                 cloudwatchMetricsService.incrementCounter(
                         CloudwatchMetrics.REAUTH_FAILED.getValue(),
@@ -224,39 +260,30 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 FAILURE_REASON.getValue(),
-                                failureReason == null ? "unknown" : failureReason.getValue()));
+                                reauthFailureReason == null
+                                        ? "unknown"
+                                        : reauthFailureReason.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+            } else {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        auditContext,
+                        pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
+                        pair(
+                                AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                                configurationService.getMaxPasswordRetries()),
+                        pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
+
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
             }
         }
 
-        int incorrectPasswordCount = 0;
-
-        if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
-            incorrectPasswordCount =
-                    authenticationAttemptsService.getCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD);
-        } else {
-            incorrectPasswordCount =
-                    retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
-        }
-
-        if (codeStorageService.isBlockedForEmail(
-                userProfile.getEmail(), PASSWORD_BLOCKED_KEY_PREFIX)) {
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                    auditContext,
-                    pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
-                    pair(
-                            AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
-                            configurationService.getMaxPasswordRetries()),
-                    pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
-
+        if (!(decision instanceof Decision.Permitted)) {
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
+                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         if (!credentialsAreValid(request, userProfile)) {
@@ -277,7 +304,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userCredentials,
                 userProfile,
                 auditContext,
-                authSession);
+                authSession,
+                journeyType);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -299,7 +327,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserCredentials userCredentials,
             UserProfile userProfile,
             AuditContext auditContext,
-            AuthSessionItem authSessionItem) {
+            AuthSessionItem authSessionItem,
+            JourneyType journeyType) {
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -380,9 +409,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     checkMfaCodeBlocks(
                             userProfile.getEmail(),
                             MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType()),
-                            request.getJourneyType() != null
-                                    ? request.getJourneyType()
-                                    : JourneyType.SIGN_IN);
+                            journeyType);
 
             if (codeBlocks.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
@@ -531,12 +558,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } else {
             codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
         }
-    }
-
-    private int retrieveIncorrectPasswordCount(String email, boolean isReauthJourney) {
-        return isReauthJourney
-                ? codeStorageService.getIncorrectPasswordCountReauthJourney(email)
-                : codeStorageService.getIncorrectPasswordCount(email);
     }
 
     private String getInternalCommonSubjectId(UserProfile userProfile) {
