@@ -157,6 +157,16 @@ Mappings:
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       UseAlarmActions: "No"
+    authdev3:
+      dataStoreAccountId: 653994557586
+      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      cloudwatchLogRetentionInDays: 1
+      customDocAppClaimEnabled: true
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      EnableSnapStart: "No"
+      IsSplunkEnabled: "No"
+      lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
     dev:
       dataStoreAccountId: 653994557586
       frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
@@ -176,6 +186,7 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
+      UseAlarmActions: "No"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -334,38 +345,6 @@ Resources:
           !Ref PermissionsBoundary,
           !Ref AWS::NoValue,
         ]
-
-  # IAM Role for Lambda
-  TicfCriStubLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "${Environment}-ticf-cri-stub-lambda-role"
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      Policies:
-        - PolicyName: DynamoDBAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:DescribeTable
-                  - dynamodb:Get*
-                Resource:
-                  - !GetAtt StubTicfCriTable.Arn
-                  - !Sub "${StubTicfCriTable.Arn}/index/*"
-      Tags:
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Service
-          Value: ticf-cri-stub
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
