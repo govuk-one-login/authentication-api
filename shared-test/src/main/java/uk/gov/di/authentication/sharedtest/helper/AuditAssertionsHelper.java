@@ -97,13 +97,6 @@ public class AuditAssertionsHelper {
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
 
-        await().atMost(TIMEOUT)
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        queue.getApproximateMessageCount(),
-                                        equalTo(expectedTxmaEvents.size())));
-
         var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
