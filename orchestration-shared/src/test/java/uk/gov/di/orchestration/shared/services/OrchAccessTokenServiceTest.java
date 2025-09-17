@@ -34,13 +34,11 @@ class OrchAccessTokenServiceTest {
 
     private final DynamoDbTable<OrchAccessTokenItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private OrchAccessTokenService orchAccessTokenService;
 
     @BeforeEach
     void setup() {
-        orchAccessTokenService =
-                new OrchAccessTokenService(dynamoDbClient, table, configurationService);
+        orchAccessTokenService = new OrchAccessTokenService(dynamoDbClient, table);
     }
 
     @Test
@@ -98,8 +96,9 @@ class OrchAccessTokenServiceTest {
                                         .partitionValue(CLIENT_ID)
                                         .sortValue(RP_PAIRWISE_ID)
                                         .build())
-                        .consistentRead(false)
+                        .consistentRead(true)
                         .build();
+
         when(table.getItem(orchAccessTokenGetRequest)).thenReturn(orchAccessTokenItem);
 
         var actualOrchAccessToken =

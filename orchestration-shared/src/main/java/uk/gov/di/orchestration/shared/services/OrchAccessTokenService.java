@@ -18,10 +18,8 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
     }
 
     public OrchAccessTokenService(
-            DynamoDbClient dynamoDbClient,
-            DynamoDbTable<OrchAccessTokenItem> dynamoDbTable,
-            ConfigurationService configurationService) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+            DynamoDbClient dynamoDbClient, DynamoDbTable<OrchAccessTokenItem> dynamoDbTable) {
+        super(dynamoDbTable, dynamoDbClient);
     }
 
     public Optional<OrchAccessTokenItem> getAccessToken(String clientId, String rpPairwiseId) {
