@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
@@ -10,18 +9,13 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.orchestration.shared.helpers.EncryptionJwkCache;
-import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
-import java.net.URL;
 import java.util.Base64;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 
@@ -87,25 +81,5 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("25252525252525")));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
-    }
-
-    @Test
-    void shouldUseJwkCacheToGetEncryptionKey() throws Exception {
-        EncryptionJwkCache.getInstance().clear();
-        URL testJwksUrl = new URL("http://localhost/.well-known/jwks.json");
-        int testTimeout = 123;
-        when(configurationService.getIPVJwksUrl()).thenReturn(testJwksUrl);
-        when(configurationService.getIPVJwkCacheExpirationInSeconds()).thenReturn(testTimeout);
-
-        try (var mockJwksUtils = mockStatic(JwksUtils.class)) {
-            JWK testKey1 = mock(JWK.class);
-            when(testKey1.getKeyUse()).thenReturn(KeyUse.ENCRYPTION);
-            when(testKey1.getAlgorithm()).thenReturn(JWEAlgorithm.RSA_OAEP_256);
-            mockJwksUtils
-                    .when(() -> JwksUtils.getKey(testJwksUrl, KeyUse.ENCRYPTION))
-                    .thenReturn(testKey1);
-
-            assertEquals(testKey1, jwksService.getIpvJwk());
-        }
     }
 }
