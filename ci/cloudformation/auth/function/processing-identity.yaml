@@ -48,7 +48,8 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-              Env: !Ref Environment
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
