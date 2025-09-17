@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -31,6 +32,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Base64;
 import java.util.List;
@@ -53,10 +55,20 @@ import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.ATTEMPT_NO_FAILED_AT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.FAILURE_REASON;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_EMAIL_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_OTP_CODE_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 
 public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -364,6 +376,30 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             authSessionExtension.addClientIdToSession(sessionId, CLIENT_ID);
             authSessionExtension.addRpSectorIdentifierHostToSession(
                     sessionId, SECTOR_IDENTIFIER_HOST);
+            var userProfile = userStore.getUserProfileFromEmail(email).orElseThrow();
+            byte[] salt = userStore.addSalt(email);
+            String rpPairwiseId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(), SECTOR_IDENTIFIER_HOST, salt);
+
+            boolean isReauth = journeyType.equals(JourneyType.REAUTHENTICATION);
+            AuditEventExpectation reauthFailedEventExpectation =
+                    new AuditEventExpectation(AUTH_REAUTH_FAILED)
+                            .withAttribute(INCORRECT_EMAIL_ATTEMPT_COUNT, "0")
+                            .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
+                            .withAttribute(INCORRECT_PASSWORD_ATTEMPT_COUNT, "6")
+                            .withAttribute(FAILURE_REASON, "incorrect_password")
+                            .withAttribute(RP_PAIRWISE_ID, rpPairwiseId);
+            AuditEventExpectation lockoutEventExpectation =
+                    new AuditEventExpectation(AUTH_ACCOUNT_TEMPORARILY_LOCKED)
+                            .withAttribute(INTERNAL_SUBJECT_ID, userProfile.getSubjectID())
+                            .withAttribute(ATTEMPT_NO_FAILED_AT, "6")
+                            .withAttribute(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, "6");
+            AuditEventExpectation invalidCredentialsEventExpectation =
+                    new AuditEventExpectation(AUTH_INVALID_CREDENTIALS)
+                            .withAttribute(INCORRECT_PASSWORD_COUNT, "6")
+                            .withAttribute(ATTEMPT_NO_FAILED_AT, "6");
+
             var headers = validHeadersWithSessionId(sessionId);
 
             var wrongRequest = new LoginRequest(email, "wrong-password", journeyType);
@@ -371,16 +407,28 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             for (int i = 0; i < 5; i++) {
                 var response = makeRequest(Optional.of(wrongRequest), headers, Map.of());
                 assertThat(response, hasStatus(401));
+                assertAuditEventExpectations(
+                        txmaAuditQueue,
+                        List.of(
+                                new AuditEventExpectation(invalidCredentialsEventExpectation)
+                                        .withAttribute(
+                                                INCORRECT_PASSWORD_COUNT, String.valueOf(i + 1))));
+                txmaAuditQueue.clear();
             }
 
             var sixthResponse = makeRequest(Optional.of(wrongRequest), headers, Map.of());
             assertThat(sixthResponse, hasStatus(400));
             assertThat(sixthResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(invalidCredentialsEventExpectation)
+                                    .withAttribute(INCORRECT_PASSWORD_COUNT, "6"),
+                            isReauth ? reauthFailedEventExpectation : lockoutEventExpectation));
+            txmaAuditQueue.clear();
 
             var validRequest = new LoginRequest(email, correctPassword, journeyType);
             var validResponse = makeRequest(Optional.of(validRequest), headers, Map.of());
-
-            boolean isReauth = journeyType.equals(JourneyType.REAUTHENTICATION);
             assertThat(validResponse, hasStatus(400));
             assertThat(
                     validResponse,
@@ -388,18 +436,15 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             isReauth
                                     ? ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS
                                     : ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
-
-            assertTxmaAuditEventsReceived(
+            assertAuditEventExpectations(
                     txmaAuditQueue,
                     List.of(
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            AUTH_INVALID_CREDENTIALS,
-                            isReauth ? AUTH_REAUTH_FAILED : AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                            isReauth ? AUTH_REAUTH_FAILED : AUTH_ACCOUNT_TEMPORARILY_LOCKED));
+                            isReauth
+                                    ? reauthFailedEventExpectation
+                                    : new AuditEventExpectation(lockoutEventExpectation)
+                                            .withAttribute(
+                                                    NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
+                                                    "0")));
         }
 
         @Test

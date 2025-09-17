@@ -171,4 +171,18 @@ public class AuditAssertionsHelper {
                                         actualMetadataPairForMfaMethod),
                         () -> fail("Missing metadata key: " + field));
     }
+
+    public static void assertAuditEventExpectations(
+            SqsQueueExtension queue, List<AuditEventExpectation> expectedEvents) {
+        List<AuditableEvent> events =
+                expectedEvents.stream().map(AuditEventExpectation::getEvent).toList();
+
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(queue, events);
+
+        for (AuditEventExpectation expectation : expectedEvents) {
+            expectation.verify(receivedEvents);
+        }
+
+        assertNoTxmaAuditEventsReceived(queue);
+    }
 }
