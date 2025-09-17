@@ -3,9 +3,12 @@ package uk.gov.di.authentication.userpermissions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -25,17 +28,32 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
-    public PermissionDecisionManager() {
-        this.configurationService = ConfigurationService.getInstance();
-        var redis = new RedisConnectionService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    public PermissionDecisionManager(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.codeStorageService =
+                new CodeStorageService(
+                        configurationService, new RedisConnectionService(configurationService));
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public PermissionDecisionManager(
-            CodeStorageService codeStorageService, ConfigurationService configurationService) {
-        this.codeStorageService = codeStorageService;
+            ConfigurationService configurationService, CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
+    }
+
+    public PermissionDecisionManager(
+            ConfigurationService configurationService,
+            CodeStorageService codeStorageService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
+        this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     @Override
@@ -113,11 +131,23 @@ public class PermissionDecisionManager implements PermissionDecisions {
     public Result<DecisionError, Decision> canReceivePassword(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
 
-        if (userPermissionContext == null || userPermissionContext.emailAddress() == null) {
+        if (journeyType == null || userPermissionContext == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
-        if (journeyType == null) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (userPermissionContext.internalSubjectId() == null
+                    || userPermissionContext.rpPairwiseId() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+            }
+
+            return this.checkForAnyReauthLockout(
+                    userPermissionContext.internalSubjectId(),
+                    userPermissionContext.rpPairwiseId(),
+                    CountType.ENTER_PASSWORD);
+        }
+
+        if (userPermissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
@@ -198,5 +228,39 @@ public class PermissionDecisionManager implements PermissionDecisions {
     public Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return Result.success(new Decision.Permitted(0));
+    }
+
+    private Result<DecisionError, Decision> checkForAnyReauthLockout(
+            String internalSubjectId, String rpPairwiseId, CountType primaryCountCheck) {
+
+        var reauthCounts =
+                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        internalSubjectId, rpPairwiseId, JourneyType.REAUTHENTICATION);
+
+        var exceedingCounts =
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        reauthCounts, configurationService);
+
+        if (!exceedingCounts.isEmpty()) {
+            CountType exceededType = exceedingCounts.get(0);
+
+            return Result.success(
+                    new Decision.TemporarilyLockedOut(
+                            switch (exceededType) {
+                                case ENTER_EMAIL -> ForbiddenReason
+                                        .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                                case ENTER_PASSWORD -> ForbiddenReason
+                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                                case ENTER_MFA_CODE -> ForbiddenReason
+                                        .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                                default -> null;
+                            },
+                            reauthCounts.getOrDefault(exceededType, 0),
+                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                            false));
+        }
+
+        return Result.success(
+                new Decision.Permitted(reauthCounts.getOrDefault(primaryCountCheck, 0)));
     }
 }

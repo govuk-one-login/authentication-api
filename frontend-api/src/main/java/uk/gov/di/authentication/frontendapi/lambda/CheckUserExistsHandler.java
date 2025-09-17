@@ -78,7 +78,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.permissionDecisionManager = new PermissionDecisionManager();
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     @Override
