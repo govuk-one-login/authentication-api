@@ -53,7 +53,11 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -205,6 +209,8 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -766,7 +772,8 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -778,7 +785,6 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-        verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).saveBlockedForEmail(any(), any(), anyLong());
 
@@ -801,8 +807,8 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
-                .thenReturn(maxRetriesAllowed - 1);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)));
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidAuthSession();
@@ -815,7 +821,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
-        verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
 
@@ -841,9 +846,16 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL))
-                .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
-        when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        MAX_ALLOWED_PASSWORD_RETRIES,
+                                        Instant.now()
+                                                .plus(15, java.time.temporal.ChronoUnit.MINUTES),
+                                        false)));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -865,6 +877,25 @@ class LoginHandlerTest {
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
+    }
+
+    @Test
+    void shouldReturn500WhenPermissionDecisionManagerFails() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
