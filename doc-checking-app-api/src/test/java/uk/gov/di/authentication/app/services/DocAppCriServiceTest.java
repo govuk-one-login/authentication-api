@@ -83,7 +83,6 @@ class DocAppCriServiceTest {
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getEnvironment()).thenReturn("test");
-        when(configService.getDocAppJwksURI()).thenReturn(DOC_APP_JWKS_URI);
         when(configService.getDocAppJwksUrl()).thenReturn(DOC_APP_JWKS_URI.toURL());
     }
 

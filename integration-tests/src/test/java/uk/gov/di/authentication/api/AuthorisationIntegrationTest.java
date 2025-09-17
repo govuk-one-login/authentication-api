@@ -57,7 +57,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.StateStorageExtension;
 
 import java.net.HttpCookie;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
@@ -164,20 +163,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public URI getDocAppJwksURI() {
-                    try {
-                        return new URIBuilder()
-                                .setHost("localhost")
-                                .setPort(jwksExtension.getHttpPort())
-                                .setPath("/.well-known/jwks.json")
-                                .setScheme("http")
-                                .build();
-                    } catch (URISyntaxException e) {
-                        throw new RuntimeException(e);
-                    }
                 }
 
                 @Override
