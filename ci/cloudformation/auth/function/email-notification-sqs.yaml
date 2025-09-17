@@ -97,6 +97,8 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref S3SmokeTestPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref HttpsEgressSecurityGroup

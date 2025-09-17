@@ -71,8 +71,6 @@ Conditions:
     Fn::And:
       - !Condition NotSubEnvironment
       - Fn::Not:
-          - !Condition EnableSnapStart
-      - Fn::Not:
           - Fn::Equals:
               - !FindInMap [
                   EnvironmentConfiguration,
@@ -80,17 +78,6 @@ Conditions:
                   lambdaMinConcurrency,
                 ]
               - "0"
-
-  EnableSnapStart:
-    Fn::And:
-      - !Condition NotSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              EnableSnapStart,
-            ]
-          - "Yes"
 
   EnforceLambdaDeploymentOrder:
     Fn::And:
@@ -198,6 +185,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -230,6 +218,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -355,7 +344,7 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
