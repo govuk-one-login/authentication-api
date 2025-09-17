@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
@@ -89,14 +88,12 @@ class DocAppAuthorisationServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final JwksService jwksService = mock(JwksService.class);
     private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
                     configurationService,
                     kmsConnectionService,
-                    jwksService,
                     jwksCacheService,
                     stateStorageService,
                     FIXED_CLOCK);
@@ -106,8 +103,7 @@ class DocAppAuthorisationServiceTest {
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
     @BeforeEach
-    void setUp() throws MalformedURLException, KeySourceException {
-        when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
+    void setUp() throws MalformedURLException {
         when(configurationService.getDocAppJwksUrl()).thenReturn(JWKS_URL.toURL());
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(stateStorageService.getState(STATE_STORAGE_PREFIX + SESSION_ID))
@@ -238,12 +234,11 @@ class DocAppAuthorisationServiceTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldConstructASignedRequestJWT(boolean isTestClient)
-            throws JOSEException, ParseException, MalformedURLException {
+            throws JOSEException, ParseException {
         setupSigning();
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
-        when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
                 .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
 
@@ -295,12 +290,11 @@ class DocAppAuthorisationServiceTest {
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldCreateRequestJWTWithExpectedClaims(boolean isTestClient)
-                throws JOSEException, ParseException, MalformedURLException {
+                throws JOSEException, ParseException {
             setupSigning();
             var state = new State("state");
             var pairwise = new Subject("pairwise-identifier");
             when(clientRegistry.isTestClient()).thenReturn(isTestClient);
-            when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
             when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
                     .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
 
@@ -324,7 +318,7 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void usesNewDocAppAudClaim() throws JOSEException, ParseException, MalformedURLException {
+    void usesNewDocAppAudClaim() throws JOSEException, ParseException {
         when(configurationService.isDocAppNewAudClaimEnabled()).thenReturn(true);
         String newAudience = "https://www.review-b.test.account.gov.uk";
         when(configurationService.getDocAppAudClaim()).thenReturn(new Audience(newAudience));
@@ -333,7 +327,6 @@ class DocAppAuthorisationServiceTest {
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
 
-        when(jwksService.getDocAppJwk()).thenReturn(publicRsaKey);
         when(jwksCacheService.getOrGenerateDocAppJwksCacheItem())
                 .thenReturn(new JwksCacheItem(JWKS_URL.toString(), publicRsaKey, 300));
         var encryptedJWT =

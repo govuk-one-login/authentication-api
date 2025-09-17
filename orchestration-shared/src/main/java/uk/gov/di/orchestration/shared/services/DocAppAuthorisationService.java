@@ -10,8 +10,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -28,13 +26,15 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.DocAppAuthorisationServiceException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 
-import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
@@ -48,7 +48,6 @@ public class DocAppAuthorisationService {
     private static final Logger LOG = LogManager.getLogger(DocAppAuthorisationService.class);
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
-    private final JwksService jwksService;
     private final JwksCacheService jwksCacheService;
     private final StateStorageService stateStorageService;
     private final NowHelper.NowClock nowClock;
@@ -60,13 +59,11 @@ public class DocAppAuthorisationService {
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
-            JwksService jwksService,
             JwksCacheService jwksCacheService,
             StateStorageService stateStorageService,
             Clock clock) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
-        this.jwksService = jwksService;
         this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
         this.nowClock = new NowHelper.NowClock(clock);
@@ -75,12 +72,10 @@ public class DocAppAuthorisationService {
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
             KmsConnectionService kmsConnectionService,
-            JwksService jwksService,
             JwksCacheService jwksCacheService,
             StateStorageService stateStorageService) {
         this.configurationService = configurationService;
         this.kmsConnectionService = kmsConnectionService;
-        this.jwksService = jwksService;
         this.jwksCacheService = jwksCacheService;
         this.stateStorageService = stateStorageService;
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
@@ -223,17 +218,19 @@ public class DocAppAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            var publicEncryptionKey = getPublicEncryptionKey();
-            var rsaKey = new RSAKey.Builder((RSAKey) publicEncryptionKey).build().toRSAPublicKey();
+            JwksCacheItem jwksCacheItem = getPublicEncryptionKey();
+            RSAPublicKey publicEncryptionKey =
+                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
+
             var jweObject =
                     new JWEObject(
                             new JWEHeader.Builder(
                                             JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
                                     .contentType("JWT")
-                                    .keyID(publicEncryptionKey.getKeyID())
+                                    .keyID(jwksCacheItem.getKeyId())
                                     .build(),
                             new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter(rsaKey));
+            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
             LOG.info("SignedJWT has been successfully encrypted");
             return EncryptedJWT.parse(jweObject.serialize());
         } catch (JOSEException e) {
@@ -245,15 +242,8 @@ public class DocAppAuthorisationService {
         }
     }
 
-    private JWK getPublicEncryptionKey() {
-        try {
-            LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            var cachedDocAppJwk = jwksService.getDocAppJwk();
-            jwksCacheService.getOrGenerateDocAppJwksCacheItem();
-            return cachedDocAppJwk;
-        } catch (MalformedURLException e) {
-            LOG.error("Invalid JWKs URL", e);
-            throw new DocAppAuthorisationServiceException(e);
-        }
+    private JwksCacheItem getPublicEncryptionKey() {
+        LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
+        return jwksCacheService.getOrGenerateDocAppJwksCacheItem();
     }
 }
