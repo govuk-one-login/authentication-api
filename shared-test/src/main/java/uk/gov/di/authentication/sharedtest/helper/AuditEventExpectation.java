@@ -4,58 +4,75 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.opentest4j.AssertionFailedError;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 public class AuditEventExpectation {
-    private final String eventName;
+    private final AuditableEvent event;
     private final Map<String, Object> expectedAttributes;
 
-    public AuditEventExpectation(String eventName) {
-        this.eventName = eventName;
+    public AuditEventExpectation(AuditableEvent event) {
+        this.event = event;
         this.expectedAttributes = new HashMap<>();
     }
 
-    public void withAttribute(String key, Object value) {
+    private String getEventName() {
+        return event.toString();
+    }
+
+    public AuditEventExpectation withAttribute(String key, Object value) {
         expectedAttributes.put(key, value);
+        return this;
     }
 
     public void verify(List<String> receivedEvents) {
-        String event = findEventByName(receivedEvents, eventName);
-        var jsonEvent = JsonParser.parseString(event).getAsJsonObject();
+        for (String event : receivedEvents) {
+            var jsonEvent = JsonParser.parseString(event).getAsJsonObject();
 
-        for (Map.Entry<String, Object> entry : expectedAttributes.entrySet()) {
-            String path = entry.getKey();
-            Object expectedValue = entry.getValue();
+            if (!jsonEvent.get("event_name").getAsString().equalsIgnoreCase(this.getEventName())) {
+                continue;
+            }
 
-            JsonElement actualElement = getJsonElementByPath(jsonEvent, path);
-            String message = "Attribute " + path + " in event " + eventName;
-            if (expectedValue instanceof String) {
-                assertEquals(expectedValue, actualElement.getAsString(), message);
-            } else if (expectedValue instanceof Boolean) {
-                assertEquals(expectedValue, actualElement.getAsBoolean(), message);
-            } else if (expectedValue instanceof Number number) {
-                assertEquals(number, actualElement.getAsDouble(), message);
+            boolean allAttributesMatch = true;
+            for (Map.Entry<String, Object> entry : expectedAttributes.entrySet()) {
+                String path = entry.getKey();
+                Object expectedValue = entry.getValue();
+
+                JsonElement actualElement = getJsonElementByPath(jsonEvent, path);
+                if (actualElement == null) {
+                    allAttributesMatch = false;
+                    break;
+                }
+
+                boolean matches = false;
+                if (expectedValue instanceof String && actualElement.isJsonPrimitive()) {
+                    matches = expectedValue.equals(actualElement.getAsString());
+                } else if (expectedValue instanceof Boolean && actualElement.isJsonPrimitive()) {
+                    matches = expectedValue.equals(actualElement.getAsBoolean());
+                } else if (expectedValue instanceof Number number
+                        && actualElement.isJsonPrimitive()) {
+                    matches = number.doubleValue() == actualElement.getAsDouble();
+                }
+
+                if (!matches) {
+                    allAttributesMatch = false;
+                    break;
+                }
+            }
+
+            if (allAttributesMatch) {
+                return;
             }
         }
-    }
 
-    private String findEventByName(List<String> events, String name) {
-        return events.stream()
-                .filter(
-                        event -> {
-                            var jsonObj = JsonParser.parseString(event).getAsJsonObject();
-                            return jsonObj.get("event_name").getAsString().equalsIgnoreCase(name);
-                        })
-                .findFirst()
-                .orElseThrow(
-                        () ->
-                                new AssertionFailedError(
-                                        "Missing " + name + " audit event " + eventName));
+        throw new AssertionFailedError(
+                "No matching audit event found for "
+                        + this.getEventName()
+                        + " with expected attributes: "
+                        + expectedAttributes);
     }
 
     private JsonElement getJsonElementByPath(JsonObject json, String path) {
@@ -67,11 +84,11 @@ public class AuditEventExpectation {
                 current = current.getAsJsonObject().get(part);
                 if (current == null) {
                     throw new AssertionFailedError(
-                            "Path " + path + " not found in event " + eventName);
+                            "Path " + path + " not found in event " + this.getEventName());
                 }
             } else {
                 throw new AssertionFailedError(
-                        "Cannot navigate path " + path + " in event " + eventName);
+                        "Cannot navigate path " + path + " in event " + this.getEventName());
             }
         }
 
