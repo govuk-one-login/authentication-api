@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -25,18 +26,32 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public PermissionDecisionManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.codeStorageService =
                 new CodeStorageService(
                         configurationService, new RedisConnectionService(configurationService));
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public PermissionDecisionManager(
             ConfigurationService configurationService, CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
+    }
+
+    public PermissionDecisionManager(
+            ConfigurationService configurationService,
+            CodeStorageService codeStorageService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
+        this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     @Override
