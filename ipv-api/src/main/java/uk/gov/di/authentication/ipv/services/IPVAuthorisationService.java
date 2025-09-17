@@ -10,8 +10,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -29,9 +27,11 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
+import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
+import uk.gov.di.orchestration.shared.helpers.RsaKeyHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.JwksService;
@@ -225,9 +225,10 @@ public class IPVAuthorisationService {
     private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
         try {
             LOG.info("Encrypting SignedJWT");
-            JWK publicEncryptionJwk = getJwkFromJwksEndpoint();
-            String keyId = publicEncryptionJwk.getKeyID();
-            RSAPublicKey publicEncryptionKey = getRsaPublicKeyFromJwk(publicEncryptionJwk);
+            JwksCacheItem jwksCacheItem = getJwksCacheItemFromJwksEndpoint();
+            String keyId = jwksCacheItem.getKeyId();
+            RSAPublicKey publicEncryptionKey =
+                    RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem(jwksCacheItem);
 
             var jweObject =
                     new JWEObject(
@@ -249,20 +250,8 @@ public class IPVAuthorisationService {
         }
     }
 
-    private JWK getJwkFromJwksEndpoint() {
+    private JwksCacheItem getJwksCacheItemFromJwksEndpoint() {
         LOG.info("Getting IPV Encryption JWK via JWKS endpoint");
-        var cachedIPVJwk = jwksService.getIpvJwk();
-        jwksCacheService.getOrGenerateIpvJwksCacheItem();
-        return cachedIPVJwk;
-    }
-
-    private RSAPublicKey getRsaPublicKeyFromJwk(JWK ipvAuthEncryptionPublicKey) {
-        try {
-            LOG.info("Converting JWK to RSAPublicKey");
-            return new RSAKey.Builder((RSAKey) ipvAuthEncryptionPublicKey).build().toRSAPublicKey();
-        } catch (JOSEException e) {
-            LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException(e);
-        }
+        return jwksCacheService.getOrGenerateIpvJwksCacheItem();
     }
 }
