@@ -6431,6 +6431,7 @@ Resources:
               Resource:
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
                 - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/pagerduty-slack-channel-id"
       Events:
         SNS:
           Type: SNS
@@ -6458,7 +6459,65 @@ Resources:
       SourceArn: !Ref OrchProdSlackEvents
 
   #endregion
+  #region PagerDuty events
 
+  PagerDutyEvents:
+    Condition: IsProduction
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub "PagerDuty events for ${Environment}"
+      TopicName: !Sub ${Environment}-pagerduty-alerts
+      KmsMasterKeyId: !GetAtt PagerDutyEventsKey.Arn
+
+  PagerDutyEventsKey:
+    Condition: IsProduction
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key used to encrypt PagerDuty events topic
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Effect: Allow
+            Principal:
+              Service: !Sub logs.${AWS::Region}.amazonaws.com
+            Action:
+              - kms:Encrypt*
+              - kms:Decrypt*
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:Describe*
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+            Resource: "*"
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  PagerDutySNSSubscription:
+    Condition: IsProduction
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:integrationURL}}"
+        - SecretArn: !Ref PagerDutyUrlSecret
+      Protocol: https
+      RawMessageDelivery: false
+      TopicArn: !Ref PagerDutyEvents
+  #endregion
   #region OrchAuthCode DynamoDB Table
 
   OrchAuthCodeTableEncryptionKey:
@@ -7467,6 +7526,83 @@ Resources:
             Stat: Average
   #endregion
 
+  # region PagerDuty alarms
+  IpvHandbackPagerDutyAlarm:
+    Condition: IsProduction
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
+      OKActions:
+        - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
+      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} IPV handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmName: !Sub ${Environment}-pagerduty-ipv-handback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 50
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: (m1 + m2 + m3)
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              MetricName: !Sub ${Environment}-ipv-callback-count
+              Namespace: LambdaErrorsNamespace
+            Period: 600
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              MetricName: !Sub ${Environment}-spot-response-count
+              Namespace: LambdaErrorsNamespace
+            Period: 600
+            Stat: Sum
+            Unit: Count
+        - Id: m3
+          ReturnData: false
+          MetricStat:
+            Metric:
+              MetricName: !Sub ${Environment}-auth-code-count
+              Namespace: LambdaErrorsNamespace
+            Period: 600
+            Stat: Sum
+            Unit: Count
+
+  DocAppHandbackPagerDutyAlarm:
+    Condition: IsProduction
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
+      OKActions:
+        - !Ref PagerDutyEvents
+        - !Ref OrchProdSlackEvents
+      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} Doc app callback handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmName: !Sub ${Environment}-pagerduty-doc-app-handback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 50
+      EvaluationPeriods: 1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          MetricStat:
+            Metric:
+              MetricName: !Sub ${Environment}-doc-app-callback-count
+              Namespace: LambdaErrorsNamespace
+            Period: 600
+            Stat: Sum
+            Unit: Count
   #endregion
 
 Outputs:
