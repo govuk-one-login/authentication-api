@@ -26,16 +26,17 @@ public class PermissionDecisionManager implements PermissionDecisions {
     private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
 
-    public PermissionDecisionManager() {
-        this.configurationService = ConfigurationService.getInstance();
-        var redis = new RedisConnectionService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    public PermissionDecisionManager(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.codeStorageService =
+                new CodeStorageService(
+                        configurationService, new RedisConnectionService(configurationService));
     }
 
     public PermissionDecisionManager(
-            CodeStorageService codeStorageService, ConfigurationService configurationService) {
-        this.codeStorageService = codeStorageService;
+            ConfigurationService configurationService, CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
     }
 
     @Override
