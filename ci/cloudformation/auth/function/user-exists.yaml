@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   UserExistsFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Serverless::Function # This function uses redis
     Properties:
       FunctionName: !Sub
         - ${Env}-user-exists-lambda
@@ -40,6 +40,16 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

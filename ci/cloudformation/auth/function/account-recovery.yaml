@@ -41,6 +41,8 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup

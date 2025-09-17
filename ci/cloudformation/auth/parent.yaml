@@ -71,8 +71,6 @@ Conditions:
     Fn::And:
       - !Condition NotSubEnvironment
       - Fn::Not:
-          - !Condition EnableSnapStart
-      - Fn::Not:
           - Fn::Equals:
               - !FindInMap [
                   EnvironmentConfiguration,
@@ -80,17 +78,6 @@ Conditions:
                   lambdaMinConcurrency,
                 ]
               - "0"
-
-  EnableSnapStart:
-    Fn::And:
-      - !Condition NotSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              EnableSnapStart,
-            ]
-          - "Yes"
 
   EnforceLambdaDeploymentOrder:
     Fn::And:
@@ -198,6 +185,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -230,6 +218,7 @@ Mappings:
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
+      lambdaMinConcurrency: 0
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -260,7 +249,6 @@ Mappings:
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
@@ -303,7 +291,6 @@ Mappings:
       frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
@@ -351,11 +338,10 @@ Mappings:
       frontendBaseUrl: https://apitest.signin.staging.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
@@ -394,8 +380,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
-      EnableSnapStart: "No"
-      EnforceLambdaDeploymentOrder: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
@@ -443,8 +428,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
-      EnableSnapStart: "No"
-      EnforceLambdaDeploymentOrder: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"
@@ -562,19 +546,7 @@ Globals:
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
       - !Ref AWS::NoValue
-    ProvisionedConcurrencyConfig: !If
-      - EnableProvisionedConcurrency
-      - ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            lambdaMinConcurrency,
-            DefaultValue: 0,
-          ]
-      - !Ref AWS::NoValue
     Runtime: java17
-    SnapStart:
-      ApplyOn: !If [EnableSnapStart, PublishedVersions, None]
     Timeout: 30
 
 Resources:

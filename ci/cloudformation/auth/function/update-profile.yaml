@@ -52,6 +52,8 @@ Resources:
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -249,59 +251,3 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref UpdateProfileFunctionLogGroup
-
-  UpdateProfileFunctionScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Condition: NotSubEnvironment
-    # Need to depend on the auto deployed version alias: "<function_logical_id> + Alias + <the_alias_name>"
-    DependsOn: UpdateProfileFunctionAliasactive
-    Properties:
-      MinCapacity:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaMinConcurrency,
-          DefaultValue: 0,
-        ]
-      MaxCapacity:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaMaxConcurrency,
-          DefaultValue: 5,
-        ]
-      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/lambda.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_LambdaConcurrency"
-      ResourceId: !Join
-        - ":"
-        - - "function"
-          - !Select [6, !Split [":", !GetAtt UpdateProfileFunction.Arn]]
-          - "active"
-      ScalableDimension: lambda:function:ProvisionedConcurrency
-      ServiceNamespace: lambda
-
-  UpdateProfileFunctionAutoScalingPolicy:
-    Type: AWS::ApplicationAutoScaling::ScalingPolicy
-    Condition: NotSubEnvironment
-    DependsOn: UpdateProfileFunctionScalableTarget
-    Properties:
-      PolicyName: !Sub
-        - "LambdaProvisionedConcurrency:${Env}-update-profile-lambda"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyType: TargetTrackingScaling
-      ResourceId: !Join
-        - ":"
-        - - "function"
-          - !Select [6, !Split [":", !GetAtt UpdateProfileFunction.Arn]]
-          - "active"
-      ScalableDimension: lambda:function:ProvisionedConcurrency
-      ServiceNamespace: lambda
-      TargetTrackingScalingPolicyConfiguration:
-        PredefinedMetricSpecification:
-          PredefinedMetricType: LambdaProvisionedConcurrencyUtilization
-        TargetValue:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            lambdaAutoscalingTargetValue,
-            DefaultValue: "0.6",
-          ]

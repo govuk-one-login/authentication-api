@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   VerifyCodeFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Serverless::Function # This function uses redis
     Properties:
       FunctionName: !Sub
         - ${Env}-verify-code-lambda
@@ -113,6 +113,16 @@ Resources:
             !Ref TestClientEmailAllowListSecretAccessPolicy,
             !Ref AWS::NoValue,
           ]
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaMinConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
