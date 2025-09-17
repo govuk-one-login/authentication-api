@@ -26,7 +26,7 @@ public class JwksCacheItem {
         this.keyId = jwk.getKeyID();
         this.timeToLive = timeToLive;
         this.keyUse = keyUse.getValue();
-        this.key = jwk.toString();
+        this.key = jwk.toJSONString();
     }
 
     public JwksCacheItem(String jwksUrl, JWK jwk, long timeToLive) {
