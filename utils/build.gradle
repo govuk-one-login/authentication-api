@@ -17,6 +17,7 @@ dependencies {
             configurations.govuk_notify,
             configurations.nimbus,
             configurations.xray,
+            configurations.open_telemetry,
             "software.amazon.awssdk:cloudwatch:${rootProject.ext.dependencyVersions.aws_sdk_v2_version}"
 
     runtimeOnly configurations.logging_runtime
