@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -31,9 +32,12 @@ class PermissionDecisionManagerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
 
     private final PermissionDecisionManager permissionDecisionManager =
-            new PermissionDecisionManager(codeStorageService, configurationService);
+            new PermissionDecisionManager(
+                    configurationService, codeStorageService, authenticationAttemptsService);
 
     @BeforeEach
     void setup() {
