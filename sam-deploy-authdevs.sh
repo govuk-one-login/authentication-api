@@ -102,7 +102,7 @@ echo "Environment: ${ENVIRONMENT}"
 
 if [[ ${O_BUILD} -eq 1 ]]; then
   echo "Building deployment artefacts ... "
-  ./gradlew --no-daemon --parallel ${O_CLEAN} :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip
+  ./gradlew --no-daemon --parallel ${O_CLEAN} buildZip
   echo "done!"
 fi
 

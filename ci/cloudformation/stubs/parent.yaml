@@ -263,7 +263,9 @@ Resources:
   StubTicfCriTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${Environment}-stub-ticf-cri"
+      TableName: !Sub
+        - ${Env}--stub-ticf-cri
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: InternalPairwiseId
