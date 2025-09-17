@@ -40,7 +40,7 @@ public class StateStorageService extends BaseDynamoService<StateItem> {
             DynamoDbTable<StateItem> dynamoDbTable,
             ConfigurationService configurationService,
             Clock clock) {
-        super(dynamoDbTable, dynamoDbClient, configurationService);
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
         this.nowClock = new NowHelper.NowClock(clock);
     }

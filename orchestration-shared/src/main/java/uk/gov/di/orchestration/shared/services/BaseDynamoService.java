@@ -1,7 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -23,10 +21,8 @@ import java.util.stream.Stream;
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
 public class BaseDynamoService<T> {
-    private static final Logger LOG = LogManager.getLogger(BaseDynamoService.class);
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
-    private final boolean useConsistentReads;
 
     public BaseDynamoService(
             Class<T> objectClass, String table, ConfigurationService configurationService) {
@@ -45,23 +41,14 @@ public class BaseDynamoService<T> {
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
-        useConsistentReads = configurationService.isUseStronglyConsistentReads();
-        LOG.info(
-                "Is using strongly consistent reads for table \"{}\": {}",
-                table,
-                useConsistentReads);
         if (!isTableInOrchAccount) {
             warmUp();
         }
     }
 
-    public BaseDynamoService(
-            DynamoDbTable<T> dynamoTable,
-            DynamoDbClient client,
-            ConfigurationService configurationService) {
+    public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
         this.dynamoTable = dynamoTable;
         this.client = client;
-        this.useConsistentReads = configurationService.isUseStronglyConsistentReads();
     }
 
     public void update(T item) {
@@ -83,10 +70,7 @@ public class BaseDynamoService<T> {
     private Optional<T> get(Key key) {
         return Optional.ofNullable(
                 dynamoTable.getItem(
-                        GetItemEnhancedRequest.builder()
-                                .consistentRead(useConsistentReads)
-                                .key(key)
-                                .build()));
+                        GetItemEnhancedRequest.builder().consistentRead(true).key(key).build()));
     }
 
     public Optional<T> getWithConsistentRead(String partition) {
@@ -116,11 +100,7 @@ public class BaseDynamoService<T> {
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(partition).build());
         return dynamoTable
                 .index(indexName)
-                .query(
-                        QueryEnhancedRequest.builder()
-                                .consistentRead(useConsistentReads)
-                                .queryConditional(queryConditional)
-                                .build())
+                .query(QueryEnhancedRequest.builder().queryConditional(queryConditional).build())
                 .stream()
                 .flatMap(page -> page.items().stream())
                 .toList();
@@ -140,7 +120,7 @@ public class BaseDynamoService<T> {
         return dynamoTable
                 .query(
                         QueryEnhancedRequest.builder()
-                                .consistentRead(useConsistentReads)
+                                .consistentRead(true)
                                 .queryConditional(queryConditional)
                                 .build())
                 .stream()

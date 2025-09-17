@@ -83,12 +83,6 @@ Conditions:
       !Equals [!Ref Environment, production],
     ]
   IsProduction: !Equals [!Ref Environment, production]
-  UseStronglyConsistentReads:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-    ]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
 
 Mappings:
@@ -1879,10 +1873,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy
@@ -2083,10 +2073,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -2298,10 +2284,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -2471,10 +2453,6 @@ Resources:
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref OrchSessionTableReadAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadAndDeleteAccessPolicy
@@ -2858,10 +2836,6 @@ Resources:
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
@@ -3494,10 +3468,6 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
           DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
 
@@ -3708,10 +3678,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3899,10 +3865,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -4076,10 +4038,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -4251,10 +4209,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -4576,10 +4530,6 @@ Resources:
             - !GetAtt StubSpotRequestQueue.QueueUrl
           IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -4787,10 +4737,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          USE_STRONGLY_CONSISTENT_READS: !If
-            - UseStronglyConsistentReads
-            - true
-            - false
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref OrchIdentityCredentialsTableWriteAccessPolicy
