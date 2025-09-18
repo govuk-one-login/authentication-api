@@ -69,6 +69,7 @@ public class AccessTokenService {
                     "Successfully processed UserInfo request with JWT ID of {}",
                     signedJWT.getJWTClaimsSet().getJWTID());
 
+            // Check access token hasn't expired
             var currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(
                     signedJWT.getJWTClaimsSet().getExpirationTime(), currentDateTime, 0)) {
@@ -79,24 +80,28 @@ public class AccessTokenService {
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
+
+            // Validate access token signature
             if (!tokenValidationService.validateAccessTokenSignature(accessToken)) {
                 LOG.warn("Unable to validate AccessToken signature");
                 throw new AccessTokenException(
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
+
+            // Get client ID from claimsSet and check against client registry
             var clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
             if (Objects.isNull(clientID)) {
                 LOG.warn("ClientID is null");
                 throw new AccessTokenException("ClientID is null", BearerTokenError.INVALID_TOKEN);
             }
             attachLogFieldToLogs(CLIENT_ID, clientID);
-
             var client = clientService.getClient(clientID).orElse(null);
             if (Objects.isNull(client)) {
                 LOG.warn("Client not found");
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
 
+            // Get scopes from claimsSet and check against client registry
             var scopes =
                     JSONArrayUtils.parse(
                                     new Gson()
@@ -108,12 +113,17 @@ public class AccessTokenService {
                 LOG.warn("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
+
+            // Get identity claims if applicable
             List<String> identityClaims = null;
             if (identityEnabled && client.isIdentityVerificationSupported()) {
                 LOG.info("Identity is enabled AND client supports identity verification");
                 identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
             }
+
             var subject = signedJWT.getJWTClaimsSet().getSubject();
+
+            // Check token provided against token in database
             var accessTokenStore = getAccessTokenStore(clientID, subject);
             if (accessTokenStore.isEmpty()) {
                 LOG.warn(
