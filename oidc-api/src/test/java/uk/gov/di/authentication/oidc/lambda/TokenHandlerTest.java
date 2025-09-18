@@ -50,6 +50,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -257,7 +258,9 @@ public class TokenHandlerTest {
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
-                                CLIENT_ID));
+                                CLIENT_ID,
+                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                CLIENT_NAME));
         verify(auditService)
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
@@ -390,7 +393,9 @@ public class TokenHandlerTest {
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
-                                CLIENT_ID));
+                                CLIENT_ID,
+                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                CLIENT_NAME));
         verify(auditService)
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
@@ -796,7 +801,9 @@ public class TokenHandlerTest {
                                     ENVIRONMENT.getValue(),
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
-                                    CLIENT_ID));
+                                    CLIENT_ID,
+                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                    CLIENT_NAME));
             verify(auditService)
                     .submitAuditEvent(
                             OIDC_TOKEN_GENERATED,
@@ -843,7 +850,9 @@ public class TokenHandlerTest {
                                     ENVIRONMENT.getValue(),
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
-                                    CLIENT_ID));
+                                    CLIENT_ID,
+                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                    CLIENT_NAME));
             verify(auditService, never())
                     .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
@@ -1113,7 +1122,9 @@ public class TokenHandlerTest {
                                     ENVIRONMENT.getValue(),
                                     configurationService.getEnvironment(),
                                     CLIENT.getValue(),
-                                    CLIENT_ID));
+                                    CLIENT_ID,
+                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                    CLIENT_NAME));
             verify(auditService)
                     .submitAuditEvent(
                             OIDC_TOKEN_GENERATED,
@@ -1253,7 +1264,9 @@ public class TokenHandlerTest {
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 CLIENT.getValue(),
-                                DOC_APP_CLIENT_ID.getValue()));
+                                DOC_APP_CLIENT_ID.getValue(),
+                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                CLIENT_NAME));
         verify(auditService)
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
@@ -1529,7 +1542,7 @@ public class TokenHandlerTest {
     private ClientRegistry generateClientRegistry(KeyPair keyPair, String clientID) {
         return new ClientRegistry()
                 .withClientID(clientID)
-                .withClientName("test-client")
+                .withClientName(CLIENT_NAME)
                 .withRedirectUrls(singletonList(REDIRECT_URI))
                 .withScopes(SCOPES.toStringList())
                 .withContacts(singletonList(TEST_EMAIL))
