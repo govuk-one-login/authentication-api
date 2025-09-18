@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 
 import java.util.ArrayList;
@@ -110,6 +111,7 @@ class LoginHandlerReauthenticationRedisTest {
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -171,7 +173,8 @@ class LoginHandlerReauthenticationRedisTest {
                         null,
                         authSessionService,
                         mfaMethodsService,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        userActionsManager);
     }
 
     @ParameterizedTest

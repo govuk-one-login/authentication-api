@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
@@ -158,6 +159,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -199,7 +201,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
-                        permissionDecisionManager);
+                        permissionDecisionManager,
+                        userActionsManager);
     }
 
     @ParameterizedTest
