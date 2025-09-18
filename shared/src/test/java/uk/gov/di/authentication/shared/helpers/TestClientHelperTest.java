@@ -1,10 +1,15 @@
 package uk.gov.di.authentication.shared.helpers;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -14,9 +19,11 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -26,6 +33,7 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 class TestClientHelperTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final String env = "test";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final List<String> ALLOWLIST =
             List.of(
@@ -34,6 +42,13 @@ class TestClientHelperTest {
                     "^(.+)@digital.cabinet-office.gov.uk$",
                     "^(.+)@interwebs.org$",
                     "testclient.user2@internet.com");
+
+    @BeforeEach
+    void setup() {
+        when(configurationService.getLocalstackEndpointUri())
+                .thenReturn(Optional.of("http://localhost:45678"));
+        when(configurationService.getEnvironment()).thenReturn(env);
+    }
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -126,6 +141,73 @@ class TestClientHelperTest {
     void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
         assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("^$", "[", "*")));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
+    }
+
+    @Test
+    void itShouldFetchTheSecretListFromSecretsManger() {
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(String.join(",", ALLOWLIST))
+                                .build());
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+
+        assertEquals(
+                ALLOWLIST,
+                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+    }
+
+    @Test
+    void itShouldReturnAnEmptyListForResourceNotFoundException() {
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenThrow(ResourceNotFoundException.class);
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+
+        assertEquals(
+                List.of(),
+                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+    }
+
+    @Test
+    void itShouldReturnAnEmptyListForNullSecretValue() {
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(GetSecretValueResponse.builder().secretString(null).build());
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+
+        assertEquals(
+                List.of(),
+                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+    }
+
+    @Test
+    void itShouldReturnAnEmptyListForEmptySecretValue() {
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(GetSecretValueResponse.builder().secretString("").build());
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+
+        assertEquals(
+                List.of(),
+                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
     }
 
     private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {

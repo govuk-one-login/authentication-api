@@ -2,10 +2,20 @@ package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -13,8 +23,15 @@ import java.util.regex.PatternSyntaxException;
 
 public class TestClientHelper {
     private static final Logger LOG = LogManager.getLogger(TestClientHelper.class);
+    private static final String TEST_CLIENT_ALLOW_LIST_SECRET_NAME =
+            "/%s/test-client-email-allow-list";
+    private SecretsManagerClient secretsManagerClient;
 
     private TestClientHelper() {}
+
+    public TestClientHelper(SecretsManagerClient secretsManagerClient) {
+        this.secretsManagerClient = secretsManagerClient;
+    }
 
     public static boolean isTestClientWithAllowedEmail(
             UserContext userContext, ConfigurationService configurationService)
@@ -60,5 +77,70 @@ public class TestClientHelper {
             }
         }
         return false;
+    }
+
+    // ATO-1884: Make this method private when implemented
+    public List<String> getEmailAllowListFromSecretsManager(
+            ConfigurationService configurationService) {
+
+        var request =
+                GetSecretValueRequest.builder()
+                        .secretId(
+                                String.format(
+                                        TEST_CLIENT_ALLOW_LIST_SECRET_NAME,
+                                        configurationService.getEnvironment()));
+
+        GetSecretValueResponse secretValueResponse;
+        try {
+            secretValueResponse =
+                    getSecretsManagerClient(configurationService).getSecretValue(request.build());
+        } catch (ResourceNotFoundException e) {
+            LOG.error(
+                    "Tried to fetch test client allow list but resource not configured: {}",
+                    e.getMessage());
+            return Collections.emptyList();
+        }
+        var secretString = secretValueResponse.secretString();
+
+        if (secretString == null || secretString.isEmpty()) {
+            LOG.warn("Test client allow list secret string is null or empty");
+            return Collections.emptyList();
+        }
+
+        return Arrays.stream(secretString.split(",")).toList();
+    }
+
+    private SecretsManagerClient getSecretsManagerClient(
+            ConfigurationService configurationService) {
+        if (secretsManagerClient == null) {
+            secretsManagerClient =
+                    configurationService
+                            .getLocalstackEndpointUri()
+                            .map(
+                                    l -> {
+                                        LOG.info("Localstack endpoint URI is present: {}", l);
+                                        return SecretsManagerClient.builder()
+                                                .region(
+                                                        Region.of(
+                                                                configurationService
+                                                                        .getAwsRegion()))
+                                                .endpointOverride(URI.create(l))
+                                                .credentialsProvider(
+                                                        StaticCredentialsProvider.create(
+                                                                AwsBasicCredentials.create(
+                                                                        "FAKEACCESSKEY",
+                                                                        "FAKESECRETKEY")))
+                                                .build();
+                                    })
+                            .orElseGet(
+                                    () ->
+                                            SecretsManagerClient.builder()
+                                                    .region(
+                                                            Region.of(
+                                                                    configurationService
+                                                                            .getAwsRegion()))
+                                                    .build());
+        }
+        return secretsManagerClient;
     }
 }
