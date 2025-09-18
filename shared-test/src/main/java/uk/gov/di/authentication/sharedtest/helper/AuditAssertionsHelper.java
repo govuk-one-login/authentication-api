@@ -97,13 +97,6 @@ public class AuditAssertionsHelper {
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
 
-        await().atMost(TIMEOUT)
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        queue.getApproximateMessageCount(),
-                                        equalTo(expectedTxmaEvents.size())));
-
         var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
@@ -170,5 +163,19 @@ public class AuditAssertionsHelper {
                                         AuditService.MetadataPair.pair(field, value),
                                         actualMetadataPairForMfaMethod),
                         () -> fail("Missing metadata key: " + field));
+    }
+
+    public static void assertAuditEventExpectations(
+            SqsQueueExtension queue, List<AuditEventExpectation> expectedEvents) {
+        List<AuditableEvent> events =
+                expectedEvents.stream().map(AuditEventExpectation::getEvent).toList();
+
+        List<String> receivedEvents = assertTxmaAuditEventsReceived(queue, events);
+
+        for (AuditEventExpectation expectation : expectedEvents) {
+            expectation.verify(receivedEvents);
+        }
+
+        assertNoTxmaAuditEventsReceived(queue);
     }
 }
