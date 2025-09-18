@@ -152,15 +152,17 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         try {
-            int attemptCount =
-                    codeStorageService.getIncorrectPasswordCount(
-                            userPermissionContext.emailAddress());
-
             boolean isBlocked =
                     codeStorageService.isBlockedForEmail(
                             userPermissionContext.emailAddress(),
                             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
                                     + JourneyType.PASSWORD_RESET);
+
+            int attemptCount =
+                    isBlocked
+                            ? configurationService.getMaxPasswordRetries()
+                            : codeStorageService.getIncorrectPasswordCount(
+                                    userPermissionContext.emailAddress());
 
             if (isBlocked) {
                 return Result.success(

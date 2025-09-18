@@ -254,6 +254,7 @@ class PermissionDecisionManagerTest {
                             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
                                     + JourneyType.PASSWORD_RESET))
                     .thenReturn(true);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -398,6 +399,27 @@ class PermissionDecisionManagerTest {
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldUseMaxRetriesWhenBlockedRegardlessOfCurrentCount() {
+            var userContext = createUserContext(0);
+            when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(3);
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET))
+                    .thenReturn(true);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(7);
+
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(7, lockedOut.attemptCount());
         }
     }
 
