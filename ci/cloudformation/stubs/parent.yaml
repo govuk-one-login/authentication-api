@@ -61,32 +61,7 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
-  EnableProvisionedConcurrency:
-    Fn::And:
-      - !Condition NotSubEnvironment
-      - Fn::Not:
-          - !Condition EnableSnapStart
-      - Fn::Not:
-          - Fn::Equals:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  lambdaMinConcurrency,
-                ]
-              - "0"
-
   EnableLogging: !Equals [!Ref EnableApiGatewayExecutionLogging, "true"]
-
-  EnableSnapStart:
-    Fn::And:
-      - !Condition NotSubEnvironment
-      - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              EnableSnapStart,
-            ]
-          - "Yes"
 
   IsNotProduction:
     Fn::Not:
@@ -143,19 +118,15 @@ Mappings:
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       IsSplunkEnabled: "No"
-      lambdaMinConcurrency: 0
       UseAlarmActions: "No"
     authdev2:
       dataStoreAccountId: 653994557586
       frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables"
       IsSplunkEnabled: "No"
-      lambdaMinConcurrency: 0
       UseAlarmActions: "No"
     authdev3:
       dataStoreAccountId: 653994557586
@@ -163,9 +134,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       IsSplunkEnabled: "No"
-      lambdaMinConcurrency: 0
       UseAlarmActions: "No"
     dev:
       dataStoreAccountId: 653994557586
@@ -173,19 +142,15 @@ Mappings:
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       IsSplunkEnabled: "No"
-      lambdaMinConcurrency: 0
       UseAlarmActions: "No"
     build:
       dataStoreAccountId: 761723964695
       frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnableSnapStart: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMinConcurrency: 0
       UseAlarmActions: "No"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
@@ -263,19 +228,7 @@ Globals:
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
       - !Ref AWS::NoValue
-    ProvisionedConcurrencyConfig: !If
-      - EnableProvisionedConcurrency
-      - ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            lambdaMinConcurrency,
-            DefaultValue: 0,
-          ]
-      - !Ref AWS::NoValue
     Runtime: java17
-    SnapStart:
-      ApplyOn: !If [EnableSnapStart, PublishedVersions, None]
     Timeout: 30
 
 Resources:
@@ -310,7 +263,9 @@ Resources:
   StubTicfCriTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${Environment}-stub-ticf-cri"
+      TableName: !Sub
+        - ${Env}--stub-ticf-cri
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: InternalPairwiseId
