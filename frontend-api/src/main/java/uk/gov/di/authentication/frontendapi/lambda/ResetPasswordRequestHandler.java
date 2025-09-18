@@ -118,7 +118,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager =
                 new PermissionDecisionManager(configurationService, codeStorageService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     public ResetPasswordRequestHandler() {
@@ -138,7 +140,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
                 new PermissionDecisionManager(configurationService, codeStorageService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     public ResetPasswordRequestHandler(
@@ -155,7 +159,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
                 new PermissionDecisionManager(configurationService, codeStorageService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     @Override
