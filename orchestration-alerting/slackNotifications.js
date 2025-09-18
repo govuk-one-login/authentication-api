@@ -107,16 +107,15 @@ const handler = async function (event, context) {
   const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
   const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
   if (isPagerDutyAlarm && isEnabledForProd) {
+    console.log("PagerDuty alarm, sending 2 notifications");
     messageRequestBody.channel =
       process.env.SLACK_CHANNEL_ID ||
       (await getParameter("pagerduty-slack-channel-id"));
-  } else {
-    messageRequestBody.channel =
-      process.env.SLACK_CHANNEL_ID ||
-      (await getParameter(
-        process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id",
-      ));
+    await sendAlertToSlack(messageRequestBody);
   }
+  messageRequestBody.channel =
+    process.env.SLACK_CHANNEL_ID ||
+    (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id"));
 
   console.log("Sending alert to slack");
   await sendAlertToSlack(messageRequestBody);
