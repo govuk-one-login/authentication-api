@@ -255,18 +255,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         ForbiddenReasonAntiCorruption.toReauthFailureReason(
                                 temporarilyLockedOut.forbiddenReason());
 
-                // TODO AUT-4755 remove authenticationAttemptsService data access from handler
-                Map<CountType, Integer> reauthCounts =
-                        authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                userPermissionContext.internalSubjectId(),
-                                userPermissionContext.rpPairwiseId(),
-                                journeyType);
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
-                                .withAllIncorrectAttemptCounts(reauthCounts)
+                                .withAllIncorrectAttemptCounts(
+                                        getReauthAttemptCounts(
+                                                journeyType,
+                                                userPermissionContext.internalSubjectId(),
+                                                userPermissionContext.rpPairwiseId()))
                                 .withFailureReason(reauthFailureReason)
                                 .build());
                 cloudwatchMetricsService.incrementCounter(
@@ -519,11 +516,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(
-                                        authenticationAttemptsService
-                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                                        userProfile.getSubjectID(),
-                                                        calculatedPairwiseId,
-                                                        JourneyType.REAUTHENTICATION))
+                                        getReauthAttemptCounts(
+                                                journeyType,
+                                                userPermissionContext.internalSubjectId(),
+                                                userPermissionContext.rpPairwiseId()))
                                 .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
                                 .build());
                 cloudwatchMetricsService.incrementCounter(
@@ -573,6 +569,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } else {
             codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
         }
+    }
+
+    // TODO AUT-4755 remove authenticationAttemptsService data access from handler
+    private Map<CountType, Integer> getReauthAttemptCounts(
+            JourneyType journeyType, String internalSubjectId, String rpPairwiseId) {
+        return authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                internalSubjectId, rpPairwiseId, journeyType);
     }
 
     private String getInternalCommonSubjectId(UserProfile userProfile) {
