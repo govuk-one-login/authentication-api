@@ -1115,9 +1115,9 @@ Resources:
         - Key: Name
           Value: DocAppCredentialTable
 
-    #endregion
+  #endregion
 
-    #region Jwks Cache DynamoDB Table
+  #region Jwks Cache DynamoDB Table
 
   JwksCacheTableEncryptionKey:
     Type: AWS::KMS::Key
@@ -1177,7 +1177,82 @@ Resources:
         - Key: Name
           Value: JwksCacheTable
 
-    #endregion
+  #endregion
+
+  #region Access Token DynamoDB Table
+
+  AccessTokenTableEncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    Properties:
+      Description: KMS encryption key for Access Token DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  AccessTokenTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    Properties:
+      TableName: !Sub ${Environment}-Access-Token
+      AttributeDefinitions:
+        - AttributeName: ClientId
+          AttributeType: S
+        - AttributeName: RpPairwiseId
+          AttributeType: S
+        - AttributeName: AuthCode
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: AuthCodeIndex
+          KeySchema:
+            - AttributeName: AuthCode
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: ClientId
+          KeyType: HASH
+        - AttributeName: RpPairwiseId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt AccessTokenTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: AccessTokenTable
+
+  #endregion
 
   #region Fetch JWKS Lambda
 
@@ -5820,6 +5895,58 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
+
+  AccessTokenTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessTokenTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub ${AccessTokenTable.Arn}/index/*
+              - !GetAtt AccessTokenTable.Arn
+          - Sid: AllowAccessTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt AccessTokenTableEncryptionKey.Arn
+
+  AccessTokenTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessTokenTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !GetAtt AccessTokenTable.Arn
+          - Sid: AllowAccessTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt AccessTokenTableEncryptionKey.Arn
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
