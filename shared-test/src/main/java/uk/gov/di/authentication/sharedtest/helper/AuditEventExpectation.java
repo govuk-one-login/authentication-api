@@ -81,7 +81,9 @@ public class AuditEventExpectation {
                 "No matching audit event found for "
                         + this.getEventName()
                         + " with expected attributes: "
-                        + expectedAttributes);
+                        + expectedAttributes
+                        + " but received the following "
+                        + receivedEvents);
     }
 
     private JsonElement getJsonElementByPath(JsonObject json, String path) {
