@@ -48,6 +48,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
@@ -95,6 +96,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
     private final PermissionDecisionManager permissionDecisionManager;
+    private final UserActionsManager userActionsManager;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -108,7 +110,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
-            PermissionDecisionManager permissionDecisionManager) {
+            PermissionDecisionManager permissionDecisionManager,
+            UserActionsManager userActionsManager) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -124,6 +127,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager = permissionDecisionManager;
+        this.userActionsManager = userActionsManager;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -141,6 +145,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.permissionDecisionManager =
                 new PermissionDecisionManager(
                         configurationService, codeStorageService, authenticationAttemptsService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService,
+                        this.codeStorageService,
+                        this.authSessionService,
+                        this.authenticationAttemptsService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -158,6 +168,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.permissionDecisionManager =
                 new PermissionDecisionManager(
                         configurationService, codeStorageService, authenticationAttemptsService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService,
+                        this.codeStorageService,
+                        this.authSessionService,
+                        this.authenticationAttemptsService);
     }
 
     public LoginHandler() {
