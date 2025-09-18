@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
@@ -18,21 +19,39 @@ public class UserActionsManager implements UserActions {
 
     private static final Logger LOG = LogManager.getLogger(UserActionsManager.class);
 
+    private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final AuthSessionService authSessionService;
-    private final ConfigurationService configurationService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
-    public UserActionsManager() {
-        this.codeStorageService = new CodeStorageService(ConfigurationService.getInstance());
-        this.authSessionService = new AuthSessionService(ConfigurationService.getInstance());
-        this.configurationService = ConfigurationService.getInstance();
+    public UserActionsManager(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.codeStorageService = new CodeStorageService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public UserActionsManager(
-            CodeStorageService codeStorageService, AuthSessionService authSessionService) {
+            ConfigurationService configurationService,
+            CodeStorageService codeStorageService,
+            AuthSessionService authSessionService) {
+        this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authSessionService = authSessionService;
-        this.configurationService = ConfigurationService.getInstance();
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
+    }
+
+    public UserActionsManager(
+            ConfigurationService configurationService,
+            CodeStorageService codeStorageService,
+            AuthSessionService authSessionService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
+        this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
+        this.authSessionService = authSessionService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     @Override

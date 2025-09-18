@@ -6,6 +6,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
@@ -28,6 +29,8 @@ class UserActionsManagerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
     private UserActionsManager userActionsManager;
 
     private static final String EMAIL = "test@example.com";
@@ -39,7 +42,12 @@ class UserActionsManagerTest {
 
     @BeforeEach
     void setUp() {
-        userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+        userActionsManager =
+                new UserActionsManager(
+                        configurationService,
+                        codeStorageService,
+                        authSessionService,
+                        authenticationAttemptsService);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getLockoutDuration()).thenReturn(900L);
     }
