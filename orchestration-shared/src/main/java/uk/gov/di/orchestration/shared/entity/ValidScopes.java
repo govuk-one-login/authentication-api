@@ -96,4 +96,12 @@ public class ValidScopes {
         }
         return scope;
     }
+
+    public static boolean areScopesValid(List<String> scopes) {
+        return getAllValidScopes().containsAll(scopes);
+    }
+
+    public static boolean areScopesValidAndPublic(List<String> scopes) {
+        return getPublicValidScopes().containsAll(scopes);
+    }
 }
