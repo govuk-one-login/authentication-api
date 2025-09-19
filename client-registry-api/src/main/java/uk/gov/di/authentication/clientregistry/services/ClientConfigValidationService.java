@@ -108,7 +108,7 @@ public class ClientConfigValidationService {
                 false)) {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
-        if (!areScopesValid(registrationRequest.getScopes())) {
+        if (!ValidScopes.areScopesValidAndPublic(registrationRequest.getScopes())) {
             return Optional.of(INVALID_SCOPE);
         }
         if (!isValidServiceType(registrationRequest.getServiceType())) {
@@ -182,7 +182,7 @@ public class ClientConfigValidationService {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!Optional.ofNullable(updateRequest.getScopes())
-                .map(this::areScopesValid)
+                .map(ValidScopes::areScopesValidAndPublic)
                 .orElse(true)) {
             return Optional.of(INVALID_SCOPE);
         }
@@ -255,15 +255,6 @@ public class ClientConfigValidationService {
             kf.generatePublic(x509publicKey);
         } catch (Exception e) {
             return false;
-        }
-        return true;
-    }
-
-    private boolean areScopesValid(List<String> scopes) {
-        for (String scope : scopes) {
-            if (ValidScopes.getPublicValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
-                return false;
-            }
         }
         return true;
     }

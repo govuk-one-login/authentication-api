@@ -66,8 +66,8 @@ class TokenValidationServiceTest {
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
         assertTrue(
-                tokenValidationService.validateAccessTokenSignature(
-                        new BearerAccessToken(signedAccessToken.serialize())));
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
     }
 
     @Test
@@ -80,8 +80,8 @@ class TokenValidationServiceTest {
 
         SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
-                tokenValidationService.validateAccessTokenSignature(
-                        new BearerAccessToken(signedAccessToken.serialize())));
+                tokenValidationService.isTokenSignatureValid(
+                        new BearerAccessToken(signedAccessToken.serialize()).getValue()));
     }
 
     @Test

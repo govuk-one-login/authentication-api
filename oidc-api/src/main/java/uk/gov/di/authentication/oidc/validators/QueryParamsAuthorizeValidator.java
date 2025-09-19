@@ -197,14 +197,12 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
     }
 
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
-        for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                logErrorInProdElseWarn(
-                        String.format(
-                                "Scopes have been requested which are not yet supported. Scopes in request: %s",
-                                scopes));
-                return false;
-            }
+        if (!ValidScopes.areScopesValid(scopes)) {
+            logErrorInProdElseWarn(
+                    String.format(
+                            "Scopes have been requested which are not yet supported. Scopes in request: %s",
+                            scopes));
+            return false;
         }
         if (!clientRegistry.getScopes().containsAll(scopes)) {
             logErrorInProdElseWarn(

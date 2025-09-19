@@ -261,19 +261,9 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
     }
 
-    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry clientRegistry) {
-
-        for (String scope : scopes.toStringList()) {
-            if (!ValidScopes.getAllValidScopes().contains(scope)) {
-                return true;
-            }
-
-            if (!clientRegistry.getScopes().contains(scope)) {
-                return true;
-            }
-        }
-
-        return false;
+    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry client) {
+        return !ValidScopes.areScopesValid(scopes.toStringList())
+                || !client.getScopes().containsAll(scopes.toStringList());
     }
 
     private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
