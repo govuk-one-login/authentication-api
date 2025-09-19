@@ -8,6 +8,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
+import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -92,7 +93,7 @@ public class BulkRemoveAccountHandler
             LOG.info("Processing bulk deletion request with reference: {}", reference);
 
             List<String> emailsToProcess = new ArrayList<>(request.emails());
-            List<String> processedEmails = new ArrayList<>();
+            List<DeletedAccountIdentifiers> processedAccountIdentifiers = new ArrayList<>();
             List<String> failedEmails = new ArrayList<>();
             List<String> notFoundEmails = new ArrayList<>();
             List<String> filteredOutEmails = new ArrayList<>();
@@ -112,7 +113,7 @@ public class BulkRemoveAccountHandler
                         batch,
                         request,
                         reference,
-                        processedEmails,
+                        processedAccountIdentifiers,
                         failedEmails,
                         notFoundEmails,
                         filteredOutEmails);
@@ -122,7 +123,7 @@ public class BulkRemoveAccountHandler
                     String.format(
                             "Bulk deletion completed for reference %s. Processed: %d, Failed: %d, Not found: %d, Filtered out: %d",
                             reference,
-                            processedEmails.size(),
+                            processedAccountIdentifiers.size(),
                             failedEmails.size(),
                             notFoundEmails.size(),
                             filteredOutEmails.size());
@@ -131,10 +132,11 @@ public class BulkRemoveAccountHandler
             return new BulkUserDeleteResponse(
                     resultMessage,
                     reference,
-                    processedEmails.size(),
+                    processedAccountIdentifiers.size(),
                     failedEmails.size(),
                     notFoundEmails.size(),
-                    filteredOutEmails.size());
+                    filteredOutEmails.size(),
+                    processedAccountIdentifiers);
         } catch (Exception e) {
             LOG.error("Unexpected error during bulk deletion", e);
             throw new RuntimeException("Bulk deletion failed", e);
@@ -163,7 +165,7 @@ public class BulkRemoveAccountHandler
             List<String> batch,
             BulkUserDeleteRequest request,
             String reference,
-            List<String> processedEmails,
+            List<DeletedAccountIdentifiers> processedAccountIdentifiers,
             List<String> failedEmails,
             List<String> notFoundEmails,
             List<String> filteredOutEmails) {
@@ -187,7 +189,7 @@ public class BulkRemoveAccountHandler
                                                 "Successfully deleted account for email (reference: {}). Identifiers: {}",
                                                 reference,
                                                 accountIdentifiers);
-                                        processedEmails.add(normalizedEmail);
+                                        processedAccountIdentifiers.add(accountIdentifiers);
 
                                     } else {
                                         LOG.info(

@@ -20,9 +20,11 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -126,12 +128,18 @@ class BulkRemoveAccountHandlerTest {
 
             when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
                     .thenReturn(Optional.of(userProfile));
-            when(manualAccountDeletionService.manuallyDeleteAccount(userProfile))
+            when(manualAccountDeletionService.manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false))
                     .thenReturn(identifiers);
 
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
             assertCounts(result, 1, 0, 0, 0);
+            var processedAccountIdentifier = result.processedAccountIdentifiers().get(0);
+            assertNotNull(processedAccountIdentifier.legacySubjectId());
+            assertNotNull(processedAccountIdentifier.publicSubjectId());
+            assertNotNull(processedAccountIdentifier.subjectId());
+
             verify(manualAccountDeletionService)
                     .manuallyDeleteAccount(
                             userProfile, AccountDeletionReason.SECURITY_INITIATED, false);
@@ -169,7 +177,8 @@ class BulkRemoveAccountHandlerTest {
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
             assertCounts(result, 0, 0, 0, 1);
-            verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
+            verify(manualAccountDeletionService, never())
+                    .manuallyDeleteAccount(any(), any(), anyBoolean());
         }
 
         @Test
@@ -193,7 +202,8 @@ class BulkRemoveAccountHandlerTest {
             BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
             assertCounts(result, 0, 0, 1, 0);
-            verify(manualAccountDeletionService, never()).manuallyDeleteAccount(any());
+            verify(manualAccountDeletionService, never())
+                    .manuallyDeleteAccount(any(), any(), anyBoolean());
         }
 
         @Test
@@ -237,6 +247,7 @@ class BulkRemoveAccountHandlerTest {
         assertEquals(failed, result.numberFailed());
         assertEquals(notFound, result.numberNotFound());
         assertEquals(filteredOut, result.numberFilteredOut());
+        assertEquals(processed, result.processedAccountIdentifiers().size());
     }
 
     private UserProfile createUserProfile(String email, String createdDate) {

@@ -7,6 +7,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
+import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
@@ -19,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -75,6 +77,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertTrue(result.message().contains("TEST_REF_001"));
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
+        assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 3);
     }
 
     @Test
@@ -107,6 +110,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertEquals(2, result.numberFilteredOut());
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
+        assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 2);
     }
 
     @Test
@@ -139,6 +143,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
         assertTrue(result.message().contains("TEST_REF_001"));
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
+        assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 3);
     }
 
     @Test
@@ -210,6 +215,7 @@ public class BulkRemoveAccountHandlerIntegrationTest
                         AUTH_DELETE_ACCOUNT,
                         AUTH_DELETE_ACCOUNT,
                         AUTH_DELETE_ACCOUNT));
+        assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 6);
     }
 
     private static void assertAuditEvents(Collection<AuditableEvent> events) {
@@ -221,5 +227,14 @@ public class BulkRemoveAccountHandlerIntegrationTest
                 "extensions.account_deletion_reason",
                 AccountDeletionReason.SECURITY_INITIATED.name());
         expectation.verify(receivedEvents);
+    }
+
+    private static void assertProcessedAccountIdentifiers(
+            List<DeletedAccountIdentifiers> processedAccountIdentifiers, int expectedProcessed) {
+        assertEquals(expectedProcessed, processedAccountIdentifiers.size());
+        for (var processedAccountIdentifier : processedAccountIdentifiers) {
+            assertNotNull(processedAccountIdentifier.publicSubjectId());
+            assertNotNull(processedAccountIdentifier.subjectId());
+        }
     }
 }
