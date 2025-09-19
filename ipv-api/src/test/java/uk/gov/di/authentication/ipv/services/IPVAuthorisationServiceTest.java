@@ -122,7 +122,6 @@ class IPVAuthorisationServiceTest {
                         .build();
         var jwksUrl = new URL("http://localhost/.well-known/jwks.json");
         when(configurationService.getIPVJwksUrl()).thenReturn(jwksUrl);
-        when(jwksService.getIpvJwk()).thenReturn(rsaKey);
         when(jwksCacheService.getOrGenerateIpvJwksCacheItem())
                 .thenReturn(new JwksCacheItem(jwksUrl.toString(), rsaKey, 300));
         when(configurationService.getIPVTokenSigningKeyAlias()).thenReturn(IPV_SIGNING_KEY_ID);

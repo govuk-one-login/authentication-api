@@ -13,10 +13,8 @@ import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.orchestration.shared.helpers.CryptoProviderHelper;
-import uk.gov.di.orchestration.shared.helpers.EncryptionJwkCache;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
@@ -66,24 +64,6 @@ public class JwksService {
     public JWK getPublicIpvTokenJwkWithOpaqueId() {
         LOG.info("Retrieving IPV token public key");
         return getPublicJWKWithKeyId(configurationService.getIPVTokenSigningKeyAlias());
-    }
-
-    public JWK getEncryptionJwkAndCacheFromJwksUrl(URL jwksUrl, int expiry) {
-        EncryptionJwkCache encryptionJwkCache = EncryptionJwkCache.getInstance();
-        var cacheEntry = encryptionJwkCache.getOrCreateEntry(jwksUrl, expiry);
-        return cacheEntry.getKey();
-    }
-
-    public JWK getIpvJwk() {
-        return getEncryptionJwkAndCacheFromJwksUrl(
-                configurationService.getIPVJwksUrl(),
-                configurationService.getIPVJwkCacheExpirationInSeconds());
-    }
-
-    public JWK getDocAppJwk() throws MalformedURLException {
-        return getEncryptionJwkAndCacheFromJwksUrl(
-                configurationService.getDocAppJwksURI().toURL(),
-                configurationService.getDocAppJwkCacheExpirationInSeconds());
     }
 
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {
