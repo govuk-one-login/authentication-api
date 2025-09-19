@@ -7,7 +7,6 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
@@ -26,10 +25,6 @@ public class TokenValidationService {
     public TokenValidationService(JwksService jwksService, ConfigurationService configuration) {
         this.jwksService = jwksService;
         this.configuration = configuration;
-    }
-
-    public boolean validateAccessTokenSignature(AccessToken accessToken) {
-        return isTokenSignatureValid(accessToken.getValue());
     }
 
     public boolean validateRefreshTokenSignatureAndExpiry(RefreshToken refreshToken) {
