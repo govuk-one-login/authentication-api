@@ -27,6 +27,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_DECISION_USED;
 import static uk.gov.di.authentication.shared.helpers.NowHelper.unixTimePlusNDays;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -127,7 +128,16 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                                     CommonTestVariables.EMAIL,
                                     EmailCheckResultStatus.ALLOW.getValue())));
 
-            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+            List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+            Map<String, String> fraudCheckDecisionUsedAttributes = new HashMap<>();
+            fraudCheckDecisionUsedAttributes.put(
+                    EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
+            fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+            eventExpectations.put(
+                    AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);
         }
 
         @Test
@@ -161,8 +171,16 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                                     CommonTestVariables.EMAIL,
                                     EmailCheckResultStatus.DENY.getValue())));
 
-            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-        }
+            List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
+            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+            Map<String, String> fraudCheckDecisionUsedAttributes = new HashMap<>();
+            fraudCheckDecisionUsedAttributes.put(
+                    EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
+            fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+            eventExpectations.put(
+                    AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
+
+            verifyAuditEvents(expectedEvents, eventExpectations);        }
     }
 
     private void verifyAuditEvents(
