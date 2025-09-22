@@ -6,11 +6,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,22 +20,21 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 
-class DynamoClientServiceTest {
+class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name-one";
     private static final List<String> SCOPES = singletonList("openid");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDbEnhancedClient dynamoDbEnhancedClient =
             mock(DynamoDbEnhancedClient.class);
     private DynamoClientService dynamoClientService;
-    private final DynamoDbTable dynamoDbTable = mock(DynamoDbTable.class);
 
     @BeforeEach
     void setup() {
@@ -96,8 +96,9 @@ class DynamoClientServiceTest {
         var client = generatePopulatedClientRegistry();
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
-        when(dynamoDbTable.getItem((Key) any())).thenReturn(client);
-        when(dynamoDbEnhancedClient.table(any(), any())).thenReturn(dynamoDbTable);
+        when(table.getItem((Key) any())).thenReturn(client);
+        when(dynamoDbEnhancedClient.table(any(), eq(TableSchema.fromBean(ClientRegistry.class))))
+                .thenReturn(table);
         dynamoClientService =
                 spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
 
@@ -124,8 +125,9 @@ class DynamoClientServiceTest {
                 .setIdentityVerificationSupported(true)
                 .setClaims(List.of("claim"));
 
-        when(dynamoDbTable.getItem((Key) any())).thenReturn(client);
-        when(dynamoDbEnhancedClient.table(any(), any())).thenReturn(dynamoDbTable);
+        when(table.getItem((Key) any())).thenReturn(client);
+        when(dynamoDbEnhancedClient.table(any(), eq(TableSchema.fromBean(ClientRegistry.class))))
+                .thenReturn(table);
         dynamoClientService =
                 spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
 

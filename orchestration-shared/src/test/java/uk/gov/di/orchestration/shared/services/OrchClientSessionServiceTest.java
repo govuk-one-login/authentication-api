@@ -2,40 +2,26 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchClientSessionException;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchClientSessionServiceTest {
+class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessionItem> {
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key CLIENT_SESSION_ID_PARTITION_KEY =
-            Key.builder().partitionValue(CLIENT_SESSION_ID).build();
     private static final GetItemEnhancedRequest CLIENT_SESSION_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(CLIENT_SESSION_ID_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
-    private final DynamoDbTable<OrchClientSessionItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+            getRequestFor(CLIENT_SESSION_ID);
     private OrchClientSessionService clientSessionService;
 
     @BeforeEach
@@ -129,12 +115,6 @@ class OrchClientSessionServiceTest {
                 new OrchClientSessionItem(CLIENT_SESSION_ID)
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(VALID_TTL);
-        when(table.getItem(
-                        GetItemEnhancedRequest.builder()
-                                .consistentRead(false)
-                                .key(CLIENT_SESSION_ID_PARTITION_KEY)
-                                .build()))
-                .thenReturn(existingSession);
         when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
         return existingSession;
     }
@@ -145,29 +125,5 @@ class OrchClientSessionServiceTest {
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(EXPIRED_TTL);
         when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(OrchClientSessionItem.class));
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get from table").build())
-                .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update table").build())
-                .when(table)
-                .updateItem(any(OrchClientSessionItem.class));
-    }
-
-    private void withFailedDelete() {
-        doThrow(DynamoDbException.builder().message("Failed to delete from table").build())
-                .when(table)
-                .deleteItem(any(OrchClientSessionItem.class));
     }
 }

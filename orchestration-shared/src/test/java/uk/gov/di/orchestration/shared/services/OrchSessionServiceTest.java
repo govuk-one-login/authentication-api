@@ -2,14 +2,11 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -23,26 +20,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchSessionServiceTest {
+class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
     private static final String SESSION_ID = "test-session-id";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key SESSION_ID_PARTITION_KEY =
-            Key.builder().partitionValue(SESSION_ID).build();
-    private static final GetItemEnhancedRequest SESSION_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(SESSION_ID_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
-    private final DynamoDbTable<OrchSessionItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private static final GetItemEnhancedRequest SESSION_GET_REQUEST = getRequestFor(SESSION_ID);
     private OrchSessionService orchSessionService;
 
     @BeforeEach
@@ -84,8 +69,8 @@ class OrchSessionServiceTest {
 
     @Test
     void deleteSessionThrowsOrchSessionExceptionWhenDeleteFails() {
-        var orchSession = withValidSession();
-        withFailedDelete(orchSession);
+        withValidSession();
+        withFailedDelete();
 
         var exception =
                 assertThrows(
@@ -187,17 +172,5 @@ class OrchSessionServiceTest {
     private void withExpiredSession() {
         when(table.getItem(SESSION_GET_REQUEST))
                 .thenReturn(new OrchSessionItem(SESSION_ID).withTimeToLive(EXPIRED_TTL));
-    }
-
-    private void withFailedDelete(OrchSessionItem orchSession) {
-        doThrow(DynamoDbException.builder().message("Failed to delete item").build())
-                .when(table)
-                .deleteItem(orchSession);
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update table").build())
-                .when(table)
-                .updateItem(any(OrchSessionItem.class));
     }
 }
