@@ -89,6 +89,6 @@ variable "vpc_environment" {
 
 variable "api_fms_tag_value" {
   default     = "authenticationfrontend"
-  description = "Tag value to be used for FMS WAF association for frontend API"
+  description = "Tag value to be used for FMS WAF association for API"
   type        = string
 }
