@@ -87,13 +87,15 @@ Resources:
       StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
       Tags:
-        FMSRegionalPolicy: "false"
-        CustomPolicy:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-            frontendApiFMSTagValue,
-          ]
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendApiFMSTagValue,
+            ]
 
   AuthExternalApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
