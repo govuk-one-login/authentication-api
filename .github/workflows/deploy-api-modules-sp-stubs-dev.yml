@@ -34,7 +34,7 @@ jobs:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           role-to-assume: ${{ secrets.GH_ACTIONS_ROLE_ARN_STUBS_API }}
           aws-region: ${{ env.AWS_REGION }}
@@ -47,7 +47,7 @@ jobs:
           cache: gradle
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -78,7 +78,7 @@ jobs:
           sam build --parallel -t stubs-template.yaml
 
       - name: Deploy SAM app
-        uses: govuk-one-login/devplatform-upload-action@720ddb75fba8951db5a648ebb416eb233f1b6bc9 # v3.10.1
+        uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
         with:
           artifact-bucket-name: ${{ secrets.ARTIFACT_BUCKET_STUBS_API }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
