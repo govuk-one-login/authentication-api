@@ -438,13 +438,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     : ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
             assertAuditEventExpectations(
                     txmaAuditQueue,
-                    List.of(
-                            isReauth
-                                    ? reauthFailedEventExpectation
-                                    : new AuditEventExpectation(lockoutEventExpectation)
-                                            .withAttribute(
-                                                    NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
-                                                    "0")));
+                    List.of(isReauth ? reauthFailedEventExpectation : lockoutEventExpectation));
         }
 
         @Test

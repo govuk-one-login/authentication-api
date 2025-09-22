@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -53,7 +52,6 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -80,8 +78,6 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    public static final String PASSWORD_BLOCKED_KEY_PREFIX =
-            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     public static final String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
             "number_of_attempts_user_allowed_to_login";
@@ -300,13 +296,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!credentialsAreValid(request, userProfile)) {
             return handleInvalidCredentials(
-                    request,
-                    incorrectPasswordCount,
                     auditContext,
                     userProfile,
                     isReauthJourney,
-                    calculatedPairwiseId,
-                    authSession);
+                    journeyType,
+                    authSession,
+                    userPermissionContext);
         }
 
         return handleValidCredentials(
@@ -324,12 +319,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         return ClientSubjectHelper.getSubject(
                         userProfile, userContext.getAuthSession(), authenticationService)
                 .getValue();
-    }
-
-    private boolean isReauthJourneyWithFlagsEnabled(boolean isReauthJourney) {
-        return isReauthJourney
-                && configurationService.supportReauthSignoutEnabled()
-                && configurationService.isAuthenticationAttemptsServiceEnabled();
     }
 
     private APIGatewayProxyResponseEvent handleValidCredentials(
@@ -489,32 +478,42 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private APIGatewayProxyResponseEvent handleInvalidCredentials(
-            LoginRequest request,
-            int incorrectPasswordCount,
             AuditContext auditContext,
             UserProfile userProfile,
             boolean isReauthJourney,
-            String calculatedPairwiseId,
-            AuthSessionItem authSession) {
-        var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
+            JourneyType journeyType,
+            AuthSessionItem authSession,
+            UserPermissionContext userPermissionContext) {
+        userActionsManager.incorrectPasswordReceived(journeyType, userPermissionContext);
 
-        incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
+        var decisionResult =
+                permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
+        if (!decisionResult.isSuccess()) {
+            DecisionError failure = decisionResult.getFailure();
+            LOG.error("Failure to get canReceivePassword decision due to {}", failure);
+            var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
+            return generateApiGatewayProxyErrorResponse(
+                    httpResponse.statusCode(), httpResponse.errorResponse());
+        }
+
+        var decision = decisionResult.getSuccess();
+        var attemptCount = decision.attemptCount();
 
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
-                pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
-                pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
+                pair(INTERNAL_SUBJECT_ID, userPermissionContext.internalSubjectId()),
+                pair(INCORRECT_PASSWORD_COUNT, attemptCount),
                 pair(
                         AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
                         configurationService.getMaxPasswordRetries()));
 
-        if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-            if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
+        if (decision instanceof Decision.TemporarilyLockedOut) {
+            if (isReauthJourney) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
-                        ReauthMetadataBuilder.builder(calculatedPairwiseId)
+                        ReauthMetadataBuilder.builder(userPermissionContext.rpPairwiseId())
                                 .withAllIncorrectAttemptCounts(
                                         getReauthAttemptCounts(
                                                 journeyType,
@@ -529,46 +528,29 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 configurationService.getEnvironment(),
                                 FAILURE_REASON.getValue(),
                                 ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
+            } else {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        auditContext,
+                        pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
+                        pair(
+                                AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
+                                attemptCount),
+                        pair(
+                                NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
+                                configurationService.getMaxPasswordRetries()));
             }
 
-            if (isJourneyWhereBlockingApplies(isReauthJourney)) {
-                blockUser(
-                        userProfile.getSubjectID(),
-                        request.getEmail(),
-                        updatedIncorrectPasswordCount,
-                        auditContext);
-            }
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
         }
 
-        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
-    }
-
-    private boolean isJourneyWhereBlockingApplies(boolean isReauthJourney) {
-        return !(isReauthJourney && configurationService.supportReauthSignoutEnabled());
-    }
-
-    private void incrementCountOfFailedAttemptsToProvidePassword(
-            UserProfile userProfile, boolean isReauthJourney) {
-        if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                authenticationAttemptsService.createOrIncrementCount(
-                        userProfile.getSubjectID(),
-                        NowHelper.nowPlus(
-                                        configurationService.getReauthEnterPasswordCountTTL(),
-                                        ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_PASSWORD);
-            } else {
-                codeStorageService.increaseIncorrectPasswordCountReauthJourney(
-                        userProfile.getEmail());
-            }
-        } else {
-            codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
+        if (!(decision instanceof Decision.Permitted)) {
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
+
+        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
     }
 
     // TODO AUT-4755 remove authenticationAttemptsService data access from handler
@@ -596,30 +578,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userProfile.getTermsAndConditions(),
                 configurationService.getTermsAndConditionsVersion(),
                 authSessionItem.getIsSmokeTest());
-    }
-
-    private void blockUser(
-            String subjectID,
-            String email,
-            int updatedIncorrectPasswordCount,
-            AuditContext auditContext) {
-        LOG.info("User has now exceeded max password retries, setting block");
-
-        codeStorageService.saveBlockedForEmail(
-                email, PASSWORD_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
-
-        codeStorageService.deleteIncorrectPasswordCount(email);
-
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                auditContext,
-                pair(INTERNAL_SUBJECT_ID, subjectID),
-                pair(
-                        AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
-                        updatedIncorrectPasswordCount),
-                pair(
-                        NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
-                        configurationService.getMaxPasswordRetries()));
     }
 
     private boolean credentialsAreValid(LoginRequest request, UserProfile userProfile) {

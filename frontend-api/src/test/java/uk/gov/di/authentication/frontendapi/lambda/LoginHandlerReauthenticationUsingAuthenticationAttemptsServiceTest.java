@@ -52,7 +52,6 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -67,7 +66,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -221,7 +219,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
             when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)));
+                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            MAX_ALLOWED_RETRIES,
+                                            Instant.now().plusSeconds(900),
+                                            false)));
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(String.class), any(String.class), eq(JourneyType.REAUTHENTICATION)))
                     .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1));
@@ -495,25 +501,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
-                .createOrIncrementCount(
-                        eq(userProfile.getSubjectID()),
-                        longThat(
-                                ttl -> {
-                                    long expectedMin =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    - 1;
-                                    long expectedMax =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    + 1;
-                                    return ttl >= expectedMin && ttl <= expectedMax;
-                                }),
-                        eq(REAUTHENTICATION),
-                        eq(ENTER_PASSWORD));
+        verify(userActionsManager)
+                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
     }
 
     @Test
@@ -535,25 +524,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         handler.handleRequest(event, context);
 
-        verify(authenticationAttemptsService)
-                .createOrIncrementCount(
-                        eq(userProfile.getSubjectID()),
-                        longThat(
-                                ttl -> {
-                                    long expectedMin =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    - 1;
-                                    long expectedMax =
-                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
-                                                            .toInstant()
-                                                            .getEpochSecond()
-                                                    + 1;
-                                    return ttl >= expectedMin && ttl <= expectedMax;
-                                }),
-                        eq(REAUTHENTICATION),
-                        eq(ENTER_PASSWORD));
+        verify(userActionsManager)
+                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
     }
 
     private void usingValidAuthSession() {
