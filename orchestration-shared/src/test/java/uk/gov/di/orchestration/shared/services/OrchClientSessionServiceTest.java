@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -24,13 +23,8 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
     private static final String CLIENT_NAME = "test-client-name";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key CLIENT_SESSION_ID_PARTITION_KEY =
-            Key.builder().partitionValue(CLIENT_SESSION_ID).build();
     private static final GetItemEnhancedRequest CLIENT_SESSION_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(CLIENT_SESSION_ID_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
+            getRequestFor(CLIENT_SESSION_ID);
     private OrchClientSessionService clientSessionService;
 
     @BeforeEach
@@ -124,12 +118,6 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                 new OrchClientSessionItem(CLIENT_SESSION_ID)
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(VALID_TTL);
-        when(table.getItem(
-                        GetItemEnhancedRequest.builder()
-                                .consistentRead(false)
-                                .key(CLIENT_SESSION_ID_PARTITION_KEY)
-                                .build()))
-                .thenReturn(existingSession);
         when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
         return existingSession;
     }

@@ -4,7 +4,6 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.StateItem;
@@ -26,10 +25,8 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
     private static final State STATE = new State();
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key STATE_PARTITION_KEY =
-            Key.builder().partitionValue(PREFIXED_SESSION_ID).build();
     private static final GetItemEnhancedRequest STATE_GET_REQUEST =
-            GetItemEnhancedRequest.builder().key(STATE_PARTITION_KEY).consistentRead(true).build();
+            getRequestFor(PREFIXED_SESSION_ID);
     private StateStorageService stateStorageService;
 
     @BeforeEach
@@ -100,12 +97,6 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
 
     private StateItem withValidStateItemInDynamo() {
         var stateItem = createValidStateItem();
-        when(table.getItem(
-                        GetItemEnhancedRequest.builder()
-                                .consistentRead(false)
-                                .key(STATE_PARTITION_KEY)
-                                .build()))
-                .thenReturn(stateItem);
         when(table.getItem(STATE_GET_REQUEST)).thenReturn(stateItem);
         return stateItem;
     }

@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
@@ -37,13 +36,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
     private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
     private static final long VALID_TTL = CREATION_INSTANT.plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = CREATION_INSTANT.minusSeconds(100).getEpochSecond();
-    private static final Key AUTH_CODE_PARTITION_KEY =
-            Key.builder().partitionValue(AUTH_CODE).build();
-    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(AUTH_CODE_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
+    private static final GetItemEnhancedRequest AUTH_CODE_GET_REQUEST = getRequestFor(AUTH_CODE);
     private static final long AUTH_CODE_EXPIRY = 123L;
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
 

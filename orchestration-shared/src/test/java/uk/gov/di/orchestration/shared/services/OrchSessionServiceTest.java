@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -31,13 +30,7 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
     private static final String SESSION_ID = "test-session-id";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
     private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
-    private static final Key SESSION_ID_PARTITION_KEY =
-            Key.builder().partitionValue(SESSION_ID).build();
-    private static final GetItemEnhancedRequest SESSION_GET_REQUEST =
-            GetItemEnhancedRequest.builder()
-                    .key(SESSION_ID_PARTITION_KEY)
-                    .consistentRead(true)
-                    .build();
+    private static final GetItemEnhancedRequest SESSION_GET_REQUEST = getRequestFor(SESSION_ID);
     private OrchSessionService orchSessionService;
 
     @BeforeEach
