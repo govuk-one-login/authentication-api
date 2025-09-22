@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -164,5 +165,47 @@ class ValidScopesTest {
         assertFalse(
                 ValidScopes.getScopesForListOfClaims(claims)
                         .contains(OIDCScopeValue.EMAIL.getValue()));
+    }
+
+    @Nested
+    class AreScopesValid {
+        @Test
+        void shouldReturnTrueWhenAllScopesAreValid() {
+            assertThat(
+                    ValidScopes.areScopesValid(List.of("openid", "email", "am", "govuk-account")),
+                    equalTo(true));
+        }
+
+        @Test
+        void shouldReturnFalseWhenScopesAreInvalid() {
+            assertThat(
+                    ValidScopes.areScopesValid(List.of("openid", "email", "cornflakes")),
+                    equalTo(false));
+        }
+    }
+
+    @Nested
+    class AreScopesValidAndPublic {
+        @Test
+        void shouldReturnTrueWhenScopesAreValidAndPublic() {
+            assertThat(
+                    ValidScopes.areScopesValidAndPublic(
+                            List.of("openid", "email", "phone", "offline_access")),
+                    equalTo(true));
+        }
+
+        @Test
+        void shouldReturnFalseWhenScopesAreInvalid() {
+            assertThat(
+                    ValidScopes.areScopesValidAndPublic(List.of("openid", "email", "cornflakes")),
+                    equalTo(false));
+        }
+
+        @Test
+        void shouldReturnFalseWhenScopesArePrivate() {
+            assertThat(
+                    ValidScopes.areScopesValidAndPublic(List.of("openid", "email", "am")),
+                    equalTo(false));
+        }
     }
 }
