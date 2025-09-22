@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorAntiCorruption;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -20,14 +21,12 @@ import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -72,8 +71,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -312,7 +309,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userProfile,
                 auditContext,
                 authSession,
-                journeyType);
+                journeyType,
+                userPermissionContext);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -329,7 +327,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile,
             AuditContext auditContext,
             AuthSessionItem authSessionItem,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            UserPermissionContext userPermissionContext) {
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -407,10 +406,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (userMfaDetail.isMfaRequired() && defaultMfaMethod.isPresent()) {
             Optional<ErrorResponse> codeBlocks =
-                    checkMfaCodeBlocks(
-                            userProfile.getEmail(),
-                            MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType()),
-                            journeyType);
+                    checkMfaCodeBlocks(journeyType, userPermissionContext);
 
             if (codeBlocks.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
@@ -435,45 +431,40 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Optional<ErrorResponse> checkMfaCodeBlocks(
-            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        CodeRequestType.SupportedCodeType.MFA, journeyType);
-        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        var canSendSmsOtpResult =
+                permissionDecisionManager.canSendSmsOtpNotification(
+                        journeyType, userPermissionContext);
+        if (canSendSmsOtpResult.isFailure()) {
+            DecisionError failure = canSendSmsOtpResult.getFailure();
+            LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
+            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
+        }
 
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
-
-        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
+        Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
+        if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
+            LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-        }
-        if (codeStorageService.isBlockedForEmail(
-                email, CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info(
-                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+        } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
+            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
-        if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    newCodeBlockPrefix);
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+        var canVerifyMfaOtpResult =
+                permissionDecisionManager.canVerifyMfaOtp(journeyType, userPermissionContext);
+        if (canVerifyMfaOtpResult.isFailure()) {
+            DecisionError failure = canVerifyMfaOtpResult.getFailure();
+            LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
+            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
         }
-        if (deprecatedCodeRequestType != null
-                && codeStorageService.isBlockedForEmail(
-                        email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-            LOG.info(
-                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    newCodeBlockPrefix);
+
+        Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
+        if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
+            LOG.info("User is blocked from entering any OTP codes");
             return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+        } else if (!(canVerifyMfaOtpDecision instanceof Decision.Permitted)) {
+            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
+
         return Optional.empty();
     }
 

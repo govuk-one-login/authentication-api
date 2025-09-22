@@ -214,6 +214,10 @@ class LoginHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
         handler =
                 new LoginHandler(
                         configurationService,
@@ -1206,21 +1210,18 @@ class LoginHandlerTest {
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
-        verify(codeStorageService)
-                .isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
-        verify(codeStorageService)
-                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
-        verify(codeStorageService)
-                .isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
-        verify(codeStorageService)
-                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+        verify(permissionDecisionManager).canSendSmsOtpNotification(any(), any());
+        verify(permissionDecisionManager).canVerifyMfaOtp(any(), any());
     }
 
     @ParameterizedTest
@@ -1237,16 +1238,8 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(codeStorageService, never())
-                .isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
-        verify(codeStorageService, never())
-                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.MFA_SIGN_IN);
-        verify(codeStorageService, never())
-                .isBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
-        verify(codeStorageService, never())
-                .isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + mfaMethodType + "_SIGN_IN");
+        verify(permissionDecisionManager, never()).canSendSmsOtpNotification(any(), any());
+        verify(permissionDecisionManager, never()).canVerifyMfaOtp(any(), any());
     }
 
     private static Stream<Arguments> validMfaMethodsWithExpectedBlock() {
@@ -1286,7 +1279,22 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        when(codeStorageService.isBlockedForEmail(EMAIL, blockKeyPrefix)).thenReturn(true);
+
+        if (expectedError == ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS) {
+            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(0)));
+        } else {
+            when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(0)));
+            when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
+        }
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

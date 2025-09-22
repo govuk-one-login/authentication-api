@@ -184,31 +184,89 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canSendSmsOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        return Result.success(new Decision.Permitted(0));
-    }
+        if (userPermissionContext.emailAddress() == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
 
-    @Override
-    public Result<DecisionError, Decision> canVerifyMfaOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
         try {
-            var ttl =
-                    codeStorageService.getMfaCodeBlockTimeToLive(
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, journeyType);
+            long ttl =
+                    codeStorageService.getTTL(
                             userPermissionContext.emailAddress(),
-                            MFAMethodType.AUTH_APP,
-                            journeyType);
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType);
+
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            var deprecatedCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            MFAMethodType.SMS, journeyType);
+            if (deprecatedCodeRequestType != null) {
+                long deprecatedTtl =
+                        codeStorageService.getTTL(
+                                userPermissionContext.emailAddress(),
+                                CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                ttl = Math.max(ttl, deprecatedTtl);
+            }
 
             if (ttl > 0) {
+                LOG.info("User is blocked from requesting any OTP codes");
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
-                                0,
+                                ForbiddenReason.EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT,
+                                configurationService.getCodeMaxRetries(),
                                 Instant.ofEpochSecond(ttl),
                                 false));
             }
 
             return Result.success(new Decision.Permitted(0));
         } catch (RuntimeException e) {
-            LOG.error("Could not retrieve from lock details.", e);
+            LOG.error("Could not retrieve MFA code request block details.", e);
+            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
+        }
+    }
+
+    @Override
+    public Result<DecisionError, Decision> canVerifyMfaOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        if (userPermissionContext.emailAddress() == null) {
+            return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+        }
+
+        try {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, journeyType);
+            long ttl =
+                    codeStorageService.getTTL(
+                            userPermissionContext.emailAddress(),
+                            CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+            var deprecatedCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            MFAMethodType.SMS, journeyType);
+            if (deprecatedCodeRequestType != null) {
+                long deprecatedTtl =
+                        codeStorageService.getTTL(
+                                userPermissionContext.emailAddress(),
+                                CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                ttl = Math.max(ttl, deprecatedTtl);
+            }
+
+            if (ttl > 0) {
+                LOG.info("User is blocked from entering any OTP codes");
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                configurationService.getCodeMaxRetries(),
+                                Instant.ofEpochSecond(ttl),
+                                false));
+            }
+
+            return Result.success(new Decision.Permitted(0));
+        } catch (RuntimeException e) {
+            LOG.error("Could not retrieve MFA code block details.", e);
             return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
         }
     }
