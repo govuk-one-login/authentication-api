@@ -6,10 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -23,6 +25,8 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -87,7 +91,9 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
 
             if (status.equals(EmailCheckResultStatus.PENDING)) {
-                submitAuditEvent(input, userContext, request);
+                submitEmailFraudCheckBypassedAuditEvent(input, userContext, request);
+            } else {
+                submitEmailFraudCheckDecisionUsedAuditEvent(input, userContext, request, emailCheckResult.get());
             }
 
             return generateApiGatewayProxyResponse(200, checkEmailFraudBlockResponse);
@@ -102,7 +108,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
         return new CheckEmailFraudBlockResponse(email, status.getValue());
     }
 
-    private void submitAuditEvent(
+    private void submitEmailFraudCheckBypassedAuditEvent(
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             CheckEmailFraudBlockRequest request) {
@@ -120,6 +126,36 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                         new AuthEmailFraudCheckBypassed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
                                 NowHelper.toUnixTimestamp(NowHelper.now())));
+
+        auditService.submitAuditEvent(newAuditEvent);
+    }
+
+    private void submitEmailFraudCheckDecisionUsedAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            CheckEmailFraudBlockRequest request,
+            EmailCheckResultStore emailCheckResult
+    ) {
+        var decision_reused = !Objects.equals(
+                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                emailCheckResult.getGovukSigninJourneyId()
+        );
+        var newAuditEvent =
+                AuthEmailFraudCheckDecisionUsed.create(
+                        userContext.getAuthSession().getClientId(),
+                        new AuthEmailFraudCheckDecisionUsed.User(
+                                StructuredAuditService.UNKNOWN,
+                                request.getEmail(),
+                                IpAddressHelper.extractIpAddress(input),
+                                PersistentIdHelper.extractPersistentIdFromHeaders(
+                                        input.getHeaders()),
+                                ClientSessionIdHelper.extractSessionIdFromHeaders(
+                                        input.getHeaders())
+                        ),
+                        new AuthEmailFraudCheckDecisionUsed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null)
+                );
 
         auditService.submitAuditEvent(newAuditEvent);
     }
