@@ -34,4 +34,4 @@ cloudwatch_log_retention = 30
 lambda_min_concurrency = 25
 
 # FMS
-frontend_api_fms_tag_value = "authfrontendprod"
+api_fms_tag_value = "authfrontendprod"

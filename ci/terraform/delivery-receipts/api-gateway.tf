@@ -77,7 +77,7 @@ resource "aws_api_gateway_stage" "endpoint_delivery_receipts_stage" {
 
   tags = {
     "FMSRegionalPolicy" = "false"
-    "CustomPolicy"      = var.frontend_api_fms_tag_value
+    "CustomPolicy"      = var.api_fms_tag_value
   }
 
 }

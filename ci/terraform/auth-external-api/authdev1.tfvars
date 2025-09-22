@@ -10,3 +10,6 @@ orch_stub_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0Ze
 
 # Performance Tuning
 snapstart_enabled = true
+
+# FMS
+api_fms_tag_value = "authfrontendsp"

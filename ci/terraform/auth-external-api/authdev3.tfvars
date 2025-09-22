@@ -9,3 +9,6 @@ orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyu7XCXkDy
 
 # VPC
 orch_api_vpc_endpoint_id = "vpce-0028f62dad635589a"
+
+# FMS
+api_fms_tag_value = "authfrontendsp"
