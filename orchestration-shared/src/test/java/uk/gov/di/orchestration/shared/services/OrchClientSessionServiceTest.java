@@ -2,13 +2,12 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchClientSessionException;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Instant;
 
@@ -17,11 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchClientSessionServiceTest {
+class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessionItem> {
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
@@ -33,9 +31,6 @@ class OrchClientSessionServiceTest {
                     .key(CLIENT_SESSION_ID_PARTITION_KEY)
                     .consistentRead(true)
                     .build();
-    private final DynamoDbTable<OrchClientSessionItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private OrchClientSessionService clientSessionService;
 
     @BeforeEach

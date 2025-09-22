@@ -3,15 +3,14 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.OrchAuthCodeItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -25,11 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchAuthCodeServiceTest {
+class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String EMAIL = "test-email";
@@ -49,9 +47,6 @@ class OrchAuthCodeServiceTest {
     private static final long AUTH_CODE_EXPIRY = 123L;
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
 
-    private final DynamoDbTable<OrchAuthCodeItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Json objectMapper = SerializationService.getInstance();
     private OrchAuthCodeService orchAuthCodeService;
 

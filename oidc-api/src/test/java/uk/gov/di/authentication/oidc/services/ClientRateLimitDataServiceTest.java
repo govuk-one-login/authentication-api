@@ -2,13 +2,12 @@ package uk.gov.di.authentication.oidc.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.oidc.entity.SlidingWindowData;
 import uk.gov.di.authentication.oidc.exceptions.ClientRateLimitDataException;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -18,11 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.TEST_CLIENT_ID;
 
-class ClientRateLimitDataServiceTest {
+class ClientRateLimitDataServiceTest extends BaseDynamoServiceTest<SlidingWindowData> {
     private static final LocalDateTime TEST_PERIOD_START =
             LocalDateTime.parse("2025-09-14T13:00:00");
     private static final Key TEST_PARTITION_AND_SORT_KEY =
@@ -36,8 +34,6 @@ class ClientRateLimitDataServiceTest {
                     .consistentRead(true)
                     .build();
     private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
-    private final DynamoDbTable<SlidingWindowData> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private ClientRateLimitDataService clientRateLimitDataService;
 
     @BeforeEach

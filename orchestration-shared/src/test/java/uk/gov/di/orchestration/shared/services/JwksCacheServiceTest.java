@@ -9,10 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.utils.JwksUtils;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -23,11 +22,10 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
-class JwksCacheServiceTest {
+class JwksCacheServiceTest extends BaseDynamoServiceTest<JwksCacheItem> {
     private static final String JWKS_URL = "http://localhost/.well-known/jwks.json";
     private static final String KEY_ID_1 = "test-enc-key-1";
     private static final String KEY_ID_2 = "test-enc-key-2";
@@ -38,9 +36,6 @@ class JwksCacheServiceTest {
             Instant.now().plusSeconds(expiryInSeconds).getEpochSecond();
     private static final MockedStatic<JwksUtils> jwksUtilsMockedStatic =
             Mockito.mockStatic(JwksUtils.class);
-    private final DynamoDbTable<JwksCacheItem> table = mock(DynamoDbTable.class);
-    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private JwksCacheService jwksCacheServiceSpy;
 
     @BeforeEach
