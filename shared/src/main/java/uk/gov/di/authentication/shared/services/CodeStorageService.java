@@ -87,8 +87,8 @@ public class CodeStorageService {
                 email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue());
     }
 
-    public void increaseIncorrectPasswordCount(String email) {
-        increaseCount(
+    public int increaseIncorrectPasswordCount(String email) {
+        return increaseCount(
                 email,
                 MULTIPLE_INCORRECT_PASSWORDS_PREFIX,
                 configurationService.getIncorrectPasswordLockoutCountTTL());
@@ -228,7 +228,7 @@ public class CodeStorageService {
                 String.format("No redis prefix key configured for %s", notificationType));
     }
 
-    private void increaseCount(String email, String prefix, long ttl) {
+    private int increaseCount(String email, String prefix, long ttl) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
@@ -236,6 +236,7 @@ public class CodeStorageService {
         try {
             redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
             LOG.info("count increased from: {} to: {}", count, newCount);
+            return newCount;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

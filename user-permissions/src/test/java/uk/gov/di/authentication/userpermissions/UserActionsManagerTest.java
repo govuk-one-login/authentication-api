@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -152,6 +153,66 @@ class UserActionsManagerTest {
 
             verify(codeStorageService, never())
                     .saveBlockedForEmail(anyString(), anyString(), anyLong());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class IncorrectPasswordReceived {
+
+        @Test
+        void shouldCreateOrIncrementCountForReauthenticationJourney() {
+            var contextWithSubjectId =
+                    new UserPermissionContext("subject-123", "pairwise-456", EMAIL, authSession);
+            when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120L);
+
+            var result =
+                    userActionsManager.incorrectPasswordReceived(
+                            JourneyType.REAUTHENTICATION, contextWithSubjectId);
+
+            verify(authenticationAttemptsService)
+                    .createOrIncrementCount(
+                            eq("subject-123"),
+                            anyLong(),
+                            eq(JourneyType.REAUTHENTICATION),
+                            eq(CountType.ENTER_PASSWORD));
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldIncreaseIncorrectPasswordCountForSignInJourney() {
+            when(codeStorageService.increaseIncorrectPasswordCount(EMAIL)).thenReturn(3);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+
+            var result =
+                    userActionsManager.incorrectPasswordReceived(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            verify(codeStorageService).increaseIncorrectPasswordCount(EMAIL);
+            verify(codeStorageService, never())
+                    .saveBlockedForEmail(anyString(), anyString(), anyLong());
+            verify(codeStorageService, never()).deleteIncorrectPasswordCount(anyString());
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldBlockUserWhenMaxPasswordRetriesReachedForSignInJourney() {
+            when(codeStorageService.increaseIncorrectPasswordCount(EMAIL)).thenReturn(6);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+            when(configurationService.getLockoutDuration()).thenReturn(900L);
+
+            var result =
+                    userActionsManager.incorrectPasswordReceived(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            verify(codeStorageService).increaseIncorrectPasswordCount(EMAIL);
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET,
+                            900L);
+            verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
             assertTrue(result.isSuccess());
         }
     }

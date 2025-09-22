@@ -72,10 +72,10 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -206,6 +206,7 @@ class LoginHandlerTest {
     void setUp() {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
@@ -776,7 +777,15 @@ class LoginHandlerTest {
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)));
+                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        maxRetriesAllowed,
+                                        Instant.now().plusSeconds(900),
+                                        true)));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
@@ -788,8 +797,6 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
-        verify(codeStorageService).saveBlockedForEmail(any(), any(), anyLong());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -811,7 +818,16 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)));
+                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        maxRetriesAllowed,
+                                        Instant.now().plusSeconds(900),
+                                        false)));
+
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidAuthSession();
@@ -824,9 +840,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
-        verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
-        verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
@@ -838,7 +851,6 @@ class LoginHandlerTest {
                                 configurationService.getMaxPasswordRetries()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -940,6 +952,9 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)))
+                .thenReturn(Result.success(new Decision.Permitted(1)));
 
         usingValidAuthSession();
 
@@ -970,6 +985,8 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
 
         usingValidAuthSession();
 
@@ -978,12 +995,10 @@ class LoginHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         handler.handleRequest(event, context);
 
-        if (isReauthJourney && isReauthEnabled) {
-            verify(codeStorageService, atLeastOnce())
-                    .increaseIncorrectPasswordCountReauthJourney(EMAIL);
-        } else {
-            verify(codeStorageService, atLeastOnce()).increaseIncorrectPasswordCount(EMAIL);
-        }
+        JourneyType expectedJourneyType =
+                isReauthJourney ? JourneyType.REAUTHENTICATION : JourneyType.SIGN_IN;
+        verify(userActionsManager, atLeastOnce())
+                .incorrectPasswordReceived(eq(expectedJourneyType), any());
     }
 
     @ParameterizedTest
