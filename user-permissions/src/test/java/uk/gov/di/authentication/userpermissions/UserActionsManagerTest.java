@@ -67,6 +67,18 @@ class UserActionsManagerTest {
     }
 
     @Test
+    void passwordResetShouldHandleDifferentJourneyTypes() {
+        var result = userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
+
+        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+        verify(codeStorageService)
+                .deleteBlockForEmail(
+                        EMAIL,
+                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+        assertTrue(result.isSuccess());
+    }
+
+    @Test
     void sentEmailOtpNotificationShouldIncrementPasswordResetCountForPasswordResetJourney() {
         var result =
                 userActionsManager.sentEmailOtpNotification(
@@ -98,17 +110,6 @@ class UserActionsManagerTest {
     }
 
     @Test
-    void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
-        var result =
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.SIGN_IN, userPermissionContext);
-
-        verify(codeStorageService, never())
-                .saveBlockedForEmail(anyString(), anyString(), anyLong());
-        assertTrue(result.isSuccess());
-    }
-
-    @Test
     void sentEmailOtpNotificationShouldHandleExactlyMaxRetries() {
         var sessionWithExactMaxCount = authSession;
         for (int i = 0; i < 6; i++) {
@@ -131,14 +132,13 @@ class UserActionsManagerTest {
     }
 
     @Test
-    void passwordResetShouldHandleDifferentJourneyTypes() {
-        var result = userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
+    void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
+        var result =
+                userActionsManager.sentEmailOtpNotification(
+                        JourneyType.SIGN_IN, userPermissionContext);
 
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
-        verify(codeStorageService)
-                .deleteBlockForEmail(
-                        EMAIL,
-                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(anyString(), anyString(), anyLong());
         assertTrue(result.isSuccess());
     }
 
