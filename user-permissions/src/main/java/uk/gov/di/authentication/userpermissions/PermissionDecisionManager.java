@@ -188,21 +188,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public Result<DecisionError, Decision> canVerifySmsOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        return Result.success(new Decision.Permitted(0));
-    }
-
-    @Override
     public Result<DecisionError, Decision> canVerifyMfaOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        return canVerifyAuthAppOtp(journeyType, userPermissionContext);
-    }
-
-    @Override
-    public Result<DecisionError, Decision> canVerifyAuthAppOtp(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-
         try {
             var ttl =
                     codeStorageService.getMfaCodeBlockTimeToLive(

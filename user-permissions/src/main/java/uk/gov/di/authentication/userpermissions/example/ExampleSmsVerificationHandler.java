@@ -28,7 +28,7 @@ public class ExampleSmsVerificationHandler {
                         .withAuthSessionItem(new AuthSessionItem())
                         .build();
 
-        var checkResult = permissionDecisions.canVerifySmsOtp(journeyType, userPermissionContext);
+        var checkResult = permissionDecisions.canVerifyMfaOtp(journeyType, userPermissionContext);
         if (checkResult.isFailure()) {
             return (format("500: %s", checkResult.getFailure().name()));
         }

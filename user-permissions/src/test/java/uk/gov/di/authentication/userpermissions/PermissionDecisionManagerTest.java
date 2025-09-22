@@ -424,7 +424,7 @@ class PermissionDecisionManagerTest {
     }
 
     @Nested
-    class CanVerifyAuthAppOtp {
+    class CanVerifyMfaOtp {
 
         @Test
         void shouldReturnPermittedWhenNotBlocked() {
@@ -434,7 +434,7 @@ class PermissionDecisionManagerTest {
                     .thenReturn(0L);
 
             var result =
-                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -450,7 +450,7 @@ class PermissionDecisionManagerTest {
                     .thenReturn(blockTtl);
 
             var result =
-                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var lockedOut =
@@ -469,7 +469,7 @@ class PermissionDecisionManagerTest {
                     .getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
             var result =
-                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
@@ -510,7 +510,7 @@ class PermissionDecisionManagerTest {
             var userContext = createUserContext(0);
 
             var result =
-                    permissionDecisionManager.canVerifySmsOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -530,7 +530,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void canVerifyOtpShouldDelegateToCanVerifyAuthAppOtp() {
+        void canVerifyOtpShouldDelegateToCanVerifyMfaOtp() {
             var userContext = createUserContext(0);
             when(codeStorageService.getMfaCodeBlockTimeToLive(
                             EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
