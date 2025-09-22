@@ -13,4 +13,4 @@ orch_api_vpc_endpoint_id = "vpce-0028f62dad635589a"
 snapstart_enabled = true
 
 # FMS
-api_fms_tag_value = "authfrontendsp"
+api_fms_tag_value = "authenticationfrontend"

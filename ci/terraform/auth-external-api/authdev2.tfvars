@@ -12,4 +12,4 @@ orch_stub_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8e
 snapstart_enabled = true
 
 # FMS
-api_fms_tag_value = "authfrontendsp"
+api_fms_tag_value = "authenticationfrontend"
