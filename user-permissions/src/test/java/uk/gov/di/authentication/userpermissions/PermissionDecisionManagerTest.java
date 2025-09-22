@@ -10,7 +10,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -25,6 +24,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -429,9 +430,7 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnPermittedWhenNotBlocked() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                    .thenReturn(0L);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
@@ -445,9 +444,7 @@ class PermissionDecisionManagerTest {
         void shouldReturnLockedOutWhenBlocked() {
             var userContext = createUserContext(0);
             long blockTtl = 1234567890L;
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                    .thenReturn(blockTtl);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(blockTtl);
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
@@ -458,7 +455,7 @@ class PermissionDecisionManagerTest {
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
-            assertEquals(0, lockedOut.attemptCount());
+            assertEquals(6, lockedOut.attemptCount());
         }
 
         @Test
@@ -466,7 +463,7 @@ class PermissionDecisionManagerTest {
             var userContext = createUserContext(0);
             doThrow(new RuntimeException("Storage error"))
                     .when(codeStorageService)
-                    .getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
+                    .getTTL(eq(EMAIL), anyString());
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
@@ -532,9 +529,7 @@ class PermissionDecisionManagerTest {
         @Test
         void canVerifyOtpShouldDelegateToCanVerifyMfaOtp() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                    .thenReturn(0L);
+            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);

@@ -2,8 +2,6 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
@@ -132,24 +130,6 @@ public class CodeStorageService {
         deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
 
-    public long getMfaCodeBlockTimeToLive(
-            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
-        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        long finalTtl = getTTL(email, codeBlockedKeyPrefix);
-
-        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-        var deprecatedCodeRequestType =
-                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
-        if (deprecatedCodeRequestType != null) {
-            long possibleOverrideTtl =
-                    getTTL(email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
-            finalTtl = Math.max(finalTtl, possibleOverrideTtl);
-        }
-
-        return finalTtl;
-    }
-
     public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
@@ -211,6 +191,10 @@ public class CodeStorageService {
         }
     }
 
+    public long getTTL(String email, String prefix) {
+        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
+    }
+
     private String getPrefixForNotificationType(NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
@@ -259,9 +243,5 @@ public class CodeStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private long getTTL(String email, String prefix) {
-        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
     }
 }
