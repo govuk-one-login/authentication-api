@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.userpermissions;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -52,112 +53,139 @@ class UserActionsManagerTest {
         when(configurationService.getLockoutDuration()).thenReturn(900L);
     }
 
-    @Test
-    void passwordResetShouldDeleteIncorrectPasswordCountAndBlock() {
-        var result =
-                userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
+    @Nested
+    class PasswordResetOperations {
 
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
-        verify(codeStorageService)
-                .deleteBlockForEmail(
-                        EMAIL,
-                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
-                                + JourneyType.PASSWORD_RESET);
-        assertTrue(result.isSuccess());
-    }
+        @Test
+        void passwordResetShouldDeleteIncorrectPasswordCountAndBlock() {
+            var result =
+                    userActionsManager.passwordReset(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
 
-    @Test
-    void passwordResetShouldHandleDifferentJourneyTypes() {
-        var result = userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
-
-        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
-        verify(codeStorageService)
-                .deleteBlockForEmail(
-                        EMAIL,
-                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
-        assertTrue(result.isSuccess());
-    }
-
-    @Test
-    void sentEmailOtpNotificationShouldIncrementPasswordResetCountForPasswordResetJourney() {
-        var result =
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, userPermissionContext);
-
-        verify(authSessionService).updateSession(any(AuthSessionItem.class));
-        assertTrue(result.isSuccess());
-    }
-
-    @Test
-    void sentEmailOtpNotificationShouldBlockUserWhenMaxRetriesReached() {
-        var sessionWithMaxCount = authSession;
-        for (int i = 0; i < 5; i++) {
-            sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
+            verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+            verify(codeStorageService)
+                    .deleteBlockForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET);
+            assertTrue(result.isSuccess());
         }
-        var contextWithMaxCount = new UserPermissionContext(null, null, EMAIL, sessionWithMaxCount);
 
-        var result =
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, contextWithMaxCount);
+        @Test
+        void passwordResetShouldHandleDifferentJourneyTypes() {
+            var result =
+                    userActionsManager.passwordReset(JourneyType.SIGN_IN, userPermissionContext);
 
-        var expectedBlockedKey =
-                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getCodeRequestType(
-                                RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        verify(codeStorageService).saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-        verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
-        assertTrue(result.isSuccess());
-    }
-
-    @Test
-    void sentEmailOtpNotificationShouldHandleExactlyMaxRetries() {
-        var sessionWithExactMaxCount = authSession;
-        for (int i = 0; i < 6; i++) {
-            sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
+            verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+            verify(codeStorageService)
+                    .deleteBlockForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+            assertTrue(result.isSuccess());
         }
-        var contextWithExactMaxCount =
-                new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
-
-        var result =
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.PASSWORD_RESET, contextWithExactMaxCount);
-
-        var expectedBlockedKey =
-                CODE_REQUEST_BLOCKED_KEY_PREFIX
-                        + CodeRequestType.getCodeRequestType(
-                                RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        verify(codeStorageService).saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
-        verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
-        assertTrue(result.isSuccess());
     }
 
-    @Test
-    void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
-        var result =
-                userActionsManager.sentEmailOtpNotification(
-                        JourneyType.SIGN_IN, userPermissionContext);
+    @Nested
+    class EmailOtpNotificationOperations {
 
-        verify(codeStorageService, never())
-                .saveBlockedForEmail(anyString(), anyString(), anyLong());
-        assertTrue(result.isSuccess());
+        @Test
+        void sentEmailOtpNotificationShouldIncrementPasswordResetCountForPasswordResetJourney() {
+            var result =
+                    userActionsManager.sentEmailOtpNotification(
+                            JourneyType.PASSWORD_RESET, userPermissionContext);
+
+            verify(authSessionService).updateSession(any(AuthSessionItem.class));
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void sentEmailOtpNotificationShouldBlockUserWhenMaxRetriesReached() {
+            var sessionWithMaxCount = authSession;
+            for (int i = 0; i < 5; i++) {
+                sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
+            }
+            var contextWithMaxCount =
+                    new UserPermissionContext(null, null, EMAIL, sessionWithMaxCount);
+
+            var result =
+                    userActionsManager.sentEmailOtpNotification(
+                            JourneyType.PASSWORD_RESET, contextWithMaxCount);
+
+            var expectedBlockedKey =
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX
+                            + CodeRequestType.getCodeRequestType(
+                                    RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            verify(codeStorageService)
+                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
+            verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void sentEmailOtpNotificationShouldHandleExactlyMaxRetries() {
+            var sessionWithExactMaxCount = authSession;
+            for (int i = 0; i < 6; i++) {
+                sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
+            }
+            var contextWithExactMaxCount =
+                    new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
+
+            var result =
+                    userActionsManager.sentEmailOtpNotification(
+                            JourneyType.PASSWORD_RESET, contextWithExactMaxCount);
+
+            var expectedBlockedKey =
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX
+                            + CodeRequestType.getCodeRequestType(
+                                    RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            verify(codeStorageService)
+                    .saveBlockedForEmail(eq(EMAIL), eq(expectedBlockedKey), eq(900L));
+            verify(authSessionService, times(2)).updateSession(any(AuthSessionItem.class));
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void sentEmailOtpNotificationShouldNotBlockForNonPasswordResetJourney() {
+            var result =
+                    userActionsManager.sentEmailOtpNotification(
+                            JourneyType.SIGN_IN, userPermissionContext);
+
+            verify(codeStorageService, never())
+                    .saveBlockedForEmail(anyString(), anyString(), anyLong());
+            assertTrue(result.isSuccess());
+        }
     }
 
-    @Test
-    void allNoOpMethodsShouldReturnSuccessWithNull() {
-        var journeyType = JourneyType.SIGN_IN;
-        var context = userPermissionContext;
+    @Nested
+    class NoOpMethods {
 
-        assertTrue(
-                userActionsManager.incorrectEmailAddressReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.incorrectEmailOtpReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.correctEmailOtpReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.incorrectPasswordReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.incorrectSmsOtpReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.correctSmsOtpReceived(journeyType, context).isSuccess());
-        assertTrue(
-                userActionsManager.incorrectAuthAppOtpReceived(journeyType, context).isSuccess());
-        assertTrue(userActionsManager.correctAuthAppOtpReceived(journeyType, context).isSuccess());
+        @Test
+        void allNoOpMethodsShouldReturnSuccessWithNull() {
+            var journeyType = JourneyType.SIGN_IN;
+            var context = userPermissionContext;
+
+            assertTrue(
+                    userActionsManager
+                            .incorrectEmailAddressReceived(journeyType, context)
+                            .isSuccess());
+            assertTrue(
+                    userActionsManager.incorrectEmailOtpReceived(journeyType, context).isSuccess());
+            assertTrue(
+                    userActionsManager.correctEmailOtpReceived(journeyType, context).isSuccess());
+            assertTrue(
+                    userActionsManager.incorrectPasswordReceived(journeyType, context).isSuccess());
+            assertTrue(
+                    userActionsManager.correctPasswordReceived(journeyType, context).isSuccess());
+            assertTrue(userActionsManager.sentSmsOtpNotification(journeyType, context).isSuccess());
+            assertTrue(
+                    userActionsManager.incorrectSmsOtpReceived(journeyType, context).isSuccess());
+            assertTrue(userActionsManager.correctSmsOtpReceived(journeyType, context).isSuccess());
+            assertTrue(
+                    userActionsManager
+                            .incorrectAuthAppOtpReceived(journeyType, context)
+                            .isSuccess());
+            assertTrue(
+                    userActionsManager.correctAuthAppOtpReceived(journeyType, context).isSuccess());
+        }
     }
 }
