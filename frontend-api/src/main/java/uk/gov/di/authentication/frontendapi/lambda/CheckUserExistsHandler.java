@@ -233,7 +233,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         var lockoutInformation = new ArrayList<LockoutInformation>();
 
         var signInResult =
-                permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
+                permissionDecisionManager.canVerifyMfaOtp(
+                        JourneyType.SIGN_IN, userPermissionContext);
         if (signInResult.isFailure()) {
             return Result.failure(signInResult.getFailure());
         }
@@ -245,7 +246,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
 
         var passwordResetResult =
-                permissionDecisionManager.canVerifyOtp(
+                permissionDecisionManager.canVerifyMfaOtp(
                         JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
         if (passwordResetResult.isFailure()) {
             return Result.failure(passwordResetResult.getFailure());

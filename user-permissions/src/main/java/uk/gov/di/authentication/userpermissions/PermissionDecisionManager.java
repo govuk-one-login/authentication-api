@@ -194,7 +194,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public Result<DecisionError, Decision> canVerifyOtp(
+    public Result<DecisionError, Decision> canVerifyMfaOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return canVerifyAuthAppOtp(journeyType, userPermissionContext);
     }

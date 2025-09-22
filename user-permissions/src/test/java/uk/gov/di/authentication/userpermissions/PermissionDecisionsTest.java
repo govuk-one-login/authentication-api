@@ -82,7 +82,7 @@ class PermissionDecisionsTest {
         }
 
         @Override
-        public Result<DecisionError, Decision> canVerifyOtp(
+        public Result<DecisionError, Decision> canVerifyMfaOtp(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return null;
         }
