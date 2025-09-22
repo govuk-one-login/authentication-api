@@ -536,7 +536,8 @@ class PermissionDecisionManagerTest {
                             EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(0L);
 
-            var result = permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userContext);
+            var result =
+                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());

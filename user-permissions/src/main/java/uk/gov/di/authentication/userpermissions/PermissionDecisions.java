@@ -64,7 +64,7 @@ public interface PermissionDecisions {
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     @Experimental()
-    Result<DecisionError, Decision> canVerifyOtp(
+    Result<DecisionError, Decision> canVerifyMfaOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
