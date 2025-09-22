@@ -21,7 +21,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Set up SAM cli
         uses: aws-actions/setup-sam@f664fad9e12492edfc187a31f575537dfbb0ff63 # v2
@@ -29,20 +29,20 @@ jobs:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
         with:
           role-to-assume: ${{ secrets.GH_ACTIONS_ROLE_ARN_STUBS_API }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 #v4.7.1
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 #v5.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: gradle
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@ac638b010cf58a27ee6c972d7336334ccaf61c96 # v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           gradle-version: wrapper
           cache-read-only: false
@@ -73,7 +73,7 @@ jobs:
           sam build --parallel -t stubs-template.yaml
 
       - name: Deploy SAM app
-        uses: govuk-one-login/devplatform-upload-action@720ddb75fba8951db5a648ebb416eb233f1b6bc9 # v3.10.1
+        uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
         with:
           artifact-bucket-name: ${{ secrets.ARTIFACT_BUCKET_STUBS_API }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
