@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -21,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -72,8 +69,8 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
 
     @Test
     void deleteSessionThrowsOrchSessionExceptionWhenDeleteFails() {
-        var orchSession = withValidSession();
-        withFailedDelete(orchSession);
+        withValidSession();
+        withFailedDelete();
 
         var exception =
                 assertThrows(
@@ -175,17 +172,5 @@ class OrchSessionServiceTest extends BaseDynamoServiceTest<OrchSessionItem> {
     private void withExpiredSession() {
         when(table.getItem(SESSION_GET_REQUEST))
                 .thenReturn(new OrchSessionItem(SESSION_ID).withTimeToLive(EXPIRED_TTL));
-    }
-
-    private void withFailedDelete(OrchSessionItem orchSession) {
-        doThrow(DynamoDbException.builder().message("Failed to delete item").build())
-                .when(table)
-                .deleteItem(orchSession);
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update table").build())
-                .when(table)
-                .updateItem(any(OrchSessionItem.class));
     }
 }

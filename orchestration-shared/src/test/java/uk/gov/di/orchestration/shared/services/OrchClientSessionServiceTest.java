@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchClientSessionException;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
@@ -13,8 +12,6 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -128,29 +125,5 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                         .withClientName(CLIENT_NAME)
                         .withTimeToLive(EXPIRED_TTL);
         when(table.getItem(CLIENT_SESSION_GET_REQUEST)).thenReturn(existingSession);
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(OrchClientSessionItem.class));
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get from table").build())
-                .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update table").build())
-                .when(table)
-                .updateItem(any(OrchClientSessionItem.class));
-    }
-
-    private void withFailedDelete() {
-        doThrow(DynamoDbException.builder().message("Failed to delete from table").build())
-                .when(table)
-                .deleteItem(any(OrchClientSessionItem.class));
     }
 }

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.OrchAuthCodeItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -20,9 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -225,23 +221,5 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
                         .withTimeToLive(EXPIRED_TTL);
 
         when(table.getItem(AUTH_CODE_GET_REQUEST)).thenReturn(orchAuthCodeItem);
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(OrchAuthCodeItem.class));
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get from table").build())
-                .when(table)
-                .getItem(eq(AUTH_CODE_GET_REQUEST));
-    }
-
-    private void withFailedUpdate() {
-        doThrow(DynamoDbException.builder().message("Failed to update item in table").build())
-                .when(table)
-                .updateItem(any(OrchAuthCodeItem.class));
     }
 }

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.StateStorageException;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
@@ -15,8 +14,6 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -81,18 +78,6 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
         assertThrows(
                 StateStorageException.class,
                 () -> stateStorageService.getState(PREFIXED_SESSION_ID));
-    }
-
-    private void withFailedPut() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(StateItem.class));
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
-                .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
     }
 
     private StateItem withValidStateItemInDynamo() {

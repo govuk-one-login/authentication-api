@@ -3,7 +3,6 @@ package uk.gov.di.authentication.oidc.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.oidc.entity.SlidingWindowData;
 import uk.gov.di.authentication.oidc.exceptions.ClientRateLimitDataException;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
@@ -14,8 +13,6 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.TEST_CLIENT_ID;
 
@@ -60,11 +57,5 @@ class ClientRateLimitDataServiceTest extends BaseDynamoServiceTest<SlidingWindow
                 new SlidingWindowData(TEST_CLIENT_ID, TEST_PERIOD_START).withTimeToLive(VALID_TTL);
         when(table.getItem(RATE_LIMIT_DATA_GET_REQUEST)).thenReturn(existingSlidingWindowData);
         return existingSlidingWindowData;
-    }
-
-    private void withFailedGet() {
-        doThrow(DynamoDbException.builder().message("Failed to get from table").build())
-                .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
     }
 }
