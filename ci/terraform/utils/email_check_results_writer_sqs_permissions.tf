@@ -43,7 +43,7 @@ resource "aws_iam_policy" "email_check_sqs_kms_decrypt_policy" {
 resource "aws_lambda_permission" "allow_sqs_invoke" {
   statement_id  = "SQSInvokeFunction"
   action        = "lambda:InvokeFunction"
-  function_name = module.email_check_results_writer_lambda.endpoint_lambda_function.function_name
+  function_name = module.email_check_results_writer_lambda.endpoint_lambda_function.arn
 
   principal  = "sqs.amazonaws.com"
   source_arn = var.email_check_results_sqs_queue_arn

@@ -7,7 +7,8 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 
   depends_on = [
     module.email_check_results_writer_lambda,
-    aws_iam_policy.email_check_queue_policy,
+    module.email_check_results_writer_role.aws_iam_role_policy_attachment.provided_policies,
+    aws_lambda_permission.allow_sqs_invoke,
   ]
 }
 
@@ -23,6 +24,12 @@ module "email_check_results_writer_role" {
     aws_iam_policy.email_check_queue_policy.arn,
     aws_iam_policy.email_check_sqs_kms_decrypt_policy.arn,
     local.email_check_results_encryption_policy_arn,
+  ]
+
+  depends_on = [
+    aws_iam_policy.email_check_queue_policy,
+    aws_iam_policy.email_check_sqs_kms_decrypt_policy,
+    aws_iam_policy.email_check_results_writer_dynamo_write_access,
   ]
 }
 
