@@ -74,6 +74,12 @@ resource "aws_api_gateway_stage" "endpoint_delivery_receipts_stage" {
   depends_on = [
     aws_api_gateway_deployment.delivery_receipts_api_deployment,
   ]
+
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.frontend_api_fms_tag_value
+  }
+
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_delivery_receipts_logging_settings" {
