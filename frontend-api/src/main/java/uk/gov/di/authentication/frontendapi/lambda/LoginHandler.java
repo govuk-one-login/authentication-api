@@ -81,7 +81,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     public static final String INTERNAL_SUBJECT_ID = "internalSubjectId";
     public static final String INCORRECT_PASSWORD_COUNT = "incorrectPasswordCount";
     public static final String PASSWORD_RESET_TYPE = "passwordResetType";
-    private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -95,7 +94,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             ClientService clientService,
-            CodeStorageService codeStorageService,
             UserMigrationService userMigrationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -112,7 +110,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 authenticationService,
                 true,
                 authSessionService);
-        this.codeStorageService = codeStorageService;
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -125,7 +122,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     public LoginHandler(ConfigurationService configurationService) {
         super(LoginRequest.class, configurationService, true);
-        this.codeStorageService = new CodeStorageService(configurationService);
+        var codeStorageService = new CodeStorageService(configurationService);
         this.userMigrationService =
                 new UserMigrationService(
                         new DynamoService(configurationService), configurationService);
@@ -141,14 +138,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.userActionsManager =
                 new UserActionsManager(
                         configurationService,
-                        this.codeStorageService,
+                        codeStorageService,
                         this.authSessionService,
                         this.authenticationAttemptsService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
         super(LoginRequest.class, configurationService, true);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        var codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
                         new DynamoService(configurationService), configurationService);
@@ -164,7 +161,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.userActionsManager =
                 new UserActionsManager(
                         configurationService,
-                        this.codeStorageService,
+                        codeStorageService,
                         this.authSessionService,
                         this.authenticationAttemptsService);
     }

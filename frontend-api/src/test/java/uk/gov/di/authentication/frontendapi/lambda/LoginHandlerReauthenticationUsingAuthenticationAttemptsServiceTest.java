@@ -41,7 +41,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
@@ -150,7 +149,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
-    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
@@ -191,7 +189,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         configurationService,
                         authenticationService,
                         clientService,
-                        codeStorageService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,

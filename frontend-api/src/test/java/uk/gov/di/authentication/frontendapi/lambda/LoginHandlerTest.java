@@ -46,7 +46,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -147,7 +146,6 @@ class LoginHandlerTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -223,7 +221,6 @@ class LoginHandlerTest {
                         configurationService,
                         authenticationService,
                         clientService,
-                        codeStorageService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
@@ -933,7 +930,6 @@ class LoginHandlerTest {
                                         mfaMethodType.equals(AUTH_APP)
                                                 ? DEFAULT_AUTH_APP_MFA_METHOD
                                                 : DEFAULT_SMS_MFA_METHOD)));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
