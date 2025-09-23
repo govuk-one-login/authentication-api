@@ -5,6 +5,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+import java.util.Objects;
+
 @DynamoDbBean
 public class CrossBrowserItem {
     private static final String ATTRIBUTE_STATE = "State";
@@ -63,5 +65,19 @@ public class CrossBrowserItem {
     public CrossBrowserItem withTimeToLive(long ttl) {
         this.ttl = ttl;
         return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        CrossBrowserItem that = (CrossBrowserItem) o;
+        return ttl == that.ttl
+                && Objects.equals(state, that.state)
+                && Objects.equals(clientSessionId, that.clientSessionId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(state, clientSessionId, ttl);
     }
 }

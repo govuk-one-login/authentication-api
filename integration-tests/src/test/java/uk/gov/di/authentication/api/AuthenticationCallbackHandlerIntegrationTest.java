@@ -52,6 +52,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
@@ -147,6 +148,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     @RegisterExtension
     public static final JwksCacheExtension jwksCacheExtension = new JwksCacheExtension();
+
+    @RegisterExtension
+    public static final CrossBrowserStorageExtension crossBrowserStorageExtension =
+            new CrossBrowserStorageExtension();
 
     protected static ConfigurationService configurationService;
 
@@ -955,9 +960,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     private void assertInformationStoredForNoSessionService(APIGatewayProxyResponseEvent response)
             throws java.text.ParseException, ParseException, JOSEException {
         var requestObject = validateAndDecryptRequestObject(response);
-        var state = requestObject.getJWTClaimsSet().getClaim("state");
-        var noSessionObject = redis.getFromRedis("state:" + state);
-        assertEquals(CLIENT_SESSION_ID, noSessionObject);
+        var stateString = requestObject.getJWTClaimsSet().getStringClaim("state");
+        var state = new State(stateString);
+        var clientSessionIdFromRedis = redis.getFromRedis("state:" + stateString);
+        var clientSessionIdFromDynamo =
+                crossBrowserStorageExtension.getClientSessionIdFromState(state).orElseThrow();
+        assertEquals(CLIENT_SESSION_ID, clientSessionIdFromRedis);
+        assertEquals(CLIENT_SESSION_ID, clientSessionIdFromDynamo);
     }
 
     private void assertUserInfoStoredAndRedirectedToRp(APIGatewayProxyResponseEvent response)
