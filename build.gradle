@@ -3,7 +3,7 @@ import com.github.spotbugs.snom.Effort
 buildscript {
     repositories {
         maven {
-            url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
+            url = 'https://gds.jfrog.io/artifactory/di-allowed-repos'
         }
     }
     dependencies {

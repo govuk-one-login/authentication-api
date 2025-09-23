@@ -2,8 +2,8 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.authentication.sharedtest"
-version "unspecified"
+group = "uk.gov.di.authentication.sharedtest"
+version = "unspecified"
 
 dependencies {
     implementation libs.bundles.test,

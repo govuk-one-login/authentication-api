@@ -3,8 +3,8 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.auditevents"
-version "unspecified"
+group = "uk.gov.di.authentication.auditevents"
+version = "unspecified"
 
 dependencies {
     implementation project(":shared")

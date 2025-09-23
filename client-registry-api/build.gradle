@@ -3,8 +3,8 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.clientregistry"
-version "unspecified"
+group = "uk.gov.di.clientregistry"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 

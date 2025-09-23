@@ -4,8 +4,8 @@ plugins {
     id "au.com.dius.pact" version "4.6.17"
 }
 
-group "uk.gov.di.authentication.ipvapi"
-version "unspecified"
+group = "uk.gov.di.authentication.ipvapi"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 

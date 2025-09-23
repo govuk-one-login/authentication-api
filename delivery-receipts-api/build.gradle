@@ -3,8 +3,8 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.deliveryreceiptsapi"
-version "unspecified"
+group = "uk.gov.di.authentication.deliveryreceiptsapi"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/delivery-receipts")
 

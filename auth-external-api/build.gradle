@@ -3,8 +3,8 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.external.api"
-version "unspecified"
+group = "uk.gov.di.authentication.external.api"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/auth-external-api")
 

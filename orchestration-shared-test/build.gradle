@@ -2,8 +2,8 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.orchestration.sharedtest"
-version "unspecified"
+group = "uk.gov.di.orchestration.sharedtest"
+version = "unspecified"
 
 dependencies {
     implementation libs.bundles.test,

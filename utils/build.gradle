@@ -1,10 +1,10 @@
 plugins {
-    id 'java'
+    id "java"
     id "jacoco"
 }
 
-group 'uk.gov.di.authentication.utils'
-version 'unspecified'
+group = "uk.gov.di.authentication.utils"
+version = "unspecified"
 
 File terraformDir = new File(project.rootDir, "ci/terraform/utils")
 
