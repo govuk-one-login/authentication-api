@@ -23,6 +23,7 @@ dependencies {
             configurations.jetbrains_annotations
 
     implementation project(":shared")
+    implementation project(':audit-events')
 
     runtimeOnly configurations.logging_runtime,
             configurations.open_telemetry
