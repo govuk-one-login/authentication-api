@@ -4,7 +4,7 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub
-        - ${Env}-di-account-interventions-stub
+        - ${Env}-di-interventions-api-stub
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EndpointConfiguration:
         Types:
@@ -31,7 +31,7 @@ Resources:
       Body:
         openapi: "3.0.1"
         info:
-          title: !Sub "${Env}-di-account-interventions-stub"
+          title: !Sub "${Environment}-di-interventions-api-stub"
         paths:
           /auth:
             post:
