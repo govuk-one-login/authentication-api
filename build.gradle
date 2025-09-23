@@ -16,11 +16,11 @@ buildscript {
 }
 
 plugins {
-    id "com.diffplug.spotless" version "7.2.1"
-    id "com.avast.gradle.docker-compose" version "0.17.12"
-    id "org.sonarqube" version "6.3.1.5724"
+    alias libs.plugins.spotless
+    alias libs.plugins.dockerCompose
+    alias libs.plugins.sonar
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.3.0'
+    alias libs.plugins.spotbugs
 }
 
 apply plugin: "java"
@@ -28,21 +28,6 @@ apply plugin: "application"
 apply plugin: "idea"
 
 ext {
-    dependencyVersions = [
-        aws_sdk_v2_version: "2.33.4",
-        aws_lambda_core_version: "1.4.0",
-        aws_lambda_events_version: "3.16.1",
-        gson: "2.13.1",
-        java_parser: "3.27.0",
-        jetbrains_annotations: "26.0.2-1",
-        jgit: "7.3.0.202506031305-r",
-        nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "10.4.2",
-        junit: "5.13.4",
-        xray: "2.19.0",
-        pact: "4.6.17",
-    ]
-
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
 
     awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
@@ -116,38 +101,6 @@ subprojects {
         effort = Effort.valueOf('MAX')
         reportLevel = Confidence.valueOf('HIGH')
         excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
-    }
-
-    configurations {
-        apache
-        bouncycastle
-        cloudwatch
-        dynamodb
-        govuk_notify
-        gson
-        hamcrest
-        java_parser
-        javalin
-        jetbrains_annotations
-        jgit
-        kms
-        lambda
-        lambda_tests
-        lettuce
-        libphonenumber
-        logging_runtime
-        nimbus
-        secretsmanager
-        s3
-        sns
-        sqs
-        ssm
-        tests
-        test_runtime
-        xray
-        pact_consumer
-        pact_provider
-        open_telemetry
     }
 
     // Check dependencies using:
