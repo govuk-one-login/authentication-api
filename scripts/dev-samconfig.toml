@@ -53,7 +53,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/dev-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-062fed07fc11\" Environment=\"dev\" SubEnvironment=\"none\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsApiStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev1stubs.deploy.parameters]
 stack_name = "authdev1-auth-stubs-api"
@@ -64,7 +64,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev1\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev1-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-0658cbc8c2d9\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsApiStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev2stubs.deploy.parameters]
 stack_name = "authdev2-auth-stubs-api"
@@ -75,7 +75,7 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev2\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev2-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-068f2dede043\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsApiStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
 [authdev3stubs.deploy.parameters]
 stack_name = "authdev3-auth-stubs-api"
@@ -86,4 +86,4 @@ confirm_changeset = true
 capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev3\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev3-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-0a6d8a2e8df1\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
 image_repositories = []
-signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""
+signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsApiStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\""

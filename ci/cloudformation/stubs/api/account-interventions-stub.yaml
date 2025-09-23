@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AccountInterventionsStubApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub
+        - ${Env}-di-interventions-api-stub
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      EndpointConfiguration:
+        Types:
+          - PRIVATE
+        VpcEndpointIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      Policy:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+          - Effect: Deny
+            Action: "execute-api:Invoke"
+            Principal: "*"
+            Resource:
+              - "execute-api:/*"
+            Condition:
+              StringNotEquals:
+                aws:SourceVpce:
+                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+      Body:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${Environment}-di-interventions-api-stub"
+        paths:
+          /auth:
+            post:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsApiStubLambdaFunction.Arn}:active/invocations"
+                timeoutInMillis: 29000
+
+  AccountInterventionsStubDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref AccountInterventionsStubApi
+
+  AccountInterventionsStubApiStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn: AccountInterventionsApiStubLambdaFunction
+    Properties:
+      AccessLogSetting:
+        DestinationArn: !GetAtt AccountInterventionsStubApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      CacheClusterEnabled: false
+      DeploymentId: !Ref AccountInterventionsStubDeployment
+      MethodSettings:
+        - CachingEnabled: false
+          DataTraceEnabled: false
+          HttpMethod: "*"
+          ResourcePath: "/*"
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      RestApiId: !Ref AccountInterventionsStubApi
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TracingEnabled: true
+
+  AccountInterventionsStubApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-di-account-interventions-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountInterventionsStubApiAccessLogGroup"
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/account-interventions-stub.yaml
+
+  AccountInterventionsStubApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountInterventionsStubApiAccessLogGroup
+
+  AccountInterventionsStubApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    DependsOn:
+      - AccountInterventionsStubApiStage
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AccountInterventionsStubApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
