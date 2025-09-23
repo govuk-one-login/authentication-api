@@ -9,25 +9,27 @@ version 'unspecified'
 File terraformDir = new File(project.rootDir, "ci/terraform/utils")
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.s3,
-            configurations.dynamodb
+    compileOnly libs.bundles.awsLambda,
+            libs.awsS3,
+            libs.bundles.awsDynamoDb
 
     implementation project(":shared"),
-            configurations.govuk_notify,
-            configurations.nimbus,
-            configurations.xray,
-            configurations.open_telemetry,
-            "software.amazon.awssdk:cloudwatch:${rootProject.ext.dependencyVersions.aws_sdk_v2_version}"
+            libs.govUkNotify,
+            libs.bundles.nimbus,
+            platform(libs.xrayBom),
+            libs.bundles.xray,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk,
+            libs.awsCloudwatch
 
-    runtimeOnly configurations.logging_runtime
+    runtimeOnly libs.bundles.loggingRuntime
 
-    testImplementation configurations.tests,
-            configurations.s3,
-            configurations.lambda,
-            configurations.dynamodb
+    testImplementation libs.bundles.test,
+            libs.awsS3,
+            libs.bundles.awsLambda,
+            libs.bundles.awsDynamoDb
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -57,7 +59,7 @@ clean.dependsOn ":composeDown"
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

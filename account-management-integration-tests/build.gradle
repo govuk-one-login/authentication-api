@@ -7,24 +7,26 @@ group "uk.gov.di"
 version "unspecified"
 
 dependencies {
-    testImplementation configurations.bouncycastle,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.gson,
-            configurations.tests,
-            configurations.sqs,
-            configurations.dynamodb,
-            configurations.lambda,
-            configurations.lettuce,
-            configurations.libphonenumber
+    testImplementation libs.bouncyCastle,
+            libs.bundles.apache,
+            libs.bundles.nimbus,
+            libs.gson,
+            libs.bundles.test,
+            libs.awsKms,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.bundles.awsDynamoDb,
+            libs.bundles.awsLambda,
+            libs.bundles.lettuce,
+            libs.libphonenumber
 
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
-    testImplementation 'net.javacrumbs.json-unit:json-unit-assertj:4.1.1'
+    testImplementation libs.jacksonDatabind
+    testImplementation libs.jsonAssertJ
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -63,6 +65,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

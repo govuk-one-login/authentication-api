@@ -9,24 +9,25 @@ version "unspecified"
 File terraformDir = new File(project.rootDir, "ci/terraform/delivery-receipts")
 
 dependencies {
-    implementation configurations.govuk_notify,
-            configurations.lambda,
-            configurations.gson,
-            configurations.libphonenumber,
-            configurations.cloudwatch
+    implementation libs.govUkNotify,
+            libs.bundles.awsLambda,
+            libs.gson,
+            libs.libphonenumber,
+            libs.awsCloudwatchEmf
 
     implementation project(":shared")
 
-    runtimeOnly configurations.logging_runtime
+    runtimeOnly libs.bundles.loggingRuntime
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(":shared-test"),
-            configurations.lambda,
-            configurations.dynamodb
+            libs.bundles.awsLambda,
+            libs.bundles.awsDynamoDb
 
-    testRuntimeOnly configurations.test_runtime,
-            configurations.open_telemetry
+    testRuntimeOnly libs.bundles.testRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 }
 
 test {
@@ -52,7 +53,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

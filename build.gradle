@@ -156,148 +156,65 @@ subprojects {
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration runtimeClasspath
     //
     dependencies {
+        // Unneeded constraints should be removed once no longer required
+        // https://discuss.gradle.org/t/dependency-version-constraints-for-all-configurations/34161/3
         constraints {
             configurations.configureEach { conf ->
-                // Netty constraints
-                add(conf.name, 'io.netty:netty-codec-http:[4.1.125.Final,)') {
-                    because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
-                }
+                if (!conf.canBeConsumed && !conf.canBeResolved) {
+                    // Netty constraints
+                    add(conf.name, 'io.netty:netty-codec-http:[4.1.125.Final,)') {
+                        because 'CVE-2025-58056 is fixed in io.netty:netty-codec-http:4.1.125.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
-                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
+                        because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
-                    because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-handler:[4.1.118.Final,)') {
+                        because 'CVE-2025-24970 is fixed in io.netty:netty-handler:4.1.118.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
-                    because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.124.Final,4.2.0)') {
+                        because 'CVE-2025-55163 is fixed in io.netty:netty-codec-http2:4.1.124.Final and higher'
+                    }
 
-                add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
-                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
-                }
+                    add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
+                        because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+                    }
 
-                // Jetty constraints
-                add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.25,12.1.0)') {
-                    because 'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
-                }
+                    // Jetty constraints
+                    add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.25,12.1.0)') {
+                        because 'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
+                    }
 
-                // Jackson constraints
-                add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
-                    because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
-                }
+                    // Jackson constraints
+                    add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
+                        because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
+                    }
 
-                add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.15.0,)') {
-                    because 'CVE-2025-52999 is fixed in com.fasterxml.jackson.core:jackson-core:2.15.0 and higher'
-                }
+                    add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.15.0,)') {
+                        because 'CVE-2025-52999 is fixed in com.fasterxml.jackson.core:jackson-core:2.15.0 and higher'
+                    }
 
-                // Apache Commons constraints
-                add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
-                    because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
-                }
+                    // Apache Commons constraints
+                    add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
+                        because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
+                    }
 
-                add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
-                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
-                }
+                    add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
+                        because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                    }
 
-                // Other constraints
-                add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                    // Other constraints
+                    add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
+                        because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                    }
                 }
             }
         }
 
-        apache "commons-codec:commons-codec:1.19.0",
-                "org.apache.httpcomponents:httpclient:4.5.14",
-                "org.apache.commons:commons-collections4:4.5.0",
-                "commons-net:commons-net:3.12.0",
-                "commons-io:commons-io:2.20.0",
-                "org.apache.commons:commons-lang3:3.18.0"
-
-        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.81"
-
-        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
-
-        dynamodb "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
-                "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "software.amazon.awssdk:lambda:${dependencyVersions.aws_sdk_v2_version}"
-
-        govuk_notify "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
-
-        gson "com.google.code.gson:gson:${dependencyVersions.gson}"
-
-        hamcrest "org.hamcrest:hamcrest:3.0"
-
-        java_parser "com.github.javaparser:javaparser-core:${dependencyVersions.java_parser}"
-
-        javalin "io.javalin:javalin:6.7.0"
-
-        jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
-
-        jgit "org.eclipse.jgit:org.eclipse.jgit:${dependencyVersions.jgit}"
-
-        kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
-
-        lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
-                "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
-
-        lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.2"
-
-        lettuce "org.apache.commons:commons-pool2:2.12.1",
-                "io.lettuce:lettuce-core:6.8.1.RELEASE"
-
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:9.0.14"
-
-        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
-                "org.slf4j:slf4j-nop:2.0.17"
-
-        nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
-                "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
-
-        secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
-
-        sns "software.amazon.awssdk:sns:${dependencyVersions.aws_sdk_v2_version}"
-
-        sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
-
-        ssm "software.amazon.awssdk:ssm:${dependencyVersions.aws_sdk_v2_version}"
-
-        s3 "software.amazon.awssdk:s3:${dependencyVersions.aws_sdk_v2_version}"
-
-        tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
-                "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.junit.platform:junit-platform-launcher",
-                "org.mockito:mockito-core:5.19.0",
-                "org.awaitility:awaitility:4.3.0",
-                "com.approvaltests:approvaltests:25.4.3",
-                configurations.hamcrest,
-                "org.reflections:reflections:0.10.2",
-                "uk.org.webcompere:system-stubs-jupiter:2.1.8"
-
-        test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-
-        xray platform("com.amazonaws:aws-xray-recorder-sdk-bom:${dependencyVersions.xray}"),
-                "com.amazonaws:aws-xray-recorder-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
-                "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
-
         spotbugs "com.github.spotbugs:spotbugs:4.9.4"
-
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
-
-        pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
-
-        pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
-
-        open_telemetry platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.19.0-alpha"),
-                "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure",
-                "io.opentelemetry.instrumentation:opentelemetry-java-http-client"
     }
 }
 
@@ -508,7 +425,7 @@ subprojects {
 reporting {
     reports {
         testCodeCoverageReport(JacocoCoverageReport) {
-            testType = TestSuiteType.UNIT_TEST
+            testSuiteName = "test"
         }
     }
 }
@@ -519,7 +436,7 @@ dependencies {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

@@ -5,13 +5,13 @@ plugins {
 }
 
 dependencies {
-    implementation configurations.java_parser
-    implementation configurations.jgit
-    implementation configurations.gson
-    implementation configurations.logging_runtime
+    implementation libs.javaParser
+    implementation libs.jgit
+    implementation libs.gson
+    implementation libs.bundles.loggingRuntime
 
-    testImplementation configurations.tests
-    testRuntimeOnly configurations.test_runtime
+    testImplementation libs.bundles.test
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -35,7 +35,7 @@ task checkDeprecations(type: JavaExec) {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

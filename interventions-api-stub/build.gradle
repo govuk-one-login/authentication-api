@@ -9,16 +9,16 @@ version = 'unspecified'
 File terraformDir = new File(project.rootDir, "ci/terraform/interventions-api-stub")
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.dynamodb
+    compileOnly libs.bundles.awsLambda,
+            libs.bundles.awsDynamoDb
 
     implementation project(":shared"),
-            configurations.gson
+            libs.gson
 
-    testImplementation configurations.tests,
-            configurations.lambda
+    testImplementation libs.bundles.test,
+            libs.bundles.awsLambda
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -44,7 +44,7 @@ task buildZip(type: Zip) {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

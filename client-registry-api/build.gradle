@@ -10,28 +10,29 @@ File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
 
-    compileOnly configurations.lambda,
-            configurations.ssm,
-            configurations.sns,
-            configurations.dynamodb
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSsm,
+            libs.awsSns,
+            libs.bundles.awsDynamoDb
 
-    implementation configurations.nimbus,
-            configurations.gson,
-            'commons-validator:commons-validator:1.10.0'
+    implementation libs.bundles.nimbus,
+            libs.gson,
+            libs.apacheCommonsValidator
 
     implementation project(":orchestration-shared")
 
-    runtimeOnly configurations.logging_runtime,
-            configurations.open_telemetry
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.dynamodb
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.bundles.awsDynamoDb
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -57,7 +58,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

@@ -9,34 +9,33 @@ version "unspecified"
 File terraformDir = new File(project.rootDir, "ci/terraform/account-management")
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.s3,
-            configurations.dynamodb
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsSns,
+            libs.awsS3,
+            libs.bundles.awsDynamoDb
 
-
-    implementation configurations.nimbus,
-            configurations.govuk_notify,
-            configurations.gson,
-            configurations.jetbrains_annotations
+    implementation libs.bundles.nimbus,
+            libs.govUkNotify,
+            libs.gson,
+            libs.jetbrainsAnnotations
 
     implementation project(":shared")
 
-    runtimeOnly configurations.logging_runtime,
-            configurations.open_telemetry
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.s3,
-            configurations.dynamodb
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsS3,
+            libs.bundles.awsDynamoDb
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -62,7 +61,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

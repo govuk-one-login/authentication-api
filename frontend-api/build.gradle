@@ -15,39 +15,39 @@ dependencies {
     implementation project(':user-permissions')
     implementation project(':audit-events')
 
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.s3,
-            configurations.dynamodb,
-            configurations.kms
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsSns,
+            libs.awsS3,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms
 
-    implementation configurations.govuk_notify,
-            configurations.apache,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.cloudwatch,
-            configurations.bouncycastle,
-            configurations.kms,
-            configurations.jetbrains_annotations
+    implementation libs.govUkNotify,
+            libs.bundles.apache,
+            libs.gson,
+            libs.bundles.nimbus,
+            libs.awsCloudwatchEmf,
+            libs.bouncyCastle,
+            libs.awsKms,
+            libs.jetbrainsAnnotations
 
-    runtimeOnly configurations.logging_runtime,
-            configurations.open_telemetry
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
-
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(":shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.s3,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer,
-            'org.wiremock:wiremock-jetty12:3.13.1'
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsS3,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.pactConsumer,
+            libs.wiremock
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -96,7 +96,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

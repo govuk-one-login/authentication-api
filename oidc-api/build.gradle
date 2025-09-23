@@ -10,38 +10,39 @@ version "unspecified"
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
-    compileOnly configurations.kms,
-            configurations.lambda,
-            configurations.sqs,
-            configurations.sns,
-            configurations.dynamodb
+    compileOnly libs.awsKms,
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSns,
+            libs.bundles.awsDynamoDb
 
-    implementation configurations.govuk_notify,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.cloudwatch,
-            configurations.apache,
-            configurations.jetbrains_annotations,
+    implementation libs.govUkNotify,
+            libs.gson,
+            libs.bundles.nimbus,
+            libs.bouncyCastle,
+            libs.awsCloudwatchEmf,
+            libs.bundles.apache,
+            libs.jetbrainsAnnotations,
             project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api")
 
-    runtimeOnly configurations.open_telemetry
+    runtimeOnly platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
     implementation project(path: ':ipv-api')
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(path: ':ipv-api'),
             project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.pactConsumer
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -90,7 +91,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

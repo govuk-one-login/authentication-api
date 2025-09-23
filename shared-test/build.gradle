@@ -6,27 +6,26 @@ group "uk.gov.di.authentication.sharedtest"
 version "unspecified"
 
 dependencies {
-    implementation configurations.tests,
-            configurations.lambda,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.lettuce,
-            configurations.dynamodb,
-            configurations.kms,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.cloudwatch,
-            "org.eclipse.jetty:jetty-server:12.0.24",
-            "com.google.code.gson:gson:2.13.1"
+    implementation libs.bundles.test,
+            libs.bundles.awsLambda,
+            libs.bundles.apache,
+            libs.bundles.nimbus,
+            libs.bundles.lettuce,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms,
+            libs.awsSns,
+            libs.awsS3,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsCloudwatchEmf,
+            libs.gson,
+            libs.jettyServer
 
     implementation project(":shared")
     implementation project(":frontend-api")
     implementation project(":doc-checking-app-api")
     implementation project(":oidc-api")
     implementation project(":interventions-api-stub")
-    implementation("software.amazon.awssdk:cloudwatchlogs:${dependencyVersions.aws_sdk_v2_version}")
 }
 
 test {

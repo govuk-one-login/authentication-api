@@ -10,32 +10,33 @@ version "unspecified"
 File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
-    compileOnly configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.sns,
-            configurations.kms,
-            configurations.dynamodb
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsSns,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb
 
-    implementation configurations.gson,
-            configurations.nimbus
+    implementation libs.gson,
+            libs.bundles.nimbus
 
     implementation project(":orchestration-shared")
 
-    runtimeOnly configurations.logging_runtime,
-            configurations.open_telemetry
+    runtimeOnly libs.bundles.loggingRuntime,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
 
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.bundles.apache,
+            libs.awsLambdaTests,
             project(":orchestration-shared-test"),
-            configurations.lambda,
-            configurations.sqs,
-            configurations.kms,
-            configurations.dynamodb,
-            configurations.pact_consumer
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.pactConsumer
 
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -84,7 +85,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }
