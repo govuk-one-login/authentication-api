@@ -205,8 +205,7 @@ class CheckEmailFraudBlockHandlerTest {
     @ParameterizedTest
     @MethodSource("successfulEmailCheckResultStatus")
     void shouldSubmitEmailCheckDecisionUsedAuditEventWhenEmailCheckIsPresent(
-            EmailCheckResultStatus status
-    ) {
+            EmailCheckResultStatus status) {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 getProxyRequestContext();
 
@@ -230,9 +229,7 @@ class CheckEmailFraudBlockHandlerTest {
                             .withRequestContext(proxyRequestContext)
                             .withBody(format("{ \"email\": \"%s\" }", EMAIL));
 
-            var expectedResponse =
-                    new CheckEmailFraudBlockResponse(
-                            EMAIL, status.getValue());
+            var expectedResponse = new CheckEmailFraudBlockResponse(EMAIL, status.getValue());
             var result =
                     handler.handleRequestWithUserContext(
                             event,
@@ -259,8 +256,8 @@ class CheckEmailFraudBlockHandlerTest {
                     capturedEvent.extensions().journeyType(),
                     is(JourneyType.REGISTRATION.getValue()));
             assertThat(
-                    capturedEvent.extensions().emailFraudCheckResponse(), is(mockEmailCheckResponse)
-            );
+                    capturedEvent.extensions().emailFraudCheckResponse(),
+                    is(mockEmailCheckResponse));
         }
     }
 

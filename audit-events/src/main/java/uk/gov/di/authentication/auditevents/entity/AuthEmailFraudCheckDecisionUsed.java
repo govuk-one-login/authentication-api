@@ -10,8 +10,8 @@ public record AuthEmailFraudCheckDecisionUsed(
         String clientId,
         String componentId,
         User user,
-        Extensions extensions
-) implements StructuredAuditEvent {
+        Extensions extensions)
+        implements StructuredAuditEvent {
 
     private static final String EVENT_NAME = "AUTH_EMAIL_FRAUD_CHECK_DECISION_USED";
 
@@ -23,9 +23,7 @@ public record AuthEmailFraudCheckDecisionUsed(
     }
 
     public static AuthEmailFraudCheckDecisionUsed create(
-            String clientId,
-            User user,
-            Extensions extensions) {
+            String clientId, User user, Extensions extensions) {
         var now = Instant.now();
         return new AuthEmailFraudCheckDecisionUsed(
                 EVENT_NAME,
@@ -34,10 +32,8 @@ public record AuthEmailFraudCheckDecisionUsed(
                 clientId,
                 ComponentId.AUTH.getValue(),
                 user,
-                extensions
-        );
+                extensions);
     }
-
 
     public record User(
             String userId,

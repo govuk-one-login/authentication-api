@@ -93,7 +93,8 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             if (status.equals(EmailCheckResultStatus.PENDING)) {
                 submitEmailFraudCheckBypassedAuditEvent(input, userContext, request);
             } else {
-                submitEmailFraudCheckDecisionUsedAuditEvent(input, userContext, request, emailCheckResult.get());
+                submitEmailFraudCheckDecisionUsedAuditEvent(
+                        input, userContext, request, emailCheckResult.get());
             }
 
             return generateApiGatewayProxyResponse(200, checkEmailFraudBlockResponse);
@@ -134,12 +135,11 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             CheckEmailFraudBlockRequest request,
-            EmailCheckResultStore emailCheckResult
-    ) {
-        var decision_reused = !Objects.equals(
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                emailCheckResult.getGovukSigninJourneyId()
-        );
+            EmailCheckResultStore emailCheckResult) {
+        var decision_reused =
+                !Objects.equals(
+                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                        emailCheckResult.getGovukSigninJourneyId());
         var newAuditEvent =
                 AuthEmailFraudCheckDecisionUsed.create(
                         userContext.getAuthSession().getClientId(),
@@ -150,12 +150,10 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                                 PersistentIdHelper.extractPersistentIdFromHeaders(
                                         input.getHeaders()),
                                 ClientSessionIdHelper.extractSessionIdFromHeaders(
-                                        input.getHeaders())
-                        ),
+                                        input.getHeaders())),
                         new AuthEmailFraudCheckDecisionUsed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
-                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null)
-                );
+                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null));
 
         auditService.submitAuditEvent(newAuditEvent);
     }

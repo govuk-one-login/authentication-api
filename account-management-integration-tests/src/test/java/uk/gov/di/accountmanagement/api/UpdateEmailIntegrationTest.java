@@ -30,6 +30,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_DECISION_USED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
@@ -307,6 +308,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_FORBIDDEN));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED));
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {

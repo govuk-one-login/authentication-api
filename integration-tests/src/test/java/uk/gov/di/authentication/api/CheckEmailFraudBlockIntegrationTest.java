@@ -180,7 +180,8 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             eventExpectations.put(
                     AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
 
-            verifyAuditEvents(expectedEvents, eventExpectations);        }
+            verifyAuditEvents(expectedEvents, eventExpectations);
+        }
     }
 
     private void verifyAuditEvents(
