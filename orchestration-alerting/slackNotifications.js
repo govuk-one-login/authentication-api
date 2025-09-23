@@ -67,29 +67,6 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
   };
 };
 
-const buildMessageRequestBody = async function (
-  snsMessage,
-  colorCode,
-  snsMessageFooter,
-) {
-  const body = formatMessage(snsMessage, colorCode, snsMessageFooter);
-
-  const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
-  const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
-  if (isPagerDutyAlarm && isEnabledForProd) {
-    body.channel =
-      process.env.SLACK_CHANNEL_ID ||
-      (await getParameter("pagerduty-slack-channel-id"));
-  } else {
-    body.channel =
-      process.env.SLACK_CHANNEL_ID ||
-      (await getParameter(
-        process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id",
-      ));
-  }
-  return body;
-};
-
 const sendAlertToSlack = async function (messageRequestBody) {
   const slackHookUrl =
     process.env.SLACK_WEBHOOK_URL ||
@@ -121,11 +98,25 @@ const handler = async function (event, context) {
   if (snsMessage.NewStateValue === "OK") {
     colorCode = process.env.OK_COLOR || "#36a64f";
   }
-  const messageRequestBody = await buildMessageRequest(
+  const messageRequestBody = formatMessage(
     snsMessage,
     colorCode,
     snsMessageFooter,
   );
+
+  const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
+  const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
+  if (isPagerDutyAlarm && isEnabledForProd) {
+    messageRequestBody.channel =
+      process.env.SLACK_CHANNEL_ID ||
+      (await getParameter("pagerduty-slack-channel-id"));
+  } else {
+    messageRequestBody.channel =
+      process.env.SLACK_CHANNEL_ID ||
+      (await getParameter(
+        process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id",
+      ));
+  }
 
   console.log("Sending alert to slack");
   await sendAlertToSlack(messageRequestBody);
