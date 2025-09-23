@@ -6795,6 +6795,106 @@ Resources:
             Resource: !GetAtt StateStorageTableEncryptionKey.Arn
   #endregion
 
+  #region cross browser data table
+  CrossBrowserTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for Cross Browser DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  CrossBrowserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-Cross-Browser
+      AttributeDefinitions:
+        - AttributeName: State
+          AttributeType: S
+      KeySchema:
+        - AttributeName: State
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt CrossBrowserTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: CrossBrowserDataTable
+
+  CrossBrowserTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCrossBrowserTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt CrossBrowserTable.Arn
+          - Sid: AllowCrossBrowserTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt CrossBrowserTableEncryptionKey.Arn
+  CrossBrowserTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCrossBrowserTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt CrossBrowserTable.Arn
+          - Sid: AllowCrossBrowserTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt CrossBrowserTableEncryptionKey.Arn
+  #endregion
   #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
