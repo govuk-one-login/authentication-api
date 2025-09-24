@@ -62,6 +62,26 @@ public class TestClientHelper {
         return isTestClientWithAllowedEmail;
     }
 
+    public boolean isTestJourney(
+            UserContext userContext, ConfigurationService configurationService) {
+        if (configurationService.isTestClientsEnabled()) {
+            LOG.warn("TestClients are ENABLED");
+        } else {
+            return false;
+        }
+
+        var isTestEmail =
+                emailMatchesAllowlist(
+                        userContext.getAuthSession().getEmailAddress(),
+                        getEmailAllowListFromSecretsManager(configurationService));
+
+        if (isTestEmail) {
+            LOG.info("Is request from a test email address: true");
+        }
+
+        return isTestEmail;
+    }
+
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
         if (Objects.isNull(emailAddress)) {
             return false;
@@ -82,8 +102,7 @@ public class TestClientHelper {
         return false;
     }
 
-    // ATO-1884: Make this method private when implemented
-    public List<String> getEmailAllowListFromSecretsManager(
+    private List<String> getEmailAllowListFromSecretsManager(
             ConfigurationService configurationService) {
         if (cachedSecret == null || cachedSecret.isExpired()) {
             var request =
