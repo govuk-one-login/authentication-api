@@ -64,6 +64,8 @@ class CrossBrowserOrchestrationServiceTest {
             throws NoSessionException, ParseException {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
+        when(crossBrowserStorageService.getClientSessionId(STATE))
+                .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -200,6 +202,8 @@ class CrossBrowserOrchestrationServiceTest {
     void shouldThrowIfNoClientSessionIsFoundWithClientSessionId() {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
+        when(crossBrowserStorageService.getClientSessionId(STATE))
+                .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.empty());
 

@@ -64,7 +64,8 @@ public class CrossBrowserOrchestrationService {
         if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
             LOG.info("access_denied error and state param are both present");
             var clientSessionId =
-                    getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
+                    getClientSessionIdFromStateComparingWithDynamo(
+                                    State.parse(queryStringParameters.get("state")))
                             .orElseThrow(
                                     () ->
                                             new NoSessionException(
@@ -188,6 +189,9 @@ public class CrossBrowserOrchestrationService {
         LOG.info(
                 "Is clientSessionId from redis equal to clientSessionId from dynamo? {}",
                 areCsidsEqual);
+        if (!areCsidsEqual) {
+            throw new RuntimeException("NOT EQUAL");
+        }
         return clientSessionIdFromRedis;
     }
 
