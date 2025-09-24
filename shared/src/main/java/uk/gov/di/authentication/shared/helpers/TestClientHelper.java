@@ -32,6 +32,10 @@ public class TestClientHelper {
 
     private TestClientHelper() {}
 
+    public TestClientHelper(ConfigurationService configurationService) {
+        this.secretsManagerClient = getSecretsManagerClient(configurationService);
+    }
+
     public TestClientHelper(SecretsManagerClient secretsManagerClient) {
         this.secretsManagerClient = secretsManagerClient;
     }
