@@ -114,7 +114,8 @@ public class CrossBrowserOrchestrationService {
         }
 
         var clientSessionIdFromState =
-                getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
+                getClientSessionIdFromStateComparingWithDynamo(
+                                State.parse(queryStringParameters.get("state")))
                         .orElseThrow(
                                 () ->
                                         new NoSessionException(
