@@ -64,8 +64,7 @@ public class CrossBrowserOrchestrationService {
         if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
             LOG.info("access_denied error and state param are both present");
             var clientSessionId =
-                    getClientSessionIdFromStateComparingWithDynamo(
-                                    State.parse(queryStringParameters.get("state")))
+                    getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
                             .orElseThrow(
                                     () ->
                                             new NoSessionException(
@@ -114,8 +113,7 @@ public class CrossBrowserOrchestrationService {
         }
 
         var clientSessionIdFromState =
-                getClientSessionIdFromStateComparingWithDynamo(
-                                State.parse(queryStringParameters.get("state")))
+                getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
                         .orElseThrow(
                                 () ->
                                         new NoSessionException(
@@ -176,23 +174,13 @@ public class CrossBrowserOrchestrationService {
 
     private Optional<String> getClientSessionIdFromState(State state) {
         LOG.info("Getting clientSessionId using state");
-        return Optional.ofNullable(
-                redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
-    }
-
-    private Optional<String> getClientSessionIdFromStateComparingWithDynamo(State state) {
-        LOG.info("Getting clientSessionId using state");
         var clientSessionIdFromRedis =
                 Optional.ofNullable(
                         redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
         var clientSessionIdFromDynamo = crossBrowserStorageService.getClientSessionId(state);
-        var areCsidsEqual = Objects.equals(clientSessionIdFromRedis, clientSessionIdFromDynamo);
         LOG.info(
                 "Is clientSessionId from redis equal to clientSessionId from dynamo? {}",
-                areCsidsEqual);
-        if (!areCsidsEqual) {
-            throw new RuntimeException("NOT EQUAL");
-        }
+                Objects.equals(clientSessionIdFromRedis, clientSessionIdFromDynamo));
         return clientSessionIdFromRedis;
     }
 
