@@ -40,8 +40,8 @@ public class CrossBrowserStorageExtension extends DynamoExtension implements Aft
         createTableWithPartitionKey(TABLE_NAME, STATE_FIELD);
     }
 
-    public void storeItem(CrossBrowserItem item) {
-        crossBrowserStorageService.storeItem(item);
+    public void store(State state, String clientSessionId) {
+        crossBrowserStorageService.storeItem(new CrossBrowserItem(state, clientSessionId));
     }
 
     public Optional<String> getClientSessionIdFromState(State state) {
