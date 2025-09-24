@@ -68,6 +68,10 @@ public class TestClientHelper {
 
     public boolean isTestJourney(
             UserContext userContext, ConfigurationService configurationService) {
+        return isTestJourney(userContext.getAuthSession().getEmailAddress(), configurationService);
+    }
+
+    public boolean isTestJourney(String emailAddress, ConfigurationService configurationService) {
         if (configurationService.isTestClientsEnabled()) {
             LOG.warn("TestClients are ENABLED");
         } else {
@@ -76,8 +80,7 @@ public class TestClientHelper {
 
         var isTestEmail =
                 emailMatchesAllowlist(
-                        userContext.getAuthSession().getEmailAddress(),
-                        getEmailAllowListFromSecretsManager(configurationService));
+                        emailAddress, getEmailAllowListFromSecretsManager(configurationService));
 
         if (isTestEmail) {
             LOG.info("Is request from a test email address: true");
