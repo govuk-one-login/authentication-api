@@ -2885,7 +2885,6 @@ Resources:
               storageTokenKeyArn,
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
-          IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3540,7 +3539,6 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
-          DOC_APP_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
 
       Policies:
@@ -4618,7 +4616,6 @@ Resources:
                     authEnvironment,
                   ]
             - !GetAtt StubSpotRequestQueue.QueueUrl
-          IPV_JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy

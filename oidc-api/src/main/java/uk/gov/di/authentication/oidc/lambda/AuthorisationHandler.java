@@ -206,7 +206,6 @@ public class AuthorisationHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         kmsConnectionService,
-                        jwksService,
                         jwksCacheService,
                         stateStorageService);
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
@@ -241,7 +240,6 @@ public class AuthorisationHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         kmsConnectionService,
-                        jwksService,
                         jwksCacheService,
                         stateStorageService);
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);

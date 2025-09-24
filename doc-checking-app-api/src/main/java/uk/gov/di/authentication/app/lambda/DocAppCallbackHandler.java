@@ -35,7 +35,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
-import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -121,7 +120,6 @@ public class DocAppCallbackHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService),
                         new JwksCacheService(configurationService),
                         new StateStorageService(configurationService));
         this.tokenService =
@@ -146,7 +144,6 @@ public class DocAppCallbackHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService),
                         new JwksCacheService(configurationService),
                         new StateStorageService(configurationService));
         this.tokenService =
