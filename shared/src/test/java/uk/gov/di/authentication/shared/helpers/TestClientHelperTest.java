@@ -26,7 +26,10 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -160,6 +163,28 @@ class TestClientHelperTest {
         assertEquals(
                 ALLOWLIST,
                 testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+    }
+
+    @Test
+    void itShouldCacheTheSecretsManagerResponse() {
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(String.join(",", ALLOWLIST))
+                                .build());
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        assertEquals(
+                ALLOWLIST,
+                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+        // Call again to check previous result cached
+        testClientHelper.getEmailAllowListFromSecretsManager(configurationService);
+        verify(mockedSecretsManagerClient, times(1))
+                .getSecretValue(any(GetSecretValueRequest.class));
     }
 
     @Test
