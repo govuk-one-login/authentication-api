@@ -32,11 +32,9 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -85,7 +83,6 @@ public class SendOtpNotificationHandler
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
-    private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -103,7 +100,6 @@ public class SendOtpNotificationHandler
             DynamoService dynamoService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            ClientService clientService,
             CloudwatchMetricsService cloudwatchMetricsService,
             MFAMethodsService mfaMethodsService,
             TestClientHelper testClientHelper) {
@@ -115,7 +111,6 @@ public class SendOtpNotificationHandler
         this.dynamoService = dynamoService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
-        this.clientService = clientService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.mfaMethodsService = mfaMethodsService;
         this.testClientHelper = testClientHelper;
@@ -140,7 +135,6 @@ public class SendOtpNotificationHandler
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.testClientHelper = new TestClientHelper(configurationService);
