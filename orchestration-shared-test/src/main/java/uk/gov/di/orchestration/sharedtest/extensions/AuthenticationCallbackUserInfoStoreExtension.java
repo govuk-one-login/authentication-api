@@ -50,10 +50,8 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
 
     @Override
     protected void createTables() {
-        if (!tableExists(AUTH_USERINFO_TABLE)) {
-            createTableWithPartitionAndSortKey(
-                    AUTH_USERINFO_TABLE, INTERNAL_COMMON_SUBJECT_ID_FIELD, CLIENT_SESSION_ID_FIELD);
-        }
+        createTableWithPartitionAndSortKey(
+                AUTH_USERINFO_TABLE, INTERNAL_COMMON_SUBJECT_ID_FIELD, CLIENT_SESSION_ID_FIELD);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectId, String clientSessionId)

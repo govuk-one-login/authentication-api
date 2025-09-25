@@ -55,12 +55,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
 
     @Override
     protected void createTables() {
-        if (!tableExists(CLIENT_REGISTRY_TABLE)) {
-            createTableWithPartitionKey(
-                    CLIENT_REGISTRY_TABLE,
-                    CLIENT_ID_FIELD,
-                    createGlobalSecondaryIndex(CLIENT_NAME_INDEX, CLIENT_NAME_FIELD));
-        }
+        createTableWithPartitionKey(
+                CLIENT_REGISTRY_TABLE,
+                CLIENT_ID_FIELD,
+                createGlobalSecondaryIndex(CLIENT_NAME_INDEX, CLIENT_NAME_FIELD));
     }
 
     public class ClientRegistrationBuilder {

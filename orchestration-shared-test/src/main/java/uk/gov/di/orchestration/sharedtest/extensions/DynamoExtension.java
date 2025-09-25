@@ -62,7 +62,7 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
 
     protected abstract void createTables();
 
-    protected boolean tableExists(String tableName) {
+    private boolean tableExists(String tableName) {
         try {
             dynamoDB.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
             return true;
@@ -109,6 +109,9 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
             String partitionKeyField,
             Optional<String> sortKey,
             GlobalSecondaryIndex... globalSecondaryIndices) {
+        if (tableExists(tableName)) {
+            return;
+        }
         var keySchemaElements = new ArrayList<KeySchemaElement>();
         keySchemaElements.add(
                 KeySchemaElement.builder()

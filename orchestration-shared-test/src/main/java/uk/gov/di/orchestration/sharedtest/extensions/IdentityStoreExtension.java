@@ -48,12 +48,8 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
 
     @Override
     protected void createTables() {
-        if (!tableExists(AUTH_IDENTITY_CREDENTIALS_TABLE)) {
-            createTableWithPartitionKey(AUTH_IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
-        }
-        if (!tableExists(ORCH_IDENTITY_CREDENTIALS_TABLE)) {
-            createTableWithPartitionKey(ORCH_IDENTITY_CREDENTIALS_TABLE, CLIENT_SESSION_ID_FIELD);
-        }
+        createTableWithPartitionKey(AUTH_IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
+        createTableWithPartitionKey(ORCH_IDENTITY_CREDENTIALS_TABLE, CLIENT_SESSION_ID_FIELD);
     }
 
     public void addCoreIdentityJWT(

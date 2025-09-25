@@ -37,9 +37,7 @@ public class StateStorageExtension extends DynamoExtension implements AfterEachC
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionKey(TABLE_NAME, PREFIXED_SESSION_ID_FIELD);
-        }
+        createTableWithPartitionKey(TABLE_NAME, PREFIXED_SESSION_ID_FIELD);
     }
 
     public void storeState(String prefixedSessionId, String state) {

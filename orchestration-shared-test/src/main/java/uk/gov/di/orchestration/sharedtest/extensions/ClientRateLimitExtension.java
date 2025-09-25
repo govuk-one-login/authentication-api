@@ -41,10 +41,7 @@ public class ClientRateLimitExtension extends DynamoExtension implements AfterEa
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionAndSortKey(
-                    TABLE_NAME, CLIENT_ID_FIELD, PERIOD_START_TIME_FIELD);
-        }
+        createTableWithPartitionAndSortKey(TABLE_NAME, CLIENT_ID_FIELD, PERIOD_START_TIME_FIELD);
     }
 
     public Optional<SlidingWindowData> getData(String clientId, LocalDateTime periodStartTime) {

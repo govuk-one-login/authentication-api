@@ -48,9 +48,7 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
 
     @Override
     protected void createTables() {
-        if (!tableExists(DOC_APP_CREDENTIAL_TABLE)) {
-            createTableWithPartitionKey(DOC_APP_CREDENTIAL_TABLE, SUBJECT_ID_FIELD);
-        }
+        createTableWithPartitionKey(DOC_APP_CREDENTIAL_TABLE, SUBJECT_ID_FIELD);
     }
 
     public void addCredential(String subjectId, List<String> credentials) {

@@ -40,13 +40,11 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionKey(
-                    TABLE_NAME,
-                    SESSION_ID_FIELD,
-                    createGlobalSecondaryIndex(
-                            INTERNAL_COMMON_SUBJECT_ID_INDEX, INTERNAL_COMMON_SUBJECT_ID_FIELD));
-        }
+        createTableWithPartitionKey(
+                TABLE_NAME,
+                SESSION_ID_FIELD,
+                createGlobalSecondaryIndex(
+                        INTERNAL_COMMON_SUBJECT_ID_INDEX, INTERNAL_COMMON_SUBJECT_ID_FIELD));
     }
 
     public void addSession(OrchSessionItem orchSession) {

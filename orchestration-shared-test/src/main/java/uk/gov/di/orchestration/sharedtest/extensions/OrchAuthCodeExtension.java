@@ -45,9 +45,7 @@ public class OrchAuthCodeExtension extends DynamoExtension implements AfterEachC
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionKey(TABLE_NAME, ORCH_AUTH_CODE_ID_FIELD);
-        }
+        createTableWithPartitionKey(TABLE_NAME, ORCH_AUTH_CODE_ID_FIELD);
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(

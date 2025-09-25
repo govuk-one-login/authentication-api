@@ -54,9 +54,7 @@ public class JwksCacheExtension extends DynamoExtension implements AfterEachCall
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionAndSortKey(TABLE_NAME, JWKS_URL_FIELD, KEY_ID_FIELD);
-        }
+        createTableWithPartitionAndSortKey(TABLE_NAME, JWKS_URL_FIELD, KEY_ID_FIELD);
     }
 
     public JwksCacheItem getOrGenerateJwksCacheItem() {

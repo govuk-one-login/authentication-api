@@ -38,9 +38,7 @@ public class OrchClientSessionExtension extends DynamoExtension implements After
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionKey(TABLE_NAME, CLIENT_SESSION_ID_FIELD);
-        }
+        createTableWithPartitionKey(TABLE_NAME, CLIENT_SESSION_ID_FIELD);
     }
 
     public void storeClientSession(OrchClientSessionItem clientSession) {

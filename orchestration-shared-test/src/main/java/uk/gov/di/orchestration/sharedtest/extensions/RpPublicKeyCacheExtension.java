@@ -44,9 +44,7 @@ public class RpPublicKeyCacheExtension extends DynamoExtension implements AfterE
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createTableWithPartitionAndSortKey(TABLE_NAME, CLIENT_ID_FIELD, KEY_ID_FIELD);
-        }
+        createTableWithPartitionAndSortKey(TABLE_NAME, CLIENT_ID_FIELD, KEY_ID_FIELD);
     }
 
     public Optional<RpPublicKeyCache> getRpPublicKeyCacheData(String clientId, String keyId) {
