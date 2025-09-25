@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -89,6 +90,7 @@ public class SendOtpNotificationHandler
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final MFAMethodsService mfaMethodsService;
+    private final TestClientHelper testClientHelper;
 
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
@@ -103,7 +105,8 @@ public class SendOtpNotificationHandler
             AuditService auditService,
             ClientService clientService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestClientHelper testClientHelper) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -115,6 +118,7 @@ public class SendOtpNotificationHandler
         this.clientService = clientService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.testClientHelper = testClientHelper;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -139,6 +143,7 @@ public class SendOtpNotificationHandler
         this.clientService = new DynamoClientService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public SendOtpNotificationHandler() {
