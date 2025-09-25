@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -39,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -88,7 +88,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     Map.of(MfaMethodResponse.class, new MfaMethodResponseAdapter()));
 
     private CodeStorageService codeStorageService;
-    private AuthenticationAttemptsService authenticationAttemptsService;
 
     @BeforeEach
     void setup() {
@@ -100,9 +99,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new CodeStorageService(
                         REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
                         redisConnectionService);
-        authenticationAttemptsService =
-                new AuthenticationAttemptsService(
-                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE);
         txmaAuditQueue.clear();
 
         clientStore.registerClient(
@@ -126,6 +122,34 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Nested
     class SuccessfulLoginScenarios {
+
+        private static Stream<Arguments> vectorOfTrust() {
+            return Stream.of(
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
+        }
 
         @ParameterizedTest
         @MethodSource("vectorOfTrust")
@@ -183,6 +207,23 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                     .orElseThrow()
                                     .getInternalCommonSubjectId()));
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
+        }
+
+        private static Stream<Arguments> vectorOfTrustWithVerifiedMethods() {
+            return Stream.of(
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
+                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP));
         }
 
         @ParameterizedTest
@@ -255,54 +296,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
         }
 
-        private static Stream<Arguments> vectorOfTrust() {
-            return Stream.of(
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
-        }
-
-        private static Stream<Arguments> vectorOfTrustWithVerifiedMethods() {
-            return Stream.of(
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS),
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
-                    Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                    Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                    Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP),
-                    Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
-                    Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP),
-                    Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP));
-        }
-
         @Test
-        void shouldUpdateAuthSessionStoreWithExistingAccountStateWhenSuccessful()
-                throws Json.JsonException {
+        void shouldUpdateAuthSessionStoreWithExistingAccountStateWhenSuccessful() {
             var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
             var password = "password-1";
             var sessionId = IdGenerator.generate();
@@ -332,8 +327,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     class InvalidCredentialsScenarios {
 
         @Test
-        void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
-                throws Json.JsonException {
+        void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
             String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
             String password = "password-1";
             userStore.signUp(email, "wrong-password");
@@ -404,17 +398,21 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var wrongRequest = new LoginRequest(email, "wrong-password", journeyType);
 
-            for (int i = 0; i < 5; i++) {
-                var response = makeRequest(Optional.of(wrongRequest), headers, Map.of());
-                assertThat(response, hasStatus(401));
-                assertAuditEventExpectations(
-                        txmaAuditQueue,
-                        List.of(
-                                new AuditEventExpectation(invalidCredentialsEventExpectation)
-                                        .withAttribute(
-                                                INCORRECT_PASSWORD_COUNT, String.valueOf(i + 1))));
-                txmaAuditQueue.clear();
-            }
+            IntStream.rangeClosed(1, 5)
+                    .forEach(
+                            attemptNumber -> {
+                                var response =
+                                        makeRequest(Optional.of(wrongRequest), headers, Map.of());
+                                assertThat(response, hasStatus(401));
+                                assertAuditEventExpectations(
+                                        txmaAuditQueue,
+                                        List.of(
+                                                new AuditEventExpectation(
+                                                                invalidCredentialsEventExpectation)
+                                                        .withAttribute(
+                                                                INCORRECT_PASSWORD_COUNT,
+                                                                String.valueOf(attemptNumber))));
+                            });
 
             var sixthResponse = makeRequest(Optional.of(wrongRequest), headers, Map.of());
             assertThat(sixthResponse, hasStatus(400));
@@ -425,7 +423,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             new AuditEventExpectation(invalidCredentialsEventExpectation)
                                     .withAttribute(INCORRECT_PASSWORD_COUNT, "6"),
                             isReauth ? reauthFailedEventExpectation : lockoutEventExpectation));
-            txmaAuditQueue.clear();
 
             var validRequest = new LoginRequest(email, correctPassword, journeyType);
             var validResponse = makeRequest(Optional.of(validRequest), headers, Map.of());
