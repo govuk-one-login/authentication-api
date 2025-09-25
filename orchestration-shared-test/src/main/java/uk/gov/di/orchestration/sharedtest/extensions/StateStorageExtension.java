@@ -2,12 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
@@ -43,28 +37,7 @@ public class StateStorageExtension extends DynamoExtension implements AfterEachC
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createStateStorageTable();
-        }
-    }
-
-    protected void createStateStorageTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(PREFIXED_SESSION_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(PREFIXED_SESSION_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
+        createTableWithPartitionKey(TABLE_NAME, PREFIXED_SESSION_ID_FIELD);
     }
 
     public void storeState(String prefixedSessionId, String state) {

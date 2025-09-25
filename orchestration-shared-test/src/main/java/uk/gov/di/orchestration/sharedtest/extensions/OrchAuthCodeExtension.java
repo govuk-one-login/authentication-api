@@ -3,12 +3,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -51,28 +45,7 @@ public class OrchAuthCodeExtension extends DynamoExtension implements AfterEachC
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createOrchAuthCodeTable();
-        }
-    }
-
-    private void createOrchAuthCodeTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(ORCH_AUTH_CODE_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(ORCH_AUTH_CODE_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
+        createTableWithPartitionKey(TABLE_NAME, ORCH_AUTH_CODE_ID_FIELD);
     }
 
     public AuthorizationCode generateAndSaveAuthorisationCode(

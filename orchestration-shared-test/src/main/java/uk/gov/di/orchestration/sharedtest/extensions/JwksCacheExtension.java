@@ -2,12 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
@@ -60,36 +54,7 @@ public class JwksCacheExtension extends DynamoExtension implements AfterEachCall
 
     @Override
     protected void createTables() {
-        if (!tableExists(TABLE_NAME)) {
-            createJwksCacheTable();
-        }
-    }
-
-    private void createJwksCacheTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(JWKS_URL_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build(),
-                                AttributeDefinition.builder()
-                                        .attributeName(KEY_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(JWKS_URL_FIELD)
-                                        .build(),
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.RANGE)
-                                        .attributeName(KEY_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .build();
-        dynamoDB.createTable(request);
+        createTableWithPartitionAndSortKey(TABLE_NAME, JWKS_URL_FIELD, KEY_ID_FIELD);
     }
 
     public JwksCacheItem getOrGenerateJwksCacheItem() {
