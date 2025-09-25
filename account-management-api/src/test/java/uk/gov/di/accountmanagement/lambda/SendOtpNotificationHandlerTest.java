@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -114,6 +115,7 @@ class SendOtpNotificationHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
 
     private final Context context = mock(Context.class);
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -145,7 +147,8 @@ class SendOtpNotificationHandlerTest {
                     auditService,
                     clientService,
                     cloudwatchMetricsService,
-                    mfaMethodsService);
+                    mfaMethodsService,
+                    testClientHelper);
 
     @BeforeAll
     static void beforeAll() {
