@@ -5,16 +5,27 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public abstract class DynamoExtension extends BaseAwsResourceExtension
         implements BeforeAllCallback {
@@ -76,5 +87,88 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
             dynamoDB.deleteItem(
                     DeleteItemRequest.builder().tableName(tableName).key(keyMap).build());
         }
+    }
+
+    protected void createTableWithPartitionKey(
+            String tableName,
+            String partitionKeyField,
+            GlobalSecondaryIndex... globalSecondaryIndices) {
+        createTable(tableName, partitionKeyField, Optional.empty(), globalSecondaryIndices);
+    }
+
+    protected void createTableWithPartitionAndSortKey(
+            String tableName,
+            String partitionKeyField,
+            String sortKey,
+            GlobalSecondaryIndex... globalSecondaryIndices) {
+        createTable(tableName, partitionKeyField, Optional.of(sortKey), globalSecondaryIndices);
+    }
+
+    private void createTable(
+            String tableName,
+            String partitionKeyField,
+            Optional<String> sortKey,
+            GlobalSecondaryIndex... globalSecondaryIndices) {
+        var keySchemaElements = new ArrayList<KeySchemaElement>();
+        keySchemaElements.add(
+                KeySchemaElement.builder()
+                        .keyType(KeyType.HASH)
+                        .attributeName(partitionKeyField)
+                        .build());
+        sortKey.ifPresent(
+                s ->
+                        keySchemaElements.add(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.RANGE)
+                                        .attributeName(s)
+                                        .build()));
+
+        var attributeDefinitions = new ArrayList<AttributeDefinition>();
+        attributeDefinitions.add(
+                AttributeDefinition.builder()
+                        .attributeName(partitionKeyField)
+                        .attributeType(ScalarAttributeType.S)
+                        .build());
+        sortKey.ifPresent(
+                s ->
+                        attributeDefinitions.add(
+                                AttributeDefinition.builder()
+                                        .attributeName(s)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build()));
+        var requestBuilder =
+                CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(keySchemaElements)
+                        .billingMode(BillingMode.PAY_PER_REQUEST);
+        if (globalSecondaryIndices.length > 0) {
+            Stream.of(globalSecondaryIndices)
+                    .map(GlobalSecondaryIndex::keySchema)
+                    .flatMap(List::stream)
+                    .map(KeySchemaElement::attributeName)
+                    .forEach(
+                            attributeName ->
+                                    attributeDefinitions.add(
+                                            AttributeDefinition.builder()
+                                                    .attributeName(attributeName)
+                                                    .attributeType(ScalarAttributeType.S)
+                                                    .build()));
+            requestBuilder.globalSecondaryIndexes(globalSecondaryIndices);
+        }
+        requestBuilder.attributeDefinitions(attributeDefinitions);
+        dynamoDB.createTable(requestBuilder.build());
+    }
+
+    protected GlobalSecondaryIndex createGlobalSecondaryIndex(
+            String indexName, String partitionKey) {
+        return GlobalSecondaryIndex.builder()
+                .indexName(indexName)
+                .keySchema(
+                        KeySchemaElement.builder()
+                                .attributeName(partitionKey)
+                                .keyType(KeyType.HASH)
+                                .build())
+                .projection(t -> t.projectionType(ProjectionType.ALL))
+                .build();
     }
 }

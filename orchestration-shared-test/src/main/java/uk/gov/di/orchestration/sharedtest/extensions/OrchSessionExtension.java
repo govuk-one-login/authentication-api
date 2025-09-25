@@ -2,14 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -49,42 +41,12 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
     @Override
     protected void createTables() {
         if (!tableExists(TABLE_NAME)) {
-            createOrchSessionTable();
+            createTableWithPartitionKey(
+                    TABLE_NAME,
+                    SESSION_ID_FIELD,
+                    createGlobalSecondaryIndex(
+                            INTERNAL_COMMON_SUBJECT_ID_INDEX, INTERNAL_COMMON_SUBJECT_ID_FIELD));
         }
-    }
-
-    private void createOrchSessionTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(SESSION_ID_FIELD)
-                                        .build())
-                        .globalSecondaryIndexes(
-                                GlobalSecondaryIndex.builder()
-                                        .indexName(INTERNAL_COMMON_SUBJECT_ID_INDEX)
-                                        .keySchema(
-                                                KeySchemaElement.builder()
-                                                        .attributeName(
-                                                                INTERNAL_COMMON_SUBJECT_ID_FIELD)
-                                                        .keyType(KeyType.HASH)
-                                                        .build())
-                                        .projection(t -> t.projectionType(ProjectionType.ALL))
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(SESSION_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build(),
-                                AttributeDefinition.builder()
-                                        .attributeName(INTERNAL_COMMON_SUBJECT_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
     }
 
     public void addSession(OrchSessionItem orchSession) {

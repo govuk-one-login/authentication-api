@@ -2,12 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.oidc.entity.SlidingWindowData;
 import uk.gov.di.authentication.oidc.services.ClientRateLimitDataService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -48,35 +42,9 @@ public class ClientRateLimitExtension extends DynamoExtension implements AfterEa
     @Override
     protected void createTables() {
         if (!tableExists(TABLE_NAME)) {
-            createRateLimitDataTable();
+            createTableWithPartitionAndSortKey(
+                    TABLE_NAME, CLIENT_ID_FIELD, PERIOD_START_TIME_FIELD);
         }
-    }
-
-    private void createRateLimitDataTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(TABLE_NAME)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(CLIENT_ID_FIELD)
-                                        .build(),
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.RANGE)
-                                        .attributeName(PERIOD_START_TIME_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(CLIENT_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build(),
-                                AttributeDefinition.builder()
-                                        .attributeName(PERIOD_START_TIME_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
     }
 
     public Optional<SlidingWindowData> getData(String clientId, LocalDateTime periodStartTime) {

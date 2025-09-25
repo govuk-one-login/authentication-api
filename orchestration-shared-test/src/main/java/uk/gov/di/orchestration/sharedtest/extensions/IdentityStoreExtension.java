@@ -2,12 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
@@ -55,10 +49,10 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
     @Override
     protected void createTables() {
         if (!tableExists(AUTH_IDENTITY_CREDENTIALS_TABLE)) {
-            createAuthIdentityCredentialTable();
+            createTableWithPartitionKey(AUTH_IDENTITY_CREDENTIALS_TABLE, SUBJECT_ID_FIELD);
         }
         if (!tableExists(ORCH_IDENTITY_CREDENTIALS_TABLE)) {
-            createIdentityCredentialTable();
+            createTableWithPartitionKey(ORCH_IDENTITY_CREDENTIALS_TABLE, CLIENT_SESSION_ID_FIELD);
         }
     }
 
@@ -79,45 +73,5 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
 
     public Optional<OrchIdentityCredentials> getIdentityCredentials(String clientSessionId) {
         return dynamoService.getIdentityCredentials(clientSessionId);
-    }
-
-    private void createAuthIdentityCredentialTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(AUTH_IDENTITY_CREDENTIALS_TABLE)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(SUBJECT_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(SUBJECT_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-
-        dynamoDB.createTable(request);
-    }
-
-    private void createIdentityCredentialTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(ORCH_IDENTITY_CREDENTIALS_TABLE)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(CLIENT_SESSION_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(CLIENT_SESSION_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-
-        dynamoDB.createTable(request);
     }
 }

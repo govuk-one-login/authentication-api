@@ -4,12 +4,6 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
@@ -57,35 +51,9 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
     @Override
     protected void createTables() {
         if (!tableExists(AUTH_USERINFO_TABLE)) {
-            createAuthUserInfoTable();
+            createTableWithPartitionAndSortKey(
+                    AUTH_USERINFO_TABLE, INTERNAL_COMMON_SUBJECT_ID_FIELD, CLIENT_SESSION_ID_FIELD);
         }
-    }
-
-    private void createAuthUserInfoTable() {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(AUTH_USERINFO_TABLE)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(INTERNAL_COMMON_SUBJECT_ID_FIELD)
-                                        .build(),
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.RANGE)
-                                        .attributeName(CLIENT_SESSION_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(INTERNAL_COMMON_SUBJECT_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build(),
-                                AttributeDefinition.builder()
-                                        .attributeName(CLIENT_SESSION_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
     }
 
     public Optional<UserInfo> getAuthenticationUserInfo(String subjectId, String clientSessionId)

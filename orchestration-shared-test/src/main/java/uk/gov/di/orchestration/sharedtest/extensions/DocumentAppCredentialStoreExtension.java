@@ -2,12 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
-import software.amazon.awssdk.services.dynamodb.model.BillingMode;
-import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
-import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
-import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -55,27 +49,8 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     @Override
     protected void createTables() {
         if (!tableExists(DOC_APP_CREDENTIAL_TABLE)) {
-            createCredentialRegistryTable(DOC_APP_CREDENTIAL_TABLE);
+            createTableWithPartitionKey(DOC_APP_CREDENTIAL_TABLE, SUBJECT_ID_FIELD);
         }
-    }
-
-    private void createCredentialRegistryTable(String tableName) {
-        CreateTableRequest request =
-                CreateTableRequest.builder()
-                        .tableName(tableName)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(SUBJECT_ID_FIELD)
-                                        .build())
-                        .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(SUBJECT_ID_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
-                        .build();
-        dynamoDB.createTable(request);
     }
 
     public void addCredential(String subjectId, List<String> credentials) {
