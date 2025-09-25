@@ -21,7 +21,8 @@ dependencies {
             libs.awsSns,
             libs.awsS3,
             libs.bundles.awsDynamoDb,
-            libs.awsKms
+            libs.awsKms,
+            libs.awsSecretsManager
 
     implementation libs.govUkNotify,
             libs.bundles.apache,
