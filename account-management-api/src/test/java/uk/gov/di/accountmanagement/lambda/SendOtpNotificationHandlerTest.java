@@ -403,25 +403,8 @@ class SendOtpNotificationHandlerTest {
 
             Mockito.reset(clientService);
 
-            when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
+            when(testClientHelper.isTestJourney(anyString(), any()))
                     .thenThrow(new RuntimeException("unexpected"));
-
-            var event = createEmptyEvent();
-            event.setBody(
-                    format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
-
-            var result = handler.handleRequest(event, context);
-
-            assertEquals(500, result.getStatusCode());
-
-            verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
-        }
-
-        @Test
-        void shouldReturn500OnRequestFromTestUserIfTestClientsNotEnabled() {
-            when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
             var event = createEmptyEvent();
             event.setBody(
@@ -725,7 +708,7 @@ class SendOtpNotificationHandlerTest {
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
             Mockito.reset(clientService);
-            when(clientService.isTestJourney(any(), eq(TEST_TEST_USER_EMAIL_ADDRESS)))
+            when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
                     .thenReturn(true);
 
             var event = createEmptyEvent();
@@ -781,7 +764,7 @@ class SendOtpNotificationHandlerTest {
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
             Mockito.reset(clientService);
-            when(clientService.isTestJourney(any(), eq(TEST_TEST_USER_EMAIL_ADDRESS)))
+            when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
                     .thenReturn(true);
 
             var event = createEmptyEvent();

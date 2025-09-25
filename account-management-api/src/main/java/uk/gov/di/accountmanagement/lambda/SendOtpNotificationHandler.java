@@ -181,15 +181,8 @@ public class SendOtpNotificationHandler
                                     input.getRequestContext().getAuthorizer().get("clientId"),
                                     "'clientId' key does not exist in map");
             boolean isTestUserRequest =
-                    clientService.isTestJourney(
-                            clientIdFromApiGateway, sendNotificationRequest.getEmail());
-
-            if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
-                LOG.warn(
-                        "Test user journey attempted, but test clients are not enabled in this environment");
-                return Result.failure(
-                        generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
-            }
+                    testClientHelper.isTestJourney(
+                            sendNotificationRequest.getEmail(), configurationService);
 
             return Result.success(isTestUserRequest);
         } catch (NullPointerException e) {
