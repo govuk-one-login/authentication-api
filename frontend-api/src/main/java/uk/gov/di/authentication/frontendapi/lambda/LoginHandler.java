@@ -360,7 +360,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     clientId,
                     authSessionItem.getClientName(),
                     "P0",
-                    clientService.isTestJourney(clientId, userProfile.getEmail()));
+                    testClientHelper.isTestJourney(userProfile.getEmail(), configurationService));
 
             if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
                     || !authSessionItem
