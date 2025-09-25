@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -112,7 +111,6 @@ class SendOtpNotificationHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
@@ -145,7 +143,6 @@ class SendOtpNotificationHandlerTest {
                     dynamoService,
                     dynamoEmailCheckResultService,
                     auditService,
-                    clientService,
                     cloudwatchMetricsService,
                     mfaMethodsService,
                     testClientHelper);
@@ -169,9 +166,6 @@ class SendOtpNotificationHandlerTest {
         when(configurationService.getTestClientVerifyPhoneNumberOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-
-        when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
-                .thenReturn(true);
     }
 
     @AfterEach
@@ -179,7 +173,6 @@ class SendOtpNotificationHandlerTest {
         Mockito.reset(auditService);
         Mockito.reset(configurationService);
         Mockito.reset(codeGeneratorService);
-        Mockito.reset(clientService);
         Mockito.reset(mfaMethodsService);
     }
 
@@ -400,8 +393,6 @@ class SendOtpNotificationHandlerTest {
         @Test
         void shouldReturn500WhenUnexpectedException() {
             when(configurationService.isTestClientsEnabled()).thenReturn(false);
-
-            Mockito.reset(clientService);
 
             when(testClientHelper.isTestJourney(anyString(), any()))
                     .thenThrow(new RuntimeException("unexpected"));
@@ -707,7 +698,6 @@ class SendOtpNotificationHandlerTest {
                     .thenReturn(Result.success(false));
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            Mockito.reset(clientService);
             when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
                     .thenReturn(true);
 
@@ -763,7 +753,6 @@ class SendOtpNotificationHandlerTest {
                 throws Json.JsonException {
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            Mockito.reset(clientService);
             when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
                     .thenReturn(true);
 
