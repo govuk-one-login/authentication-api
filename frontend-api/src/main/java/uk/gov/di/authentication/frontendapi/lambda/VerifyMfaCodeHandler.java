@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -86,6 +87,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final TestClientHelper testClientHelper;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -97,7 +99,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestClientHelper testClientHelper) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -110,6 +113,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.testClientHelper = testClientHelper;
     }
 
     public VerifyMfaCodeHandler() {
@@ -132,6 +136,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -151,6 +156,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     @Override
@@ -495,7 +501,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 authSession.getClientName(),
                 levelOfConfidence.getValue(),
-                clientService.isTestJourney(clientId, authSession.getEmailAddress()),
+                testClientHelper.isTestJourney(authSession.getEmailAddress(), configurationService),
                 journeyType,
                 mfaMethodType,
                 priorityIdentifier);
