@@ -264,7 +264,27 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub
-        - ${Env}--stub-ticf-cri
+        - ${Env}-stub-ticf-cri
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: InternalPairwiseId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: InternalPairwiseId
+          KeyType: HASH
+      DeletionProtectionEnabled: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: ticf-cri-stub
+
+  AccountInterventionsApiStubstable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub
+        - ${Env}-stub-account-interventions
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
