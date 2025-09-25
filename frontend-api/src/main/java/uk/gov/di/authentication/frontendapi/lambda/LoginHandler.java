@@ -261,9 +261,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 FAILURE_REASON.getValue(),
-                                reauthFailureReason == null
-                                        ? "unknown"
-                                        : reauthFailureReason.getValue()));
+                                reauthFailureReason.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);

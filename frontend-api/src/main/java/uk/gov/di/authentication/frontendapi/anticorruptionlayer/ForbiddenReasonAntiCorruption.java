@@ -14,7 +14,10 @@ public class ForbiddenReasonAntiCorruption {
             case EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT -> ReauthFailureReasons
                     .INCORRECT_PASSWORD;
             case EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT -> ReauthFailureReasons.INCORRECT_OTP;
-            default -> null;
+            case EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
+                    BLOCKED_FOR_PW_RESET_REQUEST,
+                    EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    EXCEEDED_SEND_MFA_OTP_NOTIFICATION_LIMIT -> ReauthFailureReasons.UNKNOWN;
         };
     }
 }
