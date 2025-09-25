@@ -112,6 +112,7 @@ public class TestClientHelper {
     private List<String> getEmailAllowListFromSecretsManager(
             ConfigurationService configurationService) {
         if (cachedSecret == null || cachedSecret.isExpired()) {
+            LOG.info("Fetching email list from secret manager");
             var request =
                     GetSecretValueRequest.builder()
                             .secretId(
