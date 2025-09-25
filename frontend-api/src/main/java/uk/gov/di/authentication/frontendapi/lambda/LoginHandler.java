@@ -196,12 +196,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         JourneyType journeyType =
                 request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
-        var journeyTypeValue = journeyType != null ? journeyType.getValue() : "missing";
-        var isReauthJourney =
-                journeyTypeValue.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+        var isReauthJourney = journeyType == JourneyType.REAUTHENTICATION;
 
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        attachLogFieldToLogs(JOURNEY_TYPE, journeyTypeValue);
+        attachLogFieldToLogs(
+                JOURNEY_TYPE, journeyType != null ? journeyType.getValue() : "missing");
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -228,7 +227,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var decisionResult =
                 permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
-        if (!decisionResult.isSuccess()) {
+        if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
             var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
@@ -476,7 +475,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var decisionResult =
                 permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
-        if (!decisionResult.isSuccess()) {
+        if (decisionResult.isFailure()) {
             DecisionError failure = decisionResult.getFailure();
             LOG.error("Failure to get canReceivePassword decision due to {}", failure);
             var httpResponse = DecisionErrorHttpMapper.toHttpResponse(failure);
