@@ -98,7 +98,7 @@ Resources:
         - Key: Environment
           Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/ticf-stub-api.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/ticf-stub-api.yaml
 
   TicfCriStubApiAccessLogSubscriptionFilter:
     Condition: IsSplunkEnabled

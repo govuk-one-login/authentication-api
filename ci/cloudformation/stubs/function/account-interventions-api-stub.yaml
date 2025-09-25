@@ -20,6 +20,8 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoAccountInterventionsApiStubsReadWriteAccessPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
