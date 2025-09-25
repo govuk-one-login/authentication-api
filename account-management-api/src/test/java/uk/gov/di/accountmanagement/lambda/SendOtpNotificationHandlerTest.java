@@ -372,23 +372,6 @@ class SendOtpNotificationHandlerTest {
 
     @Nested
     class ServerErrors {
-        @Test
-        void shouldReturn500WhenClientIdNotAvailable() {
-            when(configurationService.isTestClientsEnabled()).thenReturn(false);
-
-            var event = createEmptyEvent();
-            event.setBody(
-                    format(
-                            "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
-            event.setRequestContext(null);
-
-            var result = handler.handleRequest(event, context);
-
-            assertEquals(500, result.getStatusCode());
-
-            verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
-        }
 
         @Test
         void shouldReturn500WhenUnexpectedException() {

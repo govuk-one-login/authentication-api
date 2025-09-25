@@ -43,7 +43,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -167,21 +166,14 @@ public class SendOtpNotificationHandler
     }
 
     private Result<APIGatewayProxyResponseEvent, Boolean> checkForTestUser(
-            APIGatewayProxyRequestEvent input, SendNotificationRequest sendNotificationRequest) {
+            SendNotificationRequest sendNotificationRequest) {
         try {
-            String clientIdFromApiGateway =
-                    (String)
-                            Objects.requireNonNull(
-                                    input.getRequestContext().getAuthorizer().get("clientId"),
-                                    "'clientId' key does not exist in map");
+
             boolean isTestUserRequest =
                     testClientHelper.isTestJourney(
                             sendNotificationRequest.getEmail(), configurationService);
 
             return Result.success(isTestUserRequest);
-        } catch (NullPointerException e) {
-            LOG.error("Error reading Client ID from context (passed from API Gateway)", e);
-            return Result.failure(generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
         } catch (Exception e) {
             LOG.error(
                     "Error initialising required variables for Account Management Send OTP Handler",
@@ -210,7 +202,7 @@ public class SendOtpNotificationHandler
 
         var sendNotificationRequest = checkRequestFormatResult.getSuccess();
 
-        var checkForTestUserResult = checkForTestUser(input, sendNotificationRequest);
+        var checkForTestUserResult = checkForTestUser(sendNotificationRequest);
 
         if (checkForTestUserResult.isFailure()) {
             return checkForTestUserResult.getFailure();
