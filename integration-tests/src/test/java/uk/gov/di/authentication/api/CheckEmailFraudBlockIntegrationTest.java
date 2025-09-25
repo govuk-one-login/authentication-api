@@ -182,7 +182,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                 expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
             }
 
-            expectation.verify(receivedEvents);
+            expectation.assertPublished(receivedEvents);
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }

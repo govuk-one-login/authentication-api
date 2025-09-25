@@ -37,7 +37,7 @@ public class AuditEventExpectation {
         return this;
     }
 
-    public void verify(List<String> receivedEvents) {
+    public void assertPublished(List<String> receivedEvents) {
         for (String event : receivedEvents) {
             var jsonEvent = JsonParser.parseString(event).getAsJsonObject();
 

@@ -113,7 +113,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP);
                 expectation.withAttribute(EXTENSIONS_NOTIFICATION_TYPE, VERIFY_EMAIL.name());
                 expectation.withAttribute(EXTENSIONS_TEST_USER, false);
-                expectation.verify(receivedEvents);
+                expectation.assertPublished(receivedEvents);
             }
         }
 
@@ -192,7 +192,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 sendOtpExpectation.withAttribute(
                         EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name());
                 sendOtpExpectation.withAttribute(EXTENSIONS_TEST_USER, false);
-                sendOtpExpectation.verify(receivedEvents);
+                sendOtpExpectation.assertPublished(receivedEvents);
 
                 AuditEventExpectation phoneCodeSentExpectation =
                         new AuditEventExpectation(AUTH_PHONE_CODE_SENT);
@@ -200,7 +200,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
                 phoneCodeSentExpectation.withAttribute(
                         EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-                phoneCodeSentExpectation.verify(receivedEvents);
+                phoneCodeSentExpectation.assertPublished(receivedEvents);
             }
         }
 
