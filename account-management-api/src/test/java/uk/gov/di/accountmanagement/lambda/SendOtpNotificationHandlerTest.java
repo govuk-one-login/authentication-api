@@ -375,44 +375,6 @@ class SendOtpNotificationHandlerTest {
                 .incrementCounter(eq("UserSubmittedCredential"), anyMap());
     }
 
-    @Disabled("Test user feature not implemented yet")
-    @Test
-    void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
-        when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
-                        TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
-                .thenReturn(Result.success(false));
-
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        Mockito.reset(clientService);
-        when(clientService.isTestJourney(any(), any())).thenReturn(true);
-
-        var event = createEmptyEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
-
-        var result = handler.handleRequest(event, context);
-
-        assertEquals(204, result.getStatusCode());
-
-        verifyNoInteractions(emailSqsClient);
-
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_TEST_USER_EMAIL_ADDRESS,
-                        TEST_CLIENT_AND_USER_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        VERIFY_EMAIL);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.AUTH_SEND_OTP,
-                        auditContext.withPhoneNumber(null).withEmail(TEST_TEST_USER_EMAIL_ADDRESS),
-                        pair("notification-type", VERIFY_EMAIL),
-                        pair("test-user", true));
-    }
-
     @Nested
     class ServerErrors {
         @Test
@@ -725,6 +687,49 @@ class SendOtpNotificationHandlerTest {
 
                 verifyNoInteractions(auditService);
             }
+        }
+    }
+
+    @Nested
+    class TestUserJourney {
+        @Disabled("Test user feature not implemented yet")
+        @Test
+        void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
+            when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
+                            TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
+                    .thenReturn(Result.success(false));
+
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            Mockito.reset(clientService);
+            when(clientService.isTestJourney(any(), any())).thenReturn(true);
+
+            var event = createEmptyEvent();
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                            TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
+            var result = handler.handleRequest(event, context);
+
+            assertEquals(204, result.getStatusCode());
+
+            verifyNoInteractions(emailSqsClient);
+
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            TEST_TEST_USER_EMAIL_ADDRESS,
+                            TEST_CLIENT_AND_USER_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            VERIFY_EMAIL);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.AUTH_SEND_OTP,
+                            auditContext
+                                    .withPhoneNumber(null)
+                                    .withEmail(TEST_TEST_USER_EMAIL_ADDRESS),
+                            pair("notification-type", VERIFY_EMAIL),
+                            pair("test-user", true));
         }
     }
 }
