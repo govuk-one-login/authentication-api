@@ -124,35 +124,21 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
                                         .build()));
 
         var attributeDefinitions = new ArrayList<AttributeDefinition>();
-        attributeDefinitions.add(
-                AttributeDefinition.builder()
-                        .attributeName(partitionKeyField)
-                        .attributeType(ScalarAttributeType.S)
-                        .build());
-        sortKey.ifPresent(
-                s ->
-                        attributeDefinitions.add(
-                                AttributeDefinition.builder()
-                                        .attributeName(s)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build()));
+        attributeDefinitions.add(stringAttribute(partitionKeyField));
+        sortKey.ifPresent(s -> attributeDefinitions.add(stringAttribute(s)));
         var requestBuilder =
                 CreateTableRequest.builder()
                         .tableName(tableName)
                         .keySchema(keySchemaElements)
                         .billingMode(BillingMode.PAY_PER_REQUEST);
         if (globalSecondaryIndices.length > 0) {
+            // Add all global index keys to attribute definitions
             Stream.of(globalSecondaryIndices)
                     .map(GlobalSecondaryIndex::keySchema)
                     .flatMap(List::stream)
                     .map(KeySchemaElement::attributeName)
-                    .forEach(
-                            attributeName ->
-                                    attributeDefinitions.add(
-                                            AttributeDefinition.builder()
-                                                    .attributeName(attributeName)
-                                                    .attributeType(ScalarAttributeType.S)
-                                                    .build()));
+                    .map(DynamoExtension::stringAttribute)
+                    .forEach(attributeDefinitions::add);
             requestBuilder.globalSecondaryIndexes(globalSecondaryIndices);
         }
         requestBuilder.attributeDefinitions(attributeDefinitions);
@@ -169,6 +155,13 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
                                 .keyType(KeyType.HASH)
                                 .build())
                 .projection(t -> t.projectionType(ProjectionType.ALL))
+                .build();
+    }
+
+    private static AttributeDefinition stringAttribute(String attributeName) {
+        return AttributeDefinition.builder()
+                .attributeName(attributeName)
+                .attributeType(ScalarAttributeType.S)
                 .build();
     }
 }
