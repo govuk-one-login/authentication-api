@@ -8,8 +8,8 @@ buildscript {
     }
     dependencies {
         constraints {
-            classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
-                because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+            classpath('org.apache.commons:commons-lang3:[3.19.0,)') {
+                because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.19.0 and higher'
             }
         }
     }
@@ -91,8 +91,8 @@ subprojects {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
 
-                classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
-                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                classpath('org.apache.commons:commons-lang3:[3.19.0,)') {
+                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.19.0 and higher'
                 }
 
                 // Other constraints
@@ -198,8 +198,8 @@ subprojects {
                     because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
                 }
 
-                add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
-                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+                add(conf.name, 'org.apache.commons:commons-lang3:[3.19.0,)') {
+                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.19.0 and higher'
                 }
 
                 // Other constraints
@@ -214,7 +214,7 @@ subprojects {
                 "org.apache.commons:commons-collections4:4.5.0",
                 "commons-net:commons-net:3.12.0",
                 "commons-io:commons-io:2.20.0",
-                "org.apache.commons:commons-lang3:3.18.0"
+                "org.apache.commons:commons-lang3:3.19.0"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.81"
 
