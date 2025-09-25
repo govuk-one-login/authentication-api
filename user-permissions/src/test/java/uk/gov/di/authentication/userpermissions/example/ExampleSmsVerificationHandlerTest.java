@@ -11,7 +11,6 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
-import java.lang.reflect.Field;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,23 +30,10 @@ class ExampleSmsVerificationHandlerTest {
     private static final String INCORRECT_OTP = "000000";
 
     @BeforeEach
-    void setUp() throws Exception {
-        // Create mocks manually instead of using annotations
+    void setUp() {
         permissionDecisions = mock(PermissionDecisions.class);
         userActions = mock(UserActions.class);
-
-        handler = new ExampleSmsVerificationHandler();
-
-        // Use reflection to set the mocked dependencies
-        Field permissionDecisionsField =
-                ExampleSmsVerificationHandler.class.getDeclaredField("permissionDecisions");
-        permissionDecisionsField.setAccessible(true);
-        permissionDecisionsField.set(handler, permissionDecisions);
-
-        Field userActionsField =
-                ExampleSmsVerificationHandler.class.getDeclaredField("userActions");
-        userActionsField.setAccessible(true);
-        userActionsField.set(handler, userActions);
+        handler = new ExampleSmsVerificationHandler(permissionDecisions, userActions);
     }
 
     @Test
