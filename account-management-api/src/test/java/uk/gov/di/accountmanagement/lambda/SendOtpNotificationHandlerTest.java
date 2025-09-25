@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -692,42 +691,129 @@ class SendOtpNotificationHandlerTest {
 
     @Nested
     class TestUserJourney {
-        @Disabled("Test user feature not implemented yet")
+        private final String TEST_CLIENT_VERIFY_EMAIL_CODE = "654321";
+        private final String TEST_CLIENT_VERIFY_SMS_CODE = "564312";
+        private final AuditContext TEST_USER_AUDIT_CONTEXT =
+                new AuditContext(
+                        TEST_CLIENT_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        EXPECTED_COMMON_SUBJECT,
+                        TEST_TEST_USER_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        PERSISTENT_ID,
+                        Optional.of(TXMA_ENCODED_HEADER_VALUE),
+                        new ArrayList<>());
+
+        @BeforeEach
+        void setup() {
+            when(configurationService.getTestClientVerifyPhoneNumberOTP())
+                    .thenReturn(Optional.of(TEST_CLIENT_VERIFY_SMS_CODE));
+            when(configurationService.getTestClientVerifyEmailOTP())
+                    .thenReturn(Optional.of(TEST_CLIENT_VERIFY_EMAIL_CODE));
+        }
+
         @Test
-        void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
+        void itReturnsA204AndPlacesAVerifySmsMessageOnQueueForTestUser() throws Json.JsonException {
             when(mfaMethodsService.isPhoneAlreadyInUseAsAVerifiedMfa(
-                            TEST_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
+                            TEST_TEST_USER_EMAIL_ADDRESS, NORMALISED_TEST_PHONE_NUMBER))
                     .thenReturn(Result.success(false));
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
             Mockito.reset(clientService);
-            when(clientService.isTestJourney(any(), any())).thenReturn(true);
+            when(clientService.isTestJourney(any(), eq(TEST_TEST_USER_EMAIL_ADDRESS)))
+                    .thenReturn(true);
 
             var event = createEmptyEvent();
             event.setBody(
                     format(
                             "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
-                            TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
             var result = handler.handleRequest(event, context);
 
             assertEquals(204, result.getStatusCode());
 
-            verifyNoInteractions(emailSqsClient);
+            verify(emailSqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            TEST_PHONE_NUMBER,
+                                            VERIFY_PHONE_NUMBER,
+                                            TEST_CLIENT_VERIFY_SMS_CODE,
+                                            SupportedLanguage.EN,
+                                            true,
+                                            TEST_TEST_USER_EMAIL_ADDRESS)));
 
             verify(codeStorageService)
                     .saveOtpCode(
                             TEST_TEST_USER_EMAIL_ADDRESS,
-                            TEST_CLIENT_AND_USER_SIX_DIGIT_CODE,
+                            TEST_CLIENT_VERIFY_SMS_CODE,
+                            CODE_EXPIRY_TIME,
+                            VERIFY_PHONE_NUMBER);
+
+            InOrder inOrder = inOrder(auditService);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.AUTH_SEND_OTP,
+                            TEST_USER_AUDIT_CONTEXT,
+                            AUDIT_EVENT_COMPONENT_ID_AUTH,
+                            pair("notification-type", VERIFY_PHONE_NUMBER),
+                            pair("test-user", true));
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.AUTH_PHONE_CODE_SENT,
+                            TEST_USER_AUDIT_CONTEXT,
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            pair("journey-type", JourneyType.ACCOUNT_MANAGEMENT.name()),
+                            pair("mfa-method", PriorityIdentifier.DEFAULT.name().toLowerCase()));
+        }
+
+        @Test
+        void itReturnsA204AndPlacesAVerifyEmailMessageOnQueueForTestUser()
+                throws Json.JsonException {
+
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            Mockito.reset(clientService);
+            when(clientService.isTestJourney(any(), eq(TEST_TEST_USER_EMAIL_ADDRESS)))
+                    .thenReturn(true);
+
+            var event = createEmptyEvent();
+            event.setBody(
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
+                            TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_PHONE_NUMBER));
+
+            var result = handler.handleRequest(event, context);
+
+            assertEquals(204, result.getStatusCode());
+
+            verify(emailSqsClient)
+                    .send(
+                            objectMapper.writeValueAsString(
+                                    new NotifyRequest(
+                                            TEST_TEST_USER_EMAIL_ADDRESS,
+                                            VERIFY_EMAIL,
+                                            TEST_CLIENT_VERIFY_EMAIL_CODE,
+                                            SupportedLanguage.EN,
+                                            true,
+                                            TEST_TEST_USER_EMAIL_ADDRESS)));
+
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            TEST_TEST_USER_EMAIL_ADDRESS,
+                            TEST_CLIENT_VERIFY_EMAIL_CODE,
                             CODE_EXPIRY_TIME,
                             VERIFY_EMAIL);
 
             verify(auditService)
                     .submitAuditEvent(
                             AccountManagementAuditableEvent.AUTH_SEND_OTP,
-                            auditContext
-                                    .withPhoneNumber(null)
-                                    .withEmail(TEST_TEST_USER_EMAIL_ADDRESS),
+                            TEST_USER_AUDIT_CONTEXT,
+                            AUDIT_EVENT_COMPONENT_ID_AUTH,
                             pair("notification-type", VERIFY_EMAIL),
                             pair("test-user", true));
         }
