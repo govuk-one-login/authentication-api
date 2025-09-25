@@ -180,7 +180,7 @@ public class AuditAssertionsHelper {
         List<String> receivedEvents = assertTxmaAuditEventsReceived(queue, events);
 
         for (AuditEventExpectation expectation : expectedEvents) {
-            expectation.verify(receivedEvents);
+            expectation.assertPublished(receivedEvents);
         }
 
         assertNoTxmaAuditEventsReceived(queue);

@@ -1117,7 +1117,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             }
 
             // Verify the expectation against the received events
-            expectation.verify(receivedEvents);
+            expectation.assertPublished(receivedEvents);
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }

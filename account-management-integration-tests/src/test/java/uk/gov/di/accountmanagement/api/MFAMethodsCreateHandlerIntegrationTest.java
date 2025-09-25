@@ -845,7 +845,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             }
 
             // Verify the expectation against the received events
-            expectation.verify(receivedEvents);
+            expectation.assertPublished(receivedEvents);
         }
     }
 

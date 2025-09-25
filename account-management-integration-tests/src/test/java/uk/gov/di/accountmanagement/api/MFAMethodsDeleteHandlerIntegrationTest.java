@@ -153,7 +153,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP.getValue());
             }
 
-            expectation.verify(sentEvents);
+            expectation.assertPublished(sentEvents);
         }
 
         @Test
@@ -185,7 +185,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             expectation.withAttribute(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP.getValue());
 
-            expectation.verify(sentEvents);
+            expectation.assertPublished(sentEvents);
         }
     }
 
