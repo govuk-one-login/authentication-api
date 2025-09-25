@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -151,6 +152,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -189,7 +191,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         commonPasswordsService,
                         authenticationAttemptsService,
                         authSessionService,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        testClientHelper);
     }
 
     @ParameterizedTest

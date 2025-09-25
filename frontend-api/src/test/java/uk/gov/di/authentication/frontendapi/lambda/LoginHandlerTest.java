@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -151,6 +152,7 @@ class LoginHandlerTest {
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
+    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -214,7 +216,8 @@ class LoginHandlerTest {
                         commonPasswordsService,
                         authenticationAttemptsService,
                         authSessionService,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        testClientHelper);
     }
 
     @Test
