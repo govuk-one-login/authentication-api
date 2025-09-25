@@ -181,8 +181,8 @@ public class SendOtpNotificationHandler
                                     input.getRequestContext().getAuthorizer().get("clientId"),
                                     "'clientId' key does not exist in map");
             boolean isTestUserRequest =
-                    clientService.isTestJourney(
-                            clientIdFromApiGateway, sendNotificationRequest.getEmail());
+                    testClientHelper.isTestJourney(
+                            sendNotificationRequest.getEmail(), configurationService);
 
             if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
                 LOG.warn(
