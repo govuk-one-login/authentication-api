@@ -1,0 +1,109 @@
+[versions]
+awsSdk = "2.33.4"
+junit = "5.13.4"
+pact = "4.6.17"
+xray = "2.19.0"
+
+[libraries]
+apacheCommonsCodec = "commons-codec:commons-codec:1.19.0"
+apacheCommonsCollections = "org.apache.commons:commons-collections4:4.5.0"
+apacheCommonsIo = "commons-io:commons-io:2.20.0"
+apacheCommonsLang = "org.apache.commons:commons-lang3:3.18.0"
+apacheCommonsNet = "commons-net:commons-net:3.12.0"
+apacheCommonsPool = "org.apache.commons:commons-pool2:2.12.1"
+apacheCommonsValidator = "commons-validator:commons-validator:1.10.0"
+apacheHttpClient = "org.apache.httpcomponents:httpclient:4.5.14"
+apacheHttpComponents = "org.apache.httpcomponents.core5:httpcore5:5.3.5"
+approvalTests = "com.approvaltests:approvaltests:25.4.3"
+awaitility = "org.awaitility:awaitility:4.3.0"
+awsCloudwatchEmf = "software.amazon.cloudwatchlogs:aws-embedded-metrics:4.2.0"
+awsCloudwatch = { module = "software.amazon.awssdk:cloudwatch", version.ref = "awsSdk" }
+awsDynamoDbBase = { module = "software.amazon.awssdk:dynamodb", version.ref = "awsSdk" }
+awsDynamoDbEnhanced = { module = "software.amazon.awssdk:dynamodb-enhanced", version.ref = "awsSdk" }
+awsLambdaBase = { module = "software.amazon.awssdk:lambda", version.ref = "awsSdk" }
+awsLambdaCore = "com.amazonaws:aws-lambda-java-core:1.4.0"
+awsLambdaEvents = "com.amazonaws:aws-lambda-java-events:3.16.1"
+awsLambdaLog4j = "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
+awsLambdaTests = "com.amazonaws:aws-lambda-java-tests:1.1.2"
+awsKms = { module = "software.amazon.awssdk:kms", version.ref = "awsSdk" }
+awsSecretsManager = { module = "software.amazon.awssdk:secretsmanager", version.ref = "awsSdk" }
+awsSns = { module = "software.amazon.awssdk:sns", version.ref = "awsSdk" }
+awsSqs = { module = "software.amazon.awssdk:sqs", version.ref = "awsSdk" }
+awsSsm = { module = "software.amazon.awssdk:ssm", version.ref = "awsSdk" }
+awsS3 = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }
+bouncyCastle = "org.bouncycastle:bcpkix-jdk18on:1.81"
+govUkNotify = "uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE"
+gson = "com.google.code.gson:gson:2.13.1"
+hamcrest = "org.hamcrest:hamcrest:3.0"
+jacksonDatabind = "com.fasterxml.jackson.core:jackson-databind:2.20.0"
+javaParser = "com.github.javaparser:javaparser-core:3.27.0"
+javalin = "io.javalin:javalin:6.7.0"
+jetbrainsAnnotations = "org.jetbrains:annotations:26.0.2-1"
+jettyServer = "org.eclipse.jetty:jetty-server:12.0.24"
+jgit = "org.eclipse.jgit:org.eclipse.jgit:7.3.0.202506031305-r"
+jsonAssertJ = "net.javacrumbs.json-unit:json-unit-assertj:4.1.1"
+junitPlatform = "org.junit.platform:junit-platform-launcher:1.13.4"
+jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+lettuceCore = "io.lettuce:lettuce-core:6.8.1.RELEASE"
+libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.14"
+mockitoCore = "org.mockito:mockito-core:5.19.0"
+nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.4.2"
+nimbusOidc = "com.nimbusds:oauth2-oidc-sdk:10.13.2"
+openTelemetryBom = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.19.0-alpha"
+openTelemetryAwsSdk = { module = "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure" }
+openTelemetryJavaHttpClient = { module = "io.opentelemetry.instrumentation:opentelemetry-java-http-client" }
+pactConsumer = { module = "au.com.dius.pact.consumer:junit5", version.ref = "pact" }
+pactProvider = { module = "au.com.dius.pact.provider:junit5", version.ref = "pact" }
+reflections = "org.reflections:reflections:0.10.2"
+sl4jNop = "org.slf4j:slf4j-nop:2.0.17"
+webcompere = "uk.org.webcompere:system-stubs-jupiter:2.1.8"
+wiremock = "org.wiremock:wiremock-jetty12:3.13.1"
+xrayBom = { module = "com.amazonaws:aws-xray-recorder-sdk-bom", version.ref = "xray" }
+xrayCore = { module = "com.amazonaws:aws-xray-recorder-sdk-core", version.ref = "xray" }
+xrayAwsSdkInstrumentor = { module = "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-instrumentor", version.ref = "xray" }
+xrayAwsSdkCore = { module = "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-core", version.ref = "xray" }
+xrayAwsSdkV2 = { module = "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2", version.ref = "xray" }
+xrayAwsSdkV2Instrumentor = { module = "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor", version.ref = "xray" }
+
+[bundles]
+apache = [
+    "apacheCommonsCodec",
+    "apacheCommonsCollections",
+    "apacheCommonsIo",
+    "apacheCommonsLang",
+    "apacheCommonsNet",
+    "apacheHttpClient"
+]
+awsDynamoDb = ["awsDynamoDbBase", "awsDynamoDbEnhanced"]
+awsLambda = ["awsLambdaBase", "awsLambdaCore", "awsLambdaEvents", "awsLambdaLog4j"]
+lettuce = ["apacheCommonsPool", "lettuceCore"]
+loggingRuntime = ["awsLambdaLog4j", "sl4jNop"]
+nimbus = ["nimbusJwt", "nimbusOidc"]
+test = [
+    "awaitility",
+    "approvalTests",
+    "hamcrest",
+    "junitPlatform",
+    "jupiterApi",
+    "jupiterParams",
+    "mockitoCore",
+    "reflections",
+    "webcompere"
+]
+testRuntime = ["jupiterEngine"]
+xray = [
+    "xrayCore",
+    "xrayAwsSdkInstrumentor",
+    "xrayAwsSdkCore",
+    "xrayAwsSdkV2",
+    "xrayAwsSdkV2Instrumentor"
+]
+
+[plugins]
+dockerCompose = "com.avast.gradle.docker-compose:0.17.12"
+pact = "au.com.dius.pact:4.6.17"
+sonar = "org.sonarqube:6.3.1.5724"
+spotbugs = "com.github.spotbugs:6.3.0"
+spotless = "com.diffplug.spotless:7.2.1"

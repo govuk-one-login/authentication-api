@@ -2,23 +2,23 @@ plugins {
     id "java"
 }
 
-group "uk.gov.di.orchestration.sharedtest"
-version "unspecified"
+group = "uk.gov.di.orchestration.sharedtest"
+version = "unspecified"
 
 dependencies {
-    implementation configurations.tests,
-            configurations.lambda,
-            configurations.apache,
-            configurations.nimbus,
-            configurations.lettuce,
-            configurations.dynamodb,
-            configurations.kms,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.cloudwatch,
-            configurations.pact_provider,
+    implementation libs.bundles.test,
+            libs.bundles.awsLambda,
+            libs.bundles.apache,
+            libs.bundles.nimbus,
+            libs.bundles.lettuce,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms,
+            libs.awsSns,
+            libs.awsS3,
+            libs.awsSqs,
+            libs.awsSsm,
+            libs.awsCloudwatchEmf,
+            libs.pactProvider,
             "org.eclipse.jetty:jetty-server:12.0.24",
             "com.google.code.gson:gson:2.13.1"
 

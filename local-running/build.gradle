@@ -1,18 +1,18 @@
 plugins {
     id "application"
-    id 'java'
+    id "java"
 }
 
-group "uk.gov.di.authentication.local"
-version "unspecified"
+group = "uk.gov.di.authentication.local"
+version = "unspecified"
 
 dependencies {
-    implementation configurations.javalin,
-            configurations.dynamodb,
-            configurations.kms,
-            configurations.lambda,
-            configurations.sqs,
-            configurations.ssm,
+    implementation libs.javalin,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms,
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
             project(":shared"),
             project(":auth-external-api"),
             project(":frontend-api")

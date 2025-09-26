@@ -1,24 +1,24 @@
 plugins {
-    id 'java'
-    id 'application'
+    id "java"
+    id "application"
     id "jacoco"
 }
 
 dependencies {
-    implementation configurations.java_parser
-    implementation configurations.jgit
-    implementation configurations.gson
-    implementation configurations.logging_runtime
+    implementation libs.javaParser
+    implementation libs.jgit
+    implementation libs.gson
+    implementation libs.bundles.loggingRuntime
 
-    testImplementation configurations.tests
-    testRuntimeOnly configurations.test_runtime
+    testImplementation libs.bundles.test
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
     useJUnitPlatform()
     testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat "full"
+        events = ["passed", "skipped", "failed"]
+        exceptionFormat = "full"
     }
 }
 
@@ -35,7 +35,7 @@ task checkDeprecations(type: JavaExec) {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

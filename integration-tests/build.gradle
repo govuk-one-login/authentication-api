@@ -1,26 +1,26 @@
 plugins {
     id "java"
     id "jacoco"
-    id "au.com.dius.pact" version "4.6.17"
+    alias libs.plugins.pact
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
-    testImplementation configurations.tests,
-            configurations.apache,
-            configurations.gson,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.sqs,
-            configurations.kms,
-            configurations.s3,
-            configurations.cloudwatch,
-            configurations.dynamodb,
-            configurations.lettuce,
-            configurations.lambda,
-            configurations.pact_provider
+    testImplementation libs.bundles.test,
+            libs.bundles.apache,
+            libs.gson,
+            libs.bundles.nimbus,
+            libs.bouncyCastle,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.awsS3,
+            libs.awsCloudwatchEmf,
+            libs.bundles.awsDynamoDb,
+            libs.bundles.lettuce,
+            libs.bundles.awsLambda,
+            libs.pactProvider
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
@@ -37,9 +37,8 @@ dependencies {
     implementation project(":utils"), noXray
     implementation project(":user-permissions"), noXray
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
-    testImplementation("org.awaitility:awaitility:4.3.0")
-    testImplementation('org.wiremock:wiremock-jetty12:3.13.1')
+    testRuntimeOnly libs.bundles.testRuntime
+    testImplementation(libs.wiremock)
 }
 
 test {
@@ -120,6 +119,6 @@ task pactProviderTests (type: Test, group: "verification") {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }
