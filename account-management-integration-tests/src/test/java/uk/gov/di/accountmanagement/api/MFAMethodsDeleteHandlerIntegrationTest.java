@@ -142,18 +142,18 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var sentEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
 
             AuditEventExpectation expectation =
-                    new AuditEventExpectation(AUTH_MFA_METHOD_DELETE_COMPLETED.name());
+                    new AuditEventExpectation(AUTH_MFA_METHOD_DELETE_COMPLETED);
             expectation.withAttribute(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
 
             // Only add phone number country code for SMS methods
             if (backupMethod.getMfaMethodType().equals(MFAMethodType.SMS.getValue())) {
-                expectation.withAttribute(EXTENSIONS_MFA_TYPE, SMS);
+                expectation.withAttribute(EXTENSIONS_MFA_TYPE, SMS.getValue());
                 expectation.withAttribute(EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE, "44");
             } else if (backupMethod.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())) {
-                expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP);
+                expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP.getValue());
             }
 
-            expectation.verify(sentEvents);
+            expectation.assertPublished(sentEvents);
         }
 
         @Test
@@ -181,11 +181,11 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             var sentEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents);
 
             AuditEventExpectation expectation =
-                    new AuditEventExpectation(AUTH_MFA_METHOD_DELETE_COMPLETED.name());
+                    new AuditEventExpectation(AUTH_MFA_METHOD_DELETE_COMPLETED);
             expectation.withAttribute(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
-            expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP);
+            expectation.withAttribute(EXTENSIONS_MFA_TYPE, AUTH_APP.getValue());
 
-            expectation.verify(sentEvents);
+            expectation.assertPublished(sentEvents);
         }
     }
 

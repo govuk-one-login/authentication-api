@@ -182,6 +182,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         public boolean supportReauthSignoutEnabled() {
                             return true;
                         }
+
+                        @Override
+                        public boolean isAuthenticationAttemptsServiceEnabled() {
+                            return true;
+                        }
                     };
 
     protected static final ConfigurationService EMAIL_CHECK_AND_TXMA_ENABLED_CONFIGURATION_SERVICE =

@@ -82,19 +82,7 @@ class PermissionDecisionsTest {
         }
 
         @Override
-        public Result<DecisionError, Decision> canVerifyOtp(
-                JourneyType journeyType, UserPermissionContext userPermissionContext) {
-            return null;
-        }
-
-        @Override
-        public Result<DecisionError, Decision> canVerifySmsOtp(
-                JourneyType journeyType, UserPermissionContext userPermissionContext) {
-            return Result.success(new Decision.Permitted(0));
-        }
-
-        @Override
-        public Result<DecisionError, Decision> canVerifyAuthAppOtp(
+        public Result<DecisionError, Decision> canVerifyMfaOtp(
                 JourneyType journeyType, UserPermissionContext userPermissionContext) {
             return Result.success(new Decision.Permitted(0));
         }

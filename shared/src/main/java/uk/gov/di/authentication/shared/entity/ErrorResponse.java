@@ -112,7 +112,8 @@ public enum ErrorResponse {
     USER_DOES_NOT_HAVE_ACCOUNT(1086, "Email from request does not have any user credentials"),
     FAILED_TO_RAISE_AUDIT_EVENT(1087, "Failed to raise an audit event"),
     STORAGE_LAYER_ERROR(1088, "Error retrieving account details"),
-    EMAIL_ADDRESS_DENIED(1089, "Email address is denied");
+    EMAIL_ADDRESS_DENIED(1089, "Email address is denied"),
+    UNHANDLED_NEGATIVE_DECISION(1090, "Permissions manager negative decision was not handled");
 
     private int code;
 

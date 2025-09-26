@@ -153,7 +153,7 @@ class CheckUserExistsHandlerTest {
         // Setup default PermissionDecisionManager behavior after reset
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyOtp(any(), any()))
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
     }
 
@@ -306,9 +306,10 @@ class CheckUserExistsHandlerTest {
                             lockoutExpiry,
                             false);
 
-            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.SIGN_IN), any()))
+            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
                     .thenReturn(Result.success(signInLockout));
-            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.PASSWORD_RESET_MFA), any()))
+            when(permissionDecisionManager.canVerifyMfaOtp(
+                            eq(JourneyType.PASSWORD_RESET_MFA), any()))
                     .thenReturn(Result.success(passwordResetLockout));
 
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
@@ -569,12 +570,12 @@ class CheckUserExistsHandlerTest {
 
         @ParameterizedTest
         @MethodSource("decisionErrorToExpectedErrorResponse")
-        void shouldReturnCorrectErrorResponseForCanVerifyOtpFailure(
+        void shouldReturnCorrectErrorResponseForCanVerifyMfaOtpFailure(
                 DecisionError decisionError, ErrorResponse expectedErrorResponse) {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
-            when(permissionDecisionManager.canVerifyOtp(eq(JourneyType.SIGN_IN), any()))
+            when(permissionDecisionManager.canVerifyMfaOtp(eq(JourneyType.SIGN_IN), any()))
                     .thenReturn(Result.failure(decisionError));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
