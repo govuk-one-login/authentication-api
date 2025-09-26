@@ -147,3 +147,9 @@ variable "new_auth_api_vpc_endpoint_id" {
   type        = string
   description = "The ID of the Execute API Gateway vpc endpoint in the new Auth account"
 }
+
+variable "api_fms_tag_value" {
+  default     = "authenticationfrontend"
+  description = "Tag value to be used for FMS WAF association for API"
+  type        = string
+}

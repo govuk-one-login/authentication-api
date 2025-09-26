@@ -96,6 +96,11 @@ resource "aws_api_gateway_stage" "endpoint_test_services_stage" {
   depends_on = [
     aws_api_gateway_deployment.test_services_api_deployment,
   ]
+
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.api_fms_tag_value
+  }
 }
 
 resource "aws_api_gateway_method_settings" "api_gateway_test_services_logging_settings" {
