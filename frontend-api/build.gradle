@@ -21,7 +21,8 @@ dependencies {
             configurations.sns,
             configurations.s3,
             configurations.dynamodb,
-            configurations.kms
+            configurations.kms,
+            configurations.secretsmanager
 
     implementation configurations.govuk_notify,
             configurations.apache,

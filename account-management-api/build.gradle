@@ -14,7 +14,8 @@ dependencies {
             configurations.ssm,
             configurations.sns,
             configurations.s3,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.secretsmanager
 
 
     implementation configurations.nimbus,
