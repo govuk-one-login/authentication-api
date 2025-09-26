@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "production"
+  },
+  {
+    "ParameterKey": "SlackChannelId",
+    "ParameterValue": "C072F1QUKQV"
+  }
+]
