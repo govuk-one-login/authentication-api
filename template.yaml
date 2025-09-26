@@ -2900,6 +2900,7 @@ Resources:
         - !Ref OrchAuthCodeTableWriteAccessPolicy
         - !Ref StateStorageTableReadWriteAccessPolicy
         - !Ref JwksCacheTableReadWriteAccessPolicy
+        - !Ref CrossBrowserTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3557,6 +3558,7 @@ Resources:
         - !Ref StateStorageTableWriteAccessPolicy
         - !Ref ClientRateLimitTableReadWriteAccessPolicy
         - !Ref JwksCacheTableReadWriteAccessPolicy
+        - !Ref CrossBrowserTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -3956,6 +3958,7 @@ Resources:
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref CrossBrowserTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 

@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
@@ -26,27 +27,35 @@ public class CrossBrowserOrchestrationService {
     private final RedisConnectionService redisConnectionService;
     private final OrchClientSessionService orchClientSessionService;
     private final ConfigurationService configurationService;
+    private final CrossBrowserStorageService crossBrowserStorageService;
     public static final String STATE_STORAGE_PREFIX = "state:";
 
     public CrossBrowserOrchestrationService(
             RedisConnectionService redisConnectionService,
             OrchClientSessionService orchClientSessionService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            CrossBrowserStorageService crossBrowserStorageService) {
         this.redisConnectionService = redisConnectionService;
         this.orchClientSessionService = orchClientSessionService;
         this.configurationService = configurationService;
+        this.crossBrowserStorageService = crossBrowserStorageService;
     }
 
     public CrossBrowserOrchestrationService(ConfigurationService configurationService) {
         this(
                 new RedisConnectionService(configurationService),
                 new OrchClientSessionService(configurationService),
-                configurationService);
+                configurationService,
+                new CrossBrowserStorageService(configurationService));
     }
 
     public CrossBrowserOrchestrationService(
             ConfigurationService configurationService, RedisConnectionService redis) {
-        this(redis, new OrchClientSessionService(configurationService), configurationService);
+        this(
+                redis,
+                new OrchClientSessionService(configurationService),
+                configurationService,
+                new CrossBrowserStorageService(configurationService));
     }
 
     public CrossBrowserEntity generateNoSessionOrchestrationEntity(
@@ -160,6 +169,7 @@ public class CrossBrowserOrchestrationService {
                 STATE_STORAGE_PREFIX + state.getValue(),
                 clientSessionId,
                 configurationService.getSessionExpiry());
+        crossBrowserStorageService.storeItem(new CrossBrowserItem(state, clientSessionId));
     }
 
     private Optional<String> getClientSessionIdFromState(State state) {

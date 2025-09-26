@@ -47,6 +47,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksCacheExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.JwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -143,6 +144,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
+
+    @RegisterExtension
+    public static final CrossBrowserStorageExtension crossBrowserStorageExtension =
+            new CrossBrowserStorageExtension();
 
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
 
@@ -1202,12 +1207,18 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 throws ParseException, JOSEException, java.text.ParseException {
             var authRequest = extractAuthRequestFromResponse(response);
             var decryptedJWT = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
-            var orchToAuthState = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
-            var noSessionObject = redis.getFromRedis("state:" + orchToAuthState);
+            var orchToAuthStateString = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
+            var orchToAuthState = new State(orchToAuthStateString);
+            var clientSessionFromRedis = redis.getFromRedis("state:" + orchToAuthStateString);
+            var clientSessionFromDynamo =
+                    crossBrowserStorageExtension
+                            .getClientSessionIdFromState(orchToAuthState)
+                            .orElseThrow();
 
             var clientSessionId = getClientSessionId(response);
 
-            assertEquals(clientSessionId, noSessionObject);
+            assertEquals(clientSessionId, clientSessionFromRedis);
+            assertEquals(clientSessionId, clientSessionFromDynamo);
         }
     }
 

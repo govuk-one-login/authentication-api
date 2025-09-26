@@ -13,6 +13,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -37,6 +38,8 @@ class CrossBrowserOrchestrationServiceTest {
             mock(RedisConnectionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
+    private final CrossBrowserStorageService crossBrowserStorageService =
+            mock(CrossBrowserStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -50,7 +53,10 @@ class CrossBrowserOrchestrationServiceTest {
     void setup() {
         crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(
-                        redisConnectionService, orchClientSessionService, configurationService);
+                        redisConnectionService,
+                        orchClientSessionService,
+                        configurationService,
+                        crossBrowserStorageService);
     }
 
     @Test
@@ -215,12 +221,14 @@ class CrossBrowserOrchestrationServiceTest {
     }
 
     @Test
-    void shouldCallRedisAndSaveClientSessionIdAgainstState() {
+    void shouldSaveClientSessionIdAgainstState() {
         when(configurationService.getSessionExpiry()).thenReturn(7200L);
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(CLIENT_SESSION_ID, STATE);
 
         verify(redisConnectionService)
                 .saveWithExpiry("state:" + STATE.getValue(), CLIENT_SESSION_ID, 7200);
+        verify(crossBrowserStorageService)
+                .storeItem(new CrossBrowserItem(STATE, CLIENT_SESSION_ID));
     }
 
     @Nested

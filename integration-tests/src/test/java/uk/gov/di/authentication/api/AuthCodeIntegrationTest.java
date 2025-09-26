@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
@@ -69,6 +70,10 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
+
+    @RegisterExtension
+    public static final CrossBrowserStorageExtension crossBrowserStorageExtension =
+            new CrossBrowserStorageExtension();
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
