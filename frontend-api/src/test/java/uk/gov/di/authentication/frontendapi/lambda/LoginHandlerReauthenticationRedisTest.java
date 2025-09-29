@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -30,20 +29,15 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
-import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
-import uk.gov.di.authentication.userpermissions.UserActionsManager;
-import uk.gov.di.authentication.userpermissions.entity.Decision;
-import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -53,12 +47,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -100,6 +95,7 @@ class LoginHandlerReauthenticationRedisTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -109,11 +105,6 @@ class LoginHandlerReauthenticationRedisTest {
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
-    private final PermissionDecisionManager permissionDecisionManager =
-            mock(PermissionDecisionManager.class);
-    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -155,28 +146,24 @@ class LoginHandlerReauthenticationRedisTest {
     void setUp() {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
-        when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
         handler =
                 new LoginHandler(
                         configurationService,
                         authenticationService,
                         clientService,
+                        codeStorageService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
+                        null,
                         authSessionService,
-                        mfaMethodsService,
-                        permissionDecisionManager,
-                        userActionsManager);
+                        mfaMethodsService);
     }
 
     @ParameterizedTest
@@ -189,16 +176,8 @@ class LoginHandlerReauthenticationRedisTest {
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
 
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        false)));
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
+                .thenReturn(maxRetriesAllowed - 1);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -212,6 +191,10 @@ class LoginHandlerReauthenticationRedisTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
 
+        verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
+        verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
+        verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
@@ -223,6 +206,7 @@ class LoginHandlerReauthenticationRedisTest {
                                 configurationService.getMaxPasswordRetries()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -243,10 +227,12 @@ class LoginHandlerReauthenticationRedisTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, body);
         handler.handleRequest(event, context);
 
-        JourneyType expectedJourneyType =
-                isReauthJourney ? JourneyType.REAUTHENTICATION : JourneyType.SIGN_IN;
-        verify(userActionsManager, atLeastOnce())
-                .incorrectPasswordReceived(eq(expectedJourneyType), any());
+        if (isReauthJourney && isReauthEnabled) {
+            verify(codeStorageService, atLeastOnce())
+                    .increaseIncorrectPasswordCountReauthJourney(EMAIL);
+        } else {
+            verify(codeStorageService, atLeastOnce()).increaseIncorrectPasswordCount(EMAIL);
+        }
     }
 
     private void usingValidAuthSession() {

@@ -3,14 +3,10 @@ package uk.gov.di.authentication.userpermissions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
@@ -18,14 +14,9 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
-import java.util.Map;
-import java.util.stream.Stream;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,12 +31,9 @@ class PermissionDecisionManagerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
 
     private final PermissionDecisionManager permissionDecisionManager =
-            new PermissionDecisionManager(
-                    configurationService, codeStorageService, authenticationAttemptsService);
+            new PermissionDecisionManager(codeStorageService, configurationService);
 
     @BeforeEach
     void setup() {
@@ -255,7 +243,6 @@ class PermissionDecisionManagerTest {
                             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
                                     + JourneyType.PASSWORD_RESET))
                     .thenReturn(true);
-            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
 
             var result =
                     permissionDecisionManager.canReceivePassword(
@@ -316,124 +303,20 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
         }
-
-        @Test
-        void shouldReturnPermittedForReauthenticationJourney() {
-            var userContext = createUserContext(3);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
-                            JourneyType.REAUTHENTICATION))
-                    .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
-            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
-            when(configurationService.getCodeMaxRetries()).thenReturn(5);
-
-            var result =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.REAUTHENTICATION, userContext);
-
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(2, decision.attemptCount());
-        }
-
-        @ParameterizedTest
-        @MethodSource("countTypeToForbiddenReasonProvider")
-        void shouldReturnTemporarilyLockedOutForReauthenticationWhenCountExceeded(
-                CountType countType, ForbiddenReason expectedReason) {
-            var userContext = createUserContext(3);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
-                            JourneyType.REAUTHENTICATION))
-                    .thenReturn(Map.of(countType, 6));
-            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
-            when(configurationService.getCodeMaxRetries()).thenReturn(5);
-
-            var result =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.REAUTHENTICATION, userContext);
-
-            assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
-            assertEquals(expectedReason, lockedOut.forbiddenReason());
-            assertEquals(6, lockedOut.attemptCount());
-        }
-
-        static Stream<Arguments> countTypeToForbiddenReasonProvider() {
-            return Stream.of(
-                    Arguments.of(
-                            CountType.ENTER_PASSWORD,
-                            ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT),
-                    Arguments.of(
-                            CountType.ENTER_EMAIL,
-                            ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT),
-                    Arguments.of(
-                            CountType.ENTER_MFA_CODE,
-                            ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT));
-        }
-
-        @Test
-        void shouldReturnErrorForReauthenticationJourneyWhenInternalSubjectIdIsNull() {
-            var userContext =
-                    new UserPermissionContext(null, "pairwise", EMAIL, new AuthSessionItem());
-
-            var result =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.REAUTHENTICATION, userContext);
-
-            assertTrue(result.isFailure());
-            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
-        }
-
-        @Test
-        void shouldReturnErrorForReauthenticationJourneyWhenRpPairwiseIdIsNull() {
-            var userContext =
-                    new UserPermissionContext("subject", null, EMAIL, new AuthSessionItem());
-
-            var result =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.REAUTHENTICATION, userContext);
-
-            assertTrue(result.isFailure());
-            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
-        }
-
-        @Test
-        void shouldUseMaxRetriesWhenBlockedRegardlessOfCurrentCount() {
-            var userContext = createUserContext(0);
-            when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(3);
-            when(codeStorageService.isBlockedForEmail(
-                            EMAIL,
-                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
-                                    + JourneyType.PASSWORD_RESET))
-                    .thenReturn(true);
-            when(configurationService.getMaxPasswordRetries()).thenReturn(7);
-
-            var result =
-                    permissionDecisionManager.canReceivePassword(
-                            JourneyType.PASSWORD_RESET, userContext);
-
-            assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
-            assertEquals(7, lockedOut.attemptCount());
-        }
     }
 
     @Nested
-    class CanVerifyMfaOtp {
+    class CanVerifyAuthAppOtp {
 
         @Test
         void shouldReturnPermittedWhenNotBlocked() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenReturn(0L);
 
             var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -444,10 +327,12 @@ class PermissionDecisionManagerTest {
         void shouldReturnLockedOutWhenBlocked() {
             var userContext = createUserContext(0);
             long blockTtl = 1234567890L;
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(blockTtl);
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenReturn(blockTtl);
 
             var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var lockedOut =
@@ -455,7 +340,7 @@ class PermissionDecisionManagerTest {
             assertEquals(
                     ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
-            assertEquals(6, lockedOut.attemptCount());
+            assertEquals(0, lockedOut.attemptCount());
         }
 
         @Test
@@ -463,10 +348,10 @@ class PermissionDecisionManagerTest {
             var userContext = createUserContext(0);
             doThrow(new RuntimeException("Storage error"))
                     .when(codeStorageService)
-                    .getTTL(eq(EMAIL), anyString());
+                    .getMfaCodeBlockTimeToLive(EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
             var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifyAuthAppOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isFailure());
             assertEquals(DecisionError.STORAGE_SERVICE_ERROR, result.getFailure());
@@ -507,7 +392,7 @@ class PermissionDecisionManagerTest {
             var userContext = createUserContext(0);
 
             var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+                    permissionDecisionManager.canVerifySmsOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
@@ -527,12 +412,13 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void canVerifyOtpShouldDelegateToCanVerifyMfaOtp() {
+        void canVerifyOtpShouldDelegateToCanVerifyAuthAppOtp() {
             var userContext = createUserContext(0);
-            when(codeStorageService.getTTL(eq(EMAIL), anyString())).thenReturn(0L);
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenReturn(0L);
 
-            var result =
-                    permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
+            var result = permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());

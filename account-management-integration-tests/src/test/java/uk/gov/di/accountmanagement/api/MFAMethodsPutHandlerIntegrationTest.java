@@ -4,7 +4,6 @@ import net.javacrumbs.jsonunit.core.Option;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -1108,8 +1107,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             Map<String, String> attributes = eventEntry.getValue();
 
             // Create the expectation for this event
-            AuditEventExpectation expectation =
-                    new AuditEventExpectation(AccountManagementAuditableEvent.valueOf(eventName));
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
 
             // Add all expected attributes
             for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
@@ -1117,7 +1115,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
             }
 
             // Verify the expectation against the received events
-            expectation.assertPublished(receivedEvents);
+            expectation.verify(receivedEvents);
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }

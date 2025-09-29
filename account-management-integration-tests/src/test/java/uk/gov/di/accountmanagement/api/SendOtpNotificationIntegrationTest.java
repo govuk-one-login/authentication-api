@@ -110,10 +110,10 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
-                AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP);
+                AuditEventExpectation expectation = new AuditEventExpectation(AUTH_SEND_OTP.name());
                 expectation.withAttribute(EXTENSIONS_NOTIFICATION_TYPE, VERIFY_EMAIL.name());
                 expectation.withAttribute(EXTENSIONS_TEST_USER, false);
-                expectation.assertPublished(receivedEvents);
+                expectation.verify(receivedEvents);
             }
         }
 
@@ -188,19 +188,20 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(
                                 txmaAuditQueue, List.of(AUTH_SEND_OTP, AUTH_PHONE_CODE_SENT));
-                AuditEventExpectation sendOtpExpectation = new AuditEventExpectation(AUTH_SEND_OTP);
+                AuditEventExpectation sendOtpExpectation =
+                        new AuditEventExpectation(AUTH_SEND_OTP.name());
                 sendOtpExpectation.withAttribute(
                         EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name());
                 sendOtpExpectation.withAttribute(EXTENSIONS_TEST_USER, false);
-                sendOtpExpectation.assertPublished(receivedEvents);
+                sendOtpExpectation.verify(receivedEvents);
 
                 AuditEventExpectation phoneCodeSentExpectation =
-                        new AuditEventExpectation(AUTH_PHONE_CODE_SENT);
+                        new AuditEventExpectation(AUTH_PHONE_CODE_SENT.name());
                 phoneCodeSentExpectation.withAttribute(
                         EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
                 phoneCodeSentExpectation.withAttribute(
                         EXTENSIONS_MFA_METHOD, DEFAULT.name().toLowerCase());
-                phoneCodeSentExpectation.assertPublished(receivedEvents);
+                phoneCodeSentExpectation.verify(receivedEvents);
             }
         }
 

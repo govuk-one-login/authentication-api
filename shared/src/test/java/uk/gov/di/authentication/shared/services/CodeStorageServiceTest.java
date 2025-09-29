@@ -2,6 +2,10 @@ package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
@@ -14,6 +18,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class CodeStorageServiceTest {
 
@@ -277,6 +282,59 @@ class CodeStorageServiceTest {
                                 MFAMethodType.AUTH_APP)))
                 .thenReturn(String.valueOf(3));
         assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(6));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"AUTH_APP", "SMS"})
+    void shouldReturnMfaCodeBlockTimeForAuthAppAndSMS(MFAMethodType mfaMethodType) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(mfaMethodType, JourneyType.SIGN_IN);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        when(redisConnectionService.getTimeToLive(codeBlockedKeyPrefix + TEST_EMAIL_HASH))
+                .thenReturn(4L);
+        assertThat(
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
+                equalTo(4L));
+    }
+
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @ParameterizedTest
+    @CsvSource({"AUTH_APP", "SMS"})
+    void shouldReturnMfaCodeBlockTimeForAuthAppAndSMSWithDeprecatedPrefix(
+            MFAMethodType mfaMethodType) {
+        var codeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                mfaMethodType, JourneyType.SIGN_IN);
+        when(redisConnectionService.getTimeToLive(codeBlockedKeyPrefix + TEST_EMAIL_HASH))
+                .thenReturn(4L);
+        assertThat(
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
+                equalTo(4L));
+    }
+
+    // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+    @ParameterizedTest
+    @CsvSource({"AUTH_APP", "SMS"})
+    void shouldReturnLargerMfaCodeBlockTimeForAuthAppAndSMSWithBothActiveAndDeprecatedPrefix(
+            MFAMethodType mfaMethodType) {
+        var activeCodeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getCodeRequestType(mfaMethodType, JourneyType.SIGN_IN);
+        var deprecatedCodeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getDeprecatedCodeRequestTypeString(
+                                mfaMethodType, JourneyType.SIGN_IN);
+        when(redisConnectionService.getTimeToLive(activeCodeBlockedKeyPrefix + TEST_EMAIL_HASH))
+                .thenReturn(4L);
+        when(redisConnectionService.getTimeToLive(deprecatedCodeBlockedKeyPrefix + TEST_EMAIL_HASH))
+                .thenReturn(6L);
+        assertThat(
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
+                equalTo(6L));
     }
 
     @Test

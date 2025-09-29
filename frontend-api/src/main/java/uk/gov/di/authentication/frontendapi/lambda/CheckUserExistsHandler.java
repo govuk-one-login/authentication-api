@@ -78,7 +78,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager();
     }
 
     @Override
@@ -233,8 +233,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         var lockoutInformation = new ArrayList<LockoutInformation>();
 
         var signInResult =
-                permissionDecisionManager.canVerifyMfaOtp(
-                        JourneyType.SIGN_IN, userPermissionContext);
+                permissionDecisionManager.canVerifyOtp(JourneyType.SIGN_IN, userPermissionContext);
         if (signInResult.isFailure()) {
             return Result.failure(signInResult.getFailure());
         }
@@ -246,7 +245,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
 
         var passwordResetResult =
-                permissionDecisionManager.canVerifyMfaOtp(
+                permissionDecisionManager.canVerifyOtp(
                         JourneyType.PASSWORD_RESET_MFA, userPermissionContext);
         if (passwordResetResult.isFailure()) {
             return Result.failure(passwordResetResult.getFailure());
