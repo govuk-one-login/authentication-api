@@ -41,7 +41,6 @@ class CrossBrowserOrchestrationServiceTest {
     private final CrossBrowserStorageService crossBrowserStorageService =
             mock(CrossBrowserStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    public static final String STATE_STORAGE_PREFIX = "state:";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
@@ -62,8 +61,6 @@ class CrossBrowserOrchestrationServiceTest {
     @Test
     void shouldSuccessfullyReturnNoSessionOrchestrationEntity()
             throws NoSessionException, ParseException {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(CLIENT_SESSION_ID);
         when(crossBrowserStorageService.getClientSessionId(STATE))
                 .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -94,8 +91,6 @@ class CrossBrowserOrchestrationServiceTest {
 
     @Test
     void shouldThrowIfErrorIsPresentButIsNotAccessDenied() {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(CLIENT_SESSION_ID);
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -118,8 +113,6 @@ class CrossBrowserOrchestrationServiceTest {
 
     @Test
     void shouldThrowIfErrorIsNotPresent() {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(CLIENT_SESSION_ID);
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -178,9 +171,6 @@ class CrossBrowserOrchestrationServiceTest {
 
     @Test
     void shouldThrowIfNoClientSessionIdIsFoundWithState() {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(null);
-
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("state", STATE.getValue());
         queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
@@ -200,8 +190,6 @@ class CrossBrowserOrchestrationServiceTest {
 
     @Test
     void shouldThrowIfNoClientSessionIsFoundWithClientSessionId() {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(CLIENT_SESSION_ID);
         when(crossBrowserStorageService.getClientSessionId(STATE))
                 .thenReturn(Optional.of(CLIENT_SESSION_ID));
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -227,10 +215,9 @@ class CrossBrowserOrchestrationServiceTest {
     @Test
     void shouldSaveClientSessionIdAgainstState() {
         when(configurationService.getSessionExpiry()).thenReturn(7200L);
+
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(CLIENT_SESSION_ID, STATE);
 
-        verify(redisConnectionService)
-                .saveWithExpiry("state:" + STATE.getValue(), CLIENT_SESSION_ID, 7200);
         verify(crossBrowserStorageService)
                 .storeItem(new CrossBrowserItem(STATE, CLIENT_SESSION_ID));
     }
@@ -240,8 +227,8 @@ class CrossBrowserOrchestrationServiceTest {
 
         @Test
         void itShouldThrowNoSessionExceptionIfAccessDeniedErrorWithNoState() {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
+            when(crossBrowserStorageService.getClientSessionId(STATE))
+                    .thenReturn(Optional.of(CLIENT_SESSION_ID));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -260,8 +247,8 @@ class CrossBrowserOrchestrationServiceTest {
         @Test
         void itShouldReturnANoSessionEntityIfThereIsMismatchInCSIDFromSuccessfulIPVCallback()
                 throws NoSessionException, ParseException {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
+            when(crossBrowserStorageService.getClientSessionId(STATE))
+                    .thenReturn(Optional.of(CLIENT_SESSION_ID));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -293,8 +280,8 @@ class CrossBrowserOrchestrationServiceTest {
         @Test
         void itShouldGenerateANoSessionEntityWhenCSIDCookieDoesNotMatchStateValue()
                 throws NoSessionException, ParseException {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
+            when(crossBrowserStorageService.getClientSessionId(STATE))
+                    .thenReturn(Optional.of(CLIENT_SESSION_ID));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -327,8 +314,8 @@ class CrossBrowserOrchestrationServiceTest {
         @Test
         void itShouldReturnEmptyIfClientSessionIdInCookieMatchesStateValue()
                 throws NoSessionException {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(CLIENT_SESSION_ID);
+            when(crossBrowserStorageService.getClientSessionId(STATE))
+                    .thenReturn(Optional.of(CLIENT_SESSION_ID));
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -345,8 +332,7 @@ class CrossBrowserOrchestrationServiceTest {
 
         @Test
         void itShouldThrowIfThereIsNoClientSessionIdAssociatedWithStateValue() {
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(null);
+            when(crossBrowserStorageService.getClientSessionId(STATE)).thenReturn(Optional.empty());
             when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                     .thenReturn(Optional.of(generateOrchClientSession()));
 
@@ -367,9 +353,8 @@ class CrossBrowserOrchestrationServiceTest {
         void
                 itShouldThrowIfThereIsAMismatchBetweenCookieAndStateAndClientSessionCannotBeRetrievedFromStateValue() {
             var clientSessionIdFromState = IdGenerator.generate();
-
-            when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                    .thenReturn(clientSessionIdFromState);
+            when(crossBrowserStorageService.getClientSessionId(STATE))
+                    .thenReturn(Optional.of(clientSessionIdFromState));
             when(orchClientSessionService.getClientSession(clientSessionIdFromState))
                     .thenReturn(Optional.empty());
 
