@@ -3,36 +3,38 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
 
-    implementation configurations.lambda,
-            configurations.nimbus,
-            configurations.bouncycastle,
-            configurations.govuk_notify,
-            configurations.dynamodb,
-            configurations.jetbrains_annotations,
-            configurations.kms,
-            configurations.lettuce,
-            configurations.libphonenumber,
-            configurations.hamcrest,
-            configurations.sns,
-            configurations.s3,
-            configurations.sqs,
-            configurations.ssm,
-            configurations.xray,
-            configurations.cloudwatch,
-            configurations.gson,
-            configurations.apache,
-            configurations.open_telemetry,
-            "org.apache.httpcomponents.core5:httpcore5:5.3.5"
+    implementation libs.bundles.awsLambda,
+            libs.bundles.nimbus,
+            libs.bouncyCastle,
+            libs.govUkNotify,
+            libs.bundles.awsDynamoDb,
+            libs.jetbrainsAnnotations,
+            libs.awsKms,
+            libs.bundles.lettuce,
+            libs.libphonenumber,
+            libs.awsSns,
+            libs.awsS3,
+            libs.awsSqs,
+            libs.awsSsm,
+            platform(libs.xrayBom),
+            libs.bundles.xray,
+            libs.awsCloudwatchEmf,
+            libs.gson,
+            libs.bundles.apache,
+            platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk,
+            libs.openTelemetryJavaHttpClient,
+            libs.apacheHttpComponents
 
-    testImplementation configurations.tests,
-            configurations.lambda_tests,
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
             project(":orchestration-shared-test")
-    testRuntimeOnly configurations.test_runtime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -47,7 +49,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

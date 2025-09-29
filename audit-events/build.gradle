@@ -3,21 +3,21 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.auditevents"
-version "unspecified"
+group = "uk.gov.di.authentication.auditevents"
+version = "unspecified"
 
 dependencies {
     implementation project(":shared")
-    implementation configurations.gson
+    implementation libs.gson
 
-    compileOnly configurations.lambda
-    runtimeOnly configurations.logging_runtime
+    compileOnly libs.bundles.awsLambda
+    runtimeOnly libs.bundles.loggingRuntime
 
     testImplementation project(":shared-test")
-    testImplementation configurations.tests
-    testImplementation configurations.sqs
-    testImplementation configurations.logging_runtime
-    testRuntimeOnly configurations.test_runtime
+    testImplementation libs.bundles.test
+    testImplementation libs.awsSqs
+    testImplementation libs.bundles.loggingRuntime
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -32,7 +32,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }

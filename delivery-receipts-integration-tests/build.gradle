@@ -3,20 +3,20 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di"
-version "unspecified"
+group = "uk.gov.di"
+version = "unspecified"
 
 dependencies {
-    testImplementation configurations.nimbus,
-            configurations.tests,
-            configurations.lambda,
-            configurations.lettuce
+    testImplementation libs.bundles.nimbus,
+            libs.bundles.test,
+            libs.bundles.awsLambda,
+            libs.bundles.lettuce
 
     implementation project(":shared"), noXray
     testImplementation project(":delivery-receipts-api"), noXray
     testImplementation project(":shared-test"), noXray
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -66,6 +66,6 @@ test {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
 }

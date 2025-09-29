@@ -3,18 +3,18 @@ plugins {
     id "jacoco"
 }
 
-group "uk.gov.di.authentication.userpermissions"
-version "unspecified"
+group = "uk.gov.di.authentication.userpermissions"
+version = "unspecified"
 
 dependencies {
     implementation project(":shared")
-    implementation configurations.gson
+    implementation libs.gson
 
-    compileOnly configurations.lambda
-    runtimeOnly configurations.logging_runtime
+    compileOnly libs.bundles.awsLambda
+    runtimeOnly libs.bundles.loggingRuntime
 
-    testImplementation configurations.tests
-    testRuntimeOnly configurations.test_runtime
+    testImplementation libs.bundles.test
+    testRuntimeOnly libs.bundles.testRuntime
 }
 
 test {
@@ -29,7 +29,7 @@ java {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
+        xml.required = true
     }
     dependsOn "test"
 }
