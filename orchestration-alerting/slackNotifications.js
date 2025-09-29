@@ -1,7 +1,7 @@
-const { SSMClient, GetParameterCommand } = require("@aws-sdk/client-ssm");
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 const ssmClient = new SSMClient();
 
-const getParameter = async (parameterName) => {
+export const getParameter = async (parameterName) => {
   const getParameterCommand = new GetParameterCommand({
     Name: parameterName,
   });
@@ -42,24 +42,24 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
     },
     {
       title: "Account",
-      value: account,
+      value: account.trim(),
       short: false,
     },
   ];
   if (runbook != null) {
     fields.push({
       title: "Runbook",
-      value: runbook,
+      value: runbook.trim(),
       short: false,
     });
   }
   return {
     attachments: [
       {
-        fallback: description,
+        fallback: description.trim(),
         color: colorCode,
         title: snsMessage.AlarmName,
-        text: description,
+        text: description.trim(),
         fields: fields,
         footer: snsMessageFooter,
       },
@@ -67,7 +67,7 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
   };
 };
 
-const sendAlertToSlack = async function (messageRequestBody) {
+export const sendAlertToSlack = async function (messageRequestBody) {
   const slackHookUrl =
     process.env.SLACK_WEBHOOK_URL ||
     (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-hook-url"));
@@ -89,7 +89,7 @@ const sendAlertToSlack = async function (messageRequestBody) {
 };
 
 // eslint-disable-next-line no-unused-vars
-const handler = async function (event, context) {
+export const handler = async function (event, context) {
   console.log("Alert lambda triggered");
   let colorCode = process.env.ERROR_COLOR || "#C70039";
   let snsMessageFooter = process.env.MESSAGE_FOOTER || "GOV.UK Sign In alert";
@@ -108,10 +108,11 @@ const handler = async function (event, context) {
   const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
   if (isPagerDutyAlarm && isEnabledForProd) {
     console.log("PagerDuty alarm, sending 2 notifications");
-    messageRequestBody.channel =
-      process.env.SLACK_CHANNEL_ID ||
-      (await getParameter("pagerduty-slack-channel-id"));
-    await sendAlertToSlack(messageRequestBody);
+    const pagerDutyMessageBody = {
+      ...messageRequestBody,
+      channel: getParameter("pagerduty-slack-channel-id"),
+    };
+    await sendAlertToSlack(pagerDutyMessageBody);
   }
   messageRequestBody.channel =
     process.env.SLACK_CHANNEL_ID ||
@@ -120,5 +121,3 @@ const handler = async function (event, context) {
   console.log("Sending alert to slack");
   await sendAlertToSlack(messageRequestBody);
 };
-
-module.exports = { handler };
