@@ -3,18 +3,13 @@ package uk.gov.di.authentication.userpermissions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
-
-import java.time.temporal.ChronoUnit;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -23,39 +18,21 @@ public class UserActionsManager implements UserActions {
 
     private static final Logger LOG = LogManager.getLogger(UserActionsManager.class);
 
-    private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final AuthSessionService authSessionService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final ConfigurationService configurationService;
 
-    public UserActionsManager(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-        this.codeStorageService = new CodeStorageService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
+    public UserActionsManager() {
+        this.codeStorageService = new CodeStorageService(ConfigurationService.getInstance());
+        this.authSessionService = new AuthSessionService(ConfigurationService.getInstance());
+        this.configurationService = ConfigurationService.getInstance();
     }
 
     public UserActionsManager(
-            ConfigurationService configurationService,
-            CodeStorageService codeStorageService,
-            AuthSessionService authSessionService) {
-        this.configurationService = configurationService;
+            CodeStorageService codeStorageService, AuthSessionService authSessionService) {
         this.codeStorageService = codeStorageService;
         this.authSessionService = authSessionService;
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
-    }
-
-    public UserActionsManager(
-            ConfigurationService configurationService,
-            CodeStorageService codeStorageService,
-            AuthSessionService authSessionService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
-        this.configurationService = configurationService;
-        this.codeStorageService = codeStorageService;
-        this.authSessionService = authSessionService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
+        this.configurationService = ConfigurationService.getInstance();
     }
 
     @Override
@@ -105,32 +82,6 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> incorrectPasswordReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        if (journeyType.equals(JourneyType.REAUTHENTICATION)) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    userPermissionContext.internalSubjectId(),
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterPasswordCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    journeyType,
-                    CountType.ENTER_PASSWORD);
-        } else {
-            var updatedCount =
-                    codeStorageService.increaseIncorrectPasswordCount(
-                            userPermissionContext.emailAddress());
-            if (updatedCount >= configurationService.getMaxPasswordRetries()) {
-                LOG.info("User has now exceeded max password retries, setting block");
-                codeStorageService.saveBlockedForEmail(
-                        userPermissionContext.emailAddress(),
-                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET,
-                        configurationService.getLockoutDuration());
-
-                codeStorageService.deleteIncorrectPasswordCount(
-                        userPermissionContext.emailAddress());
-            }
-        }
-
         return Result.success(null);
     }
 

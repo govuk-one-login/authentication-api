@@ -9,7 +9,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.AssertionFailedError;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseAuthAppMfaDetail;
 import uk.gov.di.accountmanagement.entity.mfa.response.ResponseSmsMfaDetail;
@@ -836,8 +835,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             Map<String, String> attributes = eventEntry.getValue();
 
             // Create the expectation for this event
-            AuditEventExpectation expectation =
-                    new AuditEventExpectation(AccountManagementAuditableEvent.valueOf(eventName));
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
 
             // Add all expected attributes
             for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
@@ -845,7 +843,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             }
 
             // Verify the expectation against the received events
-            expectation.assertPublished(receivedEvents);
+            expectation.verify(receivedEvents);
         }
     }
 

@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
@@ -85,8 +87,8 @@ public class CodeStorageService {
                 email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue());
     }
 
-    public int increaseIncorrectPasswordCount(String email) {
-        return increaseCount(
+    public void increaseIncorrectPasswordCount(String email) {
+        increaseCount(
                 email,
                 MULTIPLE_INCORRECT_PASSWORDS_PREFIX,
                 configurationService.getIncorrectPasswordLockoutCountTTL());
@@ -128,6 +130,24 @@ public class CodeStorageService {
 
     public void deleteIncorrectPasswordCountReauthJourney(String email) {
         deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    public long getMfaCodeBlockTimeToLive(
+            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
+        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        long finalTtl = getTTL(email, codeBlockedKeyPrefix);
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(mfaMethodType, journeyType);
+        if (deprecatedCodeRequestType != null) {
+            long possibleOverrideTtl =
+                    getTTL(email, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+            finalTtl = Math.max(finalTtl, possibleOverrideTtl);
+        }
+
+        return finalTtl;
     }
 
     public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {
@@ -191,10 +211,6 @@ public class CodeStorageService {
         }
     }
 
-    public long getTTL(String email, String prefix) {
-        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
-    }
-
     private String getPrefixForNotificationType(NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
@@ -212,7 +228,7 @@ public class CodeStorageService {
                 String.format("No redis prefix key configured for %s", notificationType));
     }
 
-    private int increaseCount(String email, String prefix, long ttl) {
+    private void increaseCount(String email, String prefix, long ttl) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
@@ -220,7 +236,6 @@ public class CodeStorageService {
         try {
             redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
             LOG.info("count increased from: {} to: {}", count, newCount);
-            return newCount;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -243,5 +258,9 @@ public class CodeStorageService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private long getTTL(String email, String prefix) {
+        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
     }
 }

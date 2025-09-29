@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -175,14 +174,13 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
             String eventName = eventEntry.getKey();
             Map<String, String> attributes = eventEntry.getValue();
 
-            AuditEventExpectation expectation =
-                    new AuditEventExpectation(FrontendAuditableEvent.valueOf(eventName));
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
 
             for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
                 expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
             }
 
-            expectation.assertPublished(receivedEvents);
+            expectation.verify(receivedEvents);
             assertNoTxmaAuditEventsReceived(txmaAuditQueue);
         }
     }

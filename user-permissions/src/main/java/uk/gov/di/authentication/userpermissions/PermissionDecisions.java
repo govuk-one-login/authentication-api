@@ -63,14 +63,28 @@ public interface PermissionDecisions {
     Result<DecisionError, Decision> canSendSmsOtpNotification(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
+    @Experimental()
+    Result<DecisionError, Decision> canVerifyOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
     /**
-     * Checks if a user is permitted to verify an MFA OTP.
+     * Checks if a user is permitted to verify an SMS OTP.
      *
      * @param journeyType The type of authentication journey
      * @param userPermissionContext The user's permission context
      * @return A Result containing either a Decision or a DecisionError
      */
-    Result<DecisionError, Decision> canVerifyMfaOtp(
+    Result<DecisionError, Decision> canVerifySmsOtp(
+            JourneyType journeyType, UserPermissionContext userPermissionContext);
+
+    /**
+     * Checks if a user is permitted to verify an authenticator app OTP.
+     *
+     * @param journeyType The type of authentication journey
+     * @param userPermissionContext The user's permission context
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    Result<DecisionError, Decision> canVerifyAuthAppOtp(
             JourneyType journeyType, UserPermissionContext userPermissionContext);
 
     /**
