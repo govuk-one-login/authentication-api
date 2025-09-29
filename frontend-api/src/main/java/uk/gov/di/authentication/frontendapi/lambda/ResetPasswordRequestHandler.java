@@ -117,8 +117,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.auditService = auditService;
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager =
-                new PermissionDecisionManager(codeStorageService, configurationService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+                new PermissionDecisionManager(configurationService, codeStorageService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     public ResetPasswordRequestHandler() {
@@ -137,8 +139,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
-                new PermissionDecisionManager(codeStorageService, configurationService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+                new PermissionDecisionManager(configurationService, codeStorageService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     public ResetPasswordRequestHandler(
@@ -154,8 +158,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
-                new PermissionDecisionManager(codeStorageService, configurationService);
-        this.userActionsManager = new UserActionsManager(codeStorageService, authSessionService);
+                new PermissionDecisionManager(configurationService, codeStorageService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService, codeStorageService, authSessionService);
     }
 
     @Override
