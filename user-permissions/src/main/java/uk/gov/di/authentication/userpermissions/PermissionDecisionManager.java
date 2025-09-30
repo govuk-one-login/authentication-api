@@ -26,15 +26,12 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_R
 public class PermissionDecisionManager implements PermissionDecisions {
     private static final Logger LOG = LogManager.getLogger(PermissionDecisionManager.class);
 
-    private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
+    private CodeStorageService codeStorageService;
     private AuthenticationAttemptsService authenticationAttemptsService;
 
     public PermissionDecisionManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.codeStorageService =
-                new CodeStorageService(
-                        configurationService, new RedisConnectionService(configurationService));
     }
 
     public PermissionDecisionManager(
@@ -69,8 +66,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
             // Check Redis block first - use different ForbiddenReason instead of -1
-            if (codeStorageService.isBlockedForEmail(
-                    userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
+            if (getCodeStorageService()
+                    .isBlockedForEmail(
+                            userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
@@ -108,8 +106,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
             var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-            if (codeStorageService.isBlockedForEmail(
-                    userPermissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
+            if (getCodeStorageService()
+                    .isBlockedForEmail(
+                            userPermissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
                 return Result.success(
                         new Decision.TemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
@@ -149,16 +148,18 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
         try {
             boolean isBlocked =
-                    codeStorageService.isBlockedForEmail(
-                            userPermissionContext.emailAddress(),
-                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
-                                    + JourneyType.PASSWORD_RESET);
+                    getCodeStorageService()
+                            .isBlockedForEmail(
+                                    userPermissionContext.emailAddress(),
+                                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                            + JourneyType.PASSWORD_RESET);
 
             int attemptCount =
                     isBlocked
                             ? configurationService.getMaxPasswordRetries()
-                            : codeStorageService.getIncorrectPasswordCount(
-                                    userPermissionContext.emailAddress());
+                            : getCodeStorageService()
+                                    .getIncorrectPasswordCount(
+                                            userPermissionContext.emailAddress());
 
             if (isBlocked) {
                 return Result.success(
@@ -189,9 +190,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     CodeRequestType.getCodeRequestType(
                             CodeRequestType.SupportedCodeType.MFA, journeyType);
             long ttl =
-                    codeStorageService.getTTL(
-                            userPermissionContext.emailAddress(),
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType);
+                    getCodeStorageService()
+                            .getTTL(
+                                    userPermissionContext.emailAddress(),
+                                    CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
             var deprecatedCodeRequestType =
@@ -199,9 +201,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
                             MFAMethodType.SMS, journeyType);
             if (deprecatedCodeRequestType != null) {
                 long deprecatedTtl =
-                        codeStorageService.getTTL(
-                                userPermissionContext.emailAddress(),
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                        getCodeStorageService()
+                                .getTTL(
+                                        userPermissionContext.emailAddress(),
+                                        CODE_REQUEST_BLOCKED_KEY_PREFIX
+                                                + deprecatedCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
             }
 
@@ -234,9 +238,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     CodeRequestType.getCodeRequestType(
                             CodeRequestType.SupportedCodeType.MFA, journeyType);
             long ttl =
-                    codeStorageService.getTTL(
-                            userPermissionContext.emailAddress(),
-                            CODE_BLOCKED_KEY_PREFIX + codeRequestType);
+                    getCodeStorageService()
+                            .getTTL(
+                                    userPermissionContext.emailAddress(),
+                                    CODE_BLOCKED_KEY_PREFIX + codeRequestType);
 
             // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
             var deprecatedCodeRequestType =
@@ -244,9 +249,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
                             MFAMethodType.SMS, journeyType);
             if (deprecatedCodeRequestType != null) {
                 long deprecatedTtl =
-                        codeStorageService.getTTL(
-                                userPermissionContext.emailAddress(),
-                                CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
+                        getCodeStorageService()
+                                .getTTL(
+                                        userPermissionContext.emailAddress(),
+                                        CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType);
                 ttl = Math.max(ttl, deprecatedTtl);
             }
 
@@ -278,6 +284,15 @@ public class PermissionDecisionManager implements PermissionDecisions {
             authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
         }
         return authenticationAttemptsService;
+    }
+
+    private CodeStorageService getCodeStorageService() {
+        if (codeStorageService == null) {
+            codeStorageService =
+                    new CodeStorageService(
+                            configurationService, new RedisConnectionService(configurationService));
+        }
+        return codeStorageService;
     }
 
     private Result<DecisionError, Decision> checkForAnyReauthLockout(
