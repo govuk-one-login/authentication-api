@@ -26,14 +26,12 @@ public class UserActionsManager implements UserActions {
     private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final AuthSessionService authSessionService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private AuthenticationAttemptsService authenticationAttemptsService;
 
     public UserActionsManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.codeStorageService = new CodeStorageService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
     }
 
     public UserActionsManager(
@@ -43,8 +41,6 @@ public class UserActionsManager implements UserActions {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authSessionService = authSessionService;
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
     }
 
     public UserActionsManager(
@@ -106,15 +102,16 @@ public class UserActionsManager implements UserActions {
     public Result<TrackingError, Void> incorrectPasswordReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         if (journeyType.equals(JourneyType.REAUTHENTICATION)) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    userPermissionContext.internalSubjectId(),
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterPasswordCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    journeyType,
-                    CountType.ENTER_PASSWORD);
+            getAuthenticationAttemptsService()
+                    .createOrIncrementCount(
+                            userPermissionContext.internalSubjectId(),
+                            NowHelper.nowPlus(
+                                            configurationService.getReauthEnterPasswordCountTTL(),
+                                            ChronoUnit.SECONDS)
+                                    .toInstant()
+                                    .getEpochSecond(),
+                            journeyType,
+                            CountType.ENTER_PASSWORD);
         } else {
             var updatedCount =
                     codeStorageService.increaseIncorrectPasswordCount(
@@ -181,5 +178,12 @@ public class UserActionsManager implements UserActions {
     public Result<TrackingError, Void> correctAuthAppOtpReceived(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
         return Result.success(null);
+    }
+
+    private AuthenticationAttemptsService getAuthenticationAttemptsService() {
+        if (authenticationAttemptsService == null) {
+            authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+        }
+        return authenticationAttemptsService;
     }
 }
