@@ -28,23 +28,19 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     private final CodeStorageService codeStorageService;
     private final ConfigurationService configurationService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
+    private AuthenticationAttemptsService authenticationAttemptsService;
 
     public PermissionDecisionManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.codeStorageService =
                 new CodeStorageService(
                         configurationService, new RedisConnectionService(configurationService));
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
     }
 
     public PermissionDecisionManager(
             ConfigurationService configurationService, CodeStorageService codeStorageService) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
     }
 
     public PermissionDecisionManager(
@@ -277,12 +273,20 @@ public class PermissionDecisionManager implements PermissionDecisions {
         return Result.success(new Decision.Permitted(0));
     }
 
+    private AuthenticationAttemptsService getAuthenticationAttemptsService() {
+        if (authenticationAttemptsService == null) {
+            authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+        }
+        return authenticationAttemptsService;
+    }
+
     private Result<DecisionError, Decision> checkForAnyReauthLockout(
             String internalSubjectId, String rpPairwiseId, CountType primaryCountCheck) {
 
         var reauthCounts =
-                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        internalSubjectId, rpPairwiseId, JourneyType.REAUTHENTICATION);
+                getAuthenticationAttemptsService()
+                        .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                internalSubjectId, rpPairwiseId, JourneyType.REAUTHENTICATION);
 
         var exceedingCounts =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
