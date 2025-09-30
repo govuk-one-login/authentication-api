@@ -7,9 +7,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.DecryptionFailureException;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.InvalidParameterException;
+import software.amazon.awssdk.services.secretsmanager.model.InvalidRequestException;
 import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -148,6 +152,14 @@ class TestClientHelperTest {
     }
 
     @Test
+    void shouldReturnFalseForAnEmptyList() {
+        assertFalse(
+                TestClientHelper.emailMatchesAllowlist(
+                        TEST_EMAIL_ADDRESS, Collections.emptyList()));
+        assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
+    }
+
+    @Test
     void itShouldNotCallSecretsManagerIfTestClientsDisabled() {
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
@@ -181,15 +193,22 @@ class TestClientHelperTest {
                 .getSecretValue(any(GetSecretValueRequest.class));
     }
 
-    @Test
-    void shouldReturnFalseForResourceNotFoundException() {
+    @ParameterizedTest
+    @ValueSource(
+            classes = {
+                ResourceNotFoundException.class,
+                DecryptionFailureException.class,
+                InvalidRequestException.class,
+                InvalidParameterException.class
+            })
+    void shouldReturnFalseForARangeOfMisconfigurationErrors(Class<SecretsManagerException> clazz) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
-                .thenThrow(ResourceNotFoundException.class);
+                .thenThrow(clazz);
 
         var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
 
@@ -198,7 +217,7 @@ class TestClientHelperTest {
                 logging.events(),
                 hasItem(
                         withMessageContaining(
-                                "Tried to fetch test client allow list but resource not configured")));
+                                "Exception when attempting to fetch allow list from secrets manager. Returning empty list.")));
         verify(mockedSecretsManagerClient, times(1))
                 .getSecretValue(any(GetSecretValueRequest.class));
     }

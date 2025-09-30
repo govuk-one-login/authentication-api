@@ -8,7 +8,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
-import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -124,10 +123,10 @@ public class TestClientHelper {
                 secretValueResponse =
                         getSecretsManagerClient(configurationService)
                                 .getSecretValue(request.build());
-            } catch (ResourceNotFoundException e) {
+            } catch (Exception e) {
                 LOG.error(
-                        "Tried to fetch test client allow list but resource not configured: {}",
-                        e.getMessage());
+                        "Exception when attempting to fetch allow list from secrets manager. Returning empty list.",
+                        e);
                 return Collections.emptyList();
             }
             var secretString = secretValueResponse.secretString();
