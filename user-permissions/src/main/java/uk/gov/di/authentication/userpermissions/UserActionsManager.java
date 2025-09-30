@@ -25,12 +25,11 @@ public class UserActionsManager implements UserActions {
 
     private final ConfigurationService configurationService;
     private CodeStorageService codeStorageService;
-    private final AuthSessionService authSessionService;
+    private AuthSessionService authSessionService;
     private AuthenticationAttemptsService authenticationAttemptsService;
 
     public UserActionsManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public UserActionsManager(
@@ -66,7 +65,7 @@ public class UserActionsManager implements UserActions {
         if (journeyType == JourneyType.PASSWORD_RESET) {
             var updatedSession =
                     userPermissionContext.authSessionItem().incrementPasswordResetCount();
-            authSessionService.updateSession(updatedSession);
+            getAuthSessionService().updateSession(updatedSession);
             var codeRequestCount = updatedSession.getPasswordResetCount();
             if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
                 var codeRequestType =
@@ -79,7 +78,7 @@ public class UserActionsManager implements UserActions {
                                 userPermissionContext.emailAddress(),
                                 codeRequestBlockedKeyPrefix,
                                 configurationService.getLockoutDuration());
-                authSessionService.updateSession(updatedSession.resetPasswordResetCount());
+                getAuthSessionService().updateSession(updatedSession.resetPasswordResetCount());
             }
         }
 
@@ -194,5 +193,12 @@ public class UserActionsManager implements UserActions {
             codeStorageService = new CodeStorageService(configurationService);
         }
         return codeStorageService;
+    }
+
+    private AuthSessionService getAuthSessionService() {
+        if (authSessionService == null) {
+            authSessionService = new AuthSessionService(configurationService);
+        }
+        return authSessionService;
     }
 }
