@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -66,6 +65,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
+    private final TestClientHelper testClientHelper;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -81,7 +81,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AuthSessionService authSessionService,
             PermissionDecisionManager permissionDecisionManager,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            TestClientHelper testClientHelper) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -97,6 +98,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
+        this.testClientHelper = testClientHelper;
     }
 
     public ResetPasswordHandler() {
@@ -119,6 +121,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public ResetPasswordHandler(
@@ -138,6 +141,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     @Override
@@ -211,7 +215,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
             AuditableEvent auditableEvent;
-            if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
+            if (testClientHelper.isTestJourney(userContext, configurationService)) {
                 auditableEvent =
                         FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
             } else {
@@ -250,9 +254,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
             }
             auditService.submitAuditEvent(auditableEvent, auditContext);
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
+        } catch (Exception e) {
+            LOG.warn("Unexpected Exception thrown", e);
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNEXPECTED_EXCEPTION_THROWN);
         }
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();

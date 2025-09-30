@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
@@ -93,6 +95,7 @@ class ResetPasswordHandlerTest {
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
+    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
@@ -173,7 +176,8 @@ class ResetPasswordHandlerTest {
                         accountModifiersService,
                         authSessionService,
                         permissionDecisionManager,
-                        userActionsManager);
+                        userActionsManager,
+                        testClientHelper);
     }
 
     @Nested
@@ -181,6 +185,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -201,6 +206,7 @@ class ResetPasswordHandlerTest {
         @Test
         void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -620,29 +626,6 @@ class ResetPasswordHandlerTest {
             verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
             verifyNoInteractions(auditService);
             verifyNoInteractions(accountModifiersService);
-        }
-
-        @Test
-        void shouldReturn400WhenClientNotFoundInUserContext() {
-            when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                    .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
-            when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.empty());
-
-            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
-
-            var result = handler.handleRequest(event, context);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.CLIENT_NOT_FOUND));
-            verify(authenticationService).updatePassword(EMAIL, NEW_PASSWORD);
-            verify(userActionsManager).passwordReset(any(), any());
-            verifyNoInteractions(auditService);
-            verifyNoInteractions(accountModifiersService);
-            verifyNoInteractions(sqsClient);
         }
 
         @Test
