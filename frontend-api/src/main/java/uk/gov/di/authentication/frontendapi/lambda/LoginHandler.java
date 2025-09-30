@@ -347,7 +347,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         LOG.info(
-                "User has successfully logged in with MFAType: {}. MFAVerified: {}",
+                "User has submitted a correct password. They have a default MFAType of {}, MFAVerified: {}.",
                 userMfaDetail.mfaMethodType().getValue(),
                 userMfaDetail.mfaMethodVerified());
 
