@@ -70,7 +70,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -364,7 +363,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext,
             Optional<MFAMethod> shouldBeRequestedSmsMfaMethod)
             throws ClientNotFoundException {
-        if (isTestClientWithAllowedEmail(userContext, configurationService))
+        if (testClientHelper.isTestJourney(userContext, configurationService))
             return getOtpCodeForTestClient(notificationType);
 
         String emailAddress = authSession.getEmailAddress();
