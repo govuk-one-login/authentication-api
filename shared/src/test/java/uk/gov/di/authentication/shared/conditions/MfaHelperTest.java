@@ -243,7 +243,7 @@ class MfaHelperTest {
                     logging.events(),
                     hasItem(
                             withMessageContaining(
-                                    "Unexpected error retrieving default mfa method for migrated user: no default method exists")));
+                                    "Unexpected error retrieving default mfa method for migrated user: no default method exists. User MFA method count: 1, MFA method priorities: BACKUP")));
         }
     }
 
