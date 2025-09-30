@@ -8,7 +8,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -37,32 +36,6 @@ public class TestClientHelper {
 
     public TestClientHelper(SecretsManagerClient secretsManagerClient) {
         this.secretsManagerClient = secretsManagerClient;
-    }
-
-    public static boolean isTestClientWithAllowedEmail(
-            UserContext userContext, ConfigurationService configurationService)
-            throws ClientNotFoundException {
-        if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
-        } else {
-            return false;
-        }
-        var clientRegistry =
-                userContext
-                        .getClient()
-                        .orElseThrow(() -> new ClientNotFoundException("Could not find client"));
-
-        var isTestClientWithAllowedEmail =
-                (clientRegistry.isTestClient()
-                        && emailMatchesAllowlist(
-                                userContext.getAuthSession().getEmailAddress(),
-                                clientRegistry.getTestClientEmailAllowlist()));
-
-        if (isTestClientWithAllowedEmail) {
-            LOG.info("Is request from a test client with a test client email address: true");
-        }
-
-        return isTestClientWithAllowedEmail;
     }
 
     public boolean isTestJourney(
