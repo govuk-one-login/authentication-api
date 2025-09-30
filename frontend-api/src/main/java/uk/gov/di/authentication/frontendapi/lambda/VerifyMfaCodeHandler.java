@@ -125,6 +125,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -132,11 +133,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        this.mfaMethodsService);
+                        this.mfaMethodsService,
+                        this.testClientHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -145,6 +146,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -152,11 +154,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         new DynamoService(configurationService),
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
-                        this.mfaMethodsService);
+                        this.mfaMethodsService,
+                        this.testClientHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     @Override
