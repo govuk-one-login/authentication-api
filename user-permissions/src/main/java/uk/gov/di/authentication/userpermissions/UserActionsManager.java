@@ -24,13 +24,12 @@ public class UserActionsManager implements UserActions {
     private static final Logger LOG = LogManager.getLogger(UserActionsManager.class);
 
     private final ConfigurationService configurationService;
-    private final CodeStorageService codeStorageService;
+    private CodeStorageService codeStorageService;
     private final AuthSessionService authSessionService;
     private AuthenticationAttemptsService authenticationAttemptsService;
 
     public UserActionsManager(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.codeStorageService = new CodeStorageService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
 
@@ -75,10 +74,11 @@ public class UserActionsManager implements UserActions {
                                 RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
                 var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
                 LOG.info("Setting block for email as user has requested too many OTPs");
-                codeStorageService.saveBlockedForEmail(
-                        userPermissionContext.emailAddress(),
-                        codeRequestBlockedKeyPrefix,
-                        configurationService.getLockoutDuration());
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                userPermissionContext.emailAddress(),
+                                codeRequestBlockedKeyPrefix,
+                                configurationService.getLockoutDuration());
                 authSessionService.updateSession(updatedSession.resetPasswordResetCount());
             }
         }
@@ -114,17 +114,19 @@ public class UserActionsManager implements UserActions {
                             CountType.ENTER_PASSWORD);
         } else {
             var updatedCount =
-                    codeStorageService.increaseIncorrectPasswordCount(
-                            userPermissionContext.emailAddress());
+                    getCodeStorageService()
+                            .increaseIncorrectPasswordCount(userPermissionContext.emailAddress());
             if (updatedCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has now exceeded max password retries, setting block");
-                codeStorageService.saveBlockedForEmail(
-                        userPermissionContext.emailAddress(),
-                        CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET,
-                        configurationService.getLockoutDuration());
+                getCodeStorageService()
+                        .saveBlockedForEmail(
+                                userPermissionContext.emailAddress(),
+                                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                        + JourneyType.PASSWORD_RESET,
+                                configurationService.getLockoutDuration());
 
-                codeStorageService.deleteIncorrectPasswordCount(
-                        userPermissionContext.emailAddress());
+                getCodeStorageService()
+                        .deleteIncorrectPasswordCount(userPermissionContext.emailAddress());
             }
         }
 
@@ -140,12 +142,12 @@ public class UserActionsManager implements UserActions {
     @Override
     public Result<TrackingError, Void> passwordReset(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        codeStorageService.deleteIncorrectPasswordCount(userPermissionContext.emailAddress());
+        getCodeStorageService().deleteIncorrectPasswordCount(userPermissionContext.emailAddress());
 
         String codeBlockedKeyPrefix = CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + journeyType;
 
-        codeStorageService.deleteBlockForEmail(
-                userPermissionContext.emailAddress(), codeBlockedKeyPrefix);
+        getCodeStorageService()
+                .deleteBlockForEmail(userPermissionContext.emailAddress(), codeBlockedKeyPrefix);
 
         return Result.success(null);
     }
@@ -185,5 +187,12 @@ public class UserActionsManager implements UserActions {
             authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
         }
         return authenticationAttemptsService;
+    }
+
+    private CodeStorageService getCodeStorageService() {
+        if (codeStorageService == null) {
+            codeStorageService = new CodeStorageService(configurationService);
+        }
+        return codeStorageService;
     }
 }
