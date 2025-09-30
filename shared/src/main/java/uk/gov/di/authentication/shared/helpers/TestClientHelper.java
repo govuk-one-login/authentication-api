@@ -72,7 +72,7 @@ public class TestClientHelper {
 
     public boolean isTestJourney(String emailAddress, ConfigurationService configurationService) {
         if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
+            LOG.warn("Test journeys are ENABLED");
         } else {
             return false;
         }
