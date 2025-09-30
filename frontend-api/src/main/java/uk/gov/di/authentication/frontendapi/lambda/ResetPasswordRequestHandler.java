@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.TestClientHelper;
@@ -67,6 +66,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final MFAMethodsService mfaMethodsService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
+    private final TestClientHelper testClientHelper;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -79,7 +79,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             PermissionDecisionManager permissionDecisionManager,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            TestClientHelper testClientHelper) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -93,6 +94,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
+        this.testClientHelper = testClientHelper;
     }
 
     public ResetPasswordRequestHandler(
@@ -104,7 +106,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             CodeStorageService codeStorageService,
             AuditService auditService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestClientHelper testClientHelper) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -121,6 +124,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.userActionsManager =
                 new UserActionsManager(
                         configurationService, codeStorageService, authSessionService);
+        this.testClientHelper = testClientHelper;
     }
 
     public ResetPasswordRequestHandler() {
@@ -143,6 +147,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.userActionsManager =
                 new UserActionsManager(
                         configurationService, codeStorageService, authSessionService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public ResetPasswordRequestHandler(
@@ -162,6 +167,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.userActionsManager =
                 new UserActionsManager(
                         configurationService, codeStorageService, authSessionService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     @Override
@@ -197,9 +203,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return permissionCheckResult.getFailure();
             }
 
-            var isTestClient =
-                    TestClientHelper.isTestClientWithAllowedEmail(
-                            userContext, configurationService);
+            var isTestClient = testClientHelper.isTestJourney(userContext, configurationService);
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
@@ -216,9 +220,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
     }
 
