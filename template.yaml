@@ -831,6 +831,12 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRegistryTable
+        - !If
+          - IsIntegrationOrProduction
+          - Key: BackupFrequency
+            Value: Bihourly
+          - !Ref AWS::NoValue
+
   #endregion
 
   #region OrchIdentityCredentials DynamoDB Table
