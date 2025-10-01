@@ -1137,6 +1137,44 @@ class LoginHandlerTest {
     }
 
     @Test
+    void shouldHandleErrorsRetrievingADefaultMethod() {
+        MFAMethod mfaMethod =
+                MFAMethod.smsMfaMethod(
+                        true,
+                        true,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        PriorityIdentifier.BACKUP,
+                        "some-mfa-id");
+        var userProfile = generateUserProfile(null);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(CommonTestVariables.PASSWORD)
+                        .setMfaMethod(mfaMethod);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. As this relates to MFA verification, this will be handled in the next step, but this should be looked into more by auth. The user will be prompted to finish creating their login by adding an MFA method. User MFA method count: 1, MFA method priorities: BACKUP. userMfaDetail.mfaMethodType(): SMS")));
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         setUpSmokeTestClient();
