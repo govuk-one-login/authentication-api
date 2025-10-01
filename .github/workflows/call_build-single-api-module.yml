@@ -83,12 +83,12 @@ jobs:
         env:
           MODULE_NAME: ${{ inputs.module_name }}
         run: |
-          ./gradlew --no-daemon :$MODULE_NAME:buildZip
+          ./gradlew --no-daemon :"$MODULE_NAME":buildZip
 
           echo "Zip built successfully. Calculating sha256sum..."
-          sha256sum $MODULE_NAME/build/distributions/$MODULE_NAME.zip
+          sha256sum "$MODULE_NAME/build/distributions/$MODULE_NAME.zip"
 
-          SHA="$(sha256sum $MODULE_NAME/build/distributions/$MODULE_NAME.zip | cut -d ' ' -f 1)"
+          SHA="$(sha256sum "$MODULE_NAME/build/distributions/$MODULE_NAME.zip" | cut -d ' ' -f 1)"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Query dynamodb for previous artifact
@@ -99,8 +99,8 @@ jobs:
           ARTIFACT_HASH: ${{ steps.build.outputs.sha }}
         run: |
           PREVIOUS_SIGNED="$(aws dynamodb get-item \
-            --table-name $LOOKUP_TABLE \
-            --key '{"module_name": {"S": "'$MODULE_NAME'"}, "artifact_hash": {"S": "'$ARTIFACT_HASH'"}}')"
+            --table-name "$LOOKUP_TABLE" \
+            --key '{"module_name": {"S": "'"$MODULE_NAME"'"}, "artifact_hash": {"S": "'"$ARTIFACT_HASH"'"}}')"
 
           if [ -n "${PREVIOUS_SIGNED}" ]; then
             PREVIOUS_KEY="$(echo "${PREVIOUS_SIGNED}" | jq '.Item.signed_object_key.S' -r)"
@@ -126,13 +126,13 @@ jobs:
           ARTIFACT_HASH: ${{ steps.build.outputs.sha }}
         run: |
           if ! aws s3api head-object \
-            --bucket $DESTINATION_BUCKET \
-            --key $SIGNED_OBJECT_KEY
+            --bucket "$DESTINATION_BUCKET" \
+            --key "$SIGNED_OBJECT_KEY"
           then
             echo "Previous artifact no longer exists in S3 bucket, reuploading and resigning artifact. Deleting record from DynamoDB table..."
             aws dynamodb delete-item \
-              --table-name $LOOKUP_TABLE \
-              --key '{"module_name": {"S": "'$MODULE_NAME'"}, "artifact_hash": {"S": "'$ARTIFACT_HASH'"}}'
+              --table-name "$LOOKUP_TABLE" \
+              --key '{"module_name": {"S": "'"$MODULE_NAME"'"}, "artifact_hash": {"S": "'"$ARTIFACT_HASH"'"}}'
             echo 'ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
             echo "::warning title=$MODULE_NAME::$MODULE_NAME module has changed, using the new artifact"
           else
@@ -147,12 +147,12 @@ jobs:
           SOURCE_BUCKET: ${{ inputs.source_bucket }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          cd $MODULE_NAME/build/distributions
+          cd "$MODULE_NAME/build/distributions"
           VERSION="$(aws s3api put-object \
-            --bucket $SOURCE_BUCKET \
-            --key $MODULE_NAME/$COMMIT_SHA.zip \
-            --body $MODULE_NAME.zip \
-            --metadata commitsha=$COMMIT_SHA \
+            --bucket "$SOURCE_BUCKET" \
+            --key "$MODULE_NAME/$COMMIT_SHA.zip" \
+            --body "$MODULE_NAME.zip" \
+            --metadata "commitsha=$COMMIT_SHA" \
             --query "VersionId" --output text)"
 
           echo "Uploaded unsigned $MODULE_NAME to S3 bucket, key: $MODULE_NAME/$COMMIT_SHA.zip"
@@ -193,7 +193,7 @@ jobs:
         run: |
           aws dynamodb put-item \
             --table-name "$LOOKUP_TABLE" \
-            --item '{"module_name":{"S":"'$MODULE_NAME'"},"artifact_hash":{"S":"'$ARTIFACT_HASH'"},"signed_object_key":{"S":"'$SIGNED_OBJECT_KEY'"},"commit_sha":{"S":"'$COMMIT_SHA'"}}'
+            --item '{"module_name":{"S":"'"$MODULE_NAME"'"},"artifact_hash":{"S":"'"$ARTIFACT_HASH"'"},"signed_object_key":{"S":"'"$SIGNED_OBJECT_KEY"'"},"commit_sha":{"S":"'"$COMMIT_SHA"'"}}'
 
       - name: Prepare GHA artifacts
         id: create_artifacts
@@ -207,8 +207,8 @@ jobs:
           echo -n "$ARTIFACT_COMMIT_SHA" >> "${artifact_dir}/${MODULE_NAME}_commitsha.txt"
 
           aws s3api get-object \
-            --bucket $DESTINATION_BUCKET \
-            --key $SIGNED_OBJECT_KEY \
+            --bucket "$DESTINATION_BUCKET" \
+            --key "$SIGNED_OBJECT_KEY" \
             "${artifact_dir}/${MODULE_NAME}.zip"
 
           {
