@@ -221,12 +221,11 @@ public class BulkRemoveAccountHandlerIntegrationTest
     private static void assertAuditEvents(Collection<AuditableEvent> events) {
         List<String> receivedEvents = assertTxmaAuditEventsReceived(txmaAuditQueue, events, false);
         AuditEventExpectation expectation =
-                new AuditEventExpectation(
-                        AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT.name());
+                new AuditEventExpectation(AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT);
         expectation.withAttribute(
                 "extensions.account_deletion_reason",
                 AccountDeletionReason.SECURITY_INITIATED.name());
-        expectation.verify(receivedEvents);
+        expectation.assertPublished(receivedEvents);
     }
 
     private static void assertProcessedAccountIdentifiers(
