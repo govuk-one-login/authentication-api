@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  SmsQuotaMonitorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-sms-quota-monitor-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      CodeUri: ./frontend-api/build/distributions/frontend-api.zip
+      Handler: uk.gov.di.authentication.frontendapi.lambda.SmsQuotaMonitorHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DOMESTIC_SMS_QUOTA_THRESHOLD: "300000"
+          INTERNATIONAL_SMS_QUOTA_THRESHOLD: "3600"
+      LoggingConfig:
+        LogGroup: !Ref SmsQuotaMonitorFunctionLogGroup
+      Policies:
+        - !Ref SmsQuotaMonitorPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder:
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref TicfCriFunctionAliasactive,
+            "",
+          ]
+
+  SmsQuotaMonitorFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt SmsQuotaMonitorFunction.Arn
+      Principal: events.amazonaws.com
+
+  SmsQuotaMonitorFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SmsQuotaMonitorFunction.Alias
+      Principal: events.amazonaws.com
+
+  SmsQuotaMonitorFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-sms-quota-monitor-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-SmsQuotaMonitorFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/function/sms-quota-monitor.yaml
+
+  SmsQuotaMonitorFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-sms-quota-monitor-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref SmsQuotaMonitorFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-sms-quota-monitor-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  SmsQuotaMonitorScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub
+        - ${Env}-sms-quota-monitor-schedule
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ScheduleExpression: "rate(10 minutes)"
+      Targets:
+        - Arn: !GetAtt SmsQuotaMonitorFunction.Arn
+          Id: SmsQuotaMonitorTarget
+
+  SmsQuotaMonitorSchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SmsQuotaMonitorFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SmsQuotaMonitorScheduleRule.Arn
+
+  DomesticSmsQuotaEarlyWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-domestic-sms-quota-early-warning-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: DomesticSmsQuotaEarlyWarning
+      Namespace: Authentication
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      AlarmDescription: !Sub
+        - "Domestic SMS usage trending towards quota limit  in ${Env}. Runbook: ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "sms-quota",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
+            - !Sub
+              - "{{resolve:ssm:/deploy/${Env}/notification_topic_arn}}"
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - !Ref AWS::NoValue
+      Dimensions:
+        - Name: Environment
+          Value: !Ref Environment
+
+  InternationalSmsQuotaEarlyWarningAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-international-sms-quota-early-warning-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: InternationalSmsQuotaEarlyWarning
+      Namespace: Authentication
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      AlarmDescription: !Sub
+        - "International SMS usage trending towards quota limit in ${Env}. Runbook: ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "sms-quota",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
+            - !Sub
+              - "{{resolve:ssm:/deploy/${Env}/notification_topic_arn}}"
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - !Ref AWS::NoValue
+      Dimensions:
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  SmsQuotaMonitorFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref SmsQuotaMonitorFunctionLogGroup
