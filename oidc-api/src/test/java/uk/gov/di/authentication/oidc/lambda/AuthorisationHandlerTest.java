@@ -61,6 +61,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestExce
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
+import uk.gov.di.authentication.oidc.helpers.AuthorisationIdGenerators;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RateLimitService;
@@ -237,6 +238,7 @@ class AuthorisationHandlerTest {
 
     private OrchSessionItem orchSession;
     private static final String NEW_CLIENT_SESSION_ID = "client-session-id";
+    private static final String NEW_JWT_ID = "test-jti";
     private static final State STATE = new State("rp-state");
     private static final Nonce NONCE = new Nonce();
     private static final Subject SUBJECT = new Subject();
@@ -294,6 +296,13 @@ class AuthorisationHandlerTest {
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
         when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
+        var idGenerators =
+                AuthorisationIdGenerators.builder()
+                        .withSessionIds(NEW_SESSION_ID, NEW_SESSION_ID_FOR_PREV_SESSION)
+                        .withClientSessionIds(NEW_CLIENT_SESSION_ID)
+                        .withBrowserSessionIds(NEW_BROWSER_SESSION_ID)
+                        .withJwtIds(NEW_JWT_ID)
+                        .build();
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -311,7 +320,8 @@ class AuthorisationHandlerTest {
                         authFrontend,
                         authorisationService,
                         rateLimitService,
-                        fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC")));
+                        fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC")),
+                        idGenerators);
         orchSession = new OrchSessionItem(SESSION_ID);
         when(orchClientSessionService.generateClientSession(any(), any(), any(), any(), any()))
                 .thenReturn(orchClientSession);
@@ -2736,18 +2746,10 @@ class AuthorisationHandlerTest {
                                 when(mock.getValue()).thenReturn("state");
                             })) {
                 response =
-                        runWithIds(
-                                () ->
-                                        handler.handleRequest(
-                                                withRequestEvent(
-                                                        buildRequestParams(
-                                                                Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
-                                                context),
-                                List.of(
-                                        NEW_CLIENT_SESSION_ID,
-                                        NEW_SESSION_ID,
-                                        NEW_BROWSER_SESSION_ID,
-                                        "test-jti"));
+                        handler.handleRequest(
+                                withRequestEvent(
+                                        buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"))),
+                                context);
             }
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
@@ -2776,18 +2778,9 @@ class AuthorisationHandlerTest {
                                 when(mock.getValue()).thenReturn("state");
                             })) {
                 response =
-                        runWithIds(
-                                () ->
-                                        handler.handleRequest(
-                                                withRequestEvent(
-                                                        buildRequestParams(
-                                                                Map.of("vtr", "[\"Cl.Cm\"]"))),
-                                                context),
-                                List.of(
-                                        NEW_CLIENT_SESSION_ID,
-                                        NEW_SESSION_ID,
-                                        NEW_BROWSER_SESSION_ID,
-                                        "test-jti"));
+                        handler.handleRequest(
+                                withRequestEvent(buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"))),
+                                context);
             }
 
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));

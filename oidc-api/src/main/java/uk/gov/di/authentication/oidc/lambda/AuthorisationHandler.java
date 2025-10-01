@@ -37,6 +37,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestExce
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
+import uk.gov.di.authentication.oidc.helpers.AuthorisationIdGenerators;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
@@ -63,7 +64,6 @@ import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -144,6 +144,7 @@ public class AuthorisationHandler
     private final AuthorisationService authorisationService;
     private final NowHelper.NowClock nowClock;
     private final RateLimitService rateLimitService;
+    private final AuthorisationIdGenerators idGenerators;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -161,7 +162,8 @@ public class AuthorisationHandler
             AuthFrontend authFrontend,
             AuthorisationService authorisationService,
             RateLimitService rateLimitService,
-            Clock clock) {
+            Clock clock,
+            AuthorisationIdGenerators idGenerators) {
         this.configurationService = configurationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
@@ -178,6 +180,7 @@ public class AuthorisationHandler
         this.authorisationService = authorisationService;
         this.rateLimitService = rateLimitService;
         this.nowClock = new NowHelper.NowClock(clock);
+        this.idGenerators = idGenerators;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -217,6 +220,7 @@ public class AuthorisationHandler
         this.rateLimitService =
                 new RateLimitService(slidingWindowAlgorithm, cloudwatchMetricService);
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
+        this.idGenerators = AuthorisationIdGenerators.withDefaults();
     }
 
     public AuthorisationHandler(
@@ -253,6 +257,7 @@ public class AuthorisationHandler
                 new RateLimitService(
                         new SlidingWindowAlgorithm(configurationService), cloudwatchMetricService);
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
+        this.idGenerators = AuthorisationIdGenerators.withDefaults();
     }
 
     public AuthorisationHandler() {
@@ -276,7 +281,7 @@ public class AuthorisationHandler
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
         var ipAddress = IpAddressHelper.extractIpAddress(input);
-        var clientSessionId = IdGenerator.generate();
+        var clientSessionId = idGenerators.getClientSessionIdGenerator().generate();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
@@ -581,8 +586,8 @@ public class AuthorisationHandler
             String clientSessionId,
             String persistentSessionId,
             TxmaAuditUser user) {
-        var newSessionId = IdGenerator.generate();
-        var newBrowserSessionId = IdGenerator.generate();
+        var newSessionId = idGenerators.getSessionIdGenerator().generate();
+        var newBrowserSessionId = idGenerators.getBrowserSessionIdGenerator().generate();
         OrchSessionItem orchSession;
         if (orchSessionOptional.isEmpty()) {
             orchSession =
@@ -692,8 +697,8 @@ public class AuthorisationHandler
                         && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie);
 
         OrchSessionItem orchSession;
-        var newSessionId = IdGenerator.generate();
-        var newBrowserSessionId = IdGenerator.generate();
+        var newSessionId = idGenerators.getSessionIdGenerator().generate();
+        var newBrowserSessionId = idGenerators.getBrowserSessionIdGenerator().generate();
         if (previousSessionIdFromCookie.isEmpty()
                 || existingOrchSessionOptional.isEmpty()
                 || doesBrowserSessionIdFromSessionNotMatchCookie) {
@@ -712,7 +717,8 @@ public class AuthorisationHandler
                             existingOrchSessionOptional.get().getAuthTime(),
                             maxAgeParam,
                             timeNow)) {
-                var newSessionIdForPreviousSession = IdGenerator.generate();
+                var newSessionIdForPreviousSession =
+                        idGenerators.getSessionIdGenerator().generate();
 
                 orchSession =
                         updateOrchSessionDueToMaxAgeExpiry(
@@ -881,7 +887,7 @@ public class AuthorisationHandler
                         persistentSessionId,
                         clientSessionId);
 
-        var jwtID = IdGenerator.generate();
+        var jwtID = idGenerators.getJwtIdGenerator().generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
