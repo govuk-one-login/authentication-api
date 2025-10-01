@@ -283,3 +283,73 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref EmailNotificationQueueFunctionLogGroup
+
+  DomesticSmsLimitExceededAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-${Prefix}domestic-sms-limit-exceeded-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "P1-", ""]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: SmsLimitExceeded
+      Namespace: Authentication
+      Period: 300
+      Statistic: Sum
+      Threshold: 2
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: SmsDestinationType
+          Value: DOMESTIC
+      AlarmDescription: !Sub
+        - "${Prefix}Domestic SMS daily limit exceeded (${Env}). 2+ 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "CRITICAL: ", ""]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
+            - !Sub
+              - "{{resolve:ssm:/deploy/${Env}/notification_topic_arn}}"
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - !Ref AWS::NoValue
+
+  InternationalSmsLimitExceededAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-${Prefix}international-sms-limit-exceeded-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "P1-", ""]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: SmsLimitExceeded
+      Namespace: Authentication
+      Period: 300
+      Statistic: Sum
+      Threshold: 2
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: SmsDestinationType
+          Value: INTERNATIONAL
+      AlarmDescription: !Sub
+        - "${Prefix}International SMS daily limit exceeded (${Env}). 2+ 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          Prefix: !If [IsProduction, "CRITICAL: ", ""]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - !Sub "arn:aws:sns:eu-west-2:${AWS::AccountId}:production-pagerduty-p1-alerts"
+            - !Sub
+              - "{{resolve:ssm:/deploy/${Env}/notification_topic_arn}}"
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - !Ref AWS::NoValue
