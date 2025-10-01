@@ -3,7 +3,7 @@ package uk.gov.di.authentication.frontendapi.validation;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -23,7 +23,7 @@ public class MfaCodeProcessorFactory {
     private final AuditService auditService;
     private final DynamoAccountModifiersService accountModifiersService;
     private final MFAMethodsService mfaMethodsService;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     public MfaCodeProcessorFactory(
             ConfigurationService configurationService,
@@ -32,14 +32,14 @@ public class MfaCodeProcessorFactory {
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.accountModifiersService = accountModifiersService;
         this.mfaMethodsService = mfaMethodsService;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
@@ -73,7 +73,7 @@ public class MfaCodeProcessorFactory {
                             auditService,
                             accountModifiersService,
                             mfaMethodsService,
-                            testClientHelper));
+                            testUserHelper));
             default -> Optional.empty();
         };
     }

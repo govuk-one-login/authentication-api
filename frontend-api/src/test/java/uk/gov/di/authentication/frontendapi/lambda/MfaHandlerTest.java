@@ -24,7 +24,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -104,7 +104,7 @@ class MfaHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final MFAMethod backupAuthAppMethod =
@@ -215,7 +215,7 @@ class MfaHandlerTest {
                         sqsClient,
                         authSessionService,
                         mfaMethodsService,
-                        testClientHelper);
+                        testUserHelper);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
     }
 
@@ -835,7 +835,7 @@ class MfaHandlerTest {
             throws Json.JsonException {
         usingValidSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+        when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 

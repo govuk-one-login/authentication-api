@@ -25,7 +25,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -112,7 +112,7 @@ class ResetPasswordRequestHandlerTest {
             mock(PermissionDecisionManager.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final Context context = mock(Context.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private static final String CLIENT_ID = "test-client-id";
 
     private final ClientRegistry testClientRegistry =
@@ -145,7 +145,7 @@ class ResetPasswordRequestHandlerTest {
                     mfaMethodsService,
                     permissionDecisionManager,
                     userActionsManager,
-                    testClientHelper);
+                    testUserHelper);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -382,7 +382,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn200ButNotPutMessageOnQueueIfTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             usingValidSession();
             var result = handler.handleRequest(validEvent, context);
@@ -409,7 +409,7 @@ class ResetPasswordRequestHandlerTest {
         void
                 checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             usingValidSession();
             var headers = validEvent.getHeaders();
             var headersWithoutTICF =

@@ -33,7 +33,7 @@ import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -130,7 +130,7 @@ class SendNotificationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
@@ -175,7 +175,7 @@ class SendNotificationHandlerTest {
                     auditService,
                     authSessionService,
                     cloudwatchMetricsService,
-                    testClientHelper);
+                    testUserHelper);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -497,7 +497,7 @@ class SendNotificationHandlerTest {
                 NotificationType notificationType, JourneyType journeyType) {
             usingValidSession(TEST_CLIENT_ID);
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             var body =
                     format(
@@ -717,7 +717,7 @@ class SendNotificationHandlerTest {
                 NotificationType notificationType) {
             usingValidSession(TEST_CLIENT_ID);
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             var body =
                     format(

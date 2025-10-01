@@ -22,7 +22,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -87,7 +87,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final CodeStorageService codeStorageService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
@@ -101,7 +101,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AuditService auditService,
             AuthSessionService authSessionService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
@@ -116,7 +116,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public SendNotificationHandler() {
@@ -141,7 +141,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public SendNotificationHandler(
@@ -163,7 +163,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -204,7 +204,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext.getClientSessionId());
 
             try {
-                if (!testClientHelper.isTestJourney(userContext)) {
+                if (!testUserHelper.isTestJourney(userContext)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
                             "{} EMAIL placed on queue with reference: {}",
@@ -361,7 +361,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
 
-        var testClientWithAllowedEmail = testClientHelper.isTestJourney(userContext);
+        var testClientWithAllowedEmail = testUserHelper.isTestJourney(userContext);
 
         if (notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {

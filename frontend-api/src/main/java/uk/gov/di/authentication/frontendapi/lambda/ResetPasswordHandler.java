@@ -23,7 +23,7 @@ import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -65,7 +65,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -82,7 +82,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             AuthSessionService authSessionService,
             PermissionDecisionManager permissionDecisionManager,
             UserActionsManager userActionsManager,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -98,7 +98,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public ResetPasswordHandler() {
@@ -121,7 +121,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public ResetPasswordHandler(
@@ -141,7 +141,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -214,7 +214,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
         AuditableEvent auditableEvent;
-        if (testClientHelper.isTestJourney(userContext)) {
+        if (testUserHelper.isTestJourney(userContext)) {
             auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
         } else {
             var emailNotifyRequest =

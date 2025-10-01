@@ -26,7 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -89,7 +89,7 @@ class PhoneNumberCodeProcessorTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -554,7 +554,7 @@ class PhoneNumberCodeProcessorTest {
             when(configurationService.getTestClientVerifyPhoneNumberOTP())
                     .thenReturn(Optional.of(CommonTestVariables.TEST_OTP_CODE));
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         }
 
         @Test
@@ -623,7 +623,7 @@ class PhoneNumberCodeProcessorTest {
                         accountModifiersService,
                         sqsClient,
                         mfaMethodsService,
-                        testClientHelper);
+                        testUserHelper);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -649,7 +649,7 @@ class PhoneNumberCodeProcessorTest {
                         accountModifiersService,
                         sqsClient,
                         mfaMethodsService,
-                        testClientHelper);
+                        testUserHelper);
     }
 
     public void setUpBlockedPhoneNumberCode(
@@ -674,7 +674,7 @@ class PhoneNumberCodeProcessorTest {
                         accountModifiersService,
                         sqsClient,
                         mfaMethodsService,
-                        testClientHelper);
+                        testUserHelper);
     }
 
     private static Stream<Arguments> codeRequestTypes() {

@@ -32,7 +32,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -113,7 +113,7 @@ class SendOtpNotificationHandlerTest {
             mock(DynamoEmailCheckResultService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
 
     private final Context context = mock(Context.class);
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -145,7 +145,7 @@ class SendOtpNotificationHandlerTest {
                     auditService,
                     cloudwatchMetricsService,
                     mfaMethodsService,
-                    testClientHelper);
+                    testUserHelper);
 
     @BeforeAll
     static void beforeAll() {
@@ -377,7 +377,7 @@ class SendOtpNotificationHandlerTest {
         void shouldReturn500WhenUnexpectedException() {
             when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
-            when(testClientHelper.isTestJourney(anyString()))
+            when(testUserHelper.isTestJourney(anyString()))
                     .thenThrow(new RuntimeException("unexpected"));
 
             var event = createEmptyEvent();
@@ -681,7 +681,7 @@ class SendOtpNotificationHandlerTest {
                     .thenReturn(Result.success(false));
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
+            when(testUserHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
 
             var event = createEmptyEvent();
             event.setBody(
@@ -735,7 +735,7 @@ class SendOtpNotificationHandlerTest {
                 throws Json.JsonException {
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
+            when(testUserHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
 
             var event = createEmptyEvent();
             event.setBody(
