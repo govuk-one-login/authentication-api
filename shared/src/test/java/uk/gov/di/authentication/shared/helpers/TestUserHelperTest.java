@@ -35,7 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class TestClientHelperTest {
+class TestUserHelperTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SecretsManagerClient mockedSecretsManagerClient =
@@ -50,19 +50,19 @@ class TestClientHelperTest {
                     "^(.+)@digital.cabinet-office.gov.uk$",
                     "^(.+)@interwebs.org$",
                     "testclient.user2@internet.com");
-    private TestClientHelper testClientHelper;
+    private TestUserHelper testUserHelper;
 
     @BeforeEach
     void setup() {
         when(configurationService.getLocalstackEndpointUri())
                 .thenReturn(Optional.of("http://localhost:45678"));
         when(configurationService.getEnvironment()).thenReturn(env);
-        testClientHelper = new TestClientHelper(mockedSecretsManagerClient, configurationService);
+        testUserHelper = new TestUserHelper(mockedSecretsManagerClient, configurationService);
     }
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(TestClientHelper.class);
+            new CaptureLoggingExtension(TestUserHelper.class);
 
     @Test
     void shouldReturnTrueIfTestClientWithAllowedEmailAddress() {
@@ -80,7 +80,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertTrue(testClientHelper.isTestJourney(userContext));
+        assertTrue(testUserHelper.isTestJourney(userContext));
     }
 
     @Test
@@ -98,7 +98,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertFalse(testClientHelper.isTestJourney(userContext));
+        assertFalse(testUserHelper.isTestJourney(userContext));
     }
 
     @Test
@@ -119,7 +119,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertFalse(testClientHelper.isTestJourney(userContext));
+        assertFalse(testUserHelper.isTestJourney(userContext));
     }
 
     @ParameterizedTest
@@ -134,7 +134,7 @@ class TestClientHelperTest {
                 "testclient.user2@internet.com",
             })
     void emailShouldMatchRegexAllowlist(String email) {
-        assertTrue(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
+        assertTrue(TestUserHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
     @ParameterizedTest
@@ -148,7 +148,7 @@ class TestClientHelperTest {
                 "user.one1@interwebs.org.uk",
             })
     void emailShouldNotMatchRegexAllowlist(String email) {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
+        assertFalse(TestUserHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
     @ParameterizedTest
@@ -160,7 +160,7 @@ class TestClientHelperTest {
                 "user.one1@interwebs.org",
             })
     void emailShouldNotMatchRegexAllowlistWithInvalidRegex(String email) {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(email, List.of("$^", "[", "*")));
+        assertFalse(TestUserHelper.emailMatchesAllowlist(email, List.of("$^", "[", "*")));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
@@ -174,15 +174,14 @@ class TestClientHelperTest {
                         GetSecretValueResponse.builder()
                                 .secretString(String.join(",", List.of("$^", "[", "*")))
                                 .build());
-        assertFalse(testClientHelper.isTestJourney((String) null));
+        assertFalse(testUserHelper.isTestJourney((String) null));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
     @Test
     void shouldReturnFalseForAnEmptyList() {
         assertFalse(
-                TestClientHelper.emailMatchesAllowlist(
-                        TEST_EMAIL_ADDRESS, Collections.emptyList()));
+                TestUserHelper.emailMatchesAllowlist(TEST_EMAIL_ADDRESS, Collections.emptyList()));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
@@ -190,7 +189,7 @@ class TestClientHelperTest {
     void itShouldNotCallSecretsManagerIfTestClientsDisabled() {
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
-        testClientHelper.isTestJourney(buildUserContext());
+        testUserHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, never())
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -208,9 +207,9 @@ class TestClientHelperTest {
                                 .secretString(String.join(",", ALLOWLIST))
                                 .build());
 
-        testClientHelper.isTestJourney(buildUserContext());
+        testUserHelper.isTestJourney(buildUserContext());
         // Call again to check previous result cached
-        testClientHelper.isTestJourney(buildUserContext());
+        testUserHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, times(1))
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -226,17 +225,13 @@ class TestClientHelperTest {
             })
     void shouldReturnFalseForARangeOfMisconfigurationErrors(Class<SecretsManagerException> clazz) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenThrow(clazz);
 
-        var testClientHelper =
-                new TestClientHelper(mockedSecretsManagerClient, configurationService);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -249,17 +244,13 @@ class TestClientHelperTest {
     @Test
     void itShouldReturnFalseForNullSecretValue() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString(null).build());
 
-        var testClientHelper =
-                new TestClientHelper(mockedSecretsManagerClient, configurationService);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -272,17 +263,13 @@ class TestClientHelperTest {
     @Test
     void itShouldReturnAnEmptyListForEmptySecretValue() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString("").build());
 
-        var testClientHelper =
-                new TestClientHelper(mockedSecretsManagerClient, configurationService);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(

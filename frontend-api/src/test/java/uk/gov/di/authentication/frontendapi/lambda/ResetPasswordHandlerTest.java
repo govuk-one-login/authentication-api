@@ -27,7 +27,7 @@ import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -95,7 +95,7 @@ class ResetPasswordHandlerTest {
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
-    private final TestClientHelper testClientHelper = mock(TestClientHelper.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
@@ -177,7 +177,7 @@ class ResetPasswordHandlerTest {
                         authSessionService,
                         permissionDecisionManager,
                         userActionsManager,
-                        testClientHelper);
+                        testUserHelper);
     }
 
     @Nested
@@ -185,7 +185,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -206,7 +206,7 @@ class ResetPasswordHandlerTest {
         @Test
         void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))

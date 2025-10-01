@@ -20,8 +20,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-public class TestClientHelper {
-    private static final Logger LOG = LogManager.getLogger(TestClientHelper.class);
+public class TestUserHelper {
+    private static final Logger LOG = LogManager.getLogger(TestUserHelper.class);
     private static final String TEST_CLIENT_ALLOW_LIST_SECRET_NAME =
             "/%s/test-client-email-allow-list";
     private SecretsManagerClient secretsManagerClient;
@@ -29,12 +29,12 @@ public class TestClientHelper {
     private SecretCache<List<String>> cachedSecret;
     private final int timeToLiveInSeconds = 300;
 
-    public TestClientHelper(ConfigurationService configurationService) {
+    public TestUserHelper(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.secretsManagerClient = getSecretsManagerClient(configurationService);
     }
 
-    public TestClientHelper(
+    public TestUserHelper(
             SecretsManagerClient secretsManagerClient, ConfigurationService configurationService) {
         this.secretsManagerClient = secretsManagerClient;
         this.configurationService = configurationService;

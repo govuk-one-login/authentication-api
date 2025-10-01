@@ -15,7 +15,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -42,7 +42,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     private final UserContext userContext;
     private final CodeRequest codeRequest;
     private final AwsSqsClient sqsClient;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
     private final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(PhoneNumberCodeProcessor.class);
 
@@ -55,7 +55,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 userContext,
                 codeStorageService,
@@ -72,7 +72,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         configurationService.getAwsRegion(),
                         configurationService.getExperianPhoneCheckerQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     PhoneNumberCodeProcessor(
@@ -85,7 +85,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AwsSqsClient sqsClient,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 userContext,
                 codeStorageService,
@@ -98,7 +98,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         this.configurationService = configurationService;
         this.codeRequest = codeRequest;
         this.sqsClient = sqsClient;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     @Override
@@ -131,7 +131,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
-        boolean isTestClient = testClientHelper.isTestJourney(userContext);
+        boolean isTestClient = testUserHelper.isTestJourney(userContext);
 
         var formattedPhoneNumber =
                 PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());

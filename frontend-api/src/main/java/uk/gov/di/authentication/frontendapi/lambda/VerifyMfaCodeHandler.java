@@ -32,7 +32,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -87,7 +87,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -100,7 +100,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -113,7 +113,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public VerifyMfaCodeHandler() {
@@ -125,7 +125,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -134,7 +134,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
                         this.mfaMethodsService,
-                        this.testClientHelper);
+                        this.testUserHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
@@ -146,7 +146,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
                         configurationService,
@@ -155,7 +155,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService),
                         this.mfaMethodsService,
-                        this.testClientHelper);
+                        this.testUserHelper);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
@@ -503,7 +503,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 authSession.getClientName(),
                 levelOfConfidence.getValue(),
-                testClientHelper.isTestJourney(authSession.getEmailAddress()),
+                testUserHelper.isTestJourney(authSession.getEmailAddress()),
                 journeyType,
                 mfaMethodType,
                 priorityIdentifier);
