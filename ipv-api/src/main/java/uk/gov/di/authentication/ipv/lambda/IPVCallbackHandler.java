@@ -54,7 +54,6 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.List;
@@ -129,31 +128,6 @@ public class IPVCallbackHandler
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.configurationService = configurationService;
-        this.ipvAuthorisationService =
-                new IPVAuthorisationService(configurationService, kmsConnectionService);
-        this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.authUserInfoStorageService =
-                new AuthenticationUserInfoStorageService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.logoutService = new LogoutService(configurationService);
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService,
-                        new CloudwatchMetricsService(configurationService),
-                        auditService);
-        this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService);
-        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
-        this.frontend = getFrontend(configurationService);
-    }
-
-    public IPVCallbackHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =

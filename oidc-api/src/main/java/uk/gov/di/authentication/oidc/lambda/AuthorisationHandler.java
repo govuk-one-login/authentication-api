@@ -78,7 +78,6 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -216,42 +215,6 @@ public class AuthorisationHandler
         var slidingWindowAlgorithm = new SlidingWindowAlgorithm(configurationService);
         this.rateLimitService =
                 new RateLimitService(slidingWindowAlgorithm, cloudwatchMetricService);
-        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
-    }
-
-    public AuthorisationHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.queryParamsAuthorizeValidator =
-                new QueryParamsAuthorizeValidator(configurationService);
-        this.requestObjectAuthorizeValidator =
-                new RequestObjectAuthorizeValidator(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        var jwksService = new JwksService(configurationService, kmsConnectionService);
-        var jwksCacheService = new JwksCacheService(configurationService);
-        var stateStorageService = new StateStorageService(configurationService);
-        this.docAppAuthorisationService =
-                new DocAppAuthorisationService(
-                        configurationService,
-                        kmsConnectionService,
-                        jwksCacheService,
-                        stateStorageService);
-        var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
-        this.cloudwatchMetricsService = cloudwatchMetricService;
-        this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService);
-        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.authorisationService = new AuthorisationService(configurationService);
-        this.rateLimitService =
-                new RateLimitService(
-                        new SlidingWindowAlgorithm(configurationService), cloudwatchMetricService);
         this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
     }
 

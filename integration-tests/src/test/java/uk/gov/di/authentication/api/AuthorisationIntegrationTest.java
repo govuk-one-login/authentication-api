@@ -385,7 +385,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     .withClaims(
                             List.of(CORE_IDENTITY_JWT.getValue(), ValidClaims.ADDRESS.getValue()))
                     .saveToDynamo();
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var response =
@@ -1354,7 +1354,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Base64.getMimeEncoder()
                                     .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
         }
 
@@ -1477,7 +1477,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -1566,7 +1566,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -1651,7 +1651,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -1748,7 +1748,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -1854,7 +1854,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -1938,7 +1938,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             Base64.getMimeEncoder()
                                     .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                     .saveToDynamo();
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
         }
     }
@@ -2042,7 +2042,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new OrchSessionItem(previousSessionId)
                             .withAuthenticated(true)
                             .withAuthTime(NowHelper.now().toInstant().getEpochSecond() - 10));
-            handler = new AuthorisationHandler(configuration, redisConnectionService);
+            handler = new AuthorisationHandler(configuration);
             txmaAuditQueue.clear();
 
             var previousSession = orchSessionExtension.getSession(previousSessionId);
@@ -2192,7 +2192,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Base64.getMimeEncoder()
                                 .encodeToString(RP_KEY_PAIR.getPublic().getEncoded()))
                 .saveToDynamo();
-        handler = new AuthorisationHandler(configuration, redisConnectionService);
+        handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
     }
 

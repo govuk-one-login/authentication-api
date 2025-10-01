@@ -40,7 +40,6 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
@@ -113,30 +112,6 @@ public class DocAppCallbackHandler
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.docAppCriApi = new DocAppCriAPI(configurationService);
-        this.configurationService = configurationService;
-        this.authorisationService =
-                new DocAppAuthorisationService(
-                        configurationService,
-                        kmsConnectionService,
-                        new JwksCacheService(configurationService),
-                        new StateStorageService(configurationService));
-        this.tokenService =
-                new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.dynamoDocAppCriService = new DynamoDocAppCriService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-    }
-
-    public DocAppCallbackHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.docAppCriApi = new DocAppCriAPI(configurationService);
         this.configurationService = configurationService;

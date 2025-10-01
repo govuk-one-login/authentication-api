@@ -124,7 +124,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setup() throws JOSEException {
-        handler = new DocAppCallbackHandler(configurationService, redisConnectionService);
+        handler = new DocAppCallbackHandler(configurationService);
         docAppSubjectId =
                 new Subject(
                         ClientSubjectHelper.calculatePairwiseIdentifier(

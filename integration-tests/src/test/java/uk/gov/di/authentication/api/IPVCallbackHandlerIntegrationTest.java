@@ -136,7 +136,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeEach
     void setup() {
         ipvStub.init();
-        handler = new IPVCallbackHandler(configurationService, redisConnectionService);
+        handler = new IPVCallbackHandler(configurationService);
         txmaAuditQueue.clear();
         spotQueue.clear();
 
