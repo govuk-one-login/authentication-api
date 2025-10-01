@@ -204,7 +204,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext.getClientSessionId());
 
             try {
-                if (!testClientHelper.isTestJourney(userContext, configurationService)) {
+                if (!testClientHelper.isTestJourney(userContext)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
                             "{} EMAIL placed on queue with reference: {}",
@@ -361,8 +361,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
 
-        var testClientWithAllowedEmail =
-                testClientHelper.isTestJourney(userContext, configurationService);
+        var testClientWithAllowedEmail = testClientHelper.isTestJourney(userContext);
 
         if (notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {

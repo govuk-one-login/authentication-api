@@ -170,8 +170,7 @@ public class SendOtpNotificationHandler
         try {
 
             boolean isTestUserRequest =
-                    testClientHelper.isTestJourney(
-                            sendNotificationRequest.getEmail(), configurationService);
+                    testClientHelper.isTestJourney(sendNotificationRequest.getEmail());
 
             return Result.success(isTestUserRequest);
         } catch (Exception e) {

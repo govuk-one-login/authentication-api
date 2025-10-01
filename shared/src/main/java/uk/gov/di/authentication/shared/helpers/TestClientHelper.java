@@ -25,25 +25,26 @@ public class TestClientHelper {
     private static final String TEST_CLIENT_ALLOW_LIST_SECRET_NAME =
             "/%s/test-client-email-allow-list";
     private SecretsManagerClient secretsManagerClient;
+    private final ConfigurationService configurationService;
     private SecretCache<List<String>> cachedSecret;
     private final int timeToLiveInSeconds = 300;
 
-    private TestClientHelper() {}
-
     public TestClientHelper(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.secretsManagerClient = getSecretsManagerClient(configurationService);
     }
 
-    public TestClientHelper(SecretsManagerClient secretsManagerClient) {
+    public TestClientHelper(
+            SecretsManagerClient secretsManagerClient, ConfigurationService configurationService) {
         this.secretsManagerClient = secretsManagerClient;
+        this.configurationService = configurationService;
     }
 
-    public boolean isTestJourney(
-            UserContext userContext, ConfigurationService configurationService) {
-        return isTestJourney(userContext.getAuthSession().getEmailAddress(), configurationService);
+    public boolean isTestJourney(UserContext userContext) {
+        return isTestJourney(userContext.getAuthSession().getEmailAddress());
     }
 
-    public boolean isTestJourney(String emailAddress, ConfigurationService configurationService) {
+    public boolean isTestJourney(String emailAddress) {
         if (configurationService.isTestClientsEnabled()) {
             LOG.warn("Test journeys are ENABLED");
         } else {

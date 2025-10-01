@@ -377,7 +377,7 @@ class SendOtpNotificationHandlerTest {
         void shouldReturn500WhenUnexpectedException() {
             when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
-            when(testClientHelper.isTestJourney(anyString(), any()))
+            when(testClientHelper.isTestJourney(anyString()))
                     .thenThrow(new RuntimeException("unexpected"));
 
             var event = createEmptyEvent();
@@ -681,8 +681,7 @@ class SendOtpNotificationHandlerTest {
                     .thenReturn(Result.success(false));
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
-                    .thenReturn(true);
+            when(testClientHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
 
             var event = createEmptyEvent();
             event.setBody(
@@ -736,8 +735,7 @@ class SendOtpNotificationHandlerTest {
                 throws Json.JsonException {
 
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(eq(TEST_TEST_USER_EMAIL_ADDRESS), any()))
-                    .thenReturn(true);
+            when(testClientHelper.isTestJourney(TEST_TEST_USER_EMAIL_ADDRESS)).thenReturn(true);
 
             var event = createEmptyEvent();
             event.setBody(

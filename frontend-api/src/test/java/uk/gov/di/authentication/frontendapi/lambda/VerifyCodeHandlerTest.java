@@ -396,7 +396,7 @@ class VerifyCodeHandlerTest {
             })
     void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+        when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
@@ -880,7 +880,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidResetPasswordRequestUsingTestClient() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+        when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(
@@ -924,7 +924,7 @@ class VerifyCodeHandlerTest {
     void shouldReturn400ForValidResetPasswordRequestWhenUserHasAnMFACodeBlock(
             String blockKeyPrefix, ErrorResponse expectedError) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+        when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(

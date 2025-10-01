@@ -57,7 +57,7 @@ class TestClientHelperTest {
         when(configurationService.getLocalstackEndpointUri())
                 .thenReturn(Optional.of("http://localhost:45678"));
         when(configurationService.getEnvironment()).thenReturn(env);
-        testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        testClientHelper = new TestClientHelper(mockedSecretsManagerClient, configurationService);
     }
 
     @RegisterExtension
@@ -80,7 +80,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertTrue(testClientHelper.isTestJourney(userContext, configurationService));
+        assertTrue(testClientHelper.isTestJourney(userContext));
     }
 
     @Test
@@ -98,7 +98,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertFalse(testClientHelper.isTestJourney(userContext, configurationService));
+        assertFalse(testClientHelper.isTestJourney(userContext));
     }
 
     @Test
@@ -119,7 +119,7 @@ class TestClientHelperTest {
 
         var userContext = buildUserContext();
 
-        assertFalse(testClientHelper.isTestJourney(userContext, configurationService));
+        assertFalse(testClientHelper.isTestJourney(userContext));
     }
 
     @ParameterizedTest
@@ -174,7 +174,7 @@ class TestClientHelperTest {
                         GetSecretValueResponse.builder()
                                 .secretString(String.join(",", List.of("$^", "[", "*")))
                                 .build());
-        assertFalse(testClientHelper.isTestJourney((String) null, configurationService));
+        assertFalse(testClientHelper.isTestJourney((String) null));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
@@ -190,7 +190,7 @@ class TestClientHelperTest {
     void itShouldNotCallSecretsManagerIfTestClientsDisabled() {
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testClientHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, never())
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -208,9 +208,9 @@ class TestClientHelperTest {
                                 .secretString(String.join(",", ALLOWLIST))
                                 .build());
 
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testClientHelper.isTestJourney(buildUserContext());
         // Call again to check previous result cached
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testClientHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, times(1))
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -233,9 +233,10 @@ class TestClientHelperTest {
                                 .build()))
                 .thenThrow(clazz);
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        var testClientHelper =
+                new TestClientHelper(mockedSecretsManagerClient, configurationService);
 
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -255,9 +256,10 @@ class TestClientHelperTest {
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString(null).build());
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        var testClientHelper =
+                new TestClientHelper(mockedSecretsManagerClient, configurationService);
 
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -277,9 +279,10 @@ class TestClientHelperTest {
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString("").build());
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        var testClientHelper =
+                new TestClientHelper(mockedSecretsManagerClient, configurationService);
 
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(

@@ -269,7 +269,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                     requestSmsMfaMethod.getPriority().toLowerCase()));
 
             AuditableEvent auditableEvent;
-            if (testClientHelper.isTestJourney(userContext, configurationService)) {
+            if (testClientHelper.isTestJourney(userContext)) {
                 LOG.info(
                         "MfaHandler not sending message with NotificationType {}",
                         notificationType);

@@ -131,7 +131,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
-        boolean isTestClient = testClientHelper.isTestJourney(userContext, configurationService);
+        boolean isTestClient = testClientHelper.isTestJourney(userContext);
 
         var formattedPhoneNumber =
                 PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());

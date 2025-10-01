@@ -382,7 +382,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn200ButNotPutMessageOnQueueIfTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             usingValidSession();
             var result = handler.handleRequest(validEvent, context);
@@ -409,7 +409,7 @@ class ResetPasswordRequestHandlerTest {
         void
                 checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             usingValidSession();
             var headers = validEvent.getHeaders();
             var headersWithoutTICF =
