@@ -184,8 +184,7 @@ public class AuthenticationCallbackHandler
                         auditService,
                         new IPVAuthorisationService(configurationService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new CrossBrowserOrchestrationService(
-                                configurationService, redisConnectionService),
+                        new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(
                                 configurationService,
                                 redisConnectionService,
@@ -197,7 +196,7 @@ public class AuthenticationCallbackHandler
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService, redisConnectionService);
+                new CrossBrowserOrchestrationService(configurationService);
     }
 
     public AuthenticationCallbackHandler(

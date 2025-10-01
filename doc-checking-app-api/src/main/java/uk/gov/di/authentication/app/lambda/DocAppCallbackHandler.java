@@ -154,7 +154,7 @@ public class DocAppCallbackHandler
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService, redis);
+                new CrossBrowserOrchestrationService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
     }

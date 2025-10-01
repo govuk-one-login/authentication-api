@@ -172,7 +172,7 @@ public class IPVCallbackHandler
                         new CloudwatchMetricsService(configurationService),
                         auditService);
         this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService, redis);
+                new CrossBrowserOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = getFrontend(configurationService);
     }

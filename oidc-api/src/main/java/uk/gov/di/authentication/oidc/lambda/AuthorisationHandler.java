@@ -245,7 +245,7 @@ public class AuthorisationHandler
         var cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
         this.cloudwatchMetricsService = cloudwatchMetricService;
         this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService, redis);
+                new CrossBrowserOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.authorisationService = new AuthorisationService(configurationService);
