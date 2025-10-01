@@ -353,16 +353,18 @@ jobs:
 
   run-orchestration-alerting-tests:
     runs-on: ubuntu-latest
-    if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
     needs:
       - check-changed-files
     steps:
       - name: Check out repository code
+        if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
+        if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
         run: npm ci
         working-directory: ./orchestration-alerting
       - name: Run Unit Tests
+        if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
         run: npm test
         working-directory: ./orchestration-alerting
 
@@ -372,7 +374,6 @@ jobs:
       - run-unit-tests
       - run-integration-tests
       - run-account-management-and-delivery-receipts-tests
-      - run-orchestration-alerting-tests
       - check-changed-files
     if: github.event_name != 'merge_group'
     steps:
