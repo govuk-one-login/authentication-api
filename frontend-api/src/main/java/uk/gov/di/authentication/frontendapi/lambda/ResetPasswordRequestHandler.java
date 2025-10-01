@@ -203,7 +203,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 return permissionCheckResult.getFailure();
             }
 
-            var isTestClient = testClientHelper.isTestJourney(userContext, configurationService);
+            var isTestClient = testClientHelper.isTestJourney(userContext);
 
             emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 

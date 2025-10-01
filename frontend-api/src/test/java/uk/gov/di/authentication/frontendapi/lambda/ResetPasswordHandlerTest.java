@@ -185,7 +185,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -206,7 +206,7 @@ class ResetPasswordHandlerTest {
         @Test
         void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             when(authenticationService.getUserProfileByEmail(EMAIL))

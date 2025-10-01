@@ -497,7 +497,7 @@ class SendNotificationHandlerTest {
                 NotificationType notificationType, JourneyType journeyType) {
             usingValidSession(TEST_CLIENT_ID);
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             var body =
                     format(
@@ -717,7 +717,7 @@ class SendNotificationHandlerTest {
                 NotificationType notificationType) {
             usingValidSession(TEST_CLIENT_ID);
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
 
             var body =
                     format(

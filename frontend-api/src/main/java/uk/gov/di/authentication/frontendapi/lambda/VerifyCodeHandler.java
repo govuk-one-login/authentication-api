@@ -363,7 +363,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext,
             Optional<MFAMethod> shouldBeRequestedSmsMfaMethod)
             throws ClientNotFoundException {
-        if (testClientHelper.isTestJourney(userContext, configurationService))
+        if (testClientHelper.isTestJourney(userContext))
             return getOtpCodeForTestClient(notificationType);
 
         String emailAddress = authSession.getEmailAddress();
@@ -536,8 +536,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientId,
                     authSession.getClientName(),
                     levelOfConfidence.getValue(),
-                    testClientHelper.isTestJourney(
-                            authSession.getEmailAddress(), configurationService),
+                    testClientHelper.isTestJourney(authSession.getEmailAddress()),
                     journeyType,
                     smsMfaMethod != null
                             ? MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType())

@@ -503,7 +503,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 clientId,
                 authSession.getClientName(),
                 levelOfConfidence.getValue(),
-                testClientHelper.isTestJourney(authSession.getEmailAddress(), configurationService),
+                testClientHelper.isTestJourney(authSession.getEmailAddress()),
                 journeyType,
                 mfaMethodType,
                 priorityIdentifier);

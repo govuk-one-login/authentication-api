@@ -215,7 +215,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
 
             AuditableEvent auditableEvent;
-            if (testClientHelper.isTestJourney(userContext, configurationService)) {
+            if (testClientHelper.isTestJourney(userContext)) {
                 auditableEvent =
                         FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
             } else {

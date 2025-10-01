@@ -554,8 +554,7 @@ class PhoneNumberCodeProcessorTest {
             when(configurationService.getTestClientVerifyPhoneNumberOTP())
                     .thenReturn(Optional.of(CommonTestVariables.TEST_OTP_CODE));
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
-            when(testClientHelper.isTestJourney(any(UserContext.class), eq(configurationService)))
-                    .thenReturn(true);
+            when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         }
 
         @Test

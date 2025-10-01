@@ -835,7 +835,7 @@ class MfaHandlerTest {
             throws Json.JsonException {
         usingValidSession();
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(testClientHelper.isTestJourney(any(UserContext.class), any())).thenReturn(true);
+        when(testClientHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
