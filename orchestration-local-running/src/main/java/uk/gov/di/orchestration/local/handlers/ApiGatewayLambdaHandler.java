@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.local.handlers;
+package uk.gov.di.orchestration.local.handlers;
 
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -49,7 +49,8 @@ public class ApiGatewayLambdaHandler {
             APIGatewayProxyResponseEvent responseEvent =
                     lambdaHandler.handleRequest(apiGatewayProxyRequestEvent, LAMBDA_CONTEXT);
 
-            ctx.status(responseEvent.getStatusCode()).json(responseEvent.getBody());
+            ctx.status(responseEvent.getStatusCode())
+                    .json(responseEvent.getBody());
             responseEvent.getHeaders().forEach(ctx::header);
         } catch (RuntimeException e) {
             LOG.error("Runtime exception thrown by handler", e);

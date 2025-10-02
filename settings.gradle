@@ -21,6 +21,7 @@ include 'ticf-cri-stub'
 include 'user-permissions'
 include 'deprecation-checker'
 include 'local-running'
+include 'orchestration-local-running'
 include 'audit-events'
 
 dependencyResolutionManagement {

@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.TableNameHelper;
 
 import java.util.List;
@@ -21,6 +22,8 @@ import java.util.stream.Stream;
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
 public class BaseDynamoService<T> {
+    private static final boolean IS_LOCAL_ENV = "local".equals(System.getenv("ENVIRONMENT"));
+
     private final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
 
@@ -41,7 +44,7 @@ public class BaseDynamoService<T> {
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
-        if (!isTableInOrchAccount) {
+        if (!isTableInOrchAccount || IS_LOCAL_ENV) {
             warmUp();
         }
     }
@@ -111,7 +114,15 @@ public class BaseDynamoService<T> {
     }
 
     private void warmUp() {
-        dynamoTable.describeTable();
+        try {
+            dynamoTable.describeTable();
+        } catch (ResourceNotFoundException e) {
+            if (IS_LOCAL_ENV) {
+                dynamoTable.createTable();
+            } else {
+                throw e;
+            }
+        }
     }
 
     public Stream<T> queryTableStream(String partitionKey) {

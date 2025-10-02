@@ -1,0 +1,39 @@
+plugins {
+    id "application"
+    id "java"
+}
+
+group = "uk.gov.di.orchestration.local"
+version = "unspecified"
+
+dependencies {
+    implementation libs.javalin,
+            libs.bundles.awsDynamoDb,
+            libs.awsKms,
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSsm,
+            project(":orchestration-shared"),
+            project(":oidc-api"),
+            project(":ipv-api"),
+            project(":doc-checking-app-api"),
+            project(":client-registry-api")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+application {
+    mainClass = "uk.gov.di.orchestration.local.App"
+    applicationDefaultJvmArgs = [
+        "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
+    ]
+}
+
+sonar {
+    properties {
+        property 'sonar.coverage.exclusions', '**/uk/gov/di/orchestration/local/**'
+    }
+}

@@ -1,0 +1,46 @@
+name: di-orchestration-local
+
+include:
+  - ../docker-compose.yml
+
+services:
+  orchestration-api:
+    image: orchestration-api-local:latest
+    container_name: orchestration-api-local
+    build:
+      context: ../
+      dockerfile: orchestration-local-running/Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+    env_file: ./.env.local
+    ports:
+      - "4400:4400"
+      - "5400:5400"
+    networks:
+      - di-authentication-api-net
+
+  orchestration-stubs:
+    image: orchestration-stubs:latest
+    container_name: orchestration-stubs
+    build:
+      context: ../../orch-stubs
+      dockerfile: Dockerfile
+    depends_on:
+      aws:
+        condition: service_healthy
+      dynamodb:
+        condition: service_healthy
+    env_file: ../../orch-stubs/.env.local
+    environment:
+      FRONTEND_API_BASE_URL: http://host.docker.internal:4401/
+    command: "node --enable-source-maps --inspect=0.0.0.0:5401 dist/server.js"
+    ports:
+      - "4401:4401"
+      - "5401:5401"
+    networks:
+      - di-authentication-api-net
