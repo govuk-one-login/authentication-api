@@ -34,8 +34,6 @@ import static org.mockito.Mockito.when;
 
 class CrossBrowserOrchestrationServiceTest {
 
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final CrossBrowserStorageService crossBrowserStorageService =
@@ -52,10 +50,7 @@ class CrossBrowserOrchestrationServiceTest {
     void setup() {
         crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(
-                        redisConnectionService,
-                        orchClientSessionService,
-                        configurationService,
-                        crossBrowserStorageService);
+                        orchClientSessionService, crossBrowserStorageService);
     }
 
     @Test
