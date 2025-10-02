@@ -28,6 +28,7 @@ dependencies {
             libs.gson,
             libs.bundles.nimbus,
             libs.awsCloudwatchEmf,
+            libs.awsCloudwatch,
             libs.bouncyCastle,
             libs.awsKms,
             libs.jetbrainsAnnotations

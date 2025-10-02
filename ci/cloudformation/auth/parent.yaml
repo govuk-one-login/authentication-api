@@ -90,6 +90,11 @@ Conditions:
             ]
           - "Yes"
 
+  IsProduction:
+    Fn::Equals:
+      - !Ref Environment
+      - production
+
   IsNotProduction:
     Fn::Not:
       - Fn::Equals:
@@ -477,6 +482,8 @@ Mappings:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     ticf-cri:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+    sms-quota:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/qIBJTQE"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -674,6 +681,44 @@ Resources:
               - logs:PutLogEvents
             Resource:
               - arn:aws:logs:*:*:*
+          - Sid: ManagingVPCConnection
+            Effect: Allow
+            Action:
+              - ec2:DescribeNetworkInterfaces
+              - ec2:CreateNetworkInterface
+              - ec2:DeleteNetworkInterface
+            Resource: "*"
+            Condition:
+              ArnLikeIfExists:
+                ec2:Vpc: !Sub
+                  - arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:vpc/${VpcId}
+                  - VpcId:
+                      Fn::ImportValue: !Sub "${VpcStackName}-VpcId"
+          - Sid: XRay
+            Effect: Allow
+            Action: xray:*
+            Resource: "*"
+
+  SmsQuotaMonitorPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for Sms Quota Monitor lambda Execution"
+      Path: !Sub
+        - /${Env}/sms-quota/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToCloudWatch
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:PutMetricData
+            Resource:
+              - "*"
           - Sid: ManagingVPCConnection
             Effect: Allow
             Action:
