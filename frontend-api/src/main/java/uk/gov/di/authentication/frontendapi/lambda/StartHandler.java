@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -72,6 +73,7 @@ public class StartHandler
     private final ConfigurationService configurationService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
@@ -80,13 +82,15 @@ public class StartHandler
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PermissionDecisionManager permissionDecisionManager) {
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public StartHandler(ConfigurationService configurationService) {
@@ -97,6 +101,9 @@ public class StartHandler
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.permissionDecisionManager =
+                new PermissionDecisionManager(
+                        configurationService, null, this.authenticationAttemptsService);
     }
 
     public StartHandler() {
