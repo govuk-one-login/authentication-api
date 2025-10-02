@@ -248,9 +248,57 @@ public class StartHandler
 
             boolean isBlockedForReauth = false;
             if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
-                isBlockedForReauth =
-                        checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
-                                maybeInternalSubject, auditContext, startRequest);
+                var permissionContext =
+                        buildUserPermissionContext(authSession, startRequest, userContext);
+                var permissionResult =
+                        permissionDecisionManager.canStartJourney(
+                                JourneyType.REAUTHENTICATION, permissionContext);
+
+                if (permissionResult.isSuccess()
+                        && permissionResult.getSuccess()
+                                instanceof
+                                uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .TemporarilyLockedOut) {
+                    isBlockedForReauth = true;
+                    var reauthCountTypesToCounts =
+                            maybeInternalSubject
+                                    .map(
+                                            subjectId ->
+                                                    authenticationAttemptsService
+                                                            .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                                                    subjectId,
+                                                                    startRequest
+                                                                            .rpPairwiseIdForReauth(),
+                                                                    JourneyType.REAUTHENTICATION))
+                                    .orElse(
+                                            authenticationAttemptsService.getCountsByJourney(
+                                                    startRequest.rpPairwiseIdForReauth(),
+                                                    JourneyType.REAUTHENTICATION));
+                    var blockedCountTypes =
+                            ReauthAuthenticationAttemptsHelper
+                                    .countTypesWhereUserIsBlockedForReauth(
+                                            reauthCountTypesToCounts, configurationService);
+                    if (!blockedCountTypes.isEmpty() && maybeInternalSubject.isPresent()) {
+                        ReauthFailureReasons failureReason =
+                                getReauthFailureReasonFromCountTypes(blockedCountTypes);
+                        auditService.submitAuditEvent(
+                                FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                auditContext,
+                                ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
+                                        .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
+                                        .withFailureReason(failureReason)
+                                        .build());
+                        cloudwatchMetricsService.incrementCounter(
+                                CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                                Map.of(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment(),
+                                        FAILURE_REASON.getValue(),
+                                        failureReason == null
+                                                ? "unknown"
+                                                : failureReason.getValue()));
+                    }
+                }
             }
 
             var userStartInfo =
@@ -282,47 +330,6 @@ public class StartHandler
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
         }
-    }
-
-    private boolean checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
-            Optional<String> maybeInternalSubjectId,
-            AuditContext auditContext,
-            StartRequest startRequest) {
-        var reauthCountTypesToCounts =
-                maybeInternalSubjectId
-                        .map(
-                                subjectId ->
-                                        authenticationAttemptsService
-                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                                        subjectId,
-                                                        startRequest.rpPairwiseIdForReauth(),
-                                                        JourneyType.REAUTHENTICATION))
-                        .orElse(
-                                authenticationAttemptsService.getCountsByJourney(
-                                        startRequest.rpPairwiseIdForReauth(),
-                                        JourneyType.REAUTHENTICATION));
-        var blockedCountTypes =
-                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                        reauthCountTypesToCounts, configurationService);
-        if (!blockedCountTypes.isEmpty() && maybeInternalSubjectId.isPresent()) {
-            ReauthFailureReasons failureReason =
-                    getReauthFailureReasonFromCountTypes(blockedCountTypes);
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                    auditContext,
-                    ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
-                            .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
-                            .withFailureReason(failureReason)
-                            .build());
-            cloudwatchMetricsService.incrementCounter(
-                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            FAILURE_REASON.getValue(),
-                            failureReason == null ? "unknown" : failureReason.getValue()));
-        }
-        return !blockedCountTypes.isEmpty();
     }
 
     private void emitReauthRequestedObservability(
