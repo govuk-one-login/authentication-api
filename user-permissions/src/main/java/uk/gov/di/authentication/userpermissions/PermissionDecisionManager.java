@@ -276,6 +276,31 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            var reauthCounts =
+                    userPermissionContext.internalSubjectId() != null
+                            ? getAuthenticationAttemptsService()
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            userPermissionContext.internalSubjectId(),
+                                            userPermissionContext.rpPairwiseId(),
+                                            JourneyType.REAUTHENTICATION)
+                            : getAuthenticationAttemptsService()
+                                    .getCountsByJourney(
+                                            userPermissionContext.rpPairwiseId(),
+                                            JourneyType.REAUTHENTICATION);
+            var blockedCountTypes =
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            reauthCounts, configurationService);
+            if (!blockedCountTypes.isEmpty()) {
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                0,
+                                Instant.now()
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
+            }
+        }
         return Result.success(new Decision.Permitted(0));
     }
 
