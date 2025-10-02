@@ -6,10 +6,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "test": "cucumber-js"
+    "test": "cucumber-js",
+    "test:ci": "start-server-and-test run-local-auth-api 'http://localhost:4402' test",
+    "run-local-auth-api": "../gradlew -p ../local-running run > auth-api-output.log"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^12.1.0",
+    "@cucumber/cucumber": "^12.2.0",
+    "start-server-and-test": "^2.1.2",
     "ts-node": "^10.9.2"
   },
   "dependencies": {

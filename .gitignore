@@ -34,6 +34,7 @@ node_modules
 
 # API Tests
 api-tests/reports/
+api-tests/*.log
 
 # REST client private env variables
 *.private.env.json

@@ -443,3 +443,96 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew testCodeCoverageReport sonar -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+
+  run-api-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./api-tests
+    needs:
+      - build
+    services:
+      localstack:
+        image: 'localstack/localstack:4.6.0@sha256:5a97e0f9917a3f0d9630bb13b9d8ccf10cbe52f33252807d3b4e21418cc21348'
+        env:
+          SERVICES: "sqs, sns, kms, ssm, s3"
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
+          TEST_AWS_ACCOUNT_ID: 123456789012
+        options: >-
+          --add-host "notify.internal:host-gateway"
+          --add-host "subscriber.internal:host-gateway"
+        ports:
+          - 45678:45678
+      redis:
+        image: 'redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb'
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      dynamodb:
+        image: 'amazon/dynamodb-local:3.0.0@sha256:2fed5e3a965a4ba5aa6ac82baec57058b5a3848e959d705518f3fd579a77e76b'
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 8000:8000
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 #v5.0.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: true
+
+      - name: Restore Build Cache
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            .gradle/
+            */build/
+            !*/build/reports
+            !*/build/jacoco
+          key: ${{ runner.os }}-build-${{ github.sha }}
+
+      - name: Local API tests
+        run: npm run test:ci
+
+      - name: Upload API test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: API test report
+          path: api-tests/reports/
+          retention-days: 7
+
+      - name: Upload Application logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Application logs
+          path: api-tests/auth-api-output.log
+          retention-days: 7

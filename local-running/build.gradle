@@ -30,6 +30,18 @@ application {
     ]
 }
 
+run {
+    // Load env file when running from gradle
+    def envFile = file(".env.local")
+    def envProperties = new Properties()
+    envFile.withReader("UTF-8") {reader ->
+        envProperties.load(reader)
+    }
+    envProperties.entrySet().forEach {entry ->
+        environment entry.key.toString(), entry.value.toString()
+    }
+}
+
 sonar {
     properties {
         property 'sonar.coverage.exclusions', '**/uk/gov/di/authentication/local/**'
