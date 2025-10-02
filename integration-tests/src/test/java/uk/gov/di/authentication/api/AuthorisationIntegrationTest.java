@@ -1209,7 +1209,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var decryptedJWT = decryptJWT((EncryptedJWT) authRequest.getRequestObject());
             var orchToAuthStateString = decryptedJWT.getJWTClaimsSet().getStringClaim("state");
             var orchToAuthState = new State(orchToAuthStateString);
-            var clientSessionFromRedis = redis.getFromRedis("state:" + orchToAuthStateString);
             var clientSessionFromDynamo =
                     crossBrowserStorageExtension
                             .getClientSessionIdFromState(orchToAuthState)
@@ -1217,7 +1216,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var clientSessionId = getClientSessionId(response);
 
-            assertEquals(clientSessionId, clientSessionFromRedis);
             assertEquals(clientSessionId, clientSessionFromDynamo);
         }
     }

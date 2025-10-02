@@ -174,14 +174,7 @@ public class CrossBrowserOrchestrationService {
 
     private Optional<String> getClientSessionIdFromState(State state) {
         LOG.info("Getting clientSessionId using state");
-        var clientSessionIdFromRedis =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
-        var clientSessionIdFromDynamo = crossBrowserStorageService.getClientSessionId(state);
-        LOG.info(
-                "Is clientSessionId from redis equal to clientSessionId from dynamo? {}",
-                Objects.equals(clientSessionIdFromRedis, clientSessionIdFromDynamo));
-        return clientSessionIdFromRedis;
+        return crossBrowserStorageService.getClientSessionId(state);
     }
 
     private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
