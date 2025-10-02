@@ -16,6 +16,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -30,7 +31,9 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -101,9 +104,7 @@ public class StartHandler
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.permissionDecisionManager =
-                new PermissionDecisionManager(
-                        configurationService, null, this.authenticationAttemptsService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public StartHandler() {
@@ -342,5 +343,14 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    private UserPermissionContext buildUserPermissionContext(
+            AuthSessionItem authSession, StartRequest startRequest, UserContext userContext) {
+        return new UserPermissionContext(
+                authSession.getInternalCommonSubjectId(),
+                startRequest.rpPairwiseIdForReauth(),
+                userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
+                authSession);
     }
 }
