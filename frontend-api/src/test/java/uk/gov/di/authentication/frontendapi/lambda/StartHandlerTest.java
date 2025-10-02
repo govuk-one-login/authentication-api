@@ -130,6 +130,11 @@ class StartHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .Permitted(0)));
         handler =
                 new StartHandler(
                         auditService,
@@ -240,24 +245,6 @@ class StartHandlerTest {
         handler.handleRequest(event, context);
 
         verifyNoInteractions(authenticationAttemptsService);
-    }
-
-    @Test
-    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId() throws Json.JsonException {
-        var isAuthenticated = false;
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(userProfile.getSubjectID()).thenReturn(null);
-
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
-
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        useValidSession();
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
-        handler.handleRequest(event, context);
-
-        verify(authenticationAttemptsService)
-                .getCountsByJourney(TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION);
     }
 
     @Test
@@ -416,6 +403,17 @@ class StartHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .TemporarilyLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false)));
 
         var isAuthenticated = true;
         useValidSession();
@@ -633,6 +631,17 @@ class StartHandlerTest {
 
         when(authenticationAttemptsService.getCountsByJourney(any(), any()))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES)); // Blocked but no subject ID
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .TemporarilyLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false)));
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
@@ -800,6 +809,17 @@ class StartHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES));
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .TemporarilyLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false)));
 
         useValidSession();
 
