@@ -185,7 +185,7 @@ public class TokenService {
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing redirect_uri parameter"));
             }
-            if (!requestBody.containsKey("code") || requestBody.get("code").isEmpty()) {
+            if (requestBody.get("code") == null || requestBody.get("code").isEmpty()) {
                 return Optional.of(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,

@@ -435,6 +435,27 @@ class TokenServiceTest {
     }
 
     @Test
+    void shouldReturnErrorIfCodeIsNullWhenValidatingTokenRequest() {
+        var requestBody =
+                "grant_type="
+                        + GrantType.AUTHORIZATION_CODE.getValue()
+                        + "&client_id="
+                        + CLIENT_ID
+                        + "&redirect_uri="
+                        + REDIRECT_URI
+                        + "&code";
+        Optional<ErrorObject> errorObject = tokenService.validateTokenRequestParams(requestBody);
+
+        assertThat(
+                errorObject,
+                equalTo(
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing code parameter"))));
+    }
+
+    @Test
     void shouldReturnErrorIfGrantIsInvalidWhenValidatingTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("grant_type", Collections.singletonList("client_credentials"));
