@@ -20,7 +20,7 @@ dependencies {
             libs.awsCloudwatchEmf,
             libs.pactProvider,
             "org.eclipse.jetty:jetty-server:12.0.24",
-            "com.google.code.gson:gson:2.13.1"
+            "com.google.code.gson:gson:2.13.2"
 
     implementation project(":orchestration-shared")
     implementation project(":frontend-api")
