@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 
-public class BulkRemoveAccountHandlerIntegrationTest
+class BulkRemoveAccountHandlerIntegrationTest
         extends HandlerIntegrationTest<BulkUserDeleteRequest, BulkUserDeleteResponse> {
 
     private static final String EMAIL_1 = "user1@example.com";
