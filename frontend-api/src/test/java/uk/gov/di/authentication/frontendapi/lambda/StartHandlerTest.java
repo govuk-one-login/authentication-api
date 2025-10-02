@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -105,6 +106,8 @@ class StartHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -131,7 +134,8 @@ class StartHandlerTest {
                         authSessionService,
                         configurationService,
                         authenticationAttemptsService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        permissionDecisionManager);
     }
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
