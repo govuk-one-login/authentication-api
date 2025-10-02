@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
+import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
@@ -139,7 +140,7 @@ public class BulkRemoveAccountHandler
                     processedAccountIdentifiers);
         } catch (Exception e) {
             LOG.error("Unexpected error during bulk deletion", e);
-            throw new RuntimeException("Bulk deletion failed", e);
+            throw new BulkRemoveAccountException("Bulk deletion failed", e);
         }
     }
 
