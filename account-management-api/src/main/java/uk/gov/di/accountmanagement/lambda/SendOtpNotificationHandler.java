@@ -27,7 +27,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -86,7 +86,7 @@ public class SendOtpNotificationHandler
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final MFAMethodsService mfaMethodsService;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
@@ -101,7 +101,7 @@ public class SendOtpNotificationHandler
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -112,7 +112,7 @@ public class SendOtpNotificationHandler
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.mfaMethodsService = mfaMethodsService;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -136,7 +136,7 @@ public class SendOtpNotificationHandler
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.mfaMethodsService = new MFAMethodsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public SendOtpNotificationHandler() {
@@ -170,8 +170,7 @@ public class SendOtpNotificationHandler
         try {
 
             boolean isTestUserRequest =
-                    testClientHelper.isTestJourney(
-                            sendNotificationRequest.getEmail(), configurationService);
+                    testUserHelper.isTestJourney(sendNotificationRequest.getEmail());
 
             return Result.success(isTestUserRequest);
         } catch (Exception e) {

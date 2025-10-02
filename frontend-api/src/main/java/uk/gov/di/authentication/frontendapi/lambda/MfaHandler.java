@@ -17,11 +17,10 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -73,6 +72,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
     private final MFAMethodsService mfaMethodsService;
+    private final TestUserHelper testUserHelper;
 
     public MfaHandler(
             ConfigurationService configurationService,
@@ -83,7 +83,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             AuditService auditService,
             AwsSqsClient sqsClient,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestUserHelper testUserHelper) {
         super(
                 MfaRequest.class,
                 configurationService,
@@ -95,6 +96,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.auditService = auditService;
         this.sqsClient = sqsClient;
         this.mfaMethodsService = mfaMethodsService;
+        this.testUserHelper = testUserHelper;
     }
 
     public MfaHandler(
@@ -111,6 +113,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public MfaHandler() {
@@ -124,6 +127,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -265,7 +269,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                     requestSmsMfaMethod.getPriority().toLowerCase()));
 
             AuditableEvent auditableEvent;
-            if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
+            if (testUserHelper.isTestJourney(userContext)) {
                 LOG.info(
                         "MfaHandler not sending message with NotificationType {}",
                         notificationType);
@@ -294,9 +298,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS);
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
     }
 

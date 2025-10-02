@@ -14,8 +14,8 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -34,7 +34,6 @@ import java.util.UUID;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
-import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
@@ -43,6 +42,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     private final UserContext userContext;
     private final CodeRequest codeRequest;
     private final AwsSqsClient sqsClient;
+    private final TestUserHelper testUserHelper;
     private final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(PhoneNumberCodeProcessor.class);
 
@@ -54,7 +54,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             AuthenticationService authenticationService,
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestUserHelper testUserHelper) {
         super(
                 userContext,
                 codeStorageService,
@@ -71,6 +72,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         configurationService.getAwsRegion(),
                         configurationService.getExperianPhoneCheckerQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.testUserHelper = testUserHelper;
     }
 
     PhoneNumberCodeProcessor(
@@ -82,7 +84,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             AuditService auditService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AwsSqsClient sqsClient,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestUserHelper testUserHelper) {
         super(
                 userContext,
                 codeStorageService,
@@ -95,6 +98,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         this.configurationService = configurationService;
         this.codeRequest = codeRequest;
         this.sqsClient = sqsClient;
+        this.testUserHelper = testUserHelper;
     }
 
     @Override
@@ -127,13 +131,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.TOO_MANY_PHONE_CODES_ENTERED);
         }
 
-        boolean isTestClient;
-        try {
-            isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
-        } catch (ClientNotFoundException e) {
-            LOG.error("No client found", e);
-            throw new RuntimeException(e);
-        }
+        boolean isTestClient = testUserHelper.isTestJourney(userContext);
 
         var formattedPhoneNumber =
                 PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());

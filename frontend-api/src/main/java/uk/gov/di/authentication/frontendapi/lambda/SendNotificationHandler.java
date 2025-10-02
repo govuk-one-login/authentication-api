@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -68,7 +69,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -89,6 +89,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final CodeStorageService codeStorageService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
+    private final TestUserHelper testUserHelper;
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
@@ -101,7 +102,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
             AuthSessionService authSessionService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            TestUserHelper testUserHelper) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
@@ -116,6 +118,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.testUserHelper = testUserHelper;
     }
 
     public SendNotificationHandler() {
@@ -140,6 +143,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public SendNotificationHandler(
@@ -161,6 +165,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -201,7 +206,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext.getClientSessionId());
 
             try {
-                if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
+                if (!testUserHelper.isTestJourney(userContext)) {
                     emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info(
                             "{} EMAIL placed on queue with reference: {}",
@@ -360,8 +365,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 request.getNotificationType().name(),
                 configurationService.getEnvironment());
 
-        var testClientWithAllowedEmail =
-                isTestClientWithAllowedEmail(userContext, configurationService);
+        var testClientWithAllowedEmail = testUserHelper.isTestJourney(userContext);
 
         if (notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {

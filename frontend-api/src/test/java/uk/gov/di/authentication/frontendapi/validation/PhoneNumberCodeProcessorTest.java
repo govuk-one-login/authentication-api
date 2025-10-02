@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -25,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -48,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -86,6 +89,7 @@ class PhoneNumberCodeProcessorTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -543,6 +547,52 @@ class PhoneNumberCodeProcessorTest {
         assertInstanceOf(UUID.class, UUID.fromString(capturedMfaMethod.getMfaIdentifier()));
     }
 
+    @Nested
+    class TestJourney {
+        @BeforeEach
+        void setup() {
+            when(configurationService.getTestClientVerifyPhoneNumberOTP())
+                    .thenReturn(Optional.of(CommonTestVariables.TEST_OTP_CODE));
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
+        }
+
+        @Test
+        void itReturnsASuccessResponseWhenTestUserProvidesCorrectOtp() {
+            when(userProfile.getEmail()).thenReturn(EMAIL);
+
+            setupPhoneNumberCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CommonTestVariables.TEST_OTP_CODE,
+                            JourneyType.ACCOUNT_RECOVERY,
+                            CommonTestVariables.UK_MOBILE_NUMBER),
+                    CodeRequestType.MFA_ACCOUNT_RECOVERY);
+
+            var response = phoneNumberCodeProcessor.validateCode();
+            assertTrue(response.isEmpty());
+            verify(codeStorageService, never()).getOtpCode(anyString(), any());
+        }
+
+        @Test
+        void itReturnsAnErrorResponseWhenTestUserProvidesIncorrectOTPCode() {
+            when(userProfile.getEmail()).thenReturn(EMAIL);
+
+            setupPhoneNumberCode(
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            CommonTestVariables.TEST_OTP_CODE.replace("456", "321"),
+                            JourneyType.ACCOUNT_RECOVERY,
+                            CommonTestVariables.UK_MOBILE_NUMBER),
+                    CodeRequestType.MFA_ACCOUNT_RECOVERY);
+
+            var response = phoneNumberCodeProcessor.validateCode();
+            assertTrue(response.isPresent());
+            assertEquals(ErrorResponse.INVALID_PHONE_CODE_ENTERED, response.get());
+            verify(codeStorageService, never()).getOtpCode(anyString(), any());
+        }
+    }
+
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -572,7 +622,8 @@ class PhoneNumberCodeProcessorTest {
                         auditService,
                         accountModifiersService,
                         sqsClient,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        testUserHelper);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -597,7 +648,8 @@ class PhoneNumberCodeProcessorTest {
                         auditService,
                         accountModifiersService,
                         sqsClient,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        testUserHelper);
     }
 
     public void setUpBlockedPhoneNumberCode(
@@ -621,7 +673,8 @@ class PhoneNumberCodeProcessorTest {
                         auditService,
                         accountModifiersService,
                         sqsClient,
-                        mfaMethodsService);
+                        mfaMethodsService,
+                        testUserHelper);
     }
 
     private static Stream<Arguments> codeRequestTypes() {
