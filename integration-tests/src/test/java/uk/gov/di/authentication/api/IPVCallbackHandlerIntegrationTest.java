@@ -43,6 +43,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
@@ -107,6 +108,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @RegisterExtension
     public static final StateStorageExtension stateStorageExtension = new StateStorageExtension();
 
+    @RegisterExtension
+    public static final CrossBrowserStorageExtension crossBrowserStorageExtension =
+            new CrossBrowserStorageExtension();
+
     protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub, externalTokenSigner, ipvPrivateKeyJwtSigner, spotQueue);
@@ -131,7 +136,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeEach
     void setup() {
         ipvStub.init();
-        handler = new IPVCallbackHandler(configurationService, redisConnectionService);
+        handler = new IPVCallbackHandler(configurationService);
         txmaAuditQueue.clear();
         spotQueue.clear();
 
@@ -172,6 +177,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(
@@ -304,6 +310,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         makeRequest(
                 Optional.empty(),
@@ -363,6 +370,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(
@@ -464,6 +472,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(
@@ -555,6 +564,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(
@@ -609,6 +619,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(

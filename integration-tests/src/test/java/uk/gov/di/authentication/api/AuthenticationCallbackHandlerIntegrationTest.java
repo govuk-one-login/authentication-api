@@ -291,7 +291,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     @Test
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity() {
-        redis.addClientSessionAndStateToRedis(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
+        crossBrowserStorageExtension.store(ORCH_TO_AUTH_STATE, CLIENT_SESSION_ID);
 
         var response =
                 makeRequest(
@@ -962,10 +962,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         var requestObject = validateAndDecryptRequestObject(response);
         var stateString = requestObject.getJWTClaimsSet().getStringClaim("state");
         var state = new State(stateString);
-        var clientSessionIdFromRedis = redis.getFromRedis("state:" + stateString);
         var clientSessionIdFromDynamo =
                 crossBrowserStorageExtension.getClientSessionIdFromState(state).orElseThrow();
-        assertEquals(CLIENT_SESSION_ID, clientSessionIdFromRedis);
         assertEquals(CLIENT_SESSION_ID, clientSessionIdFromDynamo);
     }
 

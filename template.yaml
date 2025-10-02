@@ -831,6 +831,12 @@ Resources:
       Tags:
         - Key: Name
           Value: ClientRegistryTable
+        - !If
+          - IsIntegrationOrProduction
+          - Key: BackupFrequency
+            Value: Bihourly
+          - !Ref AWS::NoValue
+
   #endregion
 
   #region OrchIdentityCredentials DynamoDB Table
@@ -1907,6 +1913,7 @@ Resources:
         - !Ref ClientSessionTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
         - !Ref StateStorageTableReadAccessPolicy
+        - !Ref CrossBrowserTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2900,7 +2907,7 @@ Resources:
         - !Ref OrchAuthCodeTableWriteAccessPolicy
         - !Ref StateStorageTableReadWriteAccessPolicy
         - !Ref JwksCacheTableReadWriteAccessPolicy
-        - !Ref CrossBrowserTableWriteAccessPolicy
+        - !Ref CrossBrowserTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4633,6 +4640,7 @@ Resources:
         - !Ref ClientSessionTableReadAndDeleteAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
         - !Ref StateStorageTableReadAccessPolicy
+        - !Ref CrossBrowserTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6878,6 +6886,34 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: AllowCrossBrowserTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+            Resource: !GetAtt CrossBrowserTable.Arn
+          - Sid: AllowCrossBrowserTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !GetAtt CrossBrowserTableEncryptionKey.Arn
+  CrossBrowserTableReadWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowCrossBrowserTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt CrossBrowserTable.Arn
           - Sid: AllowCrossBrowserTableWriteAccess
             Effect: Allow
             Action:

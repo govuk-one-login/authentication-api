@@ -2,7 +2,6 @@ package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.sharedtest.extensions.CrossBrowserStorageExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,8 +15,7 @@ class CrossBrowserStorageServiceIntegrationTest {
 
     @Test
     void shouldStoreAndGetCrossBrowserItem() {
-        var item = new CrossBrowserItem(STATE, CLIENT_SESSION_ID);
-        crossBrowserStorageExtension.storeItem(item);
+        crossBrowserStorageExtension.store(STATE, CLIENT_SESSION_ID);
 
         var actualClientSessionId =
                 crossBrowserStorageExtension.getClientSessionIdFromState(STATE).orElseThrow();

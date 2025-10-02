@@ -24,37 +24,19 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 public class CrossBrowserOrchestrationService {
 
     private static final Logger LOG = LogManager.getLogger(CrossBrowserOrchestrationService.class);
-    private final RedisConnectionService redisConnectionService;
     private final OrchClientSessionService orchClientSessionService;
-    private final ConfigurationService configurationService;
     private final CrossBrowserStorageService crossBrowserStorageService;
-    public static final String STATE_STORAGE_PREFIX = "state:";
 
     public CrossBrowserOrchestrationService(
-            RedisConnectionService redisConnectionService,
             OrchClientSessionService orchClientSessionService,
-            ConfigurationService configurationService,
             CrossBrowserStorageService crossBrowserStorageService) {
-        this.redisConnectionService = redisConnectionService;
         this.orchClientSessionService = orchClientSessionService;
-        this.configurationService = configurationService;
         this.crossBrowserStorageService = crossBrowserStorageService;
     }
 
     public CrossBrowserOrchestrationService(ConfigurationService configurationService) {
         this(
-                new RedisConnectionService(configurationService),
                 new OrchClientSessionService(configurationService),
-                configurationService,
-                new CrossBrowserStorageService(configurationService));
-    }
-
-    public CrossBrowserOrchestrationService(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this(
-                redis,
-                new OrchClientSessionService(configurationService),
-                configurationService,
                 new CrossBrowserStorageService(configurationService));
     }
 
@@ -165,17 +147,12 @@ public class CrossBrowserOrchestrationService {
 
     public void storeClientSessionIdAgainstState(String clientSessionId, State state) {
         LOG.info("Storing clientSessionId against state");
-        redisConnectionService.saveWithExpiry(
-                STATE_STORAGE_PREFIX + state.getValue(),
-                clientSessionId,
-                configurationService.getSessionExpiry());
         crossBrowserStorageService.storeItem(new CrossBrowserItem(state, clientSessionId));
     }
 
     private Optional<String> getClientSessionIdFromState(State state) {
         LOG.info("Getting clientSessionId using state");
-        return Optional.ofNullable(
-                redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
+        return crossBrowserStorageService.getClientSessionId(state);
     }
 
     private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {

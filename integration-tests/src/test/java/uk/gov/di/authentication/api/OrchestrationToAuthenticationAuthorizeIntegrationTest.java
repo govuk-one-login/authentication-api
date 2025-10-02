@@ -85,7 +85,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
 
     @BeforeEach
     void setup() {
-        handler = new AuthorisationHandler(configurationService, redisConnectionService);
+        handler = new AuthorisationHandler(configurationService);
         txmaAuditQueue.clear();
     }
 
