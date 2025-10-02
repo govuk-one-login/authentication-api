@@ -147,7 +147,9 @@ public class StartHandler
         try {
             var authSession =
                     authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                            Optional.ofNullable(startRequest.previousSessionId()), sessionId);
+                            Optional.ofNullable(startRequest.previousSessionId())
+                                    .filter(s -> !s.isBlank()),
+                            sessionId);
             LOG.info("Start session retrieved");
             var requestedCredentialTrustLevel =
                     retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
