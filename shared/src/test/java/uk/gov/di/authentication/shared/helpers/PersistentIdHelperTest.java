@@ -2,20 +2,20 @@ package uk.gov.di.authentication.shared.helpers;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 class PersistentIdHelperTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String NEW_ID = "lML1nhHXgGC9o-7efoVoFBJGve0";
     private static final String PERSISTENT_SESSION_ID_COOKIE_VALUE =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
@@ -131,13 +131,19 @@ class PersistentIdHelperTest {
 
     @Test
     void shouldGenerateNewPersistentIdFromGetExistingOrCreateWhenMissing() {
-        String cookieString =
-                "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
-        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
-        String persistentId =
-                PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
+            mockIdGenerator.when(IdGenerator::generate).thenReturn(NEW_ID);
 
-        assertThat(persistentId, not(equalTo("a-persistent-id")));
-        assertThat(Base64.getUrlDecoder().decode(persistentId.split("--")[0]).length, equalTo(20));
+            String cookieString =
+                    "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+            Map<String, String> inputHeaders =
+                    Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+
+            String persistentId =
+                    PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+            assertTrue(persistentId.startsWith(NEW_ID));
+        }
     }
 }
