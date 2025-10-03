@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ManualUpdateClientRegistryRequest;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 
 import java.util.List;
@@ -43,6 +44,9 @@ public interface ClientService {
     ClientID generateClientID();
 
     ClientRegistry updateSSEClient(String clientId, UpdateClientConfigRequest updateRequest);
+
+    ClientRegistry manualUpdateClient(
+            String clientId, ManualUpdateClientRegistryRequest updateRequest);
 
     boolean isTestJourney(String clientID, String emailAddress);
 }

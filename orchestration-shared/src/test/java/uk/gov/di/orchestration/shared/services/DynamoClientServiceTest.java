@@ -10,6 +10,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.ManualUpdateClientRegistryRequest;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
@@ -150,6 +151,25 @@ class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
         assertThat(updatedClient.getClientType(), equalTo(ClientType.APP.getValue()));
         assertFalse(updatedClient.isIdentityVerificationSupported());
         assertThat(updatedClient.getClaims(), equalTo(List.of("new-claim")));
+    }
+
+    @Test
+    void manualUpdateClientShouldChangeValues() {
+        var oldClient = generatePopulatedClientRegistry();
+        when(table.getItem((Key) any())).thenReturn(oldClient);
+        when(dynamoDbEnhancedClient.table(any(), eq(TableSchema.fromBean(ClientRegistry.class))))
+                .thenReturn(table);
+        dynamoClientService =
+                spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
+
+        ManualUpdateClientRegistryRequest updateRequest =
+                new ManualUpdateClientRegistryRequest(CLIENT_ID.toString(), "1");
+
+        var updatedClient =
+                dynamoClientService.manualUpdateClient(CLIENT_ID.toString(), updateRequest);
+
+        assertThat(oldClient.getClientID(), equalTo(updatedClient.getClientID()));
+        assertThat(updatedClient.getRateLimit(), equalTo(1));
     }
 
     private ClientRegistry generateClientRegistry(String clientId) {
