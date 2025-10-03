@@ -48,6 +48,13 @@ services:
       dynamodb:
         condition: service_healthy
     env_file: ./.env.local
+    environment:
+      AUTHENTICATION_BACKEND_URI: http://host.docker.internal:4402/
+      DYNAMO_ENDPOINT: http://host.docker.internal:8000
+      LOCALSTACK_ENDPOINT: http://host.docker.internal:45678
+      ORCHESTRATION_BACKEND_URI: http://host.docker.internal:4400/
+      REDIS_HOST: host.docker.internal
+      SQS_ENDPOINT: http://host.docker.internal:45678
     ports:
       - "4402:4402"
       - "5402:5402"
