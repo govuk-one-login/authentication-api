@@ -89,7 +89,10 @@ const getHeaders = (sessionId: string): HeadersInit => ({
   "Txma-Audit-Encoded": "test-device-data",
 });
 
-export const startSession = async (body: StartRequest, sessionId: string): Promise<StartResponse> => {
+export const startSession = async (
+  body: StartRequest,
+  sessionId: string,
+): Promise<StartResponse> => {
   const response = await fetch(`${BASE_URL}/start`, {
     method: "POST",
     headers: getHeaders(sessionId),
@@ -105,7 +108,10 @@ export const startSession = async (body: StartRequest, sessionId: string): Promi
   return responseBody;
 };
 
-export const checkUserExists = async (body: CheckUserExistsRequest, sessionId: string): Promise<CheckUserExistsResponse> => {
+export const checkUserExists = async (
+  body: CheckUserExistsRequest,
+  sessionId: string,
+): Promise<CheckUserExistsResponse> => {
   const response = await fetch(`${BASE_URL}/user-exists`, {
     method: "POST",
     headers: getHeaders(sessionId),
@@ -121,7 +127,10 @@ export const checkUserExists = async (body: CheckUserExistsRequest, sessionId: s
   return responseBody;
 };
 
-export const login = async (body: LoginRequest, sessionId: string): Promise<LoginResponse> => {
+export const login = async (
+  body: LoginRequest,
+  sessionId: string,
+): Promise<LoginResponse> => {
   const response = await fetch(`${BASE_URL}/login`, {
     method: "POST",
     headers: getHeaders(sessionId),

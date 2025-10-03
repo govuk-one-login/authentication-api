@@ -29,7 +29,8 @@ public class App {
         //
         // Once Redis is gone we could remove SSM entirely and use environment variables
         var parameterInitialiser = new ParameterInitialiser();
-        parameterInitialiser.setParam("local-session-redis-master-host", System.getenv("REDIS_HOST"));
+        parameterInitialiser.setParam(
+                "local-session-redis-master-host", System.getenv("REDIS_HOST"));
         parameterInitialiser.setParam("local-session-redis-port", System.getenv("REDIS_PORT"));
         parameterInitialiser.setParam("local-session-redis-tls", valueOf(false));
         parameterInitialiser.setParam("local-password-pepper", "pepper");
