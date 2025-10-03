@@ -8,12 +8,12 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
-import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -26,8 +26,14 @@ public class TestClientHelper {
     private static final String TEST_CLIENT_ALLOW_LIST_SECRET_NAME =
             "/%s/test-client-email-allow-list";
     private SecretsManagerClient secretsManagerClient;
+    private SecretCache<List<String>> cachedSecret;
+    private final int timeToLiveInSeconds = 300;
 
     private TestClientHelper() {}
+
+    public TestClientHelper(ConfigurationService configurationService) {
+        this.secretsManagerClient = getSecretsManagerClient(configurationService);
+    }
 
     public TestClientHelper(SecretsManagerClient secretsManagerClient) {
         this.secretsManagerClient = secretsManagerClient;
@@ -59,6 +65,29 @@ public class TestClientHelper {
         return isTestClientWithAllowedEmail;
     }
 
+    public boolean isTestJourney(
+            UserContext userContext, ConfigurationService configurationService) {
+        return isTestJourney(userContext.getAuthSession().getEmailAddress(), configurationService);
+    }
+
+    public boolean isTestJourney(String emailAddress, ConfigurationService configurationService) {
+        if (configurationService.isTestClientsEnabled()) {
+            LOG.warn("Test journeys are ENABLED");
+        } else {
+            return false;
+        }
+
+        var isTestEmail =
+                emailMatchesAllowlist(
+                        emailAddress, getEmailAllowListFromSecretsManager(configurationService));
+
+        if (isTestEmail) {
+            LOG.info("Is request from a test email address: true");
+        }
+
+        return isTestEmail;
+    }
+
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
         if (Objects.isNull(emailAddress)) {
             return false;
@@ -79,35 +108,42 @@ public class TestClientHelper {
         return false;
     }
 
-    // ATO-1884: Make this method private when implemented
-    public List<String> getEmailAllowListFromSecretsManager(
+    private List<String> getEmailAllowListFromSecretsManager(
             ConfigurationService configurationService) {
+        if (cachedSecret == null || cachedSecret.isExpired()) {
+            var request =
+                    GetSecretValueRequest.builder()
+                            .secretId(
+                                    String.format(
+                                            TEST_CLIENT_ALLOW_LIST_SECRET_NAME,
+                                            configurationService.getEnvironment()));
 
-        var request =
-                GetSecretValueRequest.builder()
-                        .secretId(
-                                String.format(
-                                        TEST_CLIENT_ALLOW_LIST_SECRET_NAME,
-                                        configurationService.getEnvironment()));
+            GetSecretValueResponse secretValueResponse;
+            try {
+                secretValueResponse =
+                        getSecretsManagerClient(configurationService)
+                                .getSecretValue(request.build());
+            } catch (Exception e) {
+                LOG.error(
+                        "Exception when attempting to fetch allow list from secrets manager. Returning empty list.",
+                        e);
+                return Collections.emptyList();
+            }
+            var secretString = secretValueResponse.secretString();
 
-        GetSecretValueResponse secretValueResponse;
-        try {
-            secretValueResponse =
-                    getSecretsManagerClient(configurationService).getSecretValue(request.build());
-        } catch (ResourceNotFoundException e) {
-            LOG.error(
-                    "Tried to fetch test client allow list but resource not configured: {}",
-                    e.getMessage());
-            return Collections.emptyList();
+            if (secretString == null || secretString.isEmpty()) {
+                LOG.warn("Test client allow list secret string is null or empty");
+                return Collections.emptyList();
+            }
+            cachedSecret =
+                    new SecretCache<>(
+                            Arrays.stream(secretString.split(",")).toList(),
+                            NowHelper.nowPlus(timeToLiveInSeconds, ChronoUnit.SECONDS)
+                                    .toInstant()
+                                    .getEpochSecond());
         }
-        var secretString = secretValueResponse.secretString();
 
-        if (secretString == null || secretString.isEmpty()) {
-            LOG.warn("Test client allow list secret string is null or empty");
-            return Collections.emptyList();
-        }
-
-        return Arrays.stream(secretString.split(",")).toList();
+        return cachedSecret.secret();
     }
 
     private SecretsManagerClient getSecretsManagerClient(
@@ -142,5 +178,11 @@ public class TestClientHelper {
                                                     .build());
         }
         return secretsManagerClient;
+    }
+
+    private record SecretCache<T>(T secret, long timeToLive) {
+        boolean isExpired() {
+            return NowHelper.now().toInstant().getEpochSecond() > timeToLive;
+        }
     }
 }
