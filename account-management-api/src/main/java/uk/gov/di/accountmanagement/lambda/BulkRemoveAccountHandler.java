@@ -39,15 +39,19 @@ public class BulkRemoveAccountHandler
 
     private final AuthenticationService authenticationService;
     private final ManualAccountDeletionService manualAccountDeletionService;
+    private final ConfigurationService configurationService;
 
     public BulkRemoveAccountHandler(
             AuthenticationService authenticationService,
-            ManualAccountDeletionService manualAccountDeletionService) {
+            ManualAccountDeletionService manualAccountDeletionService,
+            ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.authenticationService = authenticationService;
         this.manualAccountDeletionService = manualAccountDeletionService;
     }
 
     public BulkRemoveAccountHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.authenticationService = new DynamoService(configurationService);
         var emailSqsClient =
                 new AwsSqsClient(
@@ -84,6 +88,11 @@ public class BulkRemoveAccountHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+
+        if (!configurationService.isBulkAccountDeletionEnabled()) {
+            throw new BulkRemoveAccountException(
+                    "Bulk deletion is not supported in this environment");
+        }
 
         try {
             LOG.info("BulkRemoveAccountHandler received request");
