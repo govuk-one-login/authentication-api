@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,12 +31,15 @@ import java.util.stream.Stream;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class DynamoServiceIntegrationTest {
 
@@ -50,6 +54,10 @@ class DynamoServiceIntegrationTest {
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
+
+    @RegisterExtension
+    private static final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(DynamoService.class);
 
     DynamoService dynamoService = new DynamoService(ConfigurationService.getInstance());
 
@@ -700,6 +708,13 @@ class DynamoServiceIntegrationTest {
         userStore.signUp("email1", "password-1", new Subject("1111"));
 
         assertThat(dynamoService.getUserProfileFromSubject("1111").getEmail(), equalTo("email1"));
+
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withMessageContaining(
+                                        "User profile not found for subject with eventually consistent read, retrying with strongly consistent read."))));
     }
 
     @Test
@@ -707,7 +722,18 @@ class DynamoServiceIntegrationTest {
         assertThrows(
                 RuntimeException.class,
                 () -> dynamoService.getUserProfileFromSubject("NonExistentUser"),
-                "No userCredentials found with query search");
+                "No userProfile found with query search");
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "User profile not found for subject with eventually consistent read, retrying with strongly consistent read.")));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "User profile not found for subject on retry with strongly consistent reads enabled. No further retries, fatal, throwing.")));
     }
 
     @Test

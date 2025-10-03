@@ -541,8 +541,20 @@ public class DynamoService implements AuthenticationService {
     public UserProfile getUserProfileFromSubject(String subject) {
         Optional<UserProfile> userProfile = getOptionalUserProfileFromSubject(subject);
         if (userProfile.isEmpty()) {
-            throw new RuntimeException("No userCredentials found with query search");
+            LOG.info(
+                    "User profile not found for subject with eventually consistent read, retrying with strongly consistent read.");
+
+            userProfile = getOptionalUserProfileFromSubject(subject, true);
+            if (userProfile.isEmpty()) {
+                LOG.error(
+                        "User profile not found for subject on retry with strongly consistent reads enabled. No further retries, fatal, throwing.");
+
+                throw new RuntimeException("No userProfile found with query search");
+            }
+
+            LOG.info("User profile found on retry with strongly consistent reads enabled.");
         }
+
         return userProfile.get();
     }
 
@@ -561,10 +573,18 @@ public class DynamoService implements AuthenticationService {
     }
 
     public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
+        return getOptionalUserProfileFromSubject(subject, false);
+    }
+
+    private Optional<UserProfile> getOptionalUserProfileFromSubject(
+            String subject, boolean consistentRead) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
         QueryEnhancedRequest queryEnhancedRequest =
-                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+                QueryEnhancedRequest.builder()
+                        .consistentRead(consistentRead)
+                        .queryConditional(q)
+                        .build();
         return dynamoUserProfileTable.index("SubjectIDIndex").query(queryEnhancedRequest).stream()
                 .findFirst()
                 .flatMap(page -> page.items().stream().findFirst());
