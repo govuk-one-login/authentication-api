@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.local;
 
+import com.nimbusds.oauth2.sdk.id.Subject;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.authentication.local.initialisers.KmsInitialiser;
@@ -8,6 +9,8 @@ import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
 
@@ -79,5 +82,12 @@ public class App {
                                 .withIdentityVerificationSupported(true)
                                 .withTestClient(true)
                                 .withTestClientEmailAllowlist(List.of("^.*$"))));
+
+        // Initialise test account
+        // TODO: remove this once we have proper test data setup in the API tests
+        var dynamoService = new DynamoService(new ConfigurationService());
+        dynamoService.signUp("test@account.gov.uk", "Password123", new Subject(), null);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                "test@account.gov.uk", "07770000000", true, true);
     }
 }

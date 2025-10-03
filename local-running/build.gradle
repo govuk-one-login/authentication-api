@@ -13,6 +13,7 @@ dependencies {
             libs.bundles.awsLambda,
             libs.awsSqs,
             libs.awsSsm,
+            libs.bundles.nimbus,
             project(":shared"),
             project(":auth-external-api"),
             project(":frontend-api")
