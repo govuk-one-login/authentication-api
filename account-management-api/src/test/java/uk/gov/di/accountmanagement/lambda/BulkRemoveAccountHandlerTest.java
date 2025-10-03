@@ -11,10 +11,12 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
+import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
@@ -35,6 +37,7 @@ class BulkRemoveAccountHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ManualAccountDeletionService manualAccountDeletionService =
             mock(ManualAccountDeletionService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -42,8 +45,44 @@ class BulkRemoveAccountHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new BulkRemoveAccountHandler(authenticationService, manualAccountDeletionService);
+        handler =
+                new BulkRemoveAccountHandler(
+                        authenticationService, manualAccountDeletionService, configurationService);
         when(context.getAwsRequestId()).thenReturn("test-request-id");
+        when(configurationService.isBulkAccountDeletionEnabled()).thenReturn(true);
+    }
+
+    @Nested
+    @DisplayName("Environment Validation")
+    class EnvironmentValidation {
+
+        @Test
+        @DisplayName("Should throw exception when environment is not supported")
+        void shouldThrowExceptionWhenEnvironmentNotSupported() throws Json.JsonException {
+
+            when(configurationService.isBulkAccountDeletionEnabled()).thenReturn(false);
+            String input =
+                    """
+                {
+                    "reference": "123456",
+                    "emails": ["test@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            RuntimeException exception =
+                    assertThrows(
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
+
+            assertTrue(
+                    exception
+                            .getMessage()
+                            .contains("Bulk deletion is not supported in this environment"));
+        }
     }
 
     @Nested
@@ -67,7 +106,8 @@ class BulkRemoveAccountHandlerTest {
 
             RuntimeException exception =
                     assertThrows(
-                            RuntimeException.class, () -> handler.handleRequest(request, context));
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
 
             assertTrue(
                     exception
@@ -93,7 +133,8 @@ class BulkRemoveAccountHandlerTest {
 
             RuntimeException exception =
                     assertThrows(
-                            RuntimeException.class, () -> handler.handleRequest(request, context));
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
 
             assertTrue(
                     exception
