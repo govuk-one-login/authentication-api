@@ -119,7 +119,8 @@ public class DynamoClientService implements ClientService {
     }
 
     @Override
-    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
+    public ClientRegistry updateSSEClient(
+            String clientId, UpdateClientConfigRequest updateRequest) {
         ClientRegistry clientRegistry =
                 dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
         Optional.ofNullable(updateRequest.getRedirectUris())

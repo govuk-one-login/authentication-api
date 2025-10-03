@@ -84,7 +84,7 @@ class UpdateClientConfigHandlerTest {
         when(clientValidationService.validateClientUpdateConfig(
                         any(UpdateClientConfigRequest.class)))
                 .thenReturn(Optional.empty());
-        when(clientService.updateClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
+        when(clientService.updateSSEClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
                 .thenReturn(createClientRegistry());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
