@@ -5,12 +5,11 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 public class FrontendApiPhoneNumberHelper {
     public static final int NUMBER_OF_LAST_DIGITS = 3;
+    public static final int NUMBER_OF_UNREDACTED_DIGITS = 4;
 
     public static String redactPhoneNumber(String phoneNumber) {
-        String substring = phoneNumber.substring(phoneNumber.length() - 4);
-        String newString = phoneNumber.substring(0, phoneNumber.length() - 4);
-        String concat = "*".repeat(newString.length());
-        return concat + substring;
+        int redactLength = phoneNumber.length() - NUMBER_OF_UNREDACTED_DIGITS;
+        return "*".repeat(redactLength) + phoneNumber.substring(redactLength);
     }
 
     public static String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
