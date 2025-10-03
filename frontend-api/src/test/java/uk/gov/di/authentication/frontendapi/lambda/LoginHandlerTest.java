@@ -1168,7 +1168,35 @@ class LoginHandlerTest {
                 logging.events(),
                 hasItem(
                         withMessageContaining(
-                                "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. As this relates to MFA verification, this will be handled in the next step, but this should be looked into more by auth. The user will be prompted to finish creating their login by adding an MFA method. User MFA method count: 1, MFA method priorities: BACKUP. userMfaDetail.mfaMethodType(): SMS")));
+                                "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. User will be prompted to add an MFA method. User MFA method count: 1, MFA method priorities: BACKUP. userMfaDetail.mfaMethodType(): SMS")));
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verifyInternalCommonSubjectIdentifierSaved();
+    }
+
+    @Test
+    void shouldLogWhenUserHasNoMfaMethods() {
+        var userProfile = generateUserProfile(null);
+        var userCredentials =
+                new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "User has no MFA methods, but session requires MFA. This may be a partially created account. User will be prompted to add an MFA method. userMfaDetail.mfaMethodType(): SMS")));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifyInternalCommonSubjectIdentifierSaved();

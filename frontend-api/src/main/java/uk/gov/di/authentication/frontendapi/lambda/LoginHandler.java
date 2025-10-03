@@ -414,7 +414,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 if (codeBlocks.isPresent()) {
                     return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
                 }
-            } else {
+            } else if (!retrievedMfaMethods.isEmpty()) {
                 var mfaMethodCount = retrievedMfaMethods.size();
                 var mfaMethodPrioritiesForUser =
                         retrievedMfaMethods.stream()
@@ -422,9 +422,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 .collect(Collectors.joining(", "));
 
                 LOG.error(
-                        "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. As this relates to MFA verification, this will be handled in the next step, but this should be looked into more by auth. The user will be prompted to finish creating their login by adding an MFA method. User MFA method count: {}, MFA method priorities: {}. userMfaDetail.mfaMethodType(): {}",
+                        "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. User will be prompted to add an MFA method. User MFA method count: {}, MFA method priorities: {}. userMfaDetail.mfaMethodType(): {}",
                         mfaMethodCount,
                         mfaMethodPrioritiesForUser,
+                        userMfaDetail.mfaMethodType().getValue());
+            } else {
+                LOG.info(
+                        "User has no MFA methods, but session requires MFA. This may be a partially created account. User will be prompted to add an MFA method. userMfaDetail.mfaMethodType(): {}",
                         userMfaDetail.mfaMethodType().getValue());
             }
         }
