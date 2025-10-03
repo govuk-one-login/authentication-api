@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.entity.Environment.INTEGRATION;
+import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -469,6 +471,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
+    public String getSnsEndpointUri() {
+        return System.getenv("SNS_ENDPOINT");
+    }
+
     public String getTermsAndConditionsVersion() {
         return System.getenv("TERMS_CONDITIONS_VERSION");
     }
@@ -734,5 +740,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public double getInternationalSmsQuotaThreshold() {
         return Double.parseDouble(
                 System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "5000"));
+    }
+
+    public boolean isBulkAccountDeletionEnabled() {
+        return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }
 }
