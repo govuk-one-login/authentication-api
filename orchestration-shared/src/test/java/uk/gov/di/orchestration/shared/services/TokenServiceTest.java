@@ -67,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -368,13 +369,13 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing redirect_uri parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing redirect_uri parameter")));
     }
 
     @Test
@@ -386,13 +387,13 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing grant_type parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing grant_type parameter")));
     }
 
     @Test
@@ -405,13 +406,13 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing code parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
     }
 
     @Test
@@ -425,13 +426,34 @@ class TokenServiceTest {
         Optional<ErrorObject> errorObject =
                 tokenService.validateTokenRequestParams(URLUtils.serializeParameters(customParams));
 
+        assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject,
-                equalTo(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing code parameter"))));
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
+    }
+
+    @Test
+    void shouldReturnErrorIfCodeIsNullWhenValidatingTokenRequest() {
+        var requestBody =
+                "grant_type="
+                        + GrantType.AUTHORIZATION_CODE.getValue()
+                        + "&client_id="
+                        + CLIENT_ID
+                        + "&redirect_uri="
+                        + REDIRECT_URI
+                        + "&code";
+        Optional<ErrorObject> errorObject = tokenService.validateTokenRequestParams(requestBody);
+
+        assertTrue(errorObject.isPresent());
+        assertThat(
+                errorObject.get(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing code parameter")));
     }
 
     @Test
