@@ -44,6 +44,7 @@ import uk.gov.di.authentication.oidc.services.RateLimitService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.result.Result;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
@@ -292,39 +293,46 @@ public class AuthorisationHandler
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
         LOG.info("Received authentication request");
 
-        AuthenticationRequest authRequest;
-        try {
-            if (!"GET".equals(input.getHttpMethod())) {
-                LOG.warn(
-                        String.format(
-                                "Authentication request sent with invalid HTTP method %s",
-                                input.getHttpMethod()));
-                throw new InvalidHttpMethodException(
-                        String.format(
-                                "Authentication request does not support %s requests",
-                                input.getHttpMethod()));
-            }
-            Map<String, String> parameterMap = input.getQueryStringParameters();
-            Map<String, List<String>> requestParameters =
-                    parameterMap.entrySet().stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            Map.Entry::getKey, entry -> List.of(entry.getValue())));
-            authRequest = AuthenticationRequest.parse(requestParameters);
-            authRequest = stripOutReauthenticateQueryParams(authRequest);
-            authRequest = stripOutLoginHintQueryParams(authRequest);
-        } catch (ParseException e) {
-            LOG.warn("Authentication request could not be parsed", e);
-            return generateParseExceptionResponse(e, user);
-        } catch (NullPointerException e) {
+        if (!"GET".equals(input.getHttpMethod())) {
             LOG.warn(
-                    "No parameters are present in the Authentication request query string or body",
-                    e);
+                    String.format(
+                            "Authentication request sent with invalid HTTP method %s",
+                            input.getHttpMethod()));
+            throw new InvalidHttpMethodException(
+                    String.format(
+                            "Authentication request does not support %s requests",
+                            input.getHttpMethod()));
+        }
+
+        Map<String, String> parameterMap = input.getQueryStringParameters();
+
+        if (parameterMap == null) {
+            LOG.warn("No parameters are present in the Authentication request query string");
             return generateMissingParametersResponse(
                     user,
-                    "No parameters are present in the Authentication request query string or body",
+                    "No parameters are present in the Authentication request query string",
                     null);
         }
+
+        Map<String, List<String>> requestParameters =
+                parameterMap.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Map.Entry::getKey, entry -> List.of(entry.getValue())));
+
+        Result<AuthenticationRequest, ParseException> authReqResult =
+                Result.wrapCheckedInResult(() -> AuthenticationRequest.parse(requestParameters));
+
+        if (authReqResult.isFailure()) {
+            LOG.warn("Authentication request could not be parsed", authReqResult.getError());
+            return generateParseExceptionResponse(authReqResult.getError(), user);
+        }
+
+        AuthenticationRequest authRequest =
+                authReqResult
+                        .map(this::stripOutLoginHintQueryParams)
+                        .map(this::stripOutReauthenticateQueryParams)
+                        .getValue();
 
         ClientRegistry client;
         String clientId = authRequest.getClientID().getValue();
