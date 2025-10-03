@@ -6996,6 +6996,134 @@ Resources:
               - kms:DescribeKey
             Resource: !GetAtt CrossBrowserTableEncryptionKey.Arn
   #endregion
+
+  #region refresh token data table
+  RefreshTokenTableEncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    Properties:
+      Description: KMS encryption key for Refresh Token DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+  RefreshTokenTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    Properties:
+      TableName: !Sub ${Environment}-Refresh-Token
+      AttributeDefinitions:
+        - AttributeName: JwtId
+          AttributeType: S
+        - AttributeName: AuthCode
+          AttributeType: S
+      GlobalSecondaryIndexes:
+        - IndexName: AuthCodeIndex
+          KeySchema:
+            - AttributeName: AuthCode
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: JwtId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt RefreshTokenTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Name
+          Value: RefreshTokenTable
+  RefreshTokenTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowRefreshTokenTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+            Resource:
+              - !Sub ${RefreshTokenTable.Arn}/index/*
+              - !GetAtt RefreshTokenTable.Arn
+          - Sid: AllowRefreshTokenTableDecryption
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
+  RefreshTokenTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowRefreshTokenTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !GetAtt RefreshTokenTable.Arn
+          - Sid: AllowRefreshTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
+  RefreshTokenTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowRefreshTokenTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !GetAtt RefreshTokenTable.Arn
+          - Sid: AllowRefreshTokenTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
+
+  #endregion
+
   #region IPV token signing key pair
 
   OrchIPVTokenSigningKmsKeyAlias:
