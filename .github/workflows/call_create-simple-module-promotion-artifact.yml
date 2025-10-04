@@ -23,17 +23,24 @@ jobs:
       - name: Download ${{ inputs.module_name }} code artifact
         id: download_artifact
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        env:
+          MODULE_NAME: ${{ inputs.module_name }}
+          TERRAFORM_DIR: ${{ inputs.terraform_directory_name }}
         with:
-          name: signed-${{ inputs.module_name }}
-          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+          name: signed-${{ env.MODULE_NAME }}
+          path: ci/terraform/${{ env.TERRAFORM_DIR }}/artifacts
 
       - name: Zip ${{ inputs.module_name }} Terraform files
         id: upload_object
         working-directory: ci/terraform
-        run: zip -r "${{ inputs.terraform_directory_name }}.zip" .
+        env:
+          TERRAFORM_DIR: ${{ inputs.terraform_directory_name }}
+        run: zip -r "$TERRAFORM_DIR.zip" .
 
       - name: upload promotion_artifact_${{ inputs.terraform_directory_name }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        env:
+          TERRAFORM_DIR: ${{ inputs.terraform_directory_name }}
         with:
-          name: promotion_artifact_${{ inputs.terraform_directory_name }}
-          path: ci/terraform/${{ inputs.terraform_directory_name }}.zip
+          name: promotion_artifact_${{ env.TERRAFORM_DIR }}
+          path: ci/terraform/${{ env.TERRAFORM_DIR }}.zip
