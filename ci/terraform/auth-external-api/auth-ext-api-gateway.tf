@@ -102,6 +102,10 @@ resource "aws_api_gateway_stage" "di_auth_ext_stage" {
     aws_api_gateway_deployment.auth_ext_api_deployment,
   ]
 
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = var.api_fms_tag_value
+  }
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }

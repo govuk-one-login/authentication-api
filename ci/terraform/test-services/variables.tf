@@ -61,3 +61,9 @@ variable "txma_account_id" {
   default = ""
   type    = string
 }
+
+variable "api_fms_tag_value" {
+  default     = "authenticationfrontend"
+  description = "Tag value to be used for FMS WAF association for API"
+  type        = string
+}

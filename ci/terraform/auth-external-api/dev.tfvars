@@ -12,3 +12,6 @@ lambda_min_concurrency = 1
 
 #VPC endpoint
 new_auth_api_vpc_endpoint_id = "vpce-0b907325ae3bfe3ce"
+
+# FMS
+api_fms_tag_value = "authfrontenddev"
