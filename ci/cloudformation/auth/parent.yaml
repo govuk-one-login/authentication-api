@@ -232,6 +232,39 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
+    authdev3:
+      accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/0797a9bd-d728-4473-9b62-7a43767d75a7
+      authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4d72b78b-e8ed-4b5f-a045-383170969226
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/51712670-ba1d-4f4a-a7de-8fc1f47fec2f
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/38223bde-df39-4240-b614-3169cb19a342
+      clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0e5934b0-d876-4803-a206-36d9ef872abc
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/af014656-1c40-4ba1-b656-aba07fd258d4
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
+      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyu7XCXkDyxhHrmoOfLrl6tcd9e9VL1pzzWqVo1P546NLL2c1H2Qd7UNaa7oQX1/eNFDKaAZuJY3YUAPwNN4Ypg== #orch-signing-key-alias
+      orchStubToAuthSigningPublicKey: "" # No orch Stub in Authdev3, Authdev3 uses RP Stubs
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
+      emailAcctCreationOtpCodeTtlDuration: 600
+      frontendApiFMSTagValue: "authenticationfrontend"
+      frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
+      lockoutCountTtl: 600
+      lockoutDuration: 600
+      otpCodeTtlDuration: 600
+      lambdaMinConcurrency: 0
+      reauthEnterEmailCountTtl: 120
+      reducedLockoutDuration: 300
+      supportReauthSignoutEnabled: true
+      termsConditionsVersion: 1.13
+      testClientsEnabled: true
+      useStronglyConsistentReads: true
+      OrchAccountID: 816047645251
+      OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
