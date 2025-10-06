@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.util.Map;
@@ -43,7 +44,8 @@ public class CrossBrowserOrchestrationService {
     public CrossBrowserEntity generateNoSessionOrchestrationEntity(
             Map<String, String> queryStringParameters) throws NoSessionException {
         LOG.info("Attempting to generate error response using state");
-        if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
+        if (isAccessDeniedErrorPresent(queryStringParameters)
+                && isStatePresentInQueryParams(queryStringParameters)) {
             LOG.info("access_denied error and state param are both present");
             var clientSessionId =
                     getClientSessionIdFromState(State.parse(queryStringParameters.get("state")))
@@ -87,7 +89,9 @@ public class CrossBrowserOrchestrationService {
     }
 
     public Optional<CrossBrowserEntity> generateEntityForMismatchInClientSessionId(
-            Map<String, String> queryStringParameters, String clientSessionIdFromCookie)
+            Map<String, String> queryStringParameters,
+            String clientSessionIdFromCookie,
+            OrchSessionItem orchSession)
             throws NoSessionException {
         if (!isStatePresentInQueryParams(queryStringParameters)) {
             LOG.warn("No state value in query params");
@@ -129,6 +133,12 @@ public class CrossBrowserOrchestrationService {
             LOG.warn("Failed to attach client details to logs");
         }
 
+        if (!isAccessDeniedErrorPresent(queryStringParameters)) {
+            LOG.info(
+                    "Client session may be recoverable. Client session linked to active session: {}",
+                    orchSession.getClientSessions().contains(clientSessionIdFromState));
+        }
+
         var errorObject =
                 new ErrorObject(
                         OAuth2Error.ACCESS_DENIED_CODE,
@@ -155,12 +165,10 @@ public class CrossBrowserOrchestrationService {
         return crossBrowserStorageService.getClientSessionId(state);
     }
 
-    private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
+    private boolean isAccessDeniedErrorPresent(Map<String, String> queryStringParameters) {
         return Objects.nonNull(queryStringParameters)
                 && queryStringParameters.containsKey("error")
-                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
-                && queryStringParameters.containsKey("state")
-                && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
+                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode());
     }
 
     private boolean isStatePresentInQueryParams(Map<String, String> queryStringParameters) {

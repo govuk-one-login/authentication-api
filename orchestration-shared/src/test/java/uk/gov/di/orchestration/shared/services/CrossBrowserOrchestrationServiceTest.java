@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 
@@ -39,11 +40,15 @@ class CrossBrowserOrchestrationServiceTest {
     private final CrossBrowserStorageService crossBrowserStorageService =
             mock(CrossBrowserStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final OrchSessionItem ORCH_SESSION_ITEM =
+            new OrchSessionItem("a-session-id").addClientSession(CLIENT_SESSION_ID);
+
     private CrossBrowserOrchestrationService crossBrowserOrchestrationService;
 
     @BeforeEach
@@ -236,7 +241,7 @@ class CrossBrowserOrchestrationServiceTest {
                     () ->
                             crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
-                                            queryParams, CLIENT_SESSION_ID));
+                                            queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM));
         }
 
         @Test
@@ -253,7 +258,7 @@ class CrossBrowserOrchestrationServiceTest {
 
             var noSessionEntity =
                     crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            queryParams, IdGenerator.generate());
+                            queryParams, IdGenerator.generate(), ORCH_SESSION_ITEM);
 
             assertTrue(noSessionEntity.isPresent());
             assertThat(
@@ -287,7 +292,7 @@ class CrossBrowserOrchestrationServiceTest {
             queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
             var noSessionEntity =
                     crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            queryParams, cookieClientSessionID);
+                            queryParams, cookieClientSessionID, ORCH_SESSION_ITEM);
 
             assertTrue(noSessionEntity.isPresent());
             assertThat(
@@ -320,7 +325,7 @@ class CrossBrowserOrchestrationServiceTest {
             queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
             var noSessionEntity =
                     crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            queryParams, CLIENT_SESSION_ID);
+                            queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM);
 
             assertTrue(noSessionEntity.isEmpty());
         }
@@ -341,7 +346,7 @@ class CrossBrowserOrchestrationServiceTest {
                     () ->
                             crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
-                                            queryParams, CLIENT_SESSION_ID));
+                                            queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM));
         }
 
         @Test
@@ -363,7 +368,7 @@ class CrossBrowserOrchestrationServiceTest {
                     () ->
                             crossBrowserOrchestrationService
                                     .generateEntityForMismatchInClientSessionId(
-                                            queryParams, CLIENT_SESSION_ID));
+                                            queryParams, CLIENT_SESSION_ID, ORCH_SESSION_ITEM));
         }
     }
 
