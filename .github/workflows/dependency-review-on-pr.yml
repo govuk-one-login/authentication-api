@@ -17,10 +17,10 @@ jobs:
           java-version: 17
 
       - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        uses: gradle/actions/dependency-submission@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v4
 
       - name: Perform dependency review
-        uses: actions/dependency-review-action@595b5aeba73380359d98a5e087f648dbb0edce1b # v4.7.3
+        uses: actions/dependency-review-action@56339e523c0409420f6c2c9a2f4292bbb3c07dd3 # v4.8.0
         with:
           # These exceptions should be rare and well justified
           # - GHSA-qh8g-58pp-2wxh see https://github.com/govuk-one-login/authentication-api/pull/7105
