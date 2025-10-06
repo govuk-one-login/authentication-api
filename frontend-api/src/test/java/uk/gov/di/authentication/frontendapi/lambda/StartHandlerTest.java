@@ -414,7 +414,8 @@ class StartHandlerTest {
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
                                         false,
-                                        Map.of(countType, MAX_ALLOWED_RETRIES))));
+                                        Map.of(countType, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(countType))));
 
         var isAuthenticated = true;
         useValidSession();
@@ -643,7 +644,8 @@ class StartHandlerTest {
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
                                         false,
-                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES))));
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(ENTER_EMAIL))));
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
@@ -822,7 +824,8 @@ class StartHandlerTest {
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
                                         false,
-                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES))));
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(ENTER_EMAIL))));
 
         useValidSession();
 
