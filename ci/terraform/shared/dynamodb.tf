@@ -593,7 +593,9 @@ data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
         "dynamodb:BatchWriteItem",
         "dynamodb:PutItem",
         "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem"
+        "dynamodb:DeleteItem",
+        "dynamodb:PutResourcePolicy",
+        "dynamodb:DeleteResourcePolicy"
       ]
       resources = ["*"]
       condition {
@@ -647,7 +649,9 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
         "dynamodb:BatchWriteItem",
         "dynamodb:PutItem",
         "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem"
+        "dynamodb:DeleteItem",
+        "dynamodb:PutResourcePolicy",
+        "dynamodb:DeleteResourcePolicy"
       ]
       resources = ["*"]
       condition {
@@ -825,7 +829,9 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
         "dynamodb:BatchWriteItem",
         "dynamodb:PutItem",
         "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem"
+        "dynamodb:DeleteItem",
+        "dynamodb:PutResourcePolicy",
+        "dynamodb:DeleteResourcePolicy"
       ]
       resources = ["*"]
       condition {
