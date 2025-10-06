@@ -242,6 +242,30 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var decision = decisionResult.getSuccess();
         int incorrectPasswordCount = decision.attemptCount();
 
+        if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            ReauthFailureReasons reauthFailureReason =
+                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                            reauthLockedOut.forbiddenReason());
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
+                    ReauthMetadataBuilder.builder(calculatedPairwiseId)
+                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
+                            .withFailureReason(reauthFailureReason)
+                            .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            reauthFailureReason.getValue()));
+
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+        }
+
         if (decision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             if (isReauthJourney) {
                 ReauthFailureReasons reauthFailureReason =
@@ -500,6 +524,26 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 pair(
                         AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT,
                         configurationService.getMaxPasswordRetries()));
+
+        if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
+                    ReauthMetadataBuilder.builder(userPermissionContext.rpPairwiseId())
+                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
+                            .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
+                            .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
+
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
+        }
 
         if (decision instanceof Decision.TemporarilyLockedOut) {
             if (isReauthJourney) {
