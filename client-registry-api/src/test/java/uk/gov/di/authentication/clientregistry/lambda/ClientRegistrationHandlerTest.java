@@ -72,7 +72,7 @@ class ClientRegistrationHandlerTest {
     private ClientRegistrationHandler handler;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         when(context.getAwsRequestId()).thenReturn("request-id");
         handler =
                 new ClientRegistrationHandler(clientService, configValidationService, auditService);
@@ -83,7 +83,7 @@ class ClientRegistrationHandlerTest {
             new CaptureLoggingExtension(UpdateClientConfigHandler.class);
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         assertThat(logging.events(), not(hasItem(withMessageContaining(clientId))));
         verifyNoMoreInteractions(auditService);
     }
