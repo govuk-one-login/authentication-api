@@ -407,13 +407,14 @@ class StartHandlerTest {
                 .thenReturn(
                         uk.gov.di.authentication.shared.entity.Result.success(
                                 new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .TemporarilyLockedOut(
+                                        .ReauthLockedOut(
                                         uk.gov.di.authentication.userpermissions.entity
                                                 .ForbiddenReason
                                                 .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
-                                        false)));
+                                        false,
+                                        Map.of(countType, MAX_ALLOWED_RETRIES))));
 
         var isAuthenticated = true;
         useValidSession();
@@ -635,13 +636,14 @@ class StartHandlerTest {
                 .thenReturn(
                         uk.gov.di.authentication.shared.entity.Result.success(
                                 new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .TemporarilyLockedOut(
+                                        .ReauthLockedOut(
                                         uk.gov.di.authentication.userpermissions.entity
                                                 .ForbiddenReason
                                                 .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
-                                        false)));
+                                        false,
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES))));
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
@@ -813,13 +815,14 @@ class StartHandlerTest {
                 .thenReturn(
                         uk.gov.di.authentication.shared.entity.Result.success(
                                 new uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .TemporarilyLockedOut(
+                                        .ReauthLockedOut(
                                         uk.gov.di.authentication.userpermissions.entity
                                                 .ForbiddenReason
                                                 .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                         0,
                                         java.time.Instant.now().plusSeconds(900),
-                                        false)));
+                                        false,
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES))));
 
         useValidSession();
 
