@@ -258,22 +258,10 @@ public class StartHandler
                         && permissionResult.getSuccess()
                                 instanceof
                                 uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .TemporarilyLockedOut) {
+                                        .ReauthLockedOut
+                                lockedOut) {
                     isBlockedForReauth = true;
-                    var reauthCountTypesToCounts =
-                            maybeInternalSubject
-                                    .map(
-                                            subjectId ->
-                                                    authenticationAttemptsService
-                                                            .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                                                    subjectId,
-                                                                    startRequest
-                                                                            .rpPairwiseIdForReauth(),
-                                                                    JourneyType.REAUTHENTICATION))
-                                    .orElse(
-                                            authenticationAttemptsService.getCountsByJourney(
-                                                    startRequest.rpPairwiseIdForReauth(),
-                                                    JourneyType.REAUTHENTICATION));
+                    var reauthCountTypesToCounts = lockedOut.detailedCounts();
                     var blockedCountTypes =
                             ReauthAuthenticationAttemptsHelper
                                     .countTypesWhereUserIsBlockedForReauth(
