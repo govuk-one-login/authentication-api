@@ -1186,7 +1186,7 @@ class IPVCallbackHandlerTest {
                         Json.JsonException {
 
             when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString()))
+                            anyMap(), anyString(), any()))
                     .thenReturn(Optional.empty());
 
             Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
@@ -1247,7 +1247,7 @@ class IPVCallbackHandlerTest {
                 throws NoSessionException, Json.JsonException {
 
             when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString()))
+                            anyMap(), anyString(), any()))
                     .thenReturn(
                             Optional.of(
                                     new CrossBrowserEntity(
