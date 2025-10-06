@@ -24,6 +24,7 @@ public sealed interface Decision
             int attemptCount,
             Instant lockedUntil,
             boolean isFirstTimeLimit,
-            Map<CountType, Integer> detailedCounts)
+            Map<CountType, Integer> detailedCounts,
+            java.util.List<CountType> blockedCountTypes)
             implements Decision {}
 }

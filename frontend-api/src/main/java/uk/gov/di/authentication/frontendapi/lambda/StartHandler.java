@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -261,12 +260,9 @@ public class StartHandler
                                         .ReauthLockedOut
                                 lockedOut) {
                     isBlockedForReauth = true;
-                    var reauthCountTypesToCounts = lockedOut.detailedCounts();
-                    var blockedCountTypes =
-                            ReauthAuthenticationAttemptsHelper
-                                    .countTypesWhereUserIsBlockedForReauth(
-                                            reauthCountTypesToCounts, configurationService);
-                    if (!blockedCountTypes.isEmpty() && maybeInternalSubject.isPresent()) {
+                    if (maybeInternalSubject.isPresent()) {
+                        var reauthCountTypesToCounts = lockedOut.detailedCounts();
+                        var blockedCountTypes = lockedOut.blockedCountTypes();
                         ReauthFailureReasons failureReason =
                                 getReauthFailureReasonFromCountTypes(blockedCountTypes);
                         auditService.submitAuditEvent(
