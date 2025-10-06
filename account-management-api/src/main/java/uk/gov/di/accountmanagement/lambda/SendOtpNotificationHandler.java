@@ -27,15 +27,14 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -44,7 +43,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -84,11 +82,11 @@ public class SendOtpNotificationHandler
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
-    private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final MFAMethodsService mfaMethodsService;
+    private final TestClientHelper testClientHelper;
 
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
@@ -101,9 +99,9 @@ public class SendOtpNotificationHandler
             DynamoService dynamoService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            ClientService clientService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestClientHelper testClientHelper) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -112,9 +110,9 @@ public class SendOtpNotificationHandler
         this.dynamoService = dynamoService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
-        this.clientService = clientService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.testClientHelper = testClientHelper;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -136,9 +134,9 @@ public class SendOtpNotificationHandler
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public SendOtpNotificationHandler() {
@@ -168,28 +166,14 @@ public class SendOtpNotificationHandler
     }
 
     private Result<APIGatewayProxyResponseEvent, Boolean> checkForTestUser(
-            APIGatewayProxyRequestEvent input, SendNotificationRequest sendNotificationRequest) {
+            SendNotificationRequest sendNotificationRequest) {
         try {
-            String clientIdFromApiGateway =
-                    (String)
-                            Objects.requireNonNull(
-                                    input.getRequestContext().getAuthorizer().get("clientId"),
-                                    "'clientId' key does not exist in map");
-            boolean isTestUserRequest =
-                    clientService.isTestJourney(
-                            clientIdFromApiGateway, sendNotificationRequest.getEmail());
 
-            if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
-                LOG.warn(
-                        "Test user journey attempted, but test clients are not enabled in this environment");
-                return Result.failure(
-                        generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
-            }
+            boolean isTestUserRequest =
+                    testClientHelper.isTestJourney(
+                            sendNotificationRequest.getEmail(), configurationService);
 
             return Result.success(isTestUserRequest);
-        } catch (NullPointerException e) {
-            LOG.error("Error reading Client ID from context (passed from API Gateway)", e);
-            return Result.failure(generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE));
         } catch (Exception e) {
             LOG.error(
                     "Error initialising required variables for Account Management Send OTP Handler",
@@ -218,7 +202,7 @@ public class SendOtpNotificationHandler
 
         var sendNotificationRequest = checkRequestFormatResult.getSuccess();
 
-        var checkForTestUserResult = checkForTestUser(input, sendNotificationRequest);
+        var checkForTestUserResult = checkForTestUser(sendNotificationRequest);
 
         if (checkForTestUserResult.isFailure()) {
             return checkForTestUserResult.getFailure();
@@ -388,7 +372,7 @@ public class SendOtpNotificationHandler
                 sendNotificationRequest.getNotificationType());
 
         LOG.info(
-                "Sending message to SQS queue for notificationType: {} for client type: {}",
+                "Sending message to SQS queue for notificationType: {}.  Is test user journey: {}",
                 sendNotificationRequest.getNotificationType(),
                 isTestUserRequest);
 

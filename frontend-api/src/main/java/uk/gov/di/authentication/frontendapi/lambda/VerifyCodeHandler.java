@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -88,6 +89,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
+    private final TestClientHelper testClientHelper;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -99,7 +101,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             DynamoAccountModifiersService accountModifiersService,
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService) {
+            MFAMethodsService mfaMethodsService,
+            TestClientHelper testClientHelper) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -112,6 +115,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
+        this.testClientHelper = testClientHelper;
     }
 
     public VerifyCodeHandler() {
@@ -127,6 +131,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -139,6 +144,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     @Override
@@ -531,7 +537,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientId,
                     authSession.getClientName(),
                     levelOfConfidence.getValue(),
-                    clientService.isTestJourney(clientId, authSession.getEmailAddress()),
+                    testClientHelper.isTestJourney(
+                            authSession.getEmailAddress(), configurationService),
                     journeyType,
                     smsMfaMethod != null
                             ? MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType())

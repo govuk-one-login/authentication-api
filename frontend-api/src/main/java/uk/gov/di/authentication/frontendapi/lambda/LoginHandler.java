@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -89,6 +90,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final MFAMethodsService mfaMethodsService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
+    private final TestClientHelper testClientHelper;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -102,7 +104,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             PermissionDecisionManager permissionDecisionManager,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            TestClientHelper testClientHelper) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -118,6 +121,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
+        this.testClientHelper = testClientHelper;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -141,6 +145,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         codeStorageService,
                         this.authSessionService,
                         this.authenticationAttemptsService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -164,6 +169,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         codeStorageService,
                         this.authSessionService,
                         this.authenticationAttemptsService);
+        this.testClientHelper = new TestClientHelper(configurationService);
     }
 
     public LoginHandler() {
@@ -354,7 +360,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     clientId,
                     authSessionItem.getClientName(),
                     "P0",
-                    clientService.isTestJourney(clientId, userProfile.getEmail()));
+                    testClientHelper.isTestJourney(userProfile.getEmail(), configurationService));
 
             if (Objects.isNull(authSessionItem.getAchievedCredentialStrength())
                     || !authSessionItem

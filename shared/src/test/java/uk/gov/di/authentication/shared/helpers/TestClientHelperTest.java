@@ -7,9 +7,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.DecryptionFailureException;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
+import software.amazon.awssdk.services.secretsmanager.model.InvalidParameterException;
+import software.amazon.awssdk.services.secretsmanager.model.InvalidRequestException;
 import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -23,10 +27,14 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -144,7 +152,28 @@ class TestClientHelperTest {
     }
 
     @Test
-    void itShouldFetchTheSecretListFromSecretsManger() {
+    void shouldReturnFalseForAnEmptyList() {
+        assertFalse(
+                TestClientHelper.emailMatchesAllowlist(
+                        TEST_EMAIL_ADDRESS, Collections.emptyList()));
+        assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
+    }
+
+    @Test
+    void itShouldNotCallSecretsManagerIfTestClientsDisabled() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(false);
+        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
+
+        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+
+        verify(mockedSecretsManagerClient, never())
+                .getSecretValue(any(GetSecretValueRequest.class));
+    }
+
+    @Test
+    void itShouldCacheTheSecretsManagerResponse() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
@@ -156,30 +185,46 @@ class TestClientHelperTest {
                                 .build());
 
         var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
+        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        // Call again to check previous result cached
+        testClientHelper.isTestJourney(buildUserContext(), configurationService);
 
-        assertEquals(
-                ALLOWLIST,
-                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+        verify(mockedSecretsManagerClient, times(1))
+                .getSecretValue(any(GetSecretValueRequest.class));
     }
 
-    @Test
-    void itShouldReturnAnEmptyListForResourceNotFoundException() {
+    @ParameterizedTest
+    @ValueSource(
+            classes = {
+                ResourceNotFoundException.class,
+                DecryptionFailureException.class,
+                InvalidRequestException.class,
+                InvalidParameterException.class
+            })
+    void shouldReturnFalseForARangeOfMisconfigurationErrors(Class<SecretsManagerException> clazz) {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
-                .thenThrow(ResourceNotFoundException.class);
+                .thenThrow(clazz);
 
         var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
 
-        assertEquals(
-                List.of(),
-                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Exception when attempting to fetch allow list from secrets manager. Returning empty list.")));
+        verify(mockedSecretsManagerClient, times(1))
+                .getSecretValue(any(GetSecretValueRequest.class));
     }
 
     @Test
-    void itShouldReturnAnEmptyListForNullSecretValue() {
+    void itShouldReturnFalseForNullSecretValue() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
@@ -189,13 +234,19 @@ class TestClientHelperTest {
 
         var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
 
-        assertEquals(
-                List.of(),
-                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Test client allow list secret string is null or empty")));
+        verify(mockedSecretsManagerClient, times(1))
+                .getSecretValue(any(GetSecretValueRequest.class));
     }
 
     @Test
     void itShouldReturnAnEmptyListForEmptySecretValue() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
@@ -205,9 +256,14 @@ class TestClientHelperTest {
 
         var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
 
-        assertEquals(
-                List.of(),
-                testClientHelper.getEmailAllowListFromSecretsManager(configurationService));
+        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Test client allow list secret string is null or empty")));
+        verify(mockedSecretsManagerClient, times(1))
+                .getSecretValue(any(GetSecretValueRequest.class));
     }
 
     private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {
@@ -219,5 +275,10 @@ class TestClientHelperTest {
                         .withTestClientEmailAllowlist(allowedEmails);
         var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
         return UserContext.builder(authSession).withClient(clientRegistry).build();
+    }
+
+    private UserContext buildUserContext() {
+        var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
+        return UserContext.builder(authSession).build();
     }
 }
