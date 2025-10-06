@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -56,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
@@ -347,7 +349,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         LOG.info(
-                "User has successfully logged in with MFAType: {}. MFAVerified: {}",
+                "User has submitted a correct password. They have a default MFAType of {}, MFAVerified: {}.",
                 userMfaDetail.mfaMethodType().getValue(),
                 userMfaDetail.mfaMethodVerified());
 
@@ -404,12 +406,30 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var defaultMfaMethod =
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
-        if (userMfaDetail.isMfaRequired() && defaultMfaMethod.isPresent()) {
-            Optional<ErrorResponse> codeBlocks =
-                    checkMfaCodeBlocks(journeyType, userPermissionContext);
+        if (userMfaDetail.isMfaRequired()) {
+            if (defaultMfaMethod.isPresent()) {
+                Optional<ErrorResponse> codeBlocks =
+                        checkMfaCodeBlocks(journeyType, userPermissionContext);
 
-            if (codeBlocks.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
+                if (codeBlocks.isPresent()) {
+                    return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
+                }
+            } else if (!retrievedMfaMethods.isEmpty()) {
+                var mfaMethodCount = retrievedMfaMethods.size();
+                var mfaMethodPrioritiesForUser =
+                        retrievedMfaMethods.stream()
+                                .map(MFAMethod::getPriority)
+                                .collect(Collectors.joining(", "));
+
+                LOG.error(
+                        "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. User will be prompted to add an MFA method. User MFA method count: {}, MFA method priorities: {}. userMfaDetail.mfaMethodType(): {}",
+                        mfaMethodCount,
+                        mfaMethodPrioritiesForUser,
+                        userMfaDetail.mfaMethodType().getValue());
+            } else {
+                LOG.info(
+                        "User has no MFA methods, but session requires MFA. This may be a partially created account. User will be prompted to add an MFA method. userMfaDetail.mfaMethodType(): {}",
+                        userMfaDetail.mfaMethodType().getValue());
             }
         }
 
