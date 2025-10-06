@@ -541,7 +541,7 @@ public class DynamoService implements AuthenticationService {
     public UserProfile getUserProfileFromSubject(String subject) {
         Optional<UserProfile> userProfile = getOptionalUserProfileFromSubject(subject);
         if (userProfile.isEmpty()) {
-            throw new RuntimeException("No userCredentials found with query search");
+            throw new RuntimeException("No userProfile found with query search");
         }
         return userProfile.get();
     }
@@ -563,6 +563,9 @@ public class DynamoService implements AuthenticationService {
     public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+
+        // NOTE: We can't perform a strongly consistent read here as we are operating on a global
+        // secondary index (which is eventually consistent).
         QueryEnhancedRequest queryEnhancedRequest =
                 QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
         return dynamoUserProfileTable.index("SubjectIDIndex").query(queryEnhancedRequest).stream()

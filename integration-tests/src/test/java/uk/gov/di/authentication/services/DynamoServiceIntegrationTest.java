@@ -707,7 +707,7 @@ class DynamoServiceIntegrationTest {
         assertThrows(
                 RuntimeException.class,
                 () -> dynamoService.getUserProfileFromSubject("NonExistentUser"),
-                "No userCredentials found with query search");
+                "No userProfile found with query search");
     }
 
     @Test
