@@ -15,3 +15,6 @@ cloudwatch_log_retention = 30
 
 # Performance Tuning
 snapstart_enabled = true
+
+# FMS
+api_fms_tag_value = "authfrontendprod"

@@ -86,6 +86,16 @@ Resources:
       RestApiId: !Ref AuthExternalApi
       StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
+      Tags:
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendApiFMSTagValue,
+            ]
 
   AuthExternalApiAccessLogGroup:
     Type: AWS::Logs::LogGroup

@@ -16,3 +16,6 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # Performance Tuning
 snapstart_enabled = true
+
+# FMS
+api_fms_tag_value = "authfrontendstaging"
