@@ -299,7 +299,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                                 Instant.now()
                                         .plusSeconds(configurationService.getLockoutDuration()),
                                 false,
-                                reauthCounts));
+                                reauthCounts,
+                                blockedCountTypes));
             }
         }
         return Result.success(new Decision.Permitted(0));
