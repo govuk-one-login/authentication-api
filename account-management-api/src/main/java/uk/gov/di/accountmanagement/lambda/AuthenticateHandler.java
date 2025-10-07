@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
+import uk.gov.di.accountmanagement.entity.TargetAction;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AccountInterventionsInboundResponse;
@@ -30,11 +31,13 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(AuthenticateHandler.class);
+    public static final String TARGET_ACTION = "target_action";
 
     private final AuthenticationService authenticationService;
     private final Json objectMapper = SerializationService.getInstance();
@@ -166,7 +169,12 @@ public class AuthenticateHandler
             auditService.submitAuditEvent(
                     AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                     auditContext,
-                    AUDIT_EVENT_COMPONENT_ID_AUTH);
+                    AUDIT_EVENT_COMPONENT_ID_AUTH,
+                    pair(
+                            TARGET_ACTION,
+                            Optional.ofNullable(loginRequest.getTargetAction())
+                                    .map(TargetAction::getValue)
+                                    .orElse(AuditService.UNKNOWN)));
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {

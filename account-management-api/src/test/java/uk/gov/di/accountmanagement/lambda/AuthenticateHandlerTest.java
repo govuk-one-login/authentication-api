@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.TargetAction;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.*;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.*;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -111,21 +113,41 @@ class AuthenticateHandlerTest {
                                 new Intervention(1L), new State(false, false, false, false)));
     }
 
-    @Test
-    void shouldReturn204IfLoginIsSuccessful() {
+    private static Stream<Arguments> targetActionValue() {
+        return Stream.of(
+                Arguments.of("not-a-valid-target-action"),
+                Arguments.of(TargetAction.DELETE_ACCOUNT.getValue()),
+                Arguments.of(TargetAction.UPDATE_EMAIL.getValue()),
+                Arguments.of(TargetAction.UPDATE_PASSWORD.getValue()),
+                Arguments.of(TargetAction.UPDATE_MFA.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("targetActionValue")
+    void shouldReturn204IfLoginIsSuccessful(String targetActionValue) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"target_action\": \"%s\" }",
+                        PASSWORD, EMAIL, targetActionValue));
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
 
+        String expectedAuditValue =
+                "not-a-valid-target-action".equals(targetActionValue)
+                        ? AuditService.UNKNOWN
+                        : targetActionValue;
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("target_action", expectedAuditValue));
     }
 
     @Test
@@ -147,7 +169,8 @@ class AuthenticateHandlerTest {
                                 .withClientSessionId("unknown")
                                 .withSubjectId(clientSubjectId)
                                 .withTxmaAuditEncoded(Optional.empty()),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("target_action", AuditService.UNKNOWN));
     }
 
     @Test
@@ -289,7 +312,8 @@ class AuthenticateHandlerTest {
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH);
+                        AUDIT_EVENT_COMPONENT_ID_AUTH,
+                        pair("target_action", AuditService.UNKNOWN));
     }
 
     @Test
