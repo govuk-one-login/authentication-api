@@ -138,7 +138,6 @@ class StartHandlerTest {
                         startService,
                         authSessionService,
                         configurationService,
-                        authenticationAttemptsService,
                         cloudwatchMetricsService,
                         permissionDecisionManager);
     }
@@ -872,8 +871,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(authSessionService)
-                .getUpdatedPreviousSessionOrCreateNew(
-                        eq(Optional.of(previousSessionId)), eq(SESSION_ID));
+                .getUpdatedPreviousSessionOrCreateNew(Optional.of(previousSessionId), SESSION_ID);
     }
 
     @Test
@@ -888,7 +886,7 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(authSessionService)
-                .getUpdatedPreviousSessionOrCreateNew(eq(Optional.empty()), eq(SESSION_ID));
+                .getUpdatedPreviousSessionOrCreateNew(Optional.empty(), SESSION_ID);
     }
 
     @Test
@@ -903,6 +901,6 @@ class StartHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(authSessionService)
-                .getUpdatedPreviousSessionOrCreateNew(eq(Optional.empty()), eq(SESSION_ID));
+                .getUpdatedPreviousSessionOrCreateNew(Optional.empty(), SESSION_ID);
     }
 }

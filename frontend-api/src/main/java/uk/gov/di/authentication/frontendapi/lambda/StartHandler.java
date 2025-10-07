@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -73,7 +72,6 @@ public class StartHandler
     private final StartService startService;
     private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final Json objectMapper = SerializationService.getInstance();
@@ -83,22 +81,18 @@ public class StartHandler
             StartService startService,
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             CloudwatchMetricsService cloudwatchMetricsService,
             PermissionDecisionManager permissionDecisionManager) {
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public StartHandler(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.startService = new StartService(new DynamoService(configurationService));
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
