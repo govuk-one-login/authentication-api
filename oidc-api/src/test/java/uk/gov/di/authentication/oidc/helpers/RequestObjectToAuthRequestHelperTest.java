@@ -157,7 +157,7 @@ class RequestObjectToAuthRequestHelperTest {
                   "rp_sid": "test-rp-sid",
                   "ui_locales": "en",
                   "vtr": ["Cl.Cm.P2"],
-                  "scope": "openid,email",
+                                  "scope": "openid email",
                   "claims": {
                     "userinfo": {
                       "https://vocab.account.gov.uk/v1/coreIdentityJWT": null,
