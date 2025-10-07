@@ -189,8 +189,7 @@ class UpdateEmailHandlerTest {
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                             AuditService.MetadataPair.pair(
-                                    "assessment_checked_at_timestamp", mockedTimestamp),
-                            AuditService.MetadataPair.pair("iss", "AUTH"));
+                                    "assessment_checked_at_timestamp", mockedTimestamp));
         }
     }
 
