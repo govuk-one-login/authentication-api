@@ -27,7 +27,7 @@ public class TestUserHelper {
     private SecretsManagerClient secretsManagerClient;
     private final ConfigurationService configurationService;
     private SecretCache<List<String>> cachedSecret;
-    private final int timeToLiveInSeconds = 300;
+    private static final int timeToLiveInSeconds = 300;
 
     public TestUserHelper(ConfigurationService configurationService) {
         this.configurationService = configurationService;
