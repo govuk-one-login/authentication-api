@@ -26,13 +26,13 @@ paths:
                 summary: Authenticate user with optional target action
                 value:
                   email: "user@example.gov.uk"
-                  password: "password123"
+                  password: "<PASSWORD>"
                   postAuthAction: "UPDATE_EMAIL"
               authenticate-request-no-target-action:
                 summary: Authenticate user request with no target action for backwards compatability
                 value:
                   email: "user@example.gov.uk"
-                  password: "password123"
+                  password: "<PASSWORD>"
         required: true
       responses:
         "204":
@@ -226,7 +226,7 @@ paths:
                       priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
                 get-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
@@ -241,7 +241,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -349,7 +349,7 @@ paths:
                         "method":
                           {
                             "mfaMethodType": "AUTH_APP",
-                            "credential": "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+                            "credential": "<CREDENTIAL_VALUE>",
                           },
                       },
                   }
@@ -388,7 +388,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "postAAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "post<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -553,7 +553,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
                 put-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method after update
@@ -568,7 +568,7 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                        credential: "<CREDENTIAL_VALUE>"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -830,7 +830,7 @@ components:
         priorityIdentifier: DEFAULT
         method:
           mfaMethodType: AUTH_APP
-          credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+          credential: "<CREDENTIAL_VALUE>"
 
     MfaMethodUpdate:
       required:
@@ -861,7 +861,7 @@ components:
           priorityIdentifier: DEFAULT
           method:
             mfaMethodType: AUTH_APP
-            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+            credential: "<CREDENTIAL_VALUE>"
 
     MfaMethodUpdateRequest:
       required:
@@ -875,7 +875,7 @@ components:
           priorityIdentifier: DEFAULT
           method:
             mfaMethodType: AUTH_APP
-            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+            credential: "<CREDENTIAL_VALUE>"
 
     SimpleError:
       type: object
@@ -1222,7 +1222,7 @@ components:
         password:
           type: string
           description: The user's password
-          example: "password123"
+          example: "<PASSWORD>"
         postAuthAction:
           type: string
           enum:
@@ -1233,7 +1233,7 @@ components:
           example: "UPDATE_EMAIL"
       example:
         email: "user@example.gov.uk"
-        password: "password123"
+        password: "<PASSWORD>"
         postAuthAction: "UPDATE_EMAIL"
 
   securitySchemes:
