@@ -1092,6 +1092,14 @@ components:
           example:
             code: 1080
             message: "Default method already exists, new one cannot be created."
+    UserAccountSuspended:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [ 1083 ]
     UserAccountBlocked:
       allOf:
         - $ref: "#/components/schemas/SimpleError"
