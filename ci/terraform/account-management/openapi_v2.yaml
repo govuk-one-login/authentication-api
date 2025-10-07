@@ -227,7 +227,7 @@ paths:
                       priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: AUTH_APP
-                        credential: "<CREDENTIAL_VALUE>"
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
                 get-when-user-with-multiple-mfa-types-default-sms:
                   summary: a user with a default mfa method of SMS, and a backup auth app method
