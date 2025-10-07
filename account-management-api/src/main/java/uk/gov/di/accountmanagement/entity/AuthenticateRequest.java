@@ -11,6 +11,8 @@ public class AuthenticateRequest {
 
     @Expose private PostAuthAction postAuthAction;
 
+    @Expose private ActionSource actionSource;
+
     public AuthenticateRequest() {}
 
     public AuthenticateRequest(String email, String password) {
@@ -28,5 +30,9 @@ public class AuthenticateRequest {
 
     public PostAuthAction getPostAuthAction() {
         return postAuthAction;
+    }
+
+    public ActionSource getActionSource() {
+        return actionSource;
     }
 }
