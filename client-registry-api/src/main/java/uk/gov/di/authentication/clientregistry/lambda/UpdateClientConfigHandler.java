@@ -105,7 +105,7 @@ public class UpdateClientConfigHandler
                         400, errorResponse.get().toJSONObject().toJSONString());
             }
             ClientRegistry clientRegistry =
-                    clientService.updateClient(clientId, updateClientConfigRequest);
+                    clientService.updateSSEClient(clientId, updateClientConfigRequest);
             ClientRegistrationResponse clientRegistrationResponse =
                     new ClientRegistrationResponse(
                             clientRegistry.getClientName(),

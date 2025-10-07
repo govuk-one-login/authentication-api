@@ -6,6 +6,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ManualUpdateClientRegistryRequest;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -119,7 +120,8 @@ public class DynamoClientService implements ClientService {
     }
 
     @Override
-    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
+    public ClientRegistry updateSSEClient(
+            String clientId, UpdateClientConfigRequest updateRequest) {
         ClientRegistry clientRegistry =
                 dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
         Optional.ofNullable(updateRequest.getRedirectUris())
@@ -158,6 +160,20 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withPKCEEnforced);
         Optional.ofNullable(updateRequest.getLandingPageUrl())
                 .ifPresent(clientRegistry::withLandingPageUrl);
+        dynamoClientRegistryTable.putItem(clientRegistry);
+        return clientRegistry;
+    }
+
+    @Override
+    public ClientRegistry manualUpdateClient(
+            String clientId, ManualUpdateClientRegistryRequest updateRequest) {
+        ClientRegistry clientRegistry =
+                dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
+        Optional.ofNullable(updateRequest.rateLimit())
+                .ifPresent(
+                        rateLimit ->
+                                clientRegistry.withRateLimit(
+                                        rateLimit.isBlank() ? null : Integer.parseInt(rateLimit)));
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
