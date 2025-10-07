@@ -1,7 +1,7 @@
 openapi: "3.0.1"
 info:
   title: "auth-account-management-method-management-api"
-  version: 1.0.2
+  version: 1.1.0
   description: Auth Account Management API
 servers:
   - url: "https://localhost:8080/"
@@ -16,6 +16,24 @@ paths:
         uri: "${endpoint_modules.authenticate.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateRequest"
+            examples:
+              authenticate-request:
+                summary: Authenticate user with optional target action
+                value:
+                  email: "user@example.gov.uk"
+                  password: "password123"
+                  postAuthAction: "UPDATE_EMAIL"
+              authenticate-request-no-target-action:
+                summary: Authenticate user request with no target action for backwards compatability
+                value:
+                  email: "user@example.gov.uk"
+                  password: "password123"
+        required: true
       responses:
         "204":
           description: Successful Operation. The password is correct for this user.
@@ -1099,7 +1117,7 @@ components:
           properties:
             code:
               type: integer
-              enum: [ 1083 ]
+              enum: [1083]
     UserAccountBlocked:
       allOf:
         - $ref: "#/components/schemas/SimpleError"
@@ -1190,6 +1208,33 @@ components:
           example:
             code: 1089
             message: "Email address is denied"
+    AuthenticateRequest:
+      required:
+        - email
+        - password
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's email address
+          example: "user@example.gov.uk"
+        password:
+          type: string
+          description: The user's password
+          example: "password123"
+        postAuthAction:
+          type: string
+          enum:
+            - UPDATE_EMAIL
+            - UPDATE_PASSWORD
+            - DELETE_ACCOUNT
+          description: Optional field indicating the user's intended action
+          example: "UPDATE_EMAIL"
+      example:
+        email: "user@example.gov.uk"
+        password: "password123"
+        postAuthAction: "UPDATE_EMAIL"
 
   securitySchemes:
     authorise-access-token:
