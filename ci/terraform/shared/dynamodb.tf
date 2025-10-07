@@ -585,17 +585,10 @@ data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
         identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
         type        = "AWS"
       }
-      actions = [
-        "dynamodb:BatchGetItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:PutResourcePolicy",
-        "dynamodb:DeleteResourcePolicy"
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
       ]
       resources = ["*"]
       condition {
@@ -641,17 +634,10 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
         identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
         type        = "AWS"
       }
-      actions = [
-        "dynamodb:BatchGetItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:PutResourcePolicy",
-        "dynamodb:DeleteResourcePolicy"
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
       ]
       resources = ["*"]
       condition {
@@ -821,17 +807,10 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
         identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
         type        = "AWS"
       }
-      actions = [
-        "dynamodb:BatchGetItem",
-        "dynamodb:GetItem",
-        "dynamodb:Query",
-        "dynamodb:Scan",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:PutResourcePolicy",
-        "dynamodb:DeleteResourcePolicy"
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
       ]
       resources = ["*"]
       condition {
