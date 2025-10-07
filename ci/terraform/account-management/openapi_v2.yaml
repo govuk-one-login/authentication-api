@@ -23,11 +23,12 @@ paths:
               $ref: "#/components/schemas/AuthenticateRequest"
             examples:
               authenticate-request:
-                summary: Authenticate user with optional target action
+                summary: Authenticate user with optional target action and action source
                 value:
                   email: "user@example.gov.uk"
                   password: "<PASSWORD>"
                   targetAction: "UPDATE_EMAIL"
+                  actionSource: "ACCOUNT_MANAGEMENT"
               authenticate-request-no-target-action:
                 summary: Authenticate user request with no target action for backwards compatability
                 value:
@@ -1231,10 +1232,18 @@ components:
             - DELETE_ACCOUNT
           description: Optional field indicating the user's intended action
           example: "UPDATE_EMAIL"
+        actionSource:
+          type: string
+          enum:
+            - ACCOUNT_MANAGEMENT
+            - ACCOUNT_COMPONENTS
+          description: Optional field indicating the source of the action
+          example: "ACCOUNT_MANAGEMENT"
       example:
         email: "user@example.gov.uk"
         password: "<PASSWORD>"
         targetAction: "UPDATE_EMAIL"
+        actionSource: "ACCOUNT_MANAGEMENT"
 
   securitySchemes:
     authorise-access-token:

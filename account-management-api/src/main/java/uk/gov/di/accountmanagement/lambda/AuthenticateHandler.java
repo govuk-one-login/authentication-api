@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.ActionSource;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.accountmanagement.entity.TargetAction;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
@@ -38,6 +39,7 @@ public class AuthenticateHandler
 
     private static final Logger LOG = LogManager.getLogger(AuthenticateHandler.class);
     public static final String TARGET_ACTION = "target_action";
+    public static final String ACTION_SOURCE = "action_source";
 
     private final AuthenticationService authenticationService;
     private final Json objectMapper = SerializationService.getInstance();
@@ -174,6 +176,11 @@ public class AuthenticateHandler
                             TARGET_ACTION,
                             Optional.ofNullable(loginRequest.getTargetAction())
                                     .map(TargetAction::getValue)
+                                    .orElse(AuditService.UNKNOWN)),
+                    pair(
+                            ACTION_SOURCE,
+                            Optional.ofNullable(loginRequest.getActionSource())
+                                    .map(ActionSource::getValue)
                                     .orElse(AuditService.UNKNOWN)));
 
             return generateEmptySuccessApiGatewayResponse();

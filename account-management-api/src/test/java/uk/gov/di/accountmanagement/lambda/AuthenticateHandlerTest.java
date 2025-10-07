@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.accountmanagement.entity.ActionSource;
 import uk.gov.di.accountmanagement.entity.TargetAction;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
@@ -113,41 +114,57 @@ class AuthenticateHandlerTest {
                                 new Intervention(1L), new State(false, false, false, false)));
     }
 
-    private static Stream<Arguments> targetActionValue() {
-        return Stream.of(
-                Arguments.of("not-a-valid-target-action"),
-                Arguments.of(TargetAction.DELETE_ACCOUNT.getValue()),
-                Arguments.of(TargetAction.UPDATE_EMAIL.getValue()),
-                Arguments.of(TargetAction.UPDATE_PASSWORD.getValue()),
-                Arguments.of(TargetAction.UPDATE_MFA.getValue()));
+    private static Stream<Arguments> targetActionAndSourceValues() {
+        var targetActions =
+                java.util.List.of(
+                        "not-a-valid-target-action",
+                        TargetAction.DELETE_ACCOUNT.getValue(),
+                        TargetAction.UPDATE_EMAIL.getValue(),
+                        TargetAction.UPDATE_PASSWORD.getValue(),
+                        TargetAction.UPDATE_MFA.getValue());
+        var actionSources =
+                java.util.List.of(
+                        "not-a-valid-action-source",
+                        ActionSource.ACCOUNT_MANAGEMENT.getValue(),
+                        ActionSource.ACCOUNT_COMPONENTS.getValue());
+        return targetActions.stream()
+                .flatMap(
+                        target ->
+                                actionSources.stream().map(source -> Arguments.of(target, source)));
     }
 
     @ParameterizedTest
-    @MethodSource("targetActionValue")
-    void shouldReturn204IfLoginIsSuccessful(String targetActionValue) {
+    @MethodSource("targetActionAndSourceValues")
+    void shouldReturn204IfLoginIsSuccessful(String targetActionValue, String actionSourceValue) {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         event.setBody(
                 format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"target_action\": \"%s\" }",
-                        PASSWORD, EMAIL, targetActionValue));
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"target_action\": \"%s\", \"action_source\": \"%s\" }",
+                        PASSWORD, EMAIL, targetActionValue, actionSourceValue));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
 
-        String expectedAuditValue =
+        String expectedTargetActionAuditValue =
                 "not-a-valid-target-action".equals(targetActionValue)
                         ? AuditService.UNKNOWN
                         : targetActionValue;
+        String expectedActionSourceAuditValue =
+                "not-a-valid-action-source".equals(actionSourceValue)
+                        ? AuditService.UNKNOWN
+                        : actionSourceValue;
+
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
                         AUDIT_EVENT_COMPONENT_ID_AUTH,
-                        pair("target_action", expectedAuditValue));
+                        pair("target_action", expectedTargetActionAuditValue),
+                        pair("action_source", expectedActionSourceAuditValue));
     }
 
     @Test
@@ -170,7 +187,8 @@ class AuthenticateHandlerTest {
                                 .withSubjectId(clientSubjectId)
                                 .withTxmaAuditEncoded(Optional.empty()),
                         AUDIT_EVENT_COMPONENT_ID_AUTH,
-                        pair("target_action", AuditService.UNKNOWN));
+                        pair("target_action", AuditService.UNKNOWN),
+                        pair("action_source", AuditService.UNKNOWN));
     }
 
     @Test
@@ -313,7 +331,8 @@ class AuthenticateHandlerTest {
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withSubjectId(clientSubjectId),
                         AUDIT_EVENT_COMPONENT_ID_AUTH,
-                        pair("target_action", AuditService.UNKNOWN));
+                        pair("target_action", AuditService.UNKNOWN),
+                        pair("action_source", AuditService.UNKNOWN));
     }
 
     @Test
