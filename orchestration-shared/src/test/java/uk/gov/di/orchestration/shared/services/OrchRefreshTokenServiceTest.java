@@ -1,0 +1,211 @@
+package uk.gov.di.orchestration.shared.services;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
+import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshTokenItem> {
+
+    private static final String JWT_ID = "test-jwt-id";
+    private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "test-internal-pairwise-subject-id";
+    private static final String TOKEN = "test-token";
+    private static final String AUTH_CODE = "test-auth-code";
+    private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
+    private static final boolean IS_USED = false;
+
+    private final DynamoDbTable<OrchRefreshTokenItem> table = mock(DynamoDbTable.class);
+    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
+    private OrchRefreshTokenService orchRefreshTokenService;
+
+    @BeforeEach
+    void setup() {
+        orchRefreshTokenService = new OrchRefreshTokenService(dynamoDbClient, table);
+    }
+
+    @Test
+    void shouldStoreOrchRefreshTokenItem() {
+        orchRefreshTokenService.saveRefreshToken(
+                JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE);
+
+        var orchRefreshTokenItemCaptor = ArgumentCaptor.forClass(OrchRefreshTokenItem.class);
+        verify(table).putItem(orchRefreshTokenItemCaptor.capture());
+        var capturedRequest = orchRefreshTokenItemCaptor.getValue();
+
+        assertOrchRefreshTokenItemMatchesExpected(capturedRequest);
+    }
+
+    @Test
+    void shouldThrowWhenFailsToStoreOrchRefreshToken() {
+        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
+                .when(table)
+                .putItem(any(OrchRefreshTokenItem.class));
+
+        var exception =
+                assertThrows(
+                        OrchRefreshTokenException.class,
+                        () ->
+                                orchRefreshTokenService.saveRefreshToken(
+                                        JWT_ID, INTERNAL_PAIRWISE_SUBJECT_ID, TOKEN, AUTH_CODE));
+        assertEquals("Failed to save Orch refresh token item to Dynamo", exception.getMessage());
+    }
+
+    @Test
+    void shouldGetOrchRefreshTokenForJwtId() {
+        var orchRefreshTokenItem =
+                new OrchRefreshTokenItem()
+                        .withJwtId(JWT_ID)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                        .withToken(TOKEN)
+                        .withAuthCode(AUTH_CODE);
+
+        when(table.getItem(getRequestFor(JWT_ID))).thenReturn(orchRefreshTokenItem);
+
+        var actualOrchRefreshToken = orchRefreshTokenService.getRefreshToken(JWT_ID);
+
+        assertTrue(actualOrchRefreshToken.isPresent());
+        assertOrchRefreshTokenItemMatchesExpected(actualOrchRefreshToken.get());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenNoRefreshTokenForJwtId() {
+        when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
+
+        var actualOrchRefreshToken = orchRefreshTokenService.getRefreshToken(JWT_ID);
+
+        assertTrue(actualOrchRefreshToken.isEmpty());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenRefreshTokenIsAlreadyUsed() {
+        var orchRefreshTokenItem =
+                new OrchRefreshTokenItem()
+                        .withJwtId(JWT_ID)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                        .withToken(TOKEN)
+                        .withAuthCode(AUTH_CODE);
+        orchRefreshTokenItem.setIsUsed(true);
+
+        when(table.getItem(getRequestFor(JWT_ID))).thenReturn(orchRefreshTokenItem);
+
+        var actualOrchRefreshToken = orchRefreshTokenService.getRefreshToken(JWT_ID);
+
+        assertTrue(actualOrchRefreshToken.isEmpty());
+    }
+
+    @Test
+    void shouldThrowWhenFailsToGetOrchRefreshToken() {
+        doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
+                .when(table)
+                .getItem(any(GetItemEnhancedRequest.class));
+
+        var exception =
+                assertThrows(
+                        OrchRefreshTokenException.class,
+                        () -> orchRefreshTokenService.getRefreshToken(JWT_ID));
+        assertEquals("Failed to get Orch refresh token from Dynamo", exception.getMessage());
+    }
+
+    @Test
+    void shouldGetOrchRefreshTokenForAuthCode() {
+        var orchRefreshTokenItem =
+                new OrchRefreshTokenItem()
+                        .withJwtId(JWT_ID)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                        .withToken(TOKEN)
+                        .withAuthCode(AUTH_CODE);
+
+        var spyService = spy(orchRefreshTokenService);
+        doReturn(List.of(orchRefreshTokenItem))
+                .when(spyService)
+                .queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+
+        var actualOrchRefreshToken = spyService.getRefreshTokenForAuthCode(AUTH_CODE);
+
+        assertTrue(actualOrchRefreshToken.isPresent());
+        assertOrchRefreshTokenItemMatchesExpected(actualOrchRefreshToken.get());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenRefreshTokenForAuthCodeIsAlreadyUsed() {
+        var orchRefreshTokenItem =
+                new OrchRefreshTokenItem()
+                        .withJwtId(JWT_ID)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                        .withToken(TOKEN)
+                        .withAuthCode(AUTH_CODE);
+        orchRefreshTokenItem.setIsUsed(true);
+
+        var spyService = spy(orchRefreshTokenService);
+        doReturn(List.of(orchRefreshTokenItem))
+                .when(spyService)
+                .queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+
+        var actualOrchRefreshToken = spyService.getRefreshTokenForAuthCode(AUTH_CODE);
+
+        assertTrue(actualOrchRefreshToken.isEmpty());
+    }
+
+    @Test
+    void shouldReturnEmptyWhenNoRefreshTokenForAuthCode() {
+        var spyService = spy(orchRefreshTokenService);
+        doReturn(List.of()).when(spyService).queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+
+        var actualOrchRefreshToken = spyService.getRefreshTokenForAuthCode(AUTH_CODE);
+
+        assertTrue(actualOrchRefreshToken.isEmpty());
+    }
+
+    @Test
+    void shouldThrowWhenFailsToGetOrchRefreshTokenForAuthCode() {
+        var spyService = spy(orchRefreshTokenService);
+        doThrow(RuntimeException.class).when(spyService).queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+
+        var exception =
+                assertThrows(
+                        OrchRefreshTokenException.class,
+                        () -> orchRefreshTokenService.getRefreshTokenForAuthCode(AUTH_CODE));
+        assertEquals(
+                "Failed to get Orch refresh token from Dynamo for auth code",
+                exception.getMessage());
+    }
+
+    @Test
+    void shouldDeleteOrchRefreshToken() {
+        var orchRefreshTokenItem = new OrchRefreshTokenItem().withJwtId(JWT_ID);
+        when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(orchRefreshTokenItem);
+
+        orchRefreshTokenService.deleteRefreshToken(JWT_ID);
+        var orchRefreshTokenItemCaptor = ArgumentCaptor.forClass(OrchRefreshTokenItem.class);
+        verify(table).deleteItem(orchRefreshTokenItemCaptor.capture());
+        var capturedRequest = orchRefreshTokenItemCaptor.getValue();
+        assertEquals(JWT_ID, capturedRequest.getJwtId());
+    }
+
+    private void assertOrchRefreshTokenItemMatchesExpected(
+            OrchRefreshTokenItem orchRefreshTokenItem) {
+        assertEquals(JWT_ID, orchRefreshTokenItem.getJwtId());
+        assertEquals(
+                INTERNAL_PAIRWISE_SUBJECT_ID, orchRefreshTokenItem.getInternalPairwiseSubjectId());
+        assertEquals(TOKEN, orchRefreshTokenItem.getToken());
+        assertEquals(AUTH_CODE, orchRefreshTokenItem.getAuthCode());
+        assertEquals(IS_USED, orchRefreshTokenItem.getIsUsed());
+    }
+}
