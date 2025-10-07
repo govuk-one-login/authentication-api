@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 import static java.text.MessageFormat.format;
 
@@ -88,26 +87,30 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         queueNameSuffix);
         var truncatedQueueName = queueName.substring(0, Math.min(80, queueName.length()));
-        queueUrl =
-                getQueueUrlFor(truncatedQueueName).orElseGet(() -> createQueue(truncatedQueueName));
-        sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
-    }
 
-    private Optional<String> getQueueUrlFor(String queueName) {
+        // Always create a fresh queue to handle container recreation
+        queueUrl = createQueue(truncatedQueueName);
+
+        // Clear any existing messages
         try {
-            return Optional.of(
-                    sqsClient
-                            .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
-                            .toString());
-        } catch (QueueDoesNotExistException ignored) {
-            return Optional.empty();
+            sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
+        } catch (Exception e) {
+            // Ignore purge errors as queue might be newly created
         }
     }
 
     private String createQueue(String queueName) {
-        return sqsClient
-                .createQueue(CreateQueueRequest.builder().queueName(queueName).build())
-                .queueUrl();
+        try {
+            // Try to get existing queue first
+            return sqsClient
+                    .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
+                    .queueUrl();
+        } catch (QueueDoesNotExistException e) {
+            // Create new queue if it doesn't exist
+            return sqsClient
+                    .createQueue(CreateQueueRequest.builder().queueName(queueName).build())
+                    .queueUrl();
+        }
     }
 
     private List<Message> getMessages(int numberOfMessages) {
