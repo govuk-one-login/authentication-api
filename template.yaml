@@ -2122,6 +2122,7 @@ Resources:
         - !Ref ClientSessionTableWriteAccessPolicy
         - !Ref OrchAuthCodeTableReadAccessPolicy
         - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref RefreshTokenTableReadWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -7063,40 +7064,24 @@ Resources:
       Tags:
         - Key: Name
           Value: RefreshTokenTable
-  RefreshTokenTableReadAccessPolicy:
+  RefreshTokenTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowRefreshTokenTableReadAccess
+          - Sid: AllowRefreshTokenTableReadWriteAccess
             Effect: Allow
             Action:
               - dynamodb:DescribeTable
               - dynamodb:Get*
               - dynamodb:Query
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
             Resource:
               - !Sub ${RefreshTokenTable.Arn}/index/*
               - !GetAtt RefreshTokenTable.Arn
           - Sid: AllowRefreshTokenTableDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:DescribeKey
-            Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
-  RefreshTokenTableWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowRefreshTokenTableWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !GetAtt RefreshTokenTable.Arn
-          - Sid: AllowRefreshTokenTableKeyAccess
             Effect: Allow
             Action:
               - kms:Encrypt
@@ -7104,24 +7089,6 @@ Resources:
               - kms:GenerateDataKey*
               - kms:DescribeKey
             Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
-  RefreshTokenTableDeleteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowRefreshTokenTableDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DeleteItem
-            Resource: !GetAtt RefreshTokenTable.Arn
-          - Sid: AllowRefreshTokenTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:DescribeKey
-            Resource: !GetAtt RefreshTokenTableEncryptionKey.Arn
-
   #endregion
 
   #region IPV token signing key pair
