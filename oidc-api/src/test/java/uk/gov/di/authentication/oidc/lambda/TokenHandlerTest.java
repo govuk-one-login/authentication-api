@@ -65,6 +65,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
@@ -162,6 +163,8 @@ public class TokenHandlerTest {
     private final TokenClientAuthValidator tokenClientAuthValidator =
             mock(TokenClientAuthValidator.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final RedisConnectionService redisConnectionService =
@@ -183,6 +186,7 @@ public class TokenHandlerTest {
                         tokenService,
                         configurationService,
                         orchAuthCodeService,
+                        orchRefreshTokenService,
                         orchClientSessionService,
                         tokenValidationService,
                         redisConnectionService,

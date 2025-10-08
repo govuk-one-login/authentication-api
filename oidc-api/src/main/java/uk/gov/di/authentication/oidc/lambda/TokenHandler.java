@@ -27,9 +27,11 @@ import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
@@ -44,6 +46,7 @@ import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
@@ -86,6 +89,7 @@ public class TokenHandler
     private final TokenService tokenService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OrchClientSessionService orchClientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
@@ -100,6 +104,7 @@ public class TokenHandler
             TokenService tokenService,
             ConfigurationService configurationService,
             OrchAuthCodeService orchAuthCodeService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
             RedisConnectionService redisConnectionService,
@@ -109,6 +114,7 @@ public class TokenHandler
         this.tokenService = tokenService;
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.orchClientSessionService = orchClientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
@@ -124,8 +130,14 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
+                new TokenService(
+                        configurationService,
+                        this.redisConnectionService,
+                        kms,
+                        new OrchRefreshTokenService(configurationService),
+                        oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
@@ -144,10 +156,16 @@ public class TokenHandler
 
         this.configurationService = configurationService;
         this.redisConnectionService = redis;
-        this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
+        this.tokenService =
+                new TokenService(
+                        configurationService,
+                        this.redisConnectionService,
+                        kms,
+                        orchRefreshTokenService,
+                        oidcApi);
         this.tokenValidationService =
                 new TokenValidationService(
                         new JwksService(configurationService, kms), configurationService);
@@ -379,6 +397,23 @@ public class TokenHandler
             LOG.warn("Refresh token store does not contain Refresh token in request");
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
+        // ATO-2014 temporary for testing
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItem = Optional.empty();
+        try {
+            orchRefreshTokenItem = orchRefreshTokenService.getRefreshToken(jti);
+        } catch (OrchRefreshTokenException e) {
+            LOG.warn("Error getting Refresh token from Dynamo");
+        }
+        if (orchRefreshTokenItem.isEmpty()) {
+            LOG.warn("Refresh token not found with given key");
+        } else {
+            if (!orchRefreshTokenItem.get().getToken().equals(currentRefreshToken.getValue())) {
+                LOG.warn("Refresh token dynamo store does not contain Refresh token in request");
+            } else {
+                LOG.info("Refresh token in dynamo matches current refresh token");
+            }
         }
 
         OIDCTokenResponse tokenResponse =

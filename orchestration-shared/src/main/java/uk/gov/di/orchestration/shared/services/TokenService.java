@@ -36,6 +36,7 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
+import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RequestBodyHelper;
@@ -60,6 +61,7 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
@@ -74,10 +76,12 @@ public class TokenService {
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OidcAPI oidcApi) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.oidcApi = oidcApi;
     }
 
@@ -380,6 +384,17 @@ public class TokenService {
                     configService.getSessionExpiry());
         } catch (JsonException e) {
             throw new RuntimeException("Error serializing refresh token store", e);
+        }
+
+        // ATO-2014 Temporary for testing
+        try {
+            orchRefreshTokenService.saveRefreshToken(
+                    jwtId,
+                    internalPairwiseSubject.getValue(),
+                    refreshToken.getValue(),
+                    "auth-code");
+        } catch (OrchRefreshTokenException e) {
+            LOG.warn("Error saving refresh token to Dynamo");
         }
 
         return refreshToken;
