@@ -9,6 +9,8 @@ Resources:
       AutoPublishAlias: active
       CodeUri: ./frontend-api/build/distributions/frontend-api.zip
       Handler: uk.gov.di.authentication.frontendapi.lambda.SmsQuotaMonitorHandler::handleRequest
+      Timeout: 300
+      MemorySize: 512
       Environment:
         Variables:
           ENVIRONMENT: !Sub

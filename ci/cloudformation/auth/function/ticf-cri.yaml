@@ -31,10 +31,6 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/account_created_confirmation_template_id}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          RESET_PASSWORD_TEMPLATE_ID: !Sub
-            - "{{resolve:ssm:/deploy/${env}/reset_password_template_id}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RESET_PASSWORD_WITH_CODE_TEMPLATE_ID: !Sub
             - "{{resolve:ssm:/deploy/${env}/reset_password_with_code_template_id}}"
             - env:

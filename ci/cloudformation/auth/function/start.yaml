@@ -50,6 +50,7 @@ Resources:
             - "https://identity.account.gov.uk"
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           USE_STRONGLY_CONSISTENT_READS:
             !FindInMap [
               EnvironmentConfiguration,
