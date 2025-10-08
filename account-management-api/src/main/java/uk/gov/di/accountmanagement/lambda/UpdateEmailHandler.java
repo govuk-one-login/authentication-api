@@ -194,8 +194,7 @@ public class UpdateEmailHandler
                         pair("journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                         pair(
                                 "assessment_checked_at_timestamp",
-                                NowHelper.toUnixTimestamp(NowHelper.now())),
-                        pair("iss", AuditService.COMPONENT_ID));
+                                NowHelper.toUnixTimestamp(NowHelper.now())));
             }
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
