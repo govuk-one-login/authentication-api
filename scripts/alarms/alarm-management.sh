@@ -174,10 +174,10 @@ init_alarms() {
   # Dynamically discover alarm names to handle P1 prefixes
   local domestic_quota_alarm international_quota_alarm domestic_limit_alarm international_limit_alarm
 
-  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-quota-early-warning')].AlarmName" --output text)
-  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-quota-early-warning')].AlarmName" --output text)
-  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-limit-exceeded')].AlarmName" --output text)
-  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-limit-exceeded')].AlarmName" --output text)
+  domestic_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-quota-early-warning-alarm')].AlarmName" --output text)
+  international_quota_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-quota-early-warning-alarm')].AlarmName" --output text)
+  domestic_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'domestic-sms-limit-exceeded-alarm')].AlarmName" --output text)
+  international_limit_alarm=$(aws cloudwatch describe-alarms --query "MetricAlarms[?starts_with(AlarmName, '${ENVIRONMENT}-') && contains(AlarmName, 'international-sms-limit-exceeded-alarm')].AlarmName" --output text)
 
   if [[ -n ${domestic_quota_alarm} ]]; then
     ALARMS["${domestic_quota_alarm}"]="DomesticSmsQuotaEarlyWarning:Authentication:${domestic_quota_threshold}:DOMESTIC"
@@ -301,7 +301,7 @@ test_alarm() {
     echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to simulate 429 (rate limit exceeded) http status responses from Notify"
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
-      --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=SmsDestinationType,Value=${SMS_TYPE}}]"
+      --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=Application,Value=Authentication},{Name=IsTest,Value=false},{Name=SmsDestinationType,Value=${SMS_TYPE}}]"
     echo "${METRIC_NAME} metric data sent successfully!"
     # Continue to alarm monitoring (don't return early)
   fi
@@ -359,7 +359,7 @@ test_alarm() {
     metric_value=$(aws cloudwatch get-metric-statistics \
       --namespace "${NAMESPACE}" \
       --metric-name "${METRIC_NAME}" \
-      --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=SmsDestinationType,Value="${SMS_TYPE}" \
+      --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=Application,Value=Authentication Name=IsTest,Value=false Name=SmsDestinationType,Value="${SMS_TYPE}" \
       --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
       --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
       --period 300 \

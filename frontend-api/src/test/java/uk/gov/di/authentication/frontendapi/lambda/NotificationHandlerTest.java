@@ -472,8 +472,7 @@ public class NotificationHandlerTest {
         assertEquals(1, response.getBatchItemFailures().size());
 
         verify(cloudwatchMetricsService)
-                .emitSmsLimitExceededMetric(
-                        VERIFY_PHONE_NUMBER, true, AUTHENTICATION, "INTERNATIONAL");
+                .emitSmsLimitExceededMetric(true, AUTHENTICATION, "INTERNATIONAL");
         verify(cloudwatchMetricsService)
                 .emitMetricForNotificationError(
                         VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER, true, AUTHENTICATION, exception);

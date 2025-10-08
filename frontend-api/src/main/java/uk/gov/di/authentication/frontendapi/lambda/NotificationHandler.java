@@ -202,10 +202,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
                                 .orElse("UNKNOWN");
 
                 cloudwatchMetricsService.emitSmsLimitExceededMetric(
-                        request.getNotificationType(),
-                        isTestDestination,
-                        AUTHENTICATION,
-                        destinationType);
+                        isTestDestination, AUTHENTICATION, destinationType);
             }
 
             cloudwatchMetricsService.emitMetricForNotificationError(

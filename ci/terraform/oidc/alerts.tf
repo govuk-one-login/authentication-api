@@ -81,6 +81,8 @@ resource "aws_cloudwatch_metric_alarm" "domestic_sms_limit_exceeded_alarm" {
 
   dimensions = {
     Environment        = var.environment
+    Application        = "Authentication"
+    IsTest             = "false"
     SmsDestinationType = "DOMESTIC"
   }
 
@@ -101,6 +103,8 @@ resource "aws_cloudwatch_metric_alarm" "international_sms_limit_exceeded_alarm" 
 
   dimensions = {
     Environment        = var.environment
+    Application        = "Authentication"
+    IsTest             = "false"
     SmsDestinationType = "INTERNATIONAL"
   }
 
