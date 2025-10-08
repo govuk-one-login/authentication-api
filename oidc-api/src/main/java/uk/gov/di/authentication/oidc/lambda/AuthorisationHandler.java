@@ -307,7 +307,10 @@ public class AuthorisationHandler
         if (isJarValidationRequired && authRequest.getRequestObject() == null) {
             String errorMsg = "JAR required for client but request does not contain Request Object";
             LOG.warn(errorMsg);
-            if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+            if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+                LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
+                return generateBadRequestResponse(user, errorMsg, client.getClientID());
+            } else {
                 LOG.warn("Redirecting");
                 return generateErrorResponse(
                         authRequest.getRedirectionURI(),
@@ -316,9 +319,6 @@ public class AuthorisationHandler
                         new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
                         client.getClientID(),
                         user);
-            } else {
-                LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
-                return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }
         }
 

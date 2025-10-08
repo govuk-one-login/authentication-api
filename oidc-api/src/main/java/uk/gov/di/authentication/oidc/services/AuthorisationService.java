@@ -44,11 +44,11 @@ public class AuthorisationService {
                         .orElseThrow(
                                 () -> new ClientNotFoundException(error.getClientID().getValue()));
 
-        if (client.getRedirectUrls().contains(error.getRedirectionURI().toString())) {
-            throw new InvalidAuthenticationRequestException(error.getErrorObject());
+        if (!client.getRedirectUrls().contains(error.getRedirectionURI().toString())) {
+            LOG.warn("Redirect URI {} is invalid for client", error.getRedirectionURI());
+            throw new IncorrectRedirectUriException(error.getErrorObject());
         }
 
-        LOG.warn("Redirect URI {} is invalid for client", error.getRedirectionURI());
-        throw new IncorrectRedirectUriException(error.getErrorObject());
+        throw new InvalidAuthenticationRequestException(error.getErrorObject());
     }
 }
