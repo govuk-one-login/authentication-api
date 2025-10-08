@@ -19,7 +19,7 @@ dependencies {
             libs.awsSsm,
             libs.awsCloudwatchEmf,
             libs.pactProvider,
-            "org.eclipse.jetty:jetty-server:12.0.24",
+            "org.eclipse.jetty:jetty-server:12.1.1",
             "com.google.code.gson:gson:2.13.2"
 
     implementation project(":orchestration-shared")
