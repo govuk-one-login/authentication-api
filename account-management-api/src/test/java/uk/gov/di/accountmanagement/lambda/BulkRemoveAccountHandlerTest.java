@@ -1,0 +1,303 @@
+package uk.gov.di.accountmanagement.lambda;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
+import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
+import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
+import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
+import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
+import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class BulkRemoveAccountHandlerTest {
+
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final ManualAccountDeletionService manualAccountDeletionService =
+            mock(ManualAccountDeletionService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final Context context = mock(Context.class);
+    private final Json objectMapper = SerializationService.getInstance();
+
+    private BulkRemoveAccountHandler handler;
+
+    @BeforeEach
+    void setUp() {
+        handler =
+                new BulkRemoveAccountHandler(
+                        authenticationService, manualAccountDeletionService, configurationService);
+        when(context.getAwsRequestId()).thenReturn("test-request-id");
+        when(configurationService.isBulkAccountDeletionEnabled()).thenReturn(true);
+    }
+
+    @Nested
+    @DisplayName("Environment Validation")
+    class EnvironmentValidation {
+
+        @Test
+        @DisplayName("Should throw exception when environment is not supported")
+        void shouldThrowExceptionWhenEnvironmentNotSupported() throws Json.JsonException {
+
+            when(configurationService.isBulkAccountDeletionEnabled()).thenReturn(false);
+            String input =
+                    """
+                {
+                    "reference": "123456",
+                    "emails": ["test@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            RuntimeException exception =
+                    assertThrows(
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
+
+            assertTrue(
+                    exception
+                            .getMessage()
+                            .contains("Bulk deletion is not supported in this environment"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Request Validation")
+    class RequestValidation {
+
+        @Test
+        @DisplayName("Should throw exception when reference is empty")
+        void shouldThrowExceptionWhenReferenceIsEmpty() throws Json.JsonException {
+            String input =
+                    """
+                {
+                    "reference": "   ",
+                    "emails": ["test@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            RuntimeException exception =
+                    assertThrows(
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
+
+            assertTrue(
+                    exception
+                            .getCause()
+                            .getMessage()
+                            .contains("Reference cannot be null or empty"));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when emails list is empty")
+        void shouldThrowExceptionWhenEmailsListIsEmpty() throws Json.JsonException {
+            String input =
+                    """
+                {
+                    "reference": "TEST_REF",
+                    "emails": [],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            RuntimeException exception =
+                    assertThrows(
+                            BulkRemoveAccountException.class,
+                            () -> handler.handleRequest(request, context));
+
+            assertTrue(
+                    exception
+                            .getCause()
+                            .getMessage()
+                            .contains("Email list cannot be null or empty"));
+        }
+    }
+
+    @Nested
+    @DisplayName("User Processing")
+    class UserProcessing {
+
+        @Test
+        @DisplayName("Should successfully delete user within date range")
+        void shouldSuccessfullyDeleteUserWithinDateRange() throws Json.JsonException {
+            String input =
+                    """
+                {
+                    "reference": "TEST_REF",
+                    "emails": ["test@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            UserProfile userProfile = createUserProfile("test@example.com", "2024-06-15T12:00:00");
+            DeletedAccountIdentifiers identifiers =
+                    new DeletedAccountIdentifiers("pub123", "leg123", "sub123");
+
+            when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
+                    .thenReturn(Optional.of(userProfile));
+            when(manualAccountDeletionService.manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false))
+                    .thenReturn(identifiers);
+
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+            assertCounts(result, 1, 0, 0, 0);
+            var processedAccountIdentifier = result.processedAccountIdentifiers().get(0);
+            assertNotNull(processedAccountIdentifier.legacySubjectId());
+            assertNotNull(processedAccountIdentifier.publicSubjectId());
+            assertNotNull(processedAccountIdentifier.subjectId());
+
+            verify(manualAccountDeletionService)
+                    .manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+            "2024-05-15T12:00:00, 2024-06-01T00:00:00, 2024-12-31T23:59:59",
+            "2023-12-31T23:59:59, 2024-01-01T00:00:00, 2024-12-31T23:59:59",
+            "2025-01-01T00:00:00, 2024-01-01T00:00:00, 2024-12-31T23:59:59"
+        })
+        @DisplayName("Should filter out user created outside date range")
+        void shouldFilterOutUserCreatedOutsideDateRange(
+                String userCreatedDate, String createdAfter, String createdBefore)
+                throws Json.JsonException {
+            String input =
+                    String.format(
+                            """
+                {
+                    "reference": "TEST_REF",
+                    "emails": ["test@example.com"],
+                    "created_after": "%s",
+                    "created_before": "%s"
+                }
+                """,
+                            createdAfter, createdBefore);
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            UserProfile userProfile = createUserProfile("test@example.com", userCreatedDate);
+
+            when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
+                    .thenReturn(Optional.of(userProfile));
+
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+            assertCounts(result, 0, 0, 0, 1);
+            verify(manualAccountDeletionService, never())
+                    .manuallyDeleteAccount(any(), any(), anyBoolean());
+        }
+
+        @Test
+        @DisplayName("Should handle user not found")
+        void shouldHandleUserNotFound() throws Json.JsonException {
+            String input =
+                    """
+                {
+                    "reference": "TEST_REF",
+                    "emails": ["nonexistent@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            when(authenticationService.getUserProfileByEmailMaybe("nonexistent@example.com"))
+                    .thenReturn(Optional.empty());
+
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+            assertCounts(result, 0, 0, 1, 0);
+            verify(manualAccountDeletionService, never())
+                    .manuallyDeleteAccount(any(), any(), anyBoolean());
+        }
+
+        @Test
+        @DisplayName("Should handle processing failure")
+        void shouldHandleProcessingFailure() throws Json.JsonException {
+            String input =
+                    """
+                {
+                    "reference": "TEST_REF",
+                    "emails": ["test@example.com"],
+                    "created_after": "2024-01-01T00:00:00",
+                    "created_before": "2024-12-31T23:59:59"
+                }
+                """;
+            BulkUserDeleteRequest request =
+                    objectMapper.readValue(input, BulkUserDeleteRequest.class);
+
+            UserProfile userProfile = createUserProfile("test@example.com", "2024-06-01T10:00:00");
+            when(authenticationService.getUserProfileByEmailMaybe("test@example.com"))
+                    .thenReturn(Optional.of(userProfile));
+            when(manualAccountDeletionService.manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false))
+                    .thenThrow(new RuntimeException("Database error"));
+
+            BulkUserDeleteResponse result = handler.handleRequest(request, context);
+
+            assertCounts(result, 0, 1, 0, 0);
+            verify(manualAccountDeletionService)
+                    .manuallyDeleteAccount(
+                            userProfile, AccountDeletionReason.SECURITY_INITIATED, false);
+        }
+    }
+
+    private void assertCounts(
+            BulkUserDeleteResponse result,
+            int processed,
+            int failed,
+            int notFound,
+            int filteredOut) {
+        assertEquals(processed, result.numberProcessed());
+        assertEquals(failed, result.numberFailed());
+        assertEquals(notFound, result.numberNotFound());
+        assertEquals(filteredOut, result.numberFilteredOut());
+        assertEquals(processed, result.processedAccountIdentifiers().size());
+    }
+
+    private UserProfile createUserProfile(String email, String createdDate) {
+        UserProfile userProfile = new UserProfile();
+        userProfile.setEmail(email);
+        userProfile.setCreated(createdDate);
+        userProfile.setSubjectID("subject-123");
+        userProfile.setPublicSubjectID("public-123");
+        userProfile.setLegacySubjectID("legacy-123");
+        return userProfile;
+    }
+}

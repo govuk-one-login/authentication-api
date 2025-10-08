@@ -23,6 +23,7 @@ dependencies {
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray
+    testImplementation libs.jetbrainsKotlin
     testImplementation libs.jacksonDatabind
     testImplementation libs.jsonAssertJ
 
@@ -43,6 +44,7 @@ test {
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
+    environment "SNS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
