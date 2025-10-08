@@ -86,7 +86,6 @@ Resources:
                   OrchApiBaseUrl,
                 ]
           REDIS_KEY: "session"
-          TICF_CRI_LAMBDA_IDENTIFIER: !GetAtt TicfCriFunctionAliasactive.AliasArn
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref ProcessingIdentityFunctionLogGroup
@@ -113,6 +112,13 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Tags:
+        EnforceLambdaDeploymentOrder:
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref TicfCriFunctionAliasactive,
+            "",
+          ]
 
   ProcessingIdentityFunctionPermission:
     Type: AWS::Lambda::Permission
