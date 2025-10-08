@@ -382,6 +382,20 @@ public class AuthorisationHandler
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
+        if (authRequest.getRequestObject() != null) {
+            var requestObjectScopes =
+                    authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("scope");
+            if (requestObjectScopes.contains(",")) {
+                LOG.info(
+                        "Scope parameter in request object contains commas. Client ID: {}",
+                        clientId);
+            }
+        }
+        var queryParamScopes = input.getQueryStringParameters().get("scope");
+        if (queryParamScopes.contains(",")) {
+            LOG.info(
+                    "Scope parameter in query parameters contains commas. Client ID: {}", clientId);
+        }
         try {
             cloudwatchMetricsService.putEmbeddedValue(
                     "rpStateLength",

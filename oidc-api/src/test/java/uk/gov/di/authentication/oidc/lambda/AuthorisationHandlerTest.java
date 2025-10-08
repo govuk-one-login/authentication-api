@@ -886,7 +886,7 @@ class AuthorisationHandlerTest {
                             Map.of(
                                     "client_id", "test-id",
                                     "redirect_uri", "http://localhost:8080",
-                                    "scope", "email,openid,profile",
+                                    "scope", "email openid profile",
                                     "response_type", "code"));
 
             event.setHttpMethod(method);
@@ -1988,7 +1988,7 @@ class AuthorisationHandlerTest {
                             Map.of(
                                     "client_id", "test-id",
                                     "redirect_uri", "http://incorrect-redirect-uri",
-                                    "scope", "email,openid,profile",
+                                    "scope", "email openid profile",
                                     "response_type", "code",
                                     "state", "test-state"));
 
@@ -2232,7 +2232,7 @@ class AuthorisationHandlerTest {
                             Map.of(
                                     "client_id", "test-id",
                                     "redirect_uri", "http://localhost:8080",
-                                    "scope", "email,openid,profile,non-existent-scope",
+                                    "scope", "email openid profile non-existent-scope",
                                     "response_type", "code",
                                     "state", "test-state"));
 

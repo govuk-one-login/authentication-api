@@ -662,7 +662,7 @@ class LogoutServiceTest {
                         "redirect_uri",
                         List.of("http://localhost:8080"),
                         "scope",
-                        List.of("email,openid,profile"),
+                        List.of("email openid profile"),
                         "response_type",
                         List.of("code"),
                         "state",
