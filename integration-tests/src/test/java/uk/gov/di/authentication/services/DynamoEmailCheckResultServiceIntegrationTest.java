@@ -1,7 +1,9 @@
 package uk.gov.di.authentication.services;
 
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -10,8 +12,6 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -35,7 +35,7 @@ class DynamoEmailCheckResultServiceIntegrationTest {
 
     @Test
     void shouldSaveAndReadAnEmailCheckResult() {
-        var testResponseData = CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA;
+        var testResponseData = CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE;
 
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 email,
@@ -55,19 +55,9 @@ class DynamoEmailCheckResultServiceIntegrationTest {
         var responseSection = result.get().getEmailCheckResponse();
         assertNotNull(responseSection);
 
-        var responseMap = (Map<?, ?>) responseSection;
-        assertThat(responseMap.get("testString"), equalTo("testValue1"));
-        assertThat(((Number) responseMap.get("testNumber")).intValue(), equalTo(456));
-        assertThat(responseMap.get("testBoolean"), equalTo(true));
-
-        var testArray = (List<?>) responseMap.get("testArray");
-        assertThat(testArray.size(), equalTo(2));
-        assertThat(testArray.get(0), equalTo("testItem1"));
-        assertThat(testArray.get(1), equalTo("testItem2"));
-
-        var testObject = (Map<?, ?>) responseMap.get("testObject");
-        assertThat(testObject.get("testNestedString"), equalTo("testNestedValue"));
-        assertThat(((Number) testObject.get("testNestedNumber")).intValue(), equalTo(789));
+        EmailCheckResponse responseMap = responseSection;
+        assertThat(responseMap.extensions(), equalTo(JsonParser.parseString(CommonTestVariables.extensionsJsonString)));
+        assertThat(responseMap.restricted(), equalTo(JsonParser.parseString(CommonTestVariables.restrictedJsonString)));
     }
 
     @Test
@@ -80,7 +70,7 @@ class DynamoEmailCheckResultServiceIntegrationTest {
                 unixTimeInThePast,
                 referenceNumber,
                 CommonTestVariables.JOURNEY_ID,
-                CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
+                CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
 
         var result = dynamoEmailCheckResultService.getEmailCheckStore(email);
 

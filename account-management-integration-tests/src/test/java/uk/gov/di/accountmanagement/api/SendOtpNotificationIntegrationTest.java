@@ -85,7 +85,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         unixTimePlusNDays(),
                         "test-reference",
                         CommonTestVariables.JOURNEY_ID,
-                        CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
+                        CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
 
                 Map<String, String> headers = new HashMap<>();
                 headers.put(TXMA_AUDIT_ENCODED_HEADER, "ENCODED_DEVICE_DETAILS");
