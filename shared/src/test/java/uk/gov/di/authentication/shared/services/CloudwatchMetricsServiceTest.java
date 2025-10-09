@@ -306,16 +306,12 @@ class CloudwatchMetricsServiceTest {
                     Mockito.spy(new CloudwatchMetricsService(configurationWithEnvironment("test")));
 
             spyService.emitSmsLimitExceededMetric(
-                    testData.notificationType(),
-                    testData.isTest(),
-                    testData.application(),
-                    testData.destinationType());
+                    testData.isTest(), testData.application(), testData.destinationType());
 
             var expectedDimensions =
                     Map.of(
                             "Environment", "test",
                             "Application", testData.application().getValue(),
-                            "NotificationType", testData.notificationType().toString(),
                             "IsTest", Boolean.toString(testData.isTest()),
                             "SmsDestinationType", testData.destinationType());
 
@@ -325,7 +321,10 @@ class CloudwatchMetricsServiceTest {
         static Stream<SmsLimitTestData> smsLimitExceededTestData() {
             return Stream.of(
                     new SmsLimitTestData(
-                            NotificationType.MFA_SMS, false, Application.AUTHENTICATION, "UK"),
+                            NotificationType.MFA_SMS,
+                            false,
+                            Application.AUTHENTICATION,
+                            "DOMESTIC"),
                     new SmsLimitTestData(
                             NotificationType.VERIFY_PHONE_NUMBER,
                             true,

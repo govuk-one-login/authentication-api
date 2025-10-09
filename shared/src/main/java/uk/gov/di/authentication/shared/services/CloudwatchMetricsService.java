@@ -333,14 +333,13 @@ public class CloudwatchMetricsService {
     }
 
     public void emitSmsLimitExceededMetric(
-            NotifiableType notificationType,
-            Boolean isTestDestination,
-            Application application,
-            String destinationType) {
+            Boolean isTestDestination, Application application, String destinationType) {
         var dimensions =
-                getNotificationBaseMetricDimensions(
-                        notificationType, isTestDestination, application);
-        dimensions.put(SMS_DESTINATION_TYPE.getValue(), destinationType);
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(APPLICATION.getValue(), application.getValue()),
+                        Map.entry(IS_TEST.getValue(), isTestDestination.toString()),
+                        Map.entry(SMS_DESTINATION_TYPE.getValue(), destinationType));
 
         incrementCounter(SMS_LIMIT_EXCEEDED.getValue(), dimensions);
     }
