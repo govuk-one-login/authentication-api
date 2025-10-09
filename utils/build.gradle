@@ -20,7 +20,7 @@ dependencies {
             libs.bundles.xray,
             platform(libs.openTelemetryBom),
             libs.openTelemetryAwsSdk,
-            libs.awsCloudwatch
+            libs.awsCloudwatch,
             libs.gson
 
     runtimeOnly libs.bundles.loggingRuntime

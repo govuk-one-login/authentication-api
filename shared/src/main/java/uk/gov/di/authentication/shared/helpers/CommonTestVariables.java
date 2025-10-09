@@ -85,7 +85,7 @@ public class CommonTestVariables {
                     List.of("testItem1", "testItem2"),
                     "testObject",
                     Map.of("testNestedString", "testNestedValue", "testNestedNumber", 789));
-    public static String extensionsJsonString =
+    public static final String extensionsJsonString =
             """
             {
                 "emailFraudCheckResponse": {
@@ -94,7 +94,7 @@ public class CommonTestVariables {
             }
             """;
 
-    public static String restrictedJsonString =
+    public static final String restrictedJsonString =
             """
             {
                 "domain_name": "digital.cabinet-office.gov.uk"

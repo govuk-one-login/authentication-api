@@ -3,6 +3,8 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -170,7 +173,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldSubmitAuditEventWhenEmailCheckResultRecordDoesNotExist() {
+    void shouldSubmitEmailFraudCheckBypassedAuditEventWhenEmailCheckResultRecordDoesNotExist() {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -206,7 +209,7 @@ class UpdateEmailHandlerTest {
                     capturedEvent.user().persistentSessionId(),
                     is(auditContext.persistentSessionId()));
             assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
-            assertThat(capturedEvent.user().userId(), is(StructuredAuditService.UNKNOWN));
+            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
             assertThat(
                     capturedEvent.extensions().journeyType(),
                     is(JourneyType.REGISTRATION.getValue()));
@@ -225,14 +228,25 @@ class UpdateEmailHandlerTest {
     @MethodSource("successfulEmailCheckResultStatus")
     void shouldSubmitEmailCheckDecisionUsedAuditEventWhenEmailCheckIsPresent(
             EmailCheckResultStatus status) {
+        Gson gson = new Gson();
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
         var resultStore = new EmailCheckResultStore();
-        var mockEmailCheckResponse = new Object();
+        var mockEmailCheckResponse = CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE;
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "some-reference-number",
+                        status.getValue(),
+                        true,
+                        gson.toJsonTree(Map.of("type", "EMAIL_FRAUD_CHECK")));
+        JsonElement expectedRestricted =
+                gson.toJsonTree(Map.of("domain_name", "digital.cabinet-office.gov.uk"));
         resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
         resultStore.setEmailCheckResponse(mockEmailCheckResponse);
         when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(resultStore));
@@ -266,13 +280,9 @@ class UpdateEmailHandlerTest {
                     capturedEvent.user().persistentSessionId(),
                     is(auditContext.persistentSessionId()));
             assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
-            assertThat(capturedEvent.user().userId(), is(StructuredAuditService.UNKNOWN));
-            assertThat(
-                    capturedEvent.extensions().journeyType(),
-                    is(JourneyType.REGISTRATION.getValue()));
-            assertThat(
-                    capturedEvent.extensions().emailFraudCheckResponse(),
-                    is(mockEmailCheckResponse));
+            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
+            assertThat(capturedEvent.extensions(), is(expectedExtensions));
+            assertThat(capturedEvent.restricted(), is(expectedRestricted));
         }
     }
 

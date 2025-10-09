@@ -85,9 +85,9 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                                     EmailCheckResultStatus.PENDING.getValue())));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_BYPASSED);
-            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
+            Map<String, Map<String, Object>> eventExpectations = new HashMap<>();
 
-            Map<String, String> fraudCheckBypassedAttributes = new HashMap<>();
+            Map<String, Object> fraudCheckBypassedAttributes = new HashMap<>();
             fraudCheckBypassedAttributes.put(
                     EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
             fraudCheckBypassedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
@@ -109,7 +109,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     unixTimePlusNDays(1),
                     "test-reference",
                     CommonTestVariables.JOURNEY_ID,
-                    CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
+                    CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
 
             Map<String, String> headers =
                     constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
@@ -129,11 +129,16 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                                     EmailCheckResultStatus.ALLOW.getValue())));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
-            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
-            Map<String, String> fraudCheckDecisionUsedAttributes = new HashMap<>();
+            Map<String, Map<String, Object>> eventExpectations = new HashMap<>();
+            Map<String, Object> fraudCheckDecisionUsedAttributes = new HashMap<>();
             fraudCheckDecisionUsedAttributes.put(
                     EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
             fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+            fraudCheckDecisionUsedAttributes.put("extensions.decision", "ALLOW");
+            fraudCheckDecisionUsedAttributes.put(
+                    "extensions.emailFraudCheckResponse.type", "EMAIL_FRAUD_CHECK");
+            fraudCheckDecisionUsedAttributes.put(
+                    "restricted.domain_name", "digital.cabinet-office.gov.uk");
             eventExpectations.put(
                     AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
 
@@ -152,7 +157,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                     unixTimePlusNDays(1),
                     "test-reference",
                     CommonTestVariables.JOURNEY_ID,
-                    CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
+                    CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
 
             Map<String, String> headers =
                     constructFrontendHeaders(sessionId, CommonTestVariables.CLIENT_SESSION_ID);
@@ -172,11 +177,16 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
                                     EmailCheckResultStatus.DENY.getValue())));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
-            Map<String, Map<String, String>> eventExpectations = new HashMap<>();
-            Map<String, String> fraudCheckDecisionUsedAttributes = new HashMap<>();
+            Map<String, Map<String, Object>> eventExpectations = new HashMap<>();
+            Map<String, Object> fraudCheckDecisionUsedAttributes = new HashMap<>();
             fraudCheckDecisionUsedAttributes.put(
                     EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
             fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+            fraudCheckDecisionUsedAttributes.put("extensions.decision", "DENY");
+            fraudCheckDecisionUsedAttributes.put(
+                    "extensions.emailFraudCheckResponse.type", "EMAIL_FRAUD_CHECK");
+            fraudCheckDecisionUsedAttributes.put(
+                    "restricted.domain_name", "digital.cabinet-office.gov.uk");
             eventExpectations.put(
                     AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
 
@@ -186,18 +196,18 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
 
     private void verifyAuditEvents(
             List<AuditableEvent> expectedEvents,
-            Map<String, Map<String, String>> eventExpectations) {
+            Map<String, Map<String, Object>> eventExpectations) {
         List<String> receivedEvents =
                 assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents, false);
 
-        for (Map.Entry<String, Map<String, String>> eventEntry : eventExpectations.entrySet()) {
+        for (Map.Entry<String, Map<String, Object>> eventEntry : eventExpectations.entrySet()) {
             String eventName = eventEntry.getKey();
-            Map<String, String> attributes = eventEntry.getValue();
+            Map<String, Object> attributes = eventEntry.getValue();
 
             AuditEventExpectation expectation =
                     new AuditEventExpectation(FrontendAuditableEvent.valueOf(eventName));
 
-            for (Map.Entry<String, String> attributeEntry : attributes.entrySet()) {
+            for (Map.Entry<String, Object> attributeEntry : attributes.entrySet()) {
                 expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
             }
 

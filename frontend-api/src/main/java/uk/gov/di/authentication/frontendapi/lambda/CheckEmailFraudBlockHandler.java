@@ -29,6 +29,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResult;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResult;
 
 public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailFraudBlockRequest> {
 
@@ -153,7 +155,13 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                                         input.getHeaders())),
                         new AuthEmailFraudCheckDecisionUsed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
-                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null));
+                                decision_reused ? emailCheckResult.getReferenceNumber() : null,
+                                emailCheckResult.getStatus().name(),
+                                decision_reused,
+                                decision_reused
+                                        ? getEmailFraudCheckResponseJsonFromResult(emailCheckResult)
+                                        : null),
+                        decision_reused ? getRestrictedJsonFromResult(emailCheckResult) : null);
 
         auditService.submitAuditEvent(newAuditEvent);
     }

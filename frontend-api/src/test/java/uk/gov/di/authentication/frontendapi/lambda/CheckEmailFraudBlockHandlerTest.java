@@ -2,6 +2,8 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -33,6 +36,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -121,6 +125,7 @@ class CheckEmailFraudBlockHandlerTest {
 
         var resultStore = new EmailCheckResultStore();
         resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
         usingValidSession();
@@ -141,7 +146,8 @@ class CheckEmailFraudBlockHandlerTest {
     }
 
     @Test
-    void shouldSubmitAuditWithPendingStatusWhenEmailCheckResultStoreNotPresent() {
+    void
+            shouldSubmitEmailFraudCheckBypassedAuditEventWithPendingStatusWhenEmailCheckResultStoreNotPresent() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 getProxyRequestContext();
 
@@ -206,12 +212,22 @@ class CheckEmailFraudBlockHandlerTest {
     @MethodSource("successfulEmailCheckResultStatus")
     void shouldSubmitEmailCheckDecisionUsedAuditEventWhenEmailCheckIsPresent(
             EmailCheckResultStatus status) {
+        Gson gson = new Gson();
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 getProxyRequestContext();
-
         var resultStore = new EmailCheckResultStore();
-        var mockEmailCheckResponse = new Object();
+        var mockEmailCheckResponse = CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE;
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "some-reference-number",
+                        status.getValue(),
+                        true,
+                        gson.toJsonTree(Map.of("type", "EMAIL_FRAUD_CHECK")));
+        JsonElement expectedRestricted =
+                gson.toJsonTree(Map.of("domain_name", "digital.cabinet-office.gov.uk"));
         resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
         resultStore.setEmailCheckResponse(mockEmailCheckResponse);
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
@@ -251,13 +267,8 @@ class CheckEmailFraudBlockHandlerTest {
             assertThat(capturedEvent.user().ipAddress(), is(IP_ADDRESS));
             assertThat(capturedEvent.user().persistentSessionId(), is(DI_PERSISTENT_SESSION_ID));
             assertThat(capturedEvent.user().govukSigninJourneyId(), is(CLIENT_SESSION_ID));
-            assertThat(capturedEvent.user().userId(), is(StructuredAuditService.UNKNOWN));
-            assertThat(
-                    capturedEvent.extensions().journeyType(),
-                    is(JourneyType.REGISTRATION.getValue()));
-            assertThat(
-                    capturedEvent.extensions().emailFraudCheckResponse(),
-                    is(mockEmailCheckResponse));
+            assertThat(capturedEvent.extensions(), is(expectedExtensions));
+            assertThat(capturedEvent.restricted(), is(expectedRestricted));
         }
     }
 

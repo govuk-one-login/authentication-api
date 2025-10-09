@@ -51,6 +51,8 @@ import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.A
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResult;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResult;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
@@ -175,6 +177,13 @@ public class UpdateEmailHandler
                     "UpdateEmailHandler: Experian email verification status: {}",
                     emailCheckResultStatus);
 
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            dynamoService);
+
             var auditContext =
                     new AuditContext(
                             input.getRequestContext()
@@ -183,7 +192,7 @@ public class UpdateEmailHandler
                                     .toString(),
                             ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                             sessionId,
-                            AuditService.UNKNOWN,
+                            internalCommonSubjectIdentifier.getValue(),
                             updateInfoRequest.getReplacementEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
@@ -229,13 +238,6 @@ public class UpdateEmailHandler
                 sqsClient.send(objectMapper.writeValueAsString((notifyEmailAddressUpdateRequest)));
             }
 
-            LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            dynamoService);
-
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                     auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
@@ -257,7 +259,7 @@ public class UpdateEmailHandler
                 AuthEmailFraudCheckBypassed.create(
                         auditContext.clientId(),
                         new AuthEmailFraudCheckBypassed.User(
-                                StructuredAuditService.UNKNOWN,
+                                auditContext.subjectId(),
                                 auditContext.email(),
                                 auditContext.ipAddress(),
                                 auditContext.persistentSessionId(),
@@ -278,14 +280,20 @@ public class UpdateEmailHandler
                 AuthEmailFraudCheckDecisionUsed.create(
                         auditContext.clientId(),
                         new AuthEmailFraudCheckDecisionUsed.User(
-                                StructuredAuditService.UNKNOWN,
+                                auditContext.subjectId(),
                                 auditContext.email(),
                                 auditContext.ipAddress(),
                                 auditContext.persistentSessionId(),
                                 auditContext.sessionId()),
                         new AuthEmailFraudCheckDecisionUsed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
-                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null));
+                                decision_reused ? emailCheckResult.getReferenceNumber() : null,
+                                emailCheckResult.getStatus().name(),
+                                decision_reused,
+                                decision_reused
+                                        ? getEmailFraudCheckResponseJsonFromResult(emailCheckResult)
+                                        : null),
+                        decision_reused ? getRestrictedJsonFromResult(emailCheckResult) : null);
 
         structuredAuditService.submitAuditEvent(newAuditEvent);
     }
