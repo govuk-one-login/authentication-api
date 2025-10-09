@@ -3,6 +3,8 @@ package uk.gov.di.authentication.utils.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
@@ -18,6 +20,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Void> {
+
+    private static final Logger LOG = LogManager.getLogger(SmsQuotaMonitorHandler.class);
 
     private final ConfigurationService configurationService;
     private final CloudWatchClient cloudWatchClient;
@@ -63,6 +67,15 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
         emitQuotaWarningMetric(
                 "InternationalSmsQuotaEarlyWarning",
                 internationalSmsCount >= internationalSmsQuotaThreshold ? 1.0 : 0.0);
+
+        LOG.info(
+                "domesticSmsCount: {}, domesticSmsQuotaThreshold: {}",
+                domesticSmsCount,
+                domesticSmsQuotaThreshold);
+        LOG.info(
+                "internationalSmsCount: {}, internationalSmsQuotaThreshold: {}",
+                internationalSmsCount,
+                internationalSmsQuotaThreshold);
 
         return null;
     }
