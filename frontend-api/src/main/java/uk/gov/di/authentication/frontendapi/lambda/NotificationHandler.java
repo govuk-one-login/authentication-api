@@ -193,9 +193,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
             LOG.error(
                     "Error sending with Notify using NotificationType: {}, reference: {}",
                     request.getNotificationType(),
-                    reference);
+                    reference,
+                    e);
 
             if (e.getHttpResult() == 429 && isPhoneNotification(request.getNotificationType())) {
+                LOG.error("Notify response was a 429");
+
                 String destinationType =
                         maybeGetCountry(request.getDestination())
                                 .map(country -> "GB".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
