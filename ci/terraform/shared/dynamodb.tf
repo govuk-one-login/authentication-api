@@ -596,6 +596,34 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
     }
     resources = ["*"]
   }
+
+  dynamic "statement" {
+    for_each = var.environment == "staging" ? [1] : []
+    content {
+      sid    = "DenyNonAdminTeamRolesAccess"
+      effect = "Deny"
+      principals {
+        identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        type        = "AWS"
+      }
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
+      ]
+      resources = ["*"]
+      condition {
+        test     = "StringLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*"]
+      }
+      condition {
+        test     = "StringNotLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*"]
+      }
+    }
+  }
 }
 
 resource "aws_dynamodb_table" "auth_session_table" {
@@ -741,7 +769,36 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
     }
     resources = ["*"]
   }
+
+  dynamic "statement" {
+    for_each = var.environment == "staging" ? [1] : []
+    content {
+      sid    = "DenyNonAdminTeamRolesAccess"
+      effect = "Deny"
+      principals {
+        identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        type        = "AWS"
+      }
+      not_actions = [
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource"
+      ]
+      resources = ["*"]
+      condition {
+        test     = "StringLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*"]
+      }
+      condition {
+        test     = "StringNotLike"
+        variable = "aws:PrincipalARN"
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*"]
+      }
+    }
+  }
 }
+
 
 data "aws_iam_policy_document" "auth_cross_account_table_delete_item_policy_document" {
   #checkov:skip=CKV_AWS_111:Ensure IAM policies does not allow write access without constraints
