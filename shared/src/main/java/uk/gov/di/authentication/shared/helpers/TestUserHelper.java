@@ -8,7 +8,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -21,56 +20,31 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-public class TestClientHelper {
-    private static final Logger LOG = LogManager.getLogger(TestClientHelper.class);
+public class TestUserHelper {
+    private static final Logger LOG = LogManager.getLogger(TestUserHelper.class);
     private static final String TEST_CLIENT_ALLOW_LIST_SECRET_NAME =
             "/%s/test-client-email-allow-list";
     private SecretsManagerClient secretsManagerClient;
+    private final ConfigurationService configurationService;
     private SecretCache<List<String>> cachedSecret;
-    private final int timeToLiveInSeconds = 300;
+    private static final int timeToLiveInSeconds = 300;
 
-    private TestClientHelper() {}
-
-    public TestClientHelper(ConfigurationService configurationService) {
+    public TestUserHelper(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.secretsManagerClient = getSecretsManagerClient(configurationService);
     }
 
-    public TestClientHelper(SecretsManagerClient secretsManagerClient) {
+    public TestUserHelper(
+            SecretsManagerClient secretsManagerClient, ConfigurationService configurationService) {
         this.secretsManagerClient = secretsManagerClient;
+        this.configurationService = configurationService;
     }
 
-    public static boolean isTestClientWithAllowedEmail(
-            UserContext userContext, ConfigurationService configurationService)
-            throws ClientNotFoundException {
-        if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
-        } else {
-            return false;
-        }
-        var clientRegistry =
-                userContext
-                        .getClient()
-                        .orElseThrow(() -> new ClientNotFoundException("Could not find client"));
-
-        var isTestClientWithAllowedEmail =
-                (clientRegistry.isTestClient()
-                        && emailMatchesAllowlist(
-                                userContext.getAuthSession().getEmailAddress(),
-                                clientRegistry.getTestClientEmailAllowlist()));
-
-        if (isTestClientWithAllowedEmail) {
-            LOG.info("Is request from a test client with a test client email address: true");
-        }
-
-        return isTestClientWithAllowedEmail;
+    public boolean isTestJourney(UserContext userContext) {
+        return isTestJourney(userContext.getAuthSession().getEmailAddress());
     }
 
-    public boolean isTestJourney(
-            UserContext userContext, ConfigurationService configurationService) {
-        return isTestJourney(userContext.getAuthSession().getEmailAddress(), configurationService);
-    }
-
-    public boolean isTestJourney(String emailAddress, ConfigurationService configurationService) {
+    public boolean isTestJourney(String emailAddress) {
         if (configurationService.isTestClientsEnabled()) {
             LOG.warn("Test journeys are ENABLED");
         } else {

@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -15,8 +14,6 @@ import software.amazon.awssdk.services.secretsmanager.model.InvalidRequestExcept
 import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 import software.amazon.awssdk.services.secretsmanager.model.SecretsManagerException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -38,9 +35,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class TestClientHelperTest {
+class TestUserHelperTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final SecretsManagerClient mockedSecretsManagerClient =
+            mock(SecretsManagerClient.class);
+
     private final String env = "test";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final List<String> ALLOWLIST =
@@ -50,57 +50,76 @@ class TestClientHelperTest {
                     "^(.+)@digital.cabinet-office.gov.uk$",
                     "^(.+)@interwebs.org$",
                     "testclient.user2@internet.com");
+    private TestUserHelper testUserHelper;
 
     @BeforeEach
     void setup() {
         when(configurationService.getLocalstackEndpointUri())
                 .thenReturn(Optional.of("http://localhost:45678"));
         when(configurationService.getEnvironment()).thenReturn(env);
+        testUserHelper = new TestUserHelper(mockedSecretsManagerClient, configurationService);
     }
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(TestClientHelper.class);
+            new CaptureLoggingExtension(TestUserHelper.class);
 
     @Test
-    void shouldReturnTrueIfTestClientWithAllowedEmailAddress() throws ClientNotFoundException {
+    void shouldReturnTrueIfTestClientWithAllowedEmailAddress() {
+
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(String.join(",", ALLOWLIST))
+                                .build());
+
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
+        var userContext = buildUserContext();
 
-        assertTrue(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
+        assertTrue(testUserHelper.isTestJourney(userContext));
     }
 
     @Test
-    void shouldReturnFalseIfTestClientsAreDisabled() throws ClientNotFoundException {
+    void shouldReturnFalseIfTestClientsAreDisabled() {
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(String.join(",", ALLOWLIST))
+                                .build());
+
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
 
-        var userContext = buildUserContext(true, Collections.singletonList(TEST_EMAIL_ADDRESS));
+        var userContext = buildUserContext();
 
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
+        assertFalse(testUserHelper.isTestJourney(userContext));
     }
 
     @Test
-    void shouldReturnFalseIfClientIsNotATestClient() throws ClientNotFoundException {
+    void shouldReturnFalseIfSecretDoesNotContainEmailAddressInAllowList() {
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(
+                                        String.join(
+                                                ",",
+                                                Collections.singletonList("test@wrong-email.com")))
+                                .build());
+
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var userContext = buildUserContext(false, Collections.singletonList(TEST_EMAIL_ADDRESS));
+        var userContext = buildUserContext();
 
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientDoesNotContainEmailAddressInAllowList()
-            throws ClientNotFoundException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-
-        var userContext = buildUserContext(true, Collections.singletonList("test@wrong-email.com"));
-
-        assertFalse(
-                TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService));
+        assertFalse(testUserHelper.isTestJourney(userContext));
     }
 
     @ParameterizedTest
@@ -115,7 +134,7 @@ class TestClientHelperTest {
                 "testclient.user2@internet.com",
             })
     void emailShouldMatchRegexAllowlist(String email) {
-        assertTrue(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
+        assertTrue(TestUserHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
     @ParameterizedTest
@@ -129,7 +148,7 @@ class TestClientHelperTest {
                 "user.one1@interwebs.org.uk",
             })
     void emailShouldNotMatchRegexAllowlist(String email) {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
+        assertFalse(TestUserHelper.emailMatchesAllowlist(email, ALLOWLIST));
     }
 
     @ParameterizedTest
@@ -141,31 +160,36 @@ class TestClientHelperTest {
                 "user.one1@interwebs.org",
             })
     void emailShouldNotMatchRegexAllowlistWithInvalidRegex(String email) {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(email, List.of("$^", "[", "*")));
+        assertFalse(TestUserHelper.emailMatchesAllowlist(email, List.of("$^", "[", "*")));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
     @Test
     void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("^$", "[", "*")));
+        when(mockedSecretsManagerClient.getSecretValue(
+                        GetSecretValueRequest.builder()
+                                .secretId(String.format("/%s/test-client-email-allow-list", env))
+                                .build()))
+                .thenReturn(
+                        GetSecretValueResponse.builder()
+                                .secretString(String.join(",", List.of("$^", "[", "*")))
+                                .build());
+        assertFalse(testUserHelper.isTestJourney((String) null));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
     @Test
     void shouldReturnFalseForAnEmptyList() {
         assertFalse(
-                TestClientHelper.emailMatchesAllowlist(
-                        TEST_EMAIL_ADDRESS, Collections.emptyList()));
+                TestUserHelper.emailMatchesAllowlist(TEST_EMAIL_ADDRESS, Collections.emptyList()));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
     @Test
     void itShouldNotCallSecretsManagerIfTestClientsDisabled() {
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testUserHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, never())
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -174,7 +198,6 @@ class TestClientHelperTest {
     @Test
     void itShouldCacheTheSecretsManagerResponse() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
@@ -184,10 +207,9 @@ class TestClientHelperTest {
                                 .secretString(String.join(",", ALLOWLIST))
                                 .build());
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testUserHelper.isTestJourney(buildUserContext());
         // Call again to check previous result cached
-        testClientHelper.isTestJourney(buildUserContext(), configurationService);
+        testUserHelper.isTestJourney(buildUserContext());
 
         verify(mockedSecretsManagerClient, times(1))
                 .getSecretValue(any(GetSecretValueRequest.class));
@@ -203,16 +225,13 @@ class TestClientHelperTest {
             })
     void shouldReturnFalseForARangeOfMisconfigurationErrors(Class<SecretsManagerException> clazz) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenThrow(clazz);
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -225,16 +244,13 @@ class TestClientHelperTest {
     @Test
     void itShouldReturnFalseForNullSecretValue() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString(null).build());
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -247,16 +263,13 @@ class TestClientHelperTest {
     @Test
     void itShouldReturnAnEmptyListForEmptySecretValue() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        var mockedSecretsManagerClient = mock(SecretsManagerClient.class);
         when(mockedSecretsManagerClient.getSecretValue(
                         GetSecretValueRequest.builder()
                                 .secretId(String.format("/%s/test-client-email-allow-list", env))
                                 .build()))
                 .thenReturn(GetSecretValueResponse.builder().secretString("").build());
 
-        var testClientHelper = new TestClientHelper(mockedSecretsManagerClient);
-
-        assertFalse(testClientHelper.isTestJourney(buildUserContext(), configurationService));
+        assertFalse(testUserHelper.isTestJourney(buildUserContext()));
         assertThat(
                 logging.events(),
                 hasItem(
@@ -264,17 +277,6 @@ class TestClientHelperTest {
                                 "Test client allow list secret string is null or empty")));
         verify(mockedSecretsManagerClient, times(1))
                 .getSecretValue(any(GetSecretValueRequest.class));
-    }
-
-    private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {
-        var clientRegistry =
-                new ClientRegistry()
-                        .withClientID(new ClientID().getValue())
-                        .withClientName("some-client")
-                        .withTestClient(isTestClient)
-                        .withTestClientEmailAllowlist(allowedEmails);
-        var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
-        return UserContext.builder(authSession).withClient(clientRegistry).build();
     }
 
     private UserContext buildUserContext() {

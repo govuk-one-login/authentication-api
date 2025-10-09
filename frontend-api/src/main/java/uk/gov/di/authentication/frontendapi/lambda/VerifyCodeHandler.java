@@ -30,7 +30,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -70,7 +70,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMA
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -89,7 +88,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
-    private final TestClientHelper testClientHelper;
+    private final TestUserHelper testUserHelper;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -102,7 +101,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
-            TestClientHelper testClientHelper) {
+            TestUserHelper testUserHelper) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -115,7 +114,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
-        this.testClientHelper = testClientHelper;
+        this.testUserHelper = testUserHelper;
     }
 
     public VerifyCodeHandler() {
@@ -131,7 +130,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -144,7 +143,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
-        this.testClientHelper = new TestClientHelper(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -362,10 +361,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             NotificationType notificationType,
             AuthSessionItem authSession,
             UserContext userContext,
-            Optional<MFAMethod> shouldBeRequestedSmsMfaMethod)
-            throws ClientNotFoundException {
-        if (isTestClientWithAllowedEmail(userContext, configurationService))
+            Optional<MFAMethod> shouldBeRequestedSmsMfaMethod) {
+        if (testUserHelper.isTestJourney(userContext)) {
             return getOtpCodeForTestClient(notificationType);
+        }
 
         String emailAddress = authSession.getEmailAddress();
         String identifier = emailAddress;
@@ -537,8 +536,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientId,
                     authSession.getClientName(),
                     levelOfConfidence.getValue(),
-                    testClientHelper.isTestJourney(
-                            authSession.getEmailAddress(), configurationService),
+                    testUserHelper.isTestJourney(authSession.getEmailAddress()),
                     journeyType,
                     smsMfaMethod != null
                             ? MFAMethodType.valueOf(smsMfaMethod.getMfaMethodType())

@@ -6,6 +6,7 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -28,6 +29,7 @@ class MfaCodeProcessorFactoryTest {
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
+    private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
             new MfaCodeProcessorFactory(
                     configurationService,
@@ -35,7 +37,8 @@ class MfaCodeProcessorFactoryTest {
                     authenticationService,
                     auditService,
                     accountModifiersService,
-                    mfaMethodsService);
+                    mfaMethodsService,
+                    testUserHelper);
 
     @BeforeEach
     void setUp() {

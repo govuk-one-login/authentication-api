@@ -19,12 +19,11 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -66,6 +65,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
+    private final TestUserHelper testUserHelper;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -81,7 +81,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AuthSessionService authSessionService,
             PermissionDecisionManager permissionDecisionManager,
-            UserActionsManager userActionsManager) {
+            UserActionsManager userActionsManager,
+            TestUserHelper testUserHelper) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -97,6 +98,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
+        this.testUserHelper = testUserHelper;
     }
 
     public ResetPasswordHandler() {
@@ -119,6 +121,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     public ResetPasswordHandler(
@@ -138,6 +141,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.testUserHelper = new TestUserHelper(configurationService);
     }
 
     @Override
@@ -153,107 +157,101 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             ResetPasswordCompletionRequest request,
             UserContext userContext) {
         LOG.info("Request received to ResetPasswordHandler");
-        try {
-            Optional<ErrorResponse> passwordValidationError =
-                    passwordValidator.validate(request.password());
 
-            if (passwordValidationError.isPresent()) {
-                LOG.info("Error message: {}", passwordValidationError.get().getMessage());
-                return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+        Optional<ErrorResponse> passwordValidationError =
+                passwordValidator.validate(request.password());
+
+        if (passwordValidationError.isPresent()) {
+            LOG.info("Error message: {}", passwordValidationError.get().getMessage());
+            return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+        }
+        var userCredentials =
+                authenticationService.getUserCredentialsFromEmail(
+                        userContext.getAuthSession().getEmailAddress());
+
+        if (Objects.nonNull(userCredentials.getPassword())) {
+            if (verifyPassword(userCredentials.getPassword(), request.password())) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.NEW_PW_MATCHES_OLD);
             }
-            var userCredentials =
-                    authenticationService.getUserCredentialsFromEmail(
-                            userContext.getAuthSession().getEmailAddress());
+        } else {
+            LOG.info("Resetting password for migrated user");
+        }
+        authenticationService.updatePassword(userCredentials.getEmail(), request.password());
+        var userProfile =
+                authenticationService.getUserProfileByEmail(
+                        userContext.getAuthSession().getEmailAddress());
 
-            if (Objects.nonNull(userCredentials.getPassword())) {
-                if (verifyPassword(userCredentials.getPassword(), request.password())) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.NEW_PW_MATCHES_OLD);
-                }
-            } else {
-                LOG.info("Resetting password for migrated user");
-            }
-            authenticationService.updatePassword(userCredentials.getEmail(), request.password());
-            var userProfile =
-                    authenticationService.getUserProfileByEmail(
-                            userContext.getAuthSession().getEmailAddress());
+        authSessionService.updateSession(
+                userContext
+                        .getAuthSession()
+                        .withResetPasswordState(AuthSessionItem.ResetPasswordState.SUCCEEDED));
 
-            authSessionService.updateSession(
-                    userContext
-                            .getAuthSession()
-                            .withResetPasswordState(AuthSessionItem.ResetPasswordState.SUCCEEDED));
+        LOG.info("Calculating internal common subject identifier");
+        var internalCommonSubjectId =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
+                        configurationService.getInternalSectorUri(),
+                        authenticationService);
 
-            LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectId =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            authenticationService);
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        internalCommonSubjectId.getValue(),
+                        userCredentials.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        userContext
+                                .getUserProfile()
+                                .map(UserProfile::getPhoneNumber)
+                                .orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-            var auditContext =
-                    auditContextFromUserContext(
-                            userContext,
-                            internalCommonSubjectId.getValue(),
+        updateAccountRecoveryBlockTable(
+                userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
+
+        UserPermissionContext userPermissionContext =
+                new UserPermissionContext(null, null, userCredentials.getEmail(), null);
+
+        userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
+
+        AuditableEvent auditableEvent;
+        if (testUserHelper.isTestJourney(userContext)) {
+            auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
+        } else {
+            var emailNotifyRequest =
+                    new NotifyRequest(
                             userCredentials.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getPhoneNumber)
-                                    .orElse(AuditService.UNKNOWN),
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-
-            updateAccountRecoveryBlockTable(
-                    userProfile, userCredentials, internalCommonSubjectId, auditContext, request);
-
-            UserPermissionContext userPermissionContext =
-                    new UserPermissionContext(null, null, userCredentials.getEmail(), null);
-
-            userActionsManager.passwordReset(JourneyType.PASSWORD_RESET, userPermissionContext);
-
-            AuditableEvent auditableEvent;
-            if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
-                auditableEvent =
-                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
-            } else {
-                var emailNotifyRequest =
+                            NotificationType.PASSWORD_RESET_CONFIRMATION,
+                            userContext.getUserLanguage(),
+                            userContext.getAuthSession().getSessionId(),
+                            userContext.getClientSessionId());
+            auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
+            LOG.info("Placing message on queue to send password reset confirmation to Email");
+            sqsClient.send(serialiseRequest(emailNotifyRequest));
+            LOG.info(
+                    "{} EMAIL placed on queue with reference: {}",
+                    emailNotifyRequest.getNotificationType(),
+                    emailNotifyRequest.getUniqueNotificationReference());
+            if (shouldSendConfirmationToSms(userProfile)) {
+                var smsNotifyRequest =
                         new NotifyRequest(
-                                userCredentials.getEmail(),
-                                NotificationType.PASSWORD_RESET_CONFIRMATION,
+                                userProfile.getPhoneNumber(),
+                                NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
                                 userContext.getUserLanguage(),
                                 userContext.getAuthSession().getSessionId(),
                                 userContext.getClientSessionId());
-                auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
-                LOG.info("Placing message on queue to send password reset confirmation to Email");
-                sqsClient.send(serialiseRequest(emailNotifyRequest));
+                sqsClient.send(serialiseRequest(smsNotifyRequest));
                 LOG.info(
-                        "{} EMAIL placed on queue with reference: {}",
-                        emailNotifyRequest.getNotificationType(),
-                        emailNotifyRequest.getUniqueNotificationReference());
-                if (shouldSendConfirmationToSms(userProfile)) {
-                    var smsNotifyRequest =
-                            new NotifyRequest(
-                                    userProfile.getPhoneNumber(),
-                                    NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                                    userContext.getUserLanguage(),
-                                    userContext.getAuthSession().getSessionId(),
-                                    userContext.getClientSessionId());
-                    sqsClient.send(serialiseRequest(smsNotifyRequest));
-                    LOG.info(
-                            "{} SMS placed on queue with reference: {}",
-                            smsNotifyRequest.getNotificationType(),
-                            smsNotifyRequest.getUniqueNotificationReference());
-                }
+                        "{} SMS placed on queue with reference: {}",
+                        smsNotifyRequest.getNotificationType(),
+                        smsNotifyRequest.getUniqueNotificationReference());
             }
-
-            if (request.isForcedPasswordReset()) {
-                auditService.submitAuditEvent(
-                        AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
-            }
-            auditService.submitAuditEvent(auditableEvent, auditContext);
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
         }
+
+        if (request.isForcedPasswordReset()) {
+            auditService.submitAuditEvent(AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
+        }
+        auditService.submitAuditEvent(auditableEvent, auditContext);
+
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();
     }
