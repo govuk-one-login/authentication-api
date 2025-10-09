@@ -62,6 +62,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -150,6 +151,7 @@ public class AuthenticationCallbackHandler
                                 configurationService,
                                 redisConnectionService,
                                 kmsConnectionService,
+                                new OrchRefreshTokenService(configurationService),
                                 oidcApi));
         this.accountInterventionService =
                 new AccountInterventionService(
@@ -189,6 +191,7 @@ public class AuthenticationCallbackHandler
                                 configurationService,
                                 redisConnectionService,
                                 kmsConnectionService,
+                                new OrchRefreshTokenService(configurationService),
                                 new OidcAPI(configurationService)));
         this.accountInterventionService =
                 new AccountInterventionService(

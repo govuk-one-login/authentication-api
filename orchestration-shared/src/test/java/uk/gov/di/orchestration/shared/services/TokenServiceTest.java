@@ -89,10 +89,16 @@ class TokenServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final TokenService tokenService =
             new TokenService(
-                    configurationService, redisConnectionService, kmsConnectionService, oidcApi);
+                    configurationService,
+                    redisConnectionService,
+                    kmsConnectionService,
+                    orchRefreshTokenService,
+                    oidcApi);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
