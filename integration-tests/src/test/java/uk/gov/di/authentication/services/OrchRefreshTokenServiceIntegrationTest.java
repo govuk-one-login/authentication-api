@@ -6,6 +6,7 @@ import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchRefreshTokenExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,7 +15,6 @@ class OrchRefreshTokenServiceIntegrationTest {
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "test-internal-pairwise-subject-id";
     private static final String TOKEN = "test-token";
     private static final String AUTH_CODE = "test-auth-code";
-    private static final boolean IS_USED = false;
 
     @RegisterExtension
     protected static final OrchRefreshTokenExtension orchRefreshTokenExtension =
@@ -33,7 +33,7 @@ class OrchRefreshTokenServiceIntegrationTest {
                 INTERNAL_PAIRWISE_SUBJECT_ID, refreshToken.get().getInternalPairwiseSubjectId());
         assertEquals(TOKEN, refreshToken.get().getToken());
         assertEquals(AUTH_CODE, refreshToken.get().getAuthCode());
-        assertEquals(IS_USED, refreshToken.get().getIsUsed());
+        assertTrue(refreshToken.get().getIsUsed());
     }
 
     @Test
@@ -64,7 +64,7 @@ class OrchRefreshTokenServiceIntegrationTest {
                 INTERNAL_PAIRWISE_SUBJECT_ID, refreshToken.get().getInternalPairwiseSubjectId());
         assertEquals(TOKEN, refreshToken.get().getToken());
         assertEquals(AUTH_CODE, refreshToken.get().getAuthCode());
-        assertEquals(IS_USED, refreshToken.get().getIsUsed());
+        assertFalse(refreshToken.get().getIsUsed());
     }
 
     @Test

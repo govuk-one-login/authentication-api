@@ -86,4 +86,9 @@ public class OrchRefreshTokenItem {
     public void setIsUsed(boolean isUsed) {
         this.isUsed = isUsed;
     }
+
+    public OrchRefreshTokenItem withIsUsed(boolean isUsed) {
+        this.isUsed = isUsed;
+        return this;
+    }
 }

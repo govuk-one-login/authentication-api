@@ -29,7 +29,6 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
     private static final String TOKEN = "test-token";
     private static final String AUTH_CODE = "test-auth-code";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
-    private static final boolean IS_USED = false;
 
     private final DynamoDbTable<OrchRefreshTokenItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
@@ -47,9 +46,15 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
 
         var orchRefreshTokenItemCaptor = ArgumentCaptor.forClass(OrchRefreshTokenItem.class);
         verify(table).putItem(orchRefreshTokenItemCaptor.capture());
-        var capturedRequest = orchRefreshTokenItemCaptor.getValue();
+        var refreshTokenFromCapturedRequest = orchRefreshTokenItemCaptor.getValue();
 
-        assertOrchRefreshTokenItemMatchesExpected(capturedRequest);
+        assertEquals(JWT_ID, refreshTokenFromCapturedRequest.getJwtId());
+        assertEquals(
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                refreshTokenFromCapturedRequest.getInternalPairwiseSubjectId());
+        assertEquals(TOKEN, refreshTokenFromCapturedRequest.getToken());
+        assertEquals(AUTH_CODE, refreshTokenFromCapturedRequest.getAuthCode());
+        assertFalse(refreshTokenFromCapturedRequest.getIsUsed());
     }
 
     @Test
@@ -81,7 +86,12 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         var actualOrchRefreshToken = orchRefreshTokenService.getRefreshToken(JWT_ID);
 
         assertTrue(actualOrchRefreshToken.isPresent());
-        assertOrchRefreshTokenItemMatchesExpected(actualOrchRefreshToken.get());
+        assertEquals(JWT_ID, orchRefreshTokenItem.getJwtId());
+        assertEquals(
+                INTERNAL_PAIRWISE_SUBJECT_ID, orchRefreshTokenItem.getInternalPairwiseSubjectId());
+        assertEquals(TOKEN, orchRefreshTokenItem.getToken());
+        assertEquals(AUTH_CODE, orchRefreshTokenItem.getAuthCode());
+        assertTrue(orchRefreshTokenItem.getIsUsed());
     }
 
     @Test
@@ -140,7 +150,12 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         var actualOrchRefreshToken = spyService.getRefreshTokenForAuthCode(AUTH_CODE);
 
         assertTrue(actualOrchRefreshToken.isPresent());
-        assertOrchRefreshTokenItemMatchesExpected(actualOrchRefreshToken.get());
+        assertEquals(JWT_ID, orchRefreshTokenItem.getJwtId());
+        assertEquals(
+                INTERNAL_PAIRWISE_SUBJECT_ID, orchRefreshTokenItem.getInternalPairwiseSubjectId());
+        assertEquals(TOKEN, orchRefreshTokenItem.getToken());
+        assertEquals(AUTH_CODE, orchRefreshTokenItem.getAuthCode());
+        assertFalse(orchRefreshTokenItem.getIsUsed());
     }
 
     @Test
@@ -185,27 +200,5 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertEquals(
                 "Failed to get Orch refresh token from Dynamo for auth code",
                 exception.getMessage());
-    }
-
-    @Test
-    void shouldDeleteOrchRefreshToken() {
-        var orchRefreshTokenItem = new OrchRefreshTokenItem().withJwtId(JWT_ID);
-        when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(orchRefreshTokenItem);
-
-        orchRefreshTokenService.deleteRefreshToken(JWT_ID);
-        var orchRefreshTokenItemCaptor = ArgumentCaptor.forClass(OrchRefreshTokenItem.class);
-        verify(table).deleteItem(orchRefreshTokenItemCaptor.capture());
-        var capturedRequest = orchRefreshTokenItemCaptor.getValue();
-        assertEquals(JWT_ID, capturedRequest.getJwtId());
-    }
-
-    private void assertOrchRefreshTokenItemMatchesExpected(
-            OrchRefreshTokenItem orchRefreshTokenItem) {
-        assertEquals(JWT_ID, orchRefreshTokenItem.getJwtId());
-        assertEquals(
-                INTERNAL_PAIRWISE_SUBJECT_ID, orchRefreshTokenItem.getInternalPairwiseSubjectId());
-        assertEquals(TOKEN, orchRefreshTokenItem.getToken());
-        assertEquals(AUTH_CODE, orchRefreshTokenItem.getAuthCode());
-        assertEquals(IS_USED, orchRefreshTokenItem.getIsUsed());
     }
 }

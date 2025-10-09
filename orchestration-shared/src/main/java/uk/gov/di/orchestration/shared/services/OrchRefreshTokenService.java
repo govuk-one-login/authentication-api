@@ -41,7 +41,8 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
             LOG.info("Orch refresh token item with Jwt ID: {} has isUsed = true", jwtId);
             return Optional.empty();
         }
-        return orchRefreshToken;
+        var refreshToken = markTokenAsUsed(unusedOrchRefreshToken.get());
+        return Optional.of(refreshToken);
     }
 
     public Optional<OrchRefreshTokenItem> getRefreshTokenForAuthCode(String authCode) {
@@ -80,13 +81,17 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
         }
     }
 
-    public void deleteRefreshToken(String jwtId) {
+    private OrchRefreshTokenItem markTokenAsUsed(OrchRefreshTokenItem orchRefreshTokenItem) {
+        var item = orchRefreshTokenItem.withIsUsed(true);
         try {
-            delete(jwtId);
+            update(item);
         } catch (Exception e) {
             logAndThrowOrchRefreshTokenException(
-                    "Failed to delete Orch refresh token item from Dynamo", e);
+                    "Failed to mark refresh token as used. Token jwt: "
+                            + orchRefreshTokenItem.getJwtId(),
+                    e);
         }
+        return item;
     }
 
     private void logAndThrowOrchRefreshTokenException(String message, Exception e) {

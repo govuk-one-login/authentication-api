@@ -382,23 +382,6 @@ public class TokenHandler
             return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
 
-        String redisKey = REFRESH_TOKEN_PREFIX + jti;
-        Optional<String> refreshToken =
-                Optional.ofNullable(redisConnectionService.popValue(redisKey));
-        RefreshTokenStore tokenStore;
-        try {
-            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
-        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
-            LOG.warn("Refresh token not found with given key");
-            return ApiResponse.badRequest(
-                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
-        }
-        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
-            LOG.warn("Refresh token store does not contain Refresh token in request");
-            return ApiResponse.badRequest(
-                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
-        }
-
         // ATO-2014 temporary for testing
         Optional<OrchRefreshTokenItem> orchRefreshTokenItem = Optional.empty();
         try {
@@ -416,6 +399,23 @@ public class TokenHandler
             }
         }
 
+        String redisKey = REFRESH_TOKEN_PREFIX + jti;
+        Optional<String> refreshToken =
+                Optional.ofNullable(redisConnectionService.popValue(redisKey));
+        RefreshTokenStore tokenStore;
+        try {
+            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
+        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
+            LOG.warn("Refresh token not found with given key");
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
+            LOG.warn("Refresh token store does not contain Refresh token in request");
+            return ApiResponse.badRequest(
+                    new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
                         clientId,
@@ -424,6 +424,7 @@ public class TokenHandler
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
                         signingAlgorithm);
         LOG.info("Generating successful RefreshToken response");
+
         return ApiResponse.ok(tokenResponse);
     }
 
