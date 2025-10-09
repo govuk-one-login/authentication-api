@@ -56,8 +56,12 @@ class DynamoEmailCheckResultServiceIntegrationTest {
         assertNotNull(responseSection);
 
         EmailCheckResponse responseMap = responseSection;
-        assertThat(responseMap.extensions(), equalTo(JsonParser.parseString(CommonTestVariables.extensionsJsonString)));
-        assertThat(responseMap.restricted(), equalTo(JsonParser.parseString(CommonTestVariables.restrictedJsonString)));
+        assertThat(
+                responseMap.extensions(),
+                equalTo(JsonParser.parseString(CommonTestVariables.extensionsJsonString)));
+        assertThat(
+                responseMap.restricted(),
+                equalTo(JsonParser.parseString(CommonTestVariables.restrictedJsonString)));
     }
 
     @Test

@@ -51,6 +51,8 @@ import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.A
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResultOrNull;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResultOrNull;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
@@ -278,14 +280,22 @@ public class UpdateEmailHandler
                 AuthEmailFraudCheckDecisionUsed.create(
                         auditContext.clientId(),
                         new AuthEmailFraudCheckDecisionUsed.User(
-                                StructuredAuditService.UNKNOWN,
                                 auditContext.email(),
                                 auditContext.ipAddress(),
                                 auditContext.persistentSessionId(),
                                 auditContext.sessionId()),
                         new AuthEmailFraudCheckDecisionUsed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
-                                decision_reused ? emailCheckResult.getEmailCheckResponse() : null));
+                                decision_reused ? emailCheckResult.getReferenceNumber() : null,
+                                emailCheckResult.getStatus().name(),
+                                decision_reused,
+                                decision_reused
+                                        ? getEmailFraudCheckResponseJsonFromResultOrNull(
+                                                emailCheckResult)
+                                        : null),
+                        decision_reused
+                                ? getRestrictedJsonFromResultOrNull(emailCheckResult)
+                                : null);
 
         structuredAuditService.submitAuditEvent(newAuditEvent);
     }
