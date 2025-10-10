@@ -745,4 +745,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isBulkAccountDeletionEnabled() {
         return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }
+
+    public String getEmailSqsLambdaFunctionName() {
+        return System.getenv()
+                .getOrDefault(
+                        "SMS_SENT_METRIC_PRODUCER",
+                        String.format("%s-email-notification-sqs-lambda", getEnvironment()));
+    }
 }

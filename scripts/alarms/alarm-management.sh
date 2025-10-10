@@ -311,7 +311,7 @@ test_alarm() {
     echo "Sending ${sms_count_metric} metric with value ${test_value} (threshold: ${THRESHOLD})"
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
-      --metric-data "MetricName=${sms_count_metric},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
+      --metric-data "MetricName=${sms_count_metric},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=Application,Value=Authentication},{Name=LogGroup,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceName,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceType,Value=AWS::Lambda::Function}]"
     echo "${sms_count_metric} metric data sent successfully!"
     echo "Waiting for scheduled SMS quota monitor lambda to process metrics (runs every 1 minute)..."
   fi
@@ -325,7 +325,7 @@ test_alarm() {
     metric_value=$(aws cloudwatch get-metric-statistics \
       --namespace "${NAMESPACE}" \
       --metric-name "${sms_count_metric}" \
-      --dimensions Name=Environment,Value="${ENVIRONMENT}" \
+      --dimensions Name=Environment,Value="${ENVIRONMENT}" Name=Application,Value=Authentication Name=LogGroup,Value="${ENVIRONMENT}"-email-notification-sqs-lambda Name=ServiceName,Value="${ENVIRONMENT}"-email-notification-sqs-lambda Name=ServiceType,Value=AWS::Lambda::Function \
       --start-time "$(date -u -v-5M +%Y-%m-%dT%H:%M:%S)" \
       --end-time "$(date -u +%Y-%m-%dT%H:%M:%S)" \
       --period 300 \
@@ -385,13 +385,17 @@ test_alarm() {
     if [[ ${new_state} == "ALARM" ]]; then
       echo "✅ SUCCESS: Alarm triggered as expected!"
 
+      # Wait for a slightly extended time to try and get this negative value in the next time period/"bucket" for easier visualisation in the AWS Console
+      echo "Waiting 180 seconds until sending the negative value..."
+      sleep 180
+
       # For early warning alarms, send negative value to bring total below threshold
       if [[ ${METRIC_NAME} == "DomesticSmsQuotaEarlyWarning" || ${METRIC_NAME} == "InternationalSmsQuotaEarlyWarning" ]]; then
         local deactivate_value=$((-(THRESHOLD + 100)))
         echo "Sending negative ${sms_count_metric} value ${deactivate_value} to deactivate alarm..."
         aws cloudwatch put-metric-data \
           --namespace "${NAMESPACE}" \
-          --metric-data "MetricName=${sms_count_metric},Value=${deactivate_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}}]"
+          --metric-data "MetricName=${sms_count_metric},Value=${deactivate_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=Application,Value=Authentication},{Name=LogGroup,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceName,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceType,Value=AWS::Lambda::Function}]"
         echo "Deactivation metrics sent. Scheduled lambda will process on next run (every 1 minute)."
       elif [[ ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
         echo "Limit exceeded alarm will auto-deactivate when no new 429 (rate limit exceeded) responses occur (treat_missing_data=notBreaching)."

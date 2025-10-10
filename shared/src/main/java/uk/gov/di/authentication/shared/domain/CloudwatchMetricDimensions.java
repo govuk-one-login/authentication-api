@@ -18,7 +18,10 @@ public enum CloudwatchMetricDimensions {
     NOTIFICATION_TYPE("NotificationType"),
     COUNTRY("Country"),
     NOTIFICATION_HTTP_ERROR("NotificationHttpError"),
-    SMS_DESTINATION_TYPE("SmsDestinationType");
+    SMS_DESTINATION_TYPE("SmsDestinationType"),
+    LOG_GROUP("LogGroup"),
+    SERVICE_TYPE("ServiceType"),
+    SERVICE_NAME("ServiceName");
 
     private String value;
 

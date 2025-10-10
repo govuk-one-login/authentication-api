@@ -27,4 +27,4 @@ auth_new_account_id = "653994557586"
 # SMS Quota Monitoring
 sms_quota_monitor_schedule_rate   = "rate(1 minute)"
 domestic_sms_quota_threshold      = "300000"
-international_sms_quota_threshold = "3600"
+international_sms_quota_threshold = "9000"

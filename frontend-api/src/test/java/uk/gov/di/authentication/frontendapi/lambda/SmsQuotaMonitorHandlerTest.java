@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.Datapoint;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsRequest;
 import software.amazon.awssdk.services.cloudwatch.model.GetMetricStatisticsResponse;
 import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
@@ -22,6 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.entity.Application.AUTHENTICATION;
+import static uk.gov.di.authentication.entity.Application.ONE_LOGIN_HOME;
 
 class SmsQuotaMonitorHandlerTest {
 
@@ -86,7 +89,7 @@ class SmsQuotaMonitorHandlerTest {
         handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
 
         var captor = ArgumentCaptor.forClass(GetMetricStatisticsRequest.class);
-        verify(cloudWatchClient, times(2)).getMetricStatistics(captor.capture());
+        verify(cloudWatchClient, times(4)).getMetricStatistics(captor.capture());
 
         // Period should be multiple of 60
         for (var request : captor.getAllValues()) {
@@ -118,40 +121,93 @@ class SmsQuotaMonitorHandlerTest {
 
     @Test
     void shouldUseCorrectMetricNamesAndDimensions() {
+        var smsSentMetricProducer = "production-email-notification-sqs-lambda";
+
         when(configurationService.getEnvironment()).thenReturn("production");
+        when(configurationService.getEmailSqsLambdaFunctionName())
+                .thenReturn(smsSentMetricProducer);
         when(configurationService.getDomesticSmsQuotaThreshold()).thenReturn(300000.0);
         when(configurationService.getInternationalSmsQuotaThreshold()).thenReturn(3600.0);
 
         var handler = new SmsQuotaMonitorHandler(configurationService, cloudWatchClient);
-
         when(cloudWatchClient.getMetricStatistics(any(GetMetricStatisticsRequest.class)))
                 .thenReturn(createMetricResponse(0.0));
 
         handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
 
         var getCaptor = ArgumentCaptor.forClass(GetMetricStatisticsRequest.class);
-        var putCaptor = ArgumentCaptor.forClass(PutMetricDataRequest.class);
-        verify(cloudWatchClient, times(2)).getMetricStatistics(getCaptor.capture());
-        verify(cloudWatchClient, times(2)).putMetricData(putCaptor.capture());
+        verify(cloudWatchClient, times(4)).getMetricStatistics(getCaptor.capture());
 
-        // Verify input metric names
-        var getRequests = getCaptor.getAllValues();
-        assertEquals("DomesticSmsSent", getRequests.get(0).metricName());
-        assertEquals("InternationalSmsSent", getRequests.get(1).metricName());
+        var requests = getCaptor.getAllValues();
 
-        // Verify output metric names
-        var putRequests = putCaptor.getAllValues();
+        // Group requests by metric name and application
+        var domesticAuthRequests =
+                requests.stream()
+                        .filter(r -> "DomesticSmsSent".equals(r.metricName()))
+                        .filter(r -> hasApplicationDimension(r, AUTHENTICATION.getValue()))
+                        .toList();
+
+        var domesticHomeRequests =
+                requests.stream()
+                        .filter(r -> "DomesticSmsSent".equals(r.metricName()))
+                        .filter(r -> hasApplicationDimension(r, ONE_LOGIN_HOME.getValue()))
+                        .toList();
+
+        var internationalAuthRequests =
+                requests.stream()
+                        .filter(r -> "InternationalSmsSent".equals(r.metricName()))
+                        .filter(r -> hasApplicationDimension(r, AUTHENTICATION.getValue()))
+                        .toList();
+
+        var internationalHomeRequests =
+                requests.stream()
+                        .filter(r -> "InternationalSmsSent".equals(r.metricName()))
+                        .filter(r -> hasApplicationDimension(r, ONE_LOGIN_HOME.getValue()))
+                        .toList();
+
+        // Verify we have exactly one of each type
+        assertEquals(1, domesticAuthRequests.size());
+        assertEquals(1, domesticHomeRequests.size());
+        assertEquals(1, internationalAuthRequests.size());
+        assertEquals(1, internationalHomeRequests.size());
+
+        // Verify common dimensions for all requests
+        requests.forEach(
+                request -> {
+                    assertDimensionEquals(request, "Environment", "production");
+                    assertDimensionEquals(request, "LogGroup", smsSentMetricProducer);
+                    assertDimensionEquals(request, "ServiceName", smsSentMetricProducer);
+                    assertDimensionEquals(request, "ServiceType", "AWS::Lambda::Function");
+                });
+    }
+
+    private boolean hasApplicationDimension(
+            GetMetricStatisticsRequest request, String applicationValue) {
+        return request.dimensions().stream()
+                .anyMatch(
+                        dim ->
+                                "Application".equals(dim.name())
+                                        && applicationValue.equals(dim.value()));
+    }
+
+    private void assertDimensionEquals(
+            GetMetricStatisticsRequest request, String dimensionName, String expectedValue) {
+        String actualValue =
+                request.dimensions().stream()
+                        .filter(dim -> dimensionName.equals(dim.name()))
+                        .findFirst()
+                        .map(Dimension::value)
+                        .orElseThrow(
+                                () ->
+                                        new AssertionError(
+                                                String.format(
+                                                        "Dimension '%s' not found",
+                                                        dimensionName)));
+
         assertEquals(
-                "DomesticSmsQuotaEarlyWarning",
-                putRequests.get(0).metricData().get(0).metricName());
-        assertEquals(
-                "InternationalSmsQuotaEarlyWarning",
-                putRequests.get(1).metricData().get(0).metricName());
-
-        // Verify environment dimension
-        for (var request : getRequests) {
-            assertEquals("production", request.dimensions().get(0).value());
-        }
+                expectedValue,
+                actualValue,
+                String.format("Dimension '%s' should be %s", dimensionName, expectedValue));
     }
 
     private GetMetricStatisticsResponse createMetricResponse(double value) {
