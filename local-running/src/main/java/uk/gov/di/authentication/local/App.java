@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.local;
 
+import com.nimbusds.oauth2.sdk.id.Subject;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.authentication.local.initialisers.KmsInitialiser;
@@ -8,6 +9,8 @@ import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
 
@@ -29,8 +32,9 @@ public class App {
         //
         // Once Redis is gone we could remove SSM entirely and use environment variables
         var parameterInitialiser = new ParameterInitialiser();
-        parameterInitialiser.setParam("local-session-redis-master-host", "host.docker.internal");
-        parameterInitialiser.setParam("local-session-redis-port", valueOf(6379));
+        parameterInitialiser.setParam(
+                "local-session-redis-master-host", System.getenv("REDIS_HOST"));
+        parameterInitialiser.setParam("local-session-redis-port", System.getenv("REDIS_PORT"));
         parameterInitialiser.setParam("local-session-redis-tls", valueOf(false));
         parameterInitialiser.setParam("local-password-pepper", "pepper");
         parameterInitialiser.setParam(
@@ -78,5 +82,12 @@ public class App {
                                 .withIdentityVerificationSupported(true)
                                 .withTestClient(true)
                                 .withTestClientEmailAllowlist(List.of("^.*$"))));
+
+        // Initialise test account
+        // TODO: remove this once we have proper test data setup in the API tests
+        var dynamoService = new DynamoService(new ConfigurationService());
+        dynamoService.signUp("test@account.gov.uk", "Password123", new Subject(), null);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                "test@account.gov.uk", "07770000000", true, true);
     }
 }

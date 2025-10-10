@@ -13,6 +13,7 @@ dependencies {
             libs.bundles.awsLambda,
             libs.awsSqs,
             libs.awsSsm,
+            libs.bundles.nimbus,
             project(":shared"),
             project(":auth-external-api"),
             project(":frontend-api")
@@ -28,6 +29,18 @@ application {
     applicationDefaultJvmArgs = [
         "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5402"
     ]
+}
+
+run {
+    // Load env file when running from gradle
+    def envFile = file(".env.local")
+    def envProperties = new Properties()
+    envFile.withReader("UTF-8") {reader ->
+        envProperties.load(reader)
+    }
+    envProperties.entrySet().forEach {entry ->
+        environment entry.key.toString(), entry.value.toString()
+    }
 }
 
 sonar {
