@@ -1,7 +1,3 @@
-output "email_sqs_lambda_function_name" {
-  value = aws_lambda_function.email_sqs_lambda.function_name
-}
-
 module "oidc_email_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
