@@ -302,6 +302,10 @@ Resources:
       Dimensions:
         - Name: Environment
           Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: Application
+          Value: Authentication
+        - Name: IsTest
+          Value: false
         - Name: SmsDestinationType
           Value: DOMESTIC
       AlarmDescription: !Sub
@@ -337,6 +341,10 @@ Resources:
       Dimensions:
         - Name: Environment
           Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: Application
+          Value: Authentication
+        - Name: IsTest
+          Value: false
         - Name: SmsDestinationType
           Value: INTERNATIONAL
       AlarmDescription: !Sub
