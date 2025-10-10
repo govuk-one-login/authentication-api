@@ -48,32 +48,35 @@ public class AccountMetricPublishHandler implements RequestHandler<ScheduledEven
 
     @Override
     public Long handleRequest(ScheduledEvent input, Context context) {
-        var result =
-                client.describeTable(
-                        DescribeTableRequest.builder()
-                                .tableName(
-                                        format(
-                                                "{0}-user-profile",
-                                                configurationService.getEnvironment()))
-                                .build());
-        var numberOfAccounts = result.table().itemCount();
-        var numberOfVerifiedAccounts =
-                result.table().globalSecondaryIndexes().stream()
-                        .filter(i -> i.indexName().equals("VerifiedAccountIndex"))
-                        .findFirst()
-                        .orElseThrow()
-                        .itemCount();
-
+        var accountCounts = getAccountCounts();
         var nonUkPhoneNumbers = countNonUkPhoneNumbersForVerifiedAccounts();
 
-        cloudwatchMetricsService.putEmbeddedValue("NumberOfAccounts", numberOfAccounts, Map.of());
+        cloudwatchMetricsService.putEmbeddedValue("NumberOfAccounts", accountCounts.totalAccounts(), Map.of());
         cloudwatchMetricsService.putEmbeddedValue(
-                "NumberOfVerifiedAccounts", numberOfVerifiedAccounts, Map.of());
+                "NumberOfVerifiedAccounts", accountCounts.verifiedAccounts(), Map.of());
         cloudwatchMetricsService.putEmbeddedValue(
                 "NonUkPhoneNumbersVerifiedAccounts", nonUkPhoneNumbers, Map.of());
 
-        return numberOfVerifiedAccounts;
+        return accountCounts.verifiedAccounts();
     }
+
+    private AccountCounts getAccountCounts() {
+        var result = client.describeTable(
+                DescribeTableRequest.builder()
+                        .tableName(format("{0}-user-profile", configurationService.getEnvironment()))
+                        .build());
+        
+        var totalAccounts = result.table().itemCount();
+        var verifiedAccounts = result.table().globalSecondaryIndexes().stream()
+                .filter(i -> i.indexName().equals("VerifiedAccountIndex"))
+                .findFirst()
+                .orElseThrow()
+                .itemCount();
+        
+        return new AccountCounts(totalAccounts, verifiedAccounts);
+    }
+
+    private record AccountCounts(long totalAccounts, long verifiedAccounts) {}
 
     private long countNonUkPhoneNumbersForVerifiedAccounts() {
         var tableName = format("{0}-user-profile", configurationService.getEnvironment());
