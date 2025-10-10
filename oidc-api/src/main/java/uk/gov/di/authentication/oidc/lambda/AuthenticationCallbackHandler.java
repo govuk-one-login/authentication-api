@@ -79,7 +79,6 @@ import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -353,12 +352,6 @@ public class AuthenticationCallbackHandler
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
 
-                boolean isTestJourney = false;
-                if (nonNull(userInfo.getEmailAddress())) {
-                    isTestJourney =
-                            clientService.isTestJourney(clientId, userInfo.getEmailAddress());
-                }
-
                 Boolean newAccount =
                         userInfo.getBooleanClaim(AuthUserInfoClaims.NEW_ACCOUNT.getValue());
                 OrchSessionItem.AccountState orchAccountState = deduceOrchAccountState(newAccount);
@@ -388,7 +381,6 @@ public class AuthenticationCallbackHandler
                                 clientId,
                                 orchClientSession.getClientName(),
                                 orchClientSession.getVtrList(),
-                                isTestJourney,
                                 userInfo.getClaim(
                                         AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                                         String.class));
@@ -428,7 +420,6 @@ public class AuthenticationCallbackHandler
                         clientId,
                         user,
                         pair("new_account", newAccount),
-                        pair("test_user", isTestJourney),
                         pair("credential_trust_level", credentialTrustLevel.toString()));
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
@@ -525,10 +516,7 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
-                        orchAccountState,
-                        clientId,
-                        orchClientSession.getClientName(),
-                        isTestJourney);
+                        orchAccountState, clientId, orchClientSession.getClientName());
                 cloudwatchMetricsService.incrementCounter(
                         "orchAuthJourneyCompleted",
                         Map.of("clientName", client.getClientName(), "clientId", clientId));
@@ -631,7 +619,6 @@ public class AuthenticationCallbackHandler
             String clientId,
             String clientName,
             List<VectorOfTrust> vtrList,
-            boolean isTestJourney,
             String verifiedMfaMethodType) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -642,8 +629,6 @@ public class AuthenticationCallbackHandler
                                 configurationService.getEnvironment(),
                                 "Client",
                                 clientId,
-                                "IsTest",
-                                Boolean.toString(isTestJourney),
                                 "IsDocApp",
                                 "false",
                                 "ClientName",

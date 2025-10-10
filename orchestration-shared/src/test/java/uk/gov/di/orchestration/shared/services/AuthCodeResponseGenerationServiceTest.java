@@ -49,8 +49,6 @@ class AuthCodeResponseGenerationServiceTest {
                                 configurationService.getEnvironment(),
                                 "Client",
                                 CLIENT_SESSION_ID,
-                                "IsTest",
-                                Boolean.toString(Boolean.FALSE),
                                 "IsDocApp",
                                 Boolean.toString(Boolean.FALSE),
                                 "ClientName",
@@ -60,7 +58,7 @@ class AuthCodeResponseGenerationServiceTest {
 
         var actualValues =
                 authCodeResponseGenerationService.getDimensions(
-                        orchSession, CLIENT_NAME, CLIENT_SESSION_ID, false, false);
+                        orchSession, CLIENT_NAME, CLIENT_SESSION_ID, false);
         assertEquals(expectedValues, actualValues);
     }
 

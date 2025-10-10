@@ -59,11 +59,8 @@ public class CloudwatchMetricsService {
     }
 
     public void incrementSignInByClient(
-            OrchSessionItem.AccountState accountState,
-            String clientId,
-            String clientName,
-            boolean isTestJourney) {
-        if (OrchSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
+            OrchSessionItem.AccountState accountState, String clientId, String clientName) {
+        if (OrchSessionItem.AccountState.NEW.equals(accountState)) {
             incrementCounter(
                     SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
@@ -74,7 +71,7 @@ public class CloudwatchMetricsService {
                             CLIENT_NAME.getValue(),
                             clientName));
         }
-        if (OrchSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
+        if (OrchSessionItem.AccountState.EXISTING.equals(accountState)) {
             incrementCounter(
                     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(

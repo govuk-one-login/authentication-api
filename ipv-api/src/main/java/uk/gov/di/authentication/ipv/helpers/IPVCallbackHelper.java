@@ -31,7 +31,6 @@ import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -57,7 +56,6 @@ public class IPVCallbackHelper {
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final DynamoClientService dynamoClientService;
     private final DynamoIdentityService dynamoIdentityService;
     private final AwsSqsClient sqsClient;
     private final OidcAPI oidcAPI;
@@ -67,7 +65,6 @@ public class IPVCallbackHelper {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.dynamoClientService = new DynamoClientService(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sqsClient =
@@ -85,7 +82,6 @@ public class IPVCallbackHelper {
             AuthCodeResponseGenerationService authCodeResponseService,
             OrchAuthCodeService orchAuthCodeService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            DynamoClientService dynamoClientService,
             DynamoIdentityService dynamoIdentityService,
             SerializationService objectMapper,
             AwsSqsClient sqsClient,
@@ -95,7 +91,6 @@ public class IPVCallbackHelper {
         this.authCodeResponseService = authCodeResponseService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.dynamoClientService = dynamoClientService;
         this.dynamoIdentityService = dynamoIdentityService;
         this.objectMapper = objectMapper;
         this.sqsClient = sqsClient;
@@ -192,7 +187,7 @@ public class IPVCallbackHelper {
 
         var dimensions =
                 authCodeResponseService.getDimensions(
-                        orchSession, clientName, clientSessionId, false, false);
+                        orchSession, clientName, clientSessionId, false);
 
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
@@ -215,13 +210,10 @@ public class IPVCallbackHelper {
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
-        var isTestJourney = dynamoClientService.isTestJourney(clientSessionId, email);
-        LOG.info("Is journey a test journey: {}", isTestJourney);
-
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
         cloudwatchMetricsService.incrementSignInByClient(
-                orchSession.getIsNewAccount(), clientId, clientName, isTestJourney);
+                orchSession.getIsNewAccount(), clientId, clientName);
         cloudwatchMetricsService.incrementCounter(
                 "orchIdentityJourneyCompleted",
                 Map.of(

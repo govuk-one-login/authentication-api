@@ -28,7 +28,6 @@ public class AuthCodeResponseGenerationService {
             OrchSessionItem orchSession,
             String clientName,
             String clientSessionId,
-            boolean isTestJourney,
             boolean docAppJourney) {
         Map<String, String> dimensions =
                 new HashMap<>(
@@ -39,8 +38,6 @@ public class AuthCodeResponseGenerationService {
                                 configurationService.getEnvironment(),
                                 "Client",
                                 clientSessionId,
-                                "IsTest",
-                                Boolean.toString(isTestJourney),
                                 "IsDocApp",
                                 Boolean.toString(docAppJourney),
                                 "ClientName",

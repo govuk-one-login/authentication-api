@@ -38,7 +38,6 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -78,7 +77,6 @@ class IPVCallbackHelperTest {
     private static final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final OidcAPI oidcAPI = mock(OidcAPI.class);
@@ -212,7 +210,6 @@ class IPVCallbackHelperTest {
                         authCodeResponseService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
-                        dynamoClientService,
                         dynamoIdentityService,
                         SerializationService.getInstance(),
                         sqsClient,
@@ -357,7 +354,6 @@ class IPVCallbackHelperTest {
                         authCodeResponseService,
                         orchAuthCodeService,
                         cloudwatchMetricsService,
-                        dynamoClientService,
                         dynamoIdentityService,
                         objectMapperMock,
                         sqsClient,

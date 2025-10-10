@@ -288,8 +288,7 @@ class AuthenticationCallbackHandlerTest {
                 .incrementSignInByClient(
                         eq(OrchSessionItem.AccountState.NEW),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_NAME),
-                        eq(false));
+                        eq(CLIENT_NAME));
 
         verifyAuditEvents(
                 List.of(
@@ -312,7 +311,6 @@ class AuthenticationCallbackHandlerTest {
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
                         eq(pair("new_account", true)),
-                        eq(pair("test_user", false)),
                         eq(pair("credential_trust_level", "LOW_LEVEL")));
         verify(auditService)
                 .submitAuditEvent(
@@ -614,7 +612,6 @@ class AuthenticationCallbackHandlerTest {
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone("1234"),
                         pair("new_account", true),
-                        pair("test_user", false),
                         pair("credential_trust_level", "MEDIUM_LEVEL"));
     }
 
@@ -650,7 +647,6 @@ class AuthenticationCallbackHandlerTest {
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone("1234"),
                         pair("new_account", true),
-                        pair("test_user", false),
                         pair("credential_trust_level", "MEDIUM_LEVEL"));
     }
 

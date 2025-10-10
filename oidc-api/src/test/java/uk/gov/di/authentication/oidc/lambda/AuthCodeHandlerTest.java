@@ -224,7 +224,6 @@ class AuthCodeHandlerTest {
                             eq(orchSession),
                             eq(CLIENT_NAME),
                             eq(CLIENT_ID.getValue()),
-                            anyBoolean(),
                             anyBoolean()))
                     .thenReturn(
                             new HashMap<>(
@@ -235,8 +234,6 @@ class AuthCodeHandlerTest {
                                             "unit-test",
                                             "Client",
                                             CLIENT_ID.getValue(),
-                                            "IsTest",
-                                            "false",
                                             "IsDocApp",
                                             Boolean.toString(false),
                                             "MfaMethod",
@@ -321,8 +318,6 @@ class AuthCodeHandlerTest {
                         "unit-test",
                         "Client",
                         CLIENT_ID.getValue(),
-                        "IsTest",
-                        "false",
                         "IsDocApp",
                         Boolean.toString(false),
                         "MfaMethod",
@@ -372,11 +367,7 @@ class AuthCodeHandlerTest {
                         eq(null)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(orchSession),
-                        eq(CLIENT_NAME),
-                        eq(CLIENT_ID.getValue()),
-                        anyBoolean(),
-                        eq(true)))
+                        orchSession, CLIENT_NAME, CLIENT_ID.getValue(), true))
                 .thenReturn(
                         Map.of(
                                 "Account",
@@ -385,8 +376,6 @@ class AuthCodeHandlerTest {
                                 "unit-test",
                                 "Client",
                                 CLIENT_ID.getValue(),
-                                "IsTest",
-                                "false",
                                 "IsDocApp",
                                 Boolean.toString(true),
                                 "ClientName",
@@ -432,8 +421,6 @@ class AuthCodeHandlerTest {
                         "unit-test",
                         "Client",
                         CLIENT_ID.getValue(),
-                        "IsTest",
-                        "false",
                         "IsDocApp",
                         Boolean.toString(true),
                         "ClientName",
@@ -730,11 +717,7 @@ class AuthCodeHandlerTest {
                         eq(INTERNAL_COMMON_SUBJECT_ID)))
                 .thenReturn(authorizationCode);
         when(authCodeResponseService.getDimensions(
-                        eq(orchSession),
-                        eq(CLIENT_NAME),
-                        eq(CLIENT_ID.getValue()),
-                        anyBoolean(),
-                        eq(true)))
+                        orchSession, CLIENT_NAME, CLIENT_ID.getValue(), true))
                 .thenReturn(
                         Map.of(
                                 "Account",
@@ -743,8 +726,6 @@ class AuthCodeHandlerTest {
                                 "unit-test",
                                 "Client",
                                 CLIENT_ID.getValue(),
-                                "IsTest",
-                                "false",
                                 "IsDocApp",
                                 Boolean.toString(true),
                                 "ClientName",

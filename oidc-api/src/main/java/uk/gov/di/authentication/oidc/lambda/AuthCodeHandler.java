@@ -253,20 +253,11 @@ public class AuthCodeHandler
 
         try {
 
-            var isTestJourney =
-                    emailOptional
-                            .filter(
-                                    email ->
-                                            orchestrationAuthorizationService.isTestJourney(
-                                                    clientID, email))
-                            .isPresent();
-
             var dimensions =
                     authCodeResponseService.getDimensions(
                             orchSession,
                             orchClientSession.getClientName(),
                             clientID.getValue(),
-                            isTestJourney,
                             isDocAppJourney);
 
             String rpPairwiseId = AuditService.UNKNOWN;
@@ -311,8 +302,7 @@ public class AuthCodeHandler
             cloudwatchMetricsService.incrementSignInByClient(
                     orchSession.getIsNewAccount(),
                     clientID.getValue(),
-                    orchClientSession.getClientName(),
-                    isTestJourney);
+                    orchClientSession.getClientName());
             cloudwatchMetricsService.incrementCounter(
                     "orchIdentityJourneyCompleted",
                     Map.of(

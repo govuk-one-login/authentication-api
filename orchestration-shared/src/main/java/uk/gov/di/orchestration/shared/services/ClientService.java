@@ -47,6 +47,4 @@ public interface ClientService {
 
     ClientRegistry manualUpdateClient(
             String clientId, ManualUpdateClientRegistryRequest updateRequest);
-
-    boolean isTestJourney(String clientID, String emailAddress);
 }

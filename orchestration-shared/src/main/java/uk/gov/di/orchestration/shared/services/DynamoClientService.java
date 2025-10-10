@@ -14,10 +14,8 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
-import static uk.gov.di.orchestration.shared.helpers.TestClientHelper.emailMatchesAllowlist;
 
 public class DynamoClientService implements ClientService {
 
@@ -187,16 +185,6 @@ public class DynamoClientService implements ClientService {
     @Override
     public ClientID generateClientID() {
         return new ClientID(IdGenerator.generate());
-    }
-
-    @Override
-    public boolean isTestJourney(String clientID, String emailAddress) {
-        var client = getClient(clientID);
-
-        return client.map(ClientRegistry::getTestClientEmailAllowlist)
-                .filter(Predicate.not(List::isEmpty))
-                .map(list -> emailMatchesAllowlist(emailAddress, list))
-                .orElse(false);
     }
 
     private void warmUp() {
