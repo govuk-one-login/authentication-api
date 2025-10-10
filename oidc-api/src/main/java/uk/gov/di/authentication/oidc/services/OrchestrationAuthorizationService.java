@@ -241,12 +241,6 @@ public class OrchestrationAuthorizationService {
         return PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(headers);
     }
 
-    public boolean isTestJourney(ClientID clientID, String emailAddress) {
-        var isTestJourney = dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
-        LOG.info("Is journey a test journey: {}", isTestJourney);
-        return isTestJourney;
-    }
-
     public void storeState(String sessionId, String clientSessionId, State state) {
         LOG.info("Storing state");
         stateStorageService.storeState(
