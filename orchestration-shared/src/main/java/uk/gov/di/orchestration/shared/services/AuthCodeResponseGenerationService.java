@@ -28,15 +28,6 @@ public class AuthCodeResponseGenerationService {
             OrchSessionItem orchSession,
             String clientName,
             String clientSessionId,
-            boolean isTestJourney,
-            boolean docAppJourney) {
-        return getDimensions(orchSession, clientName, clientSessionId, docAppJourney);
-    }
-
-    public Map<String, String> getDimensions(
-            OrchSessionItem orchSession,
-            String clientName,
-            String clientSessionId,
             boolean docAppJourney) {
         Map<String, String> dimensions =
                 new HashMap<>(

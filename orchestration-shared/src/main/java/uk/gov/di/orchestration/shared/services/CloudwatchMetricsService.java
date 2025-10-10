@@ -84,14 +84,6 @@ public class CloudwatchMetricsService {
         }
     }
 
-    public void incrementSignInByClient(
-            OrchSessionItem.AccountState accountState,
-            String clientId,
-            String clientName,
-            boolean isTestJourney) {
-        incrementSignInByClient(accountState, clientId, clientName);
-    }
-
     public void incrementLogout(Optional<String> clientId) {
         incrementLogout(clientId, Optional.empty());
     }
