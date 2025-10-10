@@ -13,6 +13,8 @@ import uk.gov.di.orchestration.shared.services.StateStorageService;
 import java.util.List;
 import java.util.Map;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+
 public class AuthenticationAuthorizationService {
     private static final Logger LOG =
             LogManager.getLogger(AuthenticationAuthorizationService.class);
@@ -50,7 +52,10 @@ public class AuthenticationAuthorizationService {
         }
         if (!isStateValid(sessionId, queryParams.get("state"))) {
             LOG.warn("Authentication callback request state is invalid");
-            throw new AuthenticationCallbackValidationException();
+            throw new AuthenticationCallbackValidationException(
+                    new ErrorObject(
+                            ACCESS_DENIED_CODE,
+                            "Access denied for security reasons, a new authentication request may be successful"));
         }
         if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
             LOG.warn("No code param found in authentication callback request query parameters");

@@ -11,7 +11,6 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -66,6 +65,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
@@ -79,6 +80,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.awaitility.Awaitility.await;
@@ -223,7 +225,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 startsWith(REDIRECT_URI.toString()));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(OAuth2Error.SERVER_ERROR.getCode()));
+                containsString(ACCESS_DENIED_CODE));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString(
+                        URLEncoder.encode(
+                                "Access denied for security reasons, a new authentication request may be successful",
+                                Charset.defaultCharset())));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 containsString(RP_STATE.getValue()));
@@ -306,7 +314,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         var error =
                 new ErrorObject(
-                        OAuth2Error.ACCESS_DENIED_CODE,
+                        ACCESS_DENIED_CODE,
                         "Access denied for security reasons, a new authentication request may be successful");
 
         var expectedURI =

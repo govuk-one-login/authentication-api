@@ -18,9 +18,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -120,7 +122,7 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldThrowWhenInvalidStateParamPresent() {
+    void shouldThrowWhenStateParamDoesNotMatchStoredState() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("state", new State().getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
@@ -129,7 +131,12 @@ class AuthenticationAuthorizationServiceTest {
                 assertThrows(
                         AuthenticationCallbackValidationException.class,
                         () -> authService.validateRequest(queryParams, SESSION_ID));
-        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(
+                exception.getError(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                ACCESS_DENIED_CODE,
+                                "Access denied for security reasons, a new authentication request may be successful")));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
     }
@@ -146,7 +153,12 @@ class AuthenticationAuthorizationServiceTest {
                 assertThrows(
                         AuthenticationCallbackValidationException.class,
                         () -> authService.validateRequest(queryParams, SESSION_ID));
-        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(
+                exception.getError(),
+                samePropertyValuesAs(
+                        new ErrorObject(
+                                ACCESS_DENIED_CODE,
+                                "Access denied for security reasons, a new authentication request may be successful")));
         assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
     }
@@ -154,7 +166,7 @@ class AuthenticationAuthorizationServiceTest {
     @Test
     void shouldThrowWhenNoCodeParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("state", new State().getValue());
+        queryParams.put("state", STORED_STATE.getValue());
 
         var exception =
                 assertThrows(
