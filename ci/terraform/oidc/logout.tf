@@ -31,7 +31,6 @@ module "logout" {
 
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
-    REDIS_KEY                            = var.environment == "production" ? local.redis_key : null
     ENVIRONMENT                          = var.environment
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
@@ -52,9 +51,9 @@ module "logout" {
   lambda_zip_file_version = aws_s3_object.oidc_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  security_group_ids = concat([
+  security_group_ids = [
     local.authentication_security_group_id,
-  ], var.environment == "production" ? [local.authentication_oidc_redis_security_group_id] : [])
+  ]
 
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.oidc_logout_role.arn
