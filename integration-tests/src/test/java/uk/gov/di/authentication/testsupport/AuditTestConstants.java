@@ -11,4 +11,6 @@ public interface AuditTestConstants {
     String RP_PAIRWISE_ID = "extensions.rpPairwiseId";
     String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
             "extensions.number_of_attempts_user_allowed_to_login";
+    String USER_SUPPLIED_EMAIL = "restricted.user_supplied_email";
+    String USER_ID_FOR_USER_SUPPLIED_EMAIL = "restricted.user_id_for_user_supplied_email";
 }

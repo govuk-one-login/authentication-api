@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -30,11 +31,20 @@ import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.ATTEMPT_NO_FAILED_AT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.FAILURE_REASON;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_EMAIL_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_OTP_CODE_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_ATTEMPT_COUNT;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_ID_FOR_USER_SUPPLIED_EMAIL;
+import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_SUPPLIED_EMAIL;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -47,6 +57,22 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final Subject SUBJECT = new Subject();
     private static final String SESSION_ID = "test-session-id";
     private Map<String, String> requestHeaders;
+
+    private static final AuditEventExpectation BASE_REAUTH_FAILED_EXPECTATION =
+            new AuditEventExpectation(AUTH_REAUTH_FAILED)
+                    .withAttribute(INCORRECT_EMAIL_ATTEMPT_COUNT, "6")
+                    .withAttribute(INCORRECT_PASSWORD_ATTEMPT_COUNT, "0")
+                    .withAttribute(FAILURE_REASON, "incorrect_email");
+
+    private static final AuditEventExpectation BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION =
+            new AuditEventExpectation(AUTH_REAUTH_INCORRECT_EMAIL_ENTERED)
+                    .withAttribute(INCORRECT_EMAIL_ATTEMPT_COUNT, "6")
+                    .withAttribute(USER_SUPPLIED_EMAIL, TEST_EMAIL)
+                    .withAttribute(USER_ID_FOR_USER_SUPPLIED_EMAIL, SUBJECT.getValue());
+
+    private static final AuditEventExpectation BASE_LIMIT_BREACHED_EXPECTATION =
+            new AuditEventExpectation(AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED)
+                    .withAttribute(ATTEMPT_NO_FAILED_AT, "6");
 
     @RegisterExtension
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
@@ -111,6 +137,12 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                             Map.of("principalId", expectedPairwiseId));
 
             assertThat(response, hasStatus(200));
+
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(AUTH_REAUTH_ACCOUNT_IDENTIFIED)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
         }
     }
 
@@ -199,12 +231,17 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_EMAIL),
                     equalTo(maxRetriesAllowed));
-            assertTxmaAuditEventsReceived(
+
+            assertAuditEventExpectations(
                     txmaAuditQueue,
                     List.of(
-                            AUTH_REAUTH_FAILED,
-                            AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                            AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED));
+                            new AuditEventExpectation(BASE_REAUTH_FAILED_EXPECTATION)
+                                    .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_LIMIT_BREACHED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
         }
 
         @Test
@@ -252,12 +289,17 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_EMAIL),
                     equalTo(subjectIdCount + 1));
-            assertTxmaAuditEventsReceived(
+
+            assertAuditEventExpectations(
                     txmaAuditQueue,
                     List.of(
-                            AUTH_REAUTH_FAILED,
-                            AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                            AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED));
+                            new AuditEventExpectation(BASE_REAUTH_FAILED_EXPECTATION)
+                                    .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_LIMIT_BREACHED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
         }
 
         @Test
