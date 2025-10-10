@@ -16,21 +16,23 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -71,8 +73,8 @@ public class StartHandler
     private final StartService startService;
     private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
@@ -80,20 +82,18 @@ public class StartHandler
             StartService startService,
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
-            AuthenticationAttemptsService authenticationAttemptsService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PermissionDecisionManager permissionDecisionManager) {
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public StartHandler(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
@@ -101,6 +101,7 @@ public class StartHandler
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public StartHandler() {
@@ -151,7 +152,9 @@ public class StartHandler
         try {
             var authSession =
                     authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                            Optional.ofNullable(startRequest.previousSessionId()), sessionId);
+                            Optional.ofNullable(startRequest.previousSessionId())
+                                    .filter(s -> !s.isBlank()),
+                            sessionId);
             LOG.info("Start session retrieved");
             var requestedCredentialTrustLevel =
                     retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
@@ -242,9 +245,42 @@ public class StartHandler
 
             boolean isBlockedForReauth = false;
             if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
-                isBlockedForReauth =
-                        checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
-                                maybeInternalSubject, auditContext, startRequest);
+                var permissionContext =
+                        buildUserPermissionContext(authSession, startRequest, userContext);
+                var permissionResult =
+                        permissionDecisionManager.canStartJourney(
+                                JourneyType.REAUTHENTICATION, permissionContext);
+
+                if (permissionResult.isSuccess()
+                        && permissionResult.getSuccess()
+                                instanceof
+                                uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .ReauthLockedOut
+                                lockedOut) {
+                    isBlockedForReauth = true;
+                    if (maybeInternalSubject.isPresent()) {
+                        var reauthCountTypesToCounts = lockedOut.detailedCounts();
+                        var blockedCountTypes = lockedOut.blockedCountTypes();
+                        ReauthFailureReasons failureReason =
+                                getReauthFailureReasonFromCountTypes(blockedCountTypes);
+                        auditService.submitAuditEvent(
+                                FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                auditContext,
+                                ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
+                                        .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
+                                        .withFailureReason(failureReason)
+                                        .build());
+                        cloudwatchMetricsService.incrementCounter(
+                                CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                                Map.of(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment(),
+                                        FAILURE_REASON.getValue(),
+                                        failureReason == null
+                                                ? "unknown"
+                                                : failureReason.getValue()));
+                    }
+                }
             }
 
             var userStartInfo =
@@ -278,47 +314,6 @@ public class StartHandler
         }
     }
 
-    private boolean checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
-            Optional<String> maybeInternalSubjectId,
-            AuditContext auditContext,
-            StartRequest startRequest) {
-        var reauthCountTypesToCounts =
-                maybeInternalSubjectId
-                        .map(
-                                subjectId ->
-                                        authenticationAttemptsService
-                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                                        subjectId,
-                                                        startRequest.rpPairwiseIdForReauth(),
-                                                        JourneyType.REAUTHENTICATION))
-                        .orElse(
-                                authenticationAttemptsService.getCountsByJourney(
-                                        startRequest.rpPairwiseIdForReauth(),
-                                        JourneyType.REAUTHENTICATION));
-        var blockedCountTypes =
-                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                        reauthCountTypesToCounts, configurationService);
-        if (!blockedCountTypes.isEmpty() && maybeInternalSubjectId.isPresent()) {
-            ReauthFailureReasons failureReason =
-                    getReauthFailureReasonFromCountTypes(blockedCountTypes);
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                    auditContext,
-                    ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
-                            .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
-                            .withFailureReason(failureReason)
-                            .build());
-            cloudwatchMetricsService.incrementCounter(
-                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            FAILURE_REASON.getValue(),
-                            failureReason == null ? "unknown" : failureReason.getValue()));
-        }
-        return !blockedCountTypes.isEmpty();
-    }
-
     private void emitReauthRequestedObservability(
             StartRequest startRequest, AuditContext auditContext) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
@@ -337,5 +332,14 @@ public class StartHandler
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.REAUTH_REQUESTED.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+    }
+
+    private UserPermissionContext buildUserPermissionContext(
+            AuthSessionItem authSession, StartRequest startRequest, UserContext userContext) {
+        return new UserPermissionContext(
+                authSession.getInternalCommonSubjectId(),
+                startRequest.rpPairwiseIdForReauth(),
+                userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
+                authSession);
     }
 }

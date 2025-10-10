@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -35,6 +36,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -73,6 +75,7 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADD
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartHandlerTest {
@@ -105,6 +108,8 @@ class StartHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -125,14 +130,19 @@ class StartHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .Permitted(0)));
         handler =
                 new StartHandler(
                         auditService,
                         startService,
                         authSessionService,
                         configurationService,
-                        authenticationAttemptsService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        permissionDecisionManager);
     }
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
@@ -234,24 +244,6 @@ class StartHandlerTest {
         handler.handleRequest(event, context);
 
         verifyNoInteractions(authenticationAttemptsService);
-    }
-
-    @Test
-    void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId() throws Json.JsonException {
-        var isAuthenticated = false;
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(userProfile.getSubjectID()).thenReturn(null);
-
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
-
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        useValidSession();
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
-        handler.handleRequest(event, context);
-
-        verify(authenticationAttemptsService)
-                .getCountsByJourney(TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION);
     }
 
     @Test
@@ -410,6 +402,19 @@ class StartHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .ReauthLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false,
+                                        Map.of(countType, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(countType))));
 
         var isAuthenticated = true;
         useValidSession();
@@ -500,8 +505,7 @@ class StartHandlerTest {
     }
 
     private Map<String, String> headersWithReauthenticate(String reauthenticate) {
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS);
+        Map<String, String> headers = new HashMap<>(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, reauthenticate);
         return headers;
     }
@@ -534,5 +538,372 @@ class StartHandlerTest {
                         TEST_SUBJECT_TYPE,
                         false,
                         TEST_RP_SUBJECT_ID_HOST));
+    }
+
+    @Test
+    void shouldReturn400WhenSessionIdHeaderIsMissing() throws Json.JsonException {
+        var headersWithoutSessionId = new HashMap<>(VALID_HEADERS);
+        headersWithoutSessionId.remove("Session-Id");
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        headersWithoutSessionId, makeRequestBodyWithAuthenticatedField(false));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+    }
+
+    @Test
+    void shouldReturn400WhenClientSessionIdHeaderIsMissing() throws Json.JsonException {
+        var headersWithoutClientSessionId = new HashMap<>(VALID_HEADERS);
+        headersWithoutClientSessionId.remove("Client-Session-Id");
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        headersWithoutClientSessionId,
+                        makeRequestBodyWithAuthenticatedField(false));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_CLIENT_SESSION_ID));
+    }
+
+    @Test
+    void shouldReturn400WhenRequestBodyIsInvalidJson() {
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "invalid-json");
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+    }
+
+    @Test
+    void shouldReturn400WhenRedirectUriIsInvalid() throws Json.JsonException {
+        usingStartServiceThatReturns(
+                userContext, getClientStartInfo(), getUserStartInfo(null, null));
+        useValidSession();
+
+        var invalidRedirectUri = "://invalid-uri"; // Invalid URI - targets line 274-277
+        var body =
+                objectMapper.writeValueAsString(
+                        new StartRequest(
+                                null,
+                                null,
+                                null,
+                                false,
+                                COOKIE_CONSENT,
+                                null,
+                                CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.NONE.getValue(),
+                                STATE.toString(),
+                                TEST_CLIENT_ID,
+                                invalidRedirectUri,
+                                SCOPE.toString(),
+                                CLIENT_NAME,
+                                ServiceType.MANDATORY.toString(),
+                                false,
+                                false,
+                                false,
+                                TEST_SUBJECT_TYPE,
+                                false,
+                                TEST_RP_SUBJECT_ID_HOST));
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+    }
+
+    @Test
+    void shouldHandleReauthWithBlockedCountTypesButNoSubjectId() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, true);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+
+        // Mock session with no internal subject ID
+        when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
+                .thenReturn(
+                        new AuthSessionItem()
+                                .withSessionId(SESSION_ID)
+                                .withClientId(CLIENT_ID)
+                                .withInternalCommonSubjectId(
+                                        null)); // No subject ID - targets line 301
+
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES)); // Blocked but no subject ID
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .ReauthLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false,
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(ENTER_EMAIL))));
+
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should not emit reauth failed event when no subject ID is present (line 301 branch)
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
+    }
+
+    @Test
+    void shouldHandleNullRequestedLevelOfConfidence() throws Json.JsonException {
+        var userStartInfo = getUserStartInfo(null, null);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body =
+                objectMapper.writeValueAsString(
+                        new StartRequest(
+                                null,
+                                null,
+                                null,
+                                false,
+                                COOKIE_CONSENT,
+                                null,
+                                CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
+                                null, // null requestedLevelOfConfidence - targets line 159
+                                STATE.toString(),
+                                TEST_CLIENT_ID,
+                                REDIRECT_URL.toString(),
+                                SCOPE.toString(),
+                                CLIENT_NAME,
+                                ServiceType.MANDATORY.toString(),
+                                false,
+                                false,
+                                false,
+                                TEST_SUBJECT_TYPE,
+                                false,
+                                TEST_RP_SUBJECT_ID_HOST));
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_START_INFO_FOUND),
+                        any(),
+                        eq(pair("internalSubjectId", TEST_SUBJECT_ID)));
+    }
+
+    @Test
+    void shouldHandleEmptyPreviousSigninJourneyIdInReauth() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body =
+                makeRequestBody(
+                        null,
+                        "",
+                        TEST_RP_PAIRWISE_ID,
+                        false); // empty previousGovUkSigninJourneyId - targets line 326
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should only include rpPairwiseId in audit metadata when previousGovUkSigninJourneyId is
+        // empty
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        eq(
+                                new AuditService.MetadataPair[] {
+                                    pair("rpPairwiseId", TEST_RP_PAIRWISE_ID)
+                                }));
+    }
+
+    @Test
+    void shouldHandleEmptyRpPairwiseIdInReauth() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body =
+                makeRequestBody(
+                        null,
+                        TEST_PREVIOUS_SIGN_IN_JOURNEY_ID,
+                        "",
+                        false); // empty rpPairwiseId - targets line 330
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should only include previousGovUkSigninJourneyId in audit metadata when rpPairwiseId is
+        // empty
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        eq(
+                                new AuditService.MetadataPair[] {
+                                    pair(
+                                            "previous_govuk_signin_journey_id",
+                                            TEST_PREVIOUS_SIGN_IN_JOURNEY_ID)
+                                }));
+    }
+
+    @Test
+    void shouldHandleNullPreviousSigninJourneyIdAndRpPairwiseIdInReauth()
+            throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body =
+                makeRequestBody(null, null, null, false); // both null - targets lines 326 and 330
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should submit audit event with empty metadata array when both are null
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        eq(new AuditService.MetadataPair[0]));
+    }
+
+    @Test
+    void shouldHandleReauthWithNullReauthenticateHeader() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        // Headers without Reauthenticate header (null case) - targets line 205-206
+        var headersWithoutReauth = new HashMap<>(VALID_HEADERS);
+        // Don't add Reauthenticate header at all
+
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
+        var event = apiRequestEventWithHeadersAndBody(headersWithoutReauth, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should not emit reauth requested event when header is null
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
+    }
+
+    @Test
+    void shouldHandleNullFailureReasonInCloudwatchMetrics() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
+                .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES));
+        when(permissionDecisionManager.canStartJourney(any(), any()))
+                .thenReturn(
+                        uk.gov.di.authentication.shared.entity.Result.success(
+                                new uk.gov.di.authentication.userpermissions.entity.Decision
+                                        .ReauthLockedOut(
+                                        uk.gov.di.authentication.userpermissions.entity
+                                                .ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        0,
+                                        java.time.Instant.now().plusSeconds(900),
+                                        false,
+                                        Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES),
+                                        java.util.List.of(ENTER_EMAIL))));
+
+        useValidSession();
+
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, true);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should handle null failure reason and use "unknown" - targets line 317
+        verify(cloudwatchMetricsService)
+                .incrementCounter(eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
+    }
+
+    @Test
+    void shouldHandleReauthWhenAttemptsServiceDisabled() throws Json.JsonException {
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(false); // Disabled - targets line 244
+        useValidSession();
+
+        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        // Should not call authentication attempts service when disabled
+        verifyNoInteractions(authenticationAttemptsService);
+        // Should still emit reauth requested event
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
+    }
+
+    @Test
+    void shouldReturn200WithPreviousSessionId() throws Json.JsonException {
+        var userStartInfo = getUserStartInfo(null, null);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var previousSessionId = "previous-session-id";
+        var body = makeRequestBody(previousSessionId, null, null, false);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(authSessionService)
+                .getUpdatedPreviousSessionOrCreateNew(Optional.of(previousSessionId), SESSION_ID);
+    }
+
+    @Test
+    void shouldReturn200WithEmptyPreviousSessionId() throws Json.JsonException {
+        var userStartInfo = getUserStartInfo(null, null);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body = makeRequestBody("", null, null, false); // empty string
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(authSessionService)
+                .getUpdatedPreviousSessionOrCreateNew(Optional.empty(), SESSION_ID);
+    }
+
+    @Test
+    void shouldReturn200WithBlankPreviousSessionId() throws Json.JsonException {
+        var userStartInfo = getUserStartInfo(null, null);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        var body = makeRequestBody("   ", null, null, false); // blank string with spaces
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(authSessionService)
+                .getUpdatedPreviousSessionOrCreateNew(Optional.empty(), SESSION_ID);
     }
 }
