@@ -2,16 +2,21 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
@@ -21,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -30,7 +36,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -117,6 +125,7 @@ class CheckEmailFraudBlockHandlerTest {
 
         var resultStore = new EmailCheckResultStore();
         resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
         usingValidSession();
@@ -137,7 +146,8 @@ class CheckEmailFraudBlockHandlerTest {
     }
 
     @Test
-    void shouldSubmitAuditWithPendingStatusWhenEmailCheckResultStoreNotPresent() {
+    void
+            shouldSubmitEmailFraudCheckBypassedAuditEventWithPendingStatusWhenEmailCheckResultStoreNotPresent() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 getProxyRequestContext();
 
@@ -189,6 +199,76 @@ class CheckEmailFraudBlockHandlerTest {
                     is(JourneyType.REGISTRATION.getValue()));
             assertThat(
                     capturedEvent.extensions().assessmentCheckedAtTimestamp(), is(mockedTimestamp));
+        }
+    }
+
+    private static Stream<Arguments> successfulEmailCheckResultStatus() {
+        return Stream.of(
+                Arguments.of(EmailCheckResultStatus.ALLOW),
+                Arguments.of(EmailCheckResultStatus.DENY));
+    }
+
+    @ParameterizedTest
+    @MethodSource("successfulEmailCheckResultStatus")
+    void shouldSubmitEmailCheckDecisionUsedAuditEventWhenEmailCheckIsPresent(
+            EmailCheckResultStatus status) {
+        Gson gson = new Gson();
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                getProxyRequestContext();
+        var resultStore = new EmailCheckResultStore();
+        var mockEmailCheckResponse = CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE;
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "some-reference-number",
+                        status.getValue(),
+                        true,
+                        gson.toJsonTree(Map.of("type", "EMAIL_FRAUD_CHECK")));
+        JsonElement expectedRestricted =
+                gson.toJsonTree(Map.of("domain_name", "digital.cabinet-office.gov.uk"));
+        resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
+        resultStore.setEmailCheckResponse(mockEmailCheckResponse);
+        when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
+
+        usingValidSession();
+
+        long mockedTimestamp = 1719376320;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
+                    .thenReturn(mockedTimestamp);
+
+            var event =
+                    new APIGatewayProxyRequestEvent()
+                            .withHeaders(VALID_HEADERS)
+                            .withRequestContext(proxyRequestContext)
+                            .withBody(format("{ \"email\": \"%s\" }", EMAIL));
+
+            var expectedResponse = new CheckEmailFraudBlockResponse(EMAIL, status.getValue());
+            var result =
+                    handler.handleRequestWithUserContext(
+                            event,
+                            contextMock,
+                            new CheckEmailFraudBlockRequest(EMAIL),
+                            userContext);
+
+            assertThat(result, hasStatus(200));
+            assertThat(result, hasJsonBody(expectedResponse));
+
+            ArgumentCaptor<AuthEmailFraudCheckDecisionUsed> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthEmailFraudCheckDecisionUsed.class);
+            verify(auditServiceMock).submitAuditEvent(auditEventCaptor.capture());
+
+            AuthEmailFraudCheckDecisionUsed capturedEvent = auditEventCaptor.getValue();
+            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_DECISION_USED"));
+            assertThat(capturedEvent.clientId(), is(CLIENT_ID));
+            assertThat(capturedEvent.user().email(), is(EMAIL));
+            assertThat(capturedEvent.user().ipAddress(), is(IP_ADDRESS));
+            assertThat(capturedEvent.user().persistentSessionId(), is(DI_PERSISTENT_SESSION_ID));
+            assertThat(capturedEvent.user().govukSigninJourneyId(), is(CLIENT_SESSION_ID));
+            assertThat(capturedEvent.extensions(), is(expectedExtensions));
+            assertThat(capturedEvent.restricted(), is(expectedRestricted));
         }
     }
 

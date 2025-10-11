@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -23,7 +24,7 @@ public class DynamoEmailCheckResultService extends BaseDynamoService<EmailCheckR
             Long timeToExist,
             String referenceNumber,
             String govukSigninJourneyId,
-            Object emailCheckResponse) {
+            EmailCheckResponse emailCheckResponse) {
         var emailCheckResult =
                 new EmailCheckResultStore()
                         .withEmail(email)

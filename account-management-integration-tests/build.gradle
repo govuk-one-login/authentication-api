@@ -20,6 +20,8 @@ dependencies {
             libs.bundles.lettuce,
             libs.libphonenumber
 
+    implementation project(':audit-events')
+
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray

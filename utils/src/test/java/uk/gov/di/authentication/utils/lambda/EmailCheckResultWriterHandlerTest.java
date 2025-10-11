@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.annotations.NotNull;
+import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -17,7 +18,6 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -40,7 +40,7 @@ class EmailCheckResultWriterHandlerTest {
     private static ArgumentCaptor<Long> timeToExistCaptor;
     private static ArgumentCaptor<String> referenceNumberCaptor;
     private static ArgumentCaptor<String> govukSigninJourneyIdCaptor;
-    private static ArgumentCaptor<Object> emailCheckResponseCaptor;
+    private static ArgumentCaptor<EmailCheckResponse> emailCheckResponseCaptor;
     private EmailCheckResultWriterHandler handler;
 
     @BeforeAll
@@ -52,7 +52,7 @@ class EmailCheckResultWriterHandlerTest {
         timeToExistCaptor = ArgumentCaptor.forClass(Long.class);
         referenceNumberCaptor = ArgumentCaptor.forClass(String.class);
         govukSigninJourneyIdCaptor = ArgumentCaptor.forClass(String.class);
-        emailCheckResponseCaptor = ArgumentCaptor.forClass(Object.class);
+        emailCheckResponseCaptor = ArgumentCaptor.forClass(EmailCheckResponse.class);
     }
 
     @BeforeEach
@@ -84,26 +84,27 @@ class EmailCheckResultWriterHandlerTest {
             assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
             assertEquals("test-journey-id", govukSigninJourneyIdCaptor.getValue());
 
-            var capturedResponseSection = emailCheckResponseCaptor.getValue();
-            assertNotNull(capturedResponseSection);
+            var capturedEmailCheckResponse = emailCheckResponseCaptor.getValue();
+            assertNotNull(capturedEmailCheckResponse);
 
-            var responseMap = (Map<?, ?>) capturedResponseSection;
-            assertEquals("testValue1", responseMap.get("testString"));
-            assertEquals(123, ((Number) responseMap.get("testNumber")).intValue());
-            assertEquals(true, responseMap.get("testBoolean"));
+            var extensions = capturedEmailCheckResponse.extensions().getAsJsonObject();
+            assertEquals("testValue1", extensions.get("extensionsTestString").getAsString());
+            assertEquals(123, extensions.get("extensionsTestNumber").getAsNumber().intValue());
+            assertEquals(true, extensions.get("extensionsTestBoolean").getAsBoolean());
 
-            var testArray = (List<?>) responseMap.get("testArray");
-            assertEquals(2, testArray.size());
-            assertEquals("testItem1", testArray.get(0));
-            assertEquals("testItem2", testArray.get(1));
+            var testObject = extensions.get("extensionsTestObject").getAsJsonObject();
+            assertEquals(
+                    "testNestedValue", testObject.get("extensionsTestNestedString").getAsString());
+            assertEquals(
+                    456, testObject.get("extensionsTestNestedNumber").getAsNumber().intValue());
 
-            var testObject = (Map<?, ?>) responseMap.get("testObject");
-            assertEquals("testNestedValue", testObject.get("testNestedString"));
-            assertEquals(456, ((Number) testObject.get("testNestedNumber")).intValue());
+            var testChildObject = testObject.get("extensionsTestChildObject").getAsJsonObject();
+            assertEquals(
+                    "testDeepValue", testChildObject.get("extensionsTestDeepString").getAsString());
+            assertEquals(false, testChildObject.get("extensionsTestDeepBoolean").getAsBoolean());
 
-            var testChildObject = (Map<?, ?>) testObject.get("testChildObject");
-            assertEquals("testDeepValue", testChildObject.get("testDeepString"));
-            assertEquals(false, testChildObject.get("testDeepBoolean"));
+            var restricted = capturedEmailCheckResponse.restricted().getAsJsonObject();
+            assertEquals("testValue2", restricted.get("restrictedTestString").getAsString());
 
             verify(cloudWatchMock).logEmailCheckDuration(REQUEST_DURATION);
         }
@@ -169,17 +170,22 @@ class EmailCheckResultWriterHandlerTest {
                               "TimeOfInitialRequest": %d,
                               "GovukSigninJourneyId": "test-journey-id",
                               "EmailCheckResponse": {
-                                "testString": "testValue1",
-                                "testNumber": 123,
-                                "testBoolean": true,
-                                "testArray": ["testItem1", "testItem2"],
-                                "testObject": {
-                                  "testNestedString": "testNestedValue",
-                                  "testNestedNumber": 456,
-                                  "testChildObject": {
-                                    "testDeepString": "testDeepValue",
-                                    "testDeepBoolean": false
-                                  }
+                                "extensions": {
+                                    "extensionsTestString": "testValue1",
+                                    "extensionsTestNumber": 123,
+                                    "extensionsTestBoolean": true,
+                                    "extensionsTestArray": ["testItem1", "testItem2"],
+                                    "extensionsTestObject": {
+                                      "extensionsTestNestedString": "testNestedValue",
+                                      "extensionsTestNestedNumber": 456,
+                                      "extensionsTestChildObject": {
+                                        "extensionsTestDeepString": "testDeepValue",
+                                        "extensionsTestDeepBoolean": false
+                                      }
+                                    }
+                                },
+                                "restricted": {
+                                    "restrictedTestString": "testValue2"
                                 }
                               }
                             }""",

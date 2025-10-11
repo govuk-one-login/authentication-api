@@ -1,5 +1,7 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,8 +11,11 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -20,8 +25,10 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
+import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,13 +37,19 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_DECISION_USED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
+import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.extensionsJsonString;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.restrictedJsonString;
 import static uk.gov.di.authentication.shared.helpers.NowHelper.unixTimePlusNDays;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -49,6 +62,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
+    private static final String EXTENSIONS_JOURNEY_TYPE = "extensions.journey_type";
+    private static final String EXTENSIONS_COMPONENT_ID = "component_id";
+
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
             new DynamoEmailCheckResultService(TEST_CONFIGURATION_SERVICE);
 
@@ -60,6 +76,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void setup() {
         handler = new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
+        notificationsQueue.clear();
     }
 
     @Test
@@ -282,14 +299,14 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn404IfEmailHasFailedExperianCheck() {
+    void shouldReturn404IfEmailHasDeniedExperianCheck() {
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 NEW_EMAIL_ADDRESS,
                 EmailCheckResultStatus.DENY,
                 unixTimePlusNDays(1),
                 "test-reference",
                 CommonTestVariables.JOURNEY_ID,
-                CommonTestVariables.EMAIL_CHECK_RESPONSE_TEST_DATA);
+                CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
@@ -307,6 +324,99 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_FORBIDDEN));
+
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "test-reference",
+                        "DENY",
+                        true,
+                        JsonParser.parseString(extensionsJsonString));
+        JsonElement expectedRestricted = JsonParser.parseString(restrictedJsonString);
+        List<AuditableEvent> expectedEvents = List.of(AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
+        Map<String, Map<String, Object>> eventExpectations = new HashMap<>();
+        Map<String, Object> fraudCheckDecisionUsedAttributes = new HashMap<>();
+        fraudCheckDecisionUsedAttributes.put(
+                EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
+        fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+        fraudCheckDecisionUsedAttributes.put("extensions", expectedExtensions);
+        fraudCheckDecisionUsedAttributes.put("restricted", expectedRestricted);
+        eventExpectations.put(
+                AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
+
+        verifyAuditEvents(expectedEvents, eventExpectations);
+    }
+
+    @Test
+    void shouldReturn204AndSendFraudCheckDecisionUsedAuditEventIfEmailHasPassedExperianCheck() {
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
+        dynamoEmailCheckResultService.saveEmailCheckResult(
+                NEW_EMAIL_ADDRESS,
+                EmailCheckResultStatus.ALLOW,
+                unixTimePlusNDays(1),
+                "test-reference",
+                CommonTestVariables.JOURNEY_ID,
+                CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE);
+        var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new UpdateEmailRequest(
+                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        requestParams);
+
+        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+        assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
+
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "test-reference",
+                        "ALLOW",
+                        true,
+                        JsonParser.parseString(extensionsJsonString));
+        JsonElement expectedRestricted = JsonParser.parseString(restrictedJsonString);
+        List<AuditableEvent> expectedEvents =
+                List.of(AUTH_UPDATE_EMAIL, AUTH_EMAIL_FRAUD_CHECK_DECISION_USED);
+        Map<String, Map<String, Object>> eventExpectations = new HashMap<>();
+        Map<String, Object> fraudCheckDecisionUsedAttributes = new HashMap<>();
+        fraudCheckDecisionUsedAttributes.put(
+                EXTENSIONS_JOURNEY_TYPE, JourneyType.REGISTRATION.getValue());
+        fraudCheckDecisionUsedAttributes.put(EXTENSIONS_COMPONENT_ID, "AUTH");
+        fraudCheckDecisionUsedAttributes.put("extensions", expectedExtensions);
+        fraudCheckDecisionUsedAttributes.put("restricted", expectedRestricted);
+        eventExpectations.put(
+                AUTH_EMAIL_FRAUD_CHECK_DECISION_USED.name(), fraudCheckDecisionUsedAttributes);
+
+        verifyAuditEvents(expectedEvents, eventExpectations);
+    }
+
+    private void verifyAuditEvents(
+            List<AuditableEvent> expectedEvents,
+            Map<String, Map<String, Object>> eventExpectations) {
+        List<String> receivedEvents =
+                assertTxmaAuditEventsReceived(txmaAuditQueue, expectedEvents, false);
+
+        for (Map.Entry<String, Map<String, Object>> eventEntry : eventExpectations.entrySet()) {
+            String eventName = eventEntry.getKey();
+            Map<String, Object> attributes = eventEntry.getValue();
+
+            AuditEventExpectation expectation = new AuditEventExpectation(eventName);
+
+            for (Map.Entry<String, Object> attributeEntry : attributes.entrySet()) {
+                expectation.withAttribute(attributeEntry.getKey(), attributeEntry.getValue());
+            }
+
+            expectation.verify(receivedEvents);
+            assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+        }
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {

@@ -4,7 +4,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import uk.gov.di.authentication.shared.converters.ObjectConverter;
+import uk.gov.di.authentication.shared.converters.EmailCheckResponseConverter;
 
 @DynamoDbBean
 public class EmailCheckResultStore {
@@ -21,7 +21,7 @@ public class EmailCheckResultStore {
     private long timeToExist;
     private String referenceNumber;
     private String govukSigninJourneyId;
-    private Object emailCheckResponse;
+    private EmailCheckResponse emailCheckResponse;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_EMAIL)
@@ -95,16 +95,16 @@ public class EmailCheckResultStore {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_EMAIL_CHECK_RESPONSE)
-    @DynamoDbConvertedBy(ObjectConverter.class)
-    public Object getEmailCheckResponse() {
+    @DynamoDbConvertedBy(EmailCheckResponseConverter.class)
+    public EmailCheckResponse getEmailCheckResponse() {
         return emailCheckResponse;
     }
 
-    public void setEmailCheckResponse(Object emailCheckResponse) {
+    public void setEmailCheckResponse(EmailCheckResponse emailCheckResponse) {
         this.emailCheckResponse = emailCheckResponse;
     }
 
-    public EmailCheckResultStore withEmailCheckResponse(Object emailCheckResponse) {
+    public EmailCheckResultStore withEmailCheckResponse(EmailCheckResponse emailCheckResponse) {
         this.emailCheckResponse = emailCheckResponse;
         return this;
     }

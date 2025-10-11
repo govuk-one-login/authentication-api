@@ -11,4 +11,4 @@ public record EmailCheckResultSqsMessage(
         @Expose @SerializedName("RequestReference") @Required String requestReference,
         @Expose @SerializedName("TimeOfInitialRequest") @Required long timeOfInitialRequest,
         @Expose @SerializedName("GovukSigninJourneyId") String govukSigninJourneyId,
-        @Expose @SerializedName("EmailCheckResponse") Object emailCheckResponse) {}
+        @Expose @SerializedName("EmailCheckResponse") EmailCheckResponse emailCheckResponse) {}
