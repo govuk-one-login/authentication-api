@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -1102,18 +1101,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.addUnverifiedUser(email, USER_PASSWORD);
         authSessionExtension.addEmailToSession(sessionId, email);
         userStore.setMfaMethodsMigrated(email, mfaMethodsMigrated);
-        clientStore.registerClient(
-                CLIENT_ID,
-                "test-client",
-                singletonList("redirect-url"),
-                singletonList(EMAIL_ADDRESS),
-                List.of("openid", "email", "phone"),
-                "public-key",
-                singletonList("http://localhost/post-redirect-logout"),
-                "https://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
     }
 
     public void setUpAuthAppRequest(JourneyType journeyType) {

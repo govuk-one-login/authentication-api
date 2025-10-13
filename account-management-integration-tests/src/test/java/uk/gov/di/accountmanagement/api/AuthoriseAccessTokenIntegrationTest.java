@@ -12,13 +12,10 @@ import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +23,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -68,7 +64,6 @@ class AuthoriseAccessTokenIntegrationTest
                         Optional.of(CLIENT_ID.getValue()),
                         PUBLIC_SUBJECT.getValue(),
                         validDate);
-        setUpClient(scopes);
 
         var authPolicy = makeRequest(accessToken.toAuthorizationHeader());
 
@@ -91,7 +86,6 @@ class AuthoriseAccessTokenIntegrationTest
                         Optional.of(CLIENT_ID.getValue()),
                         PUBLIC_SUBJECT.getValue(),
                         expiryDate);
-        setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
     }
@@ -105,7 +99,6 @@ class AuthoriseAccessTokenIntegrationTest
                         Optional.of(CLIENT_ID.getValue()),
                         PUBLIC_SUBJECT.getValue(),
                         validDate);
-        setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
     }
@@ -119,7 +112,6 @@ class AuthoriseAccessTokenIntegrationTest
         var accessToken =
                 generateSignedAccessToken(
                         scopes, Optional.empty(), PUBLIC_SUBJECT.getValue(), validDate);
-        setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
     }
@@ -128,22 +120,6 @@ class AuthoriseAccessTokenIntegrationTest
         var ex = assertThrows(RuntimeException.class, performAction::get);
 
         assertThat(ex.getMessage(), is("Unauthorized"));
-    }
-
-    private void setUpClient(List<String> scopes) {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                "test-client",
-                singletonList("redirect-url"),
-                singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
-                scopes,
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("https://localhost/post-redirect-logout"),
-                "https://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
     }
 
     private AccessToken generateSignedAccessToken(

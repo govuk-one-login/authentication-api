@@ -1,9 +1,7 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -19,13 +17,9 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
-import uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils;
 
-import java.net.URI;
-import java.security.KeyPair;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
@@ -49,12 +42,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String CLIENT_NAME = "some-client-name";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final Subject SUBJECT = new Subject();
-    private final KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
-    private static final URI REDIRECT_URI =
-            URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final String SESSION_ID = "test-session-id";
     private Map<String, String> requestHeaders;
 
@@ -102,7 +91,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://" + INTERNAL_SECTOR_HOST);
         authSessionExtension.addRpSectorIdentifierHostToSession(SESSION_ID, INTERNAL_SECTOR_HOST);
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
@@ -123,7 +111,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn404WhenUserNotFound() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
@@ -145,7 +132,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn404WhenUserNotMatched() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
@@ -167,7 +153,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
         var maxRetriesAllowed = 6;
@@ -209,7 +194,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimesAcrossRpPairwiseIdAndSubjectId() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
@@ -259,7 +243,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn400WhenUserHasExceededMaxPasswordRetries() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
 
@@ -293,7 +276,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn400WhenUserHasExceededMaxEmailRetriesAcrossSubjectIdAndPairwiseId() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://randomSectorIDuRI.COM");
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 SESSION_ID, "randomSectorIDuRI.COM");
         byte[] salt = userStore.addSalt(TEST_EMAIL);
@@ -328,21 +310,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-    }
-
-    private void registerClient(String sectorIdentifierUri) {
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                CLIENT_NAME,
-                singletonList(REDIRECT_URI.toString()),
-                singletonList(TEST_EMAIL),
-                new Scope(OIDCScopeValue.OPENID).toStringList(),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY),
-                sectorIdentifierUri,
-                "pairwise");
     }
 
     private Map<String, String> createHeaders(String sessionId) {
