@@ -135,16 +135,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
-                    userContext
-                            .getClient()
-                            .map(
-                                    client ->
-                                            ClientSubjectHelper.getSubject(
-                                                            user.getUserProfile(),
-                                                            authSessionItem,
-                                                            authenticationService)
-                                                    .getValue())
-                            .orElse(AuditService.UNKNOWN);
+                    ClientSubjectHelper.getSubject(
+                                    user.getUserProfile(), authSessionItem, authenticationService)
+                            .getValue();
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
