@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.util.ArrayList;
@@ -69,6 +70,8 @@ class CheckReAuthUserHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL_USED_TO_SIGN_IN = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -157,7 +160,8 @@ class CheckReAuthUserHandlerTest {
                         authenticationAttemptsService,
                         cloudwatchMetricsService,
                         authSessionService,
-                        userActionsManager);
+                        userActionsManager,
+                        permissionDecisionManager);
     }
 
     @Test
