@@ -59,6 +59,7 @@ resource "aws_lambda_function" "sms_quota_monitor_lambda" {
       DOMESTIC_SMS_QUOTA_THRESHOLD      = var.domestic_sms_quota_threshold
       INTERNATIONAL_SMS_QUOTA_THRESHOLD = var.international_sms_quota_threshold
       SMS_SENT_METRIC_PRODUCER          = data.terraform_remote_state.oidc.outputs.email_sqs_lambda_function_name
+      AM_SMS_SENT_METRIC_PRODUCER       = data.terraform_remote_state.account_management.outputs.email_sqs_lambda_function_name
     }
   }
 
