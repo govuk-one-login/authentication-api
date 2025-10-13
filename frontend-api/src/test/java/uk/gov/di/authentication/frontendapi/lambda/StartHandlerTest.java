@@ -20,7 +20,6 @@ import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -101,7 +100,6 @@ class StartHandlerTest {
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final UserContext userContext = mock(UserContext.class);
-    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -123,7 +121,6 @@ class StartHandlerTest {
         when(configurationService.isIdentityEnabled()).thenReturn(true);
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(authSessionService.generateNewAuthSession(anyString())).thenCallRealMethod();
         handler =
                 new StartHandler(

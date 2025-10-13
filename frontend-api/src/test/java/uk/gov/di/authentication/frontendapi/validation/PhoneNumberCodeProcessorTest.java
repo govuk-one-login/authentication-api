@@ -14,7 +14,6 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -81,7 +80,6 @@ class PhoneNumberCodeProcessorTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final UserProfile userProfile = mock(UserProfile.class);
-    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -512,7 +510,6 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER),
                 CodeRequestType.MFA_REGISTRATION);
         authSession.setIsSmokeTest(true);
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(
                 IP_ADDRESS, PERSISTENT_ID, userProfile);

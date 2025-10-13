@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -27,7 +26,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -113,8 +111,6 @@ class CheckReAuthUserHandlerTest {
 
     private final UserContext userContext = mock(UserContext.class);
 
-    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
-
     private String expectedRpPairwiseSub;
 
     private static final byte[] SALT = SaltHelper.generateNewSalt();
@@ -131,7 +127,6 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(USER_PROFILE);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
 
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
@@ -141,8 +136,6 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
         expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(USER_PROFILE, authSession, authenticationService)

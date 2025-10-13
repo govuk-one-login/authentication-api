@@ -21,7 +21,6 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -72,7 +71,6 @@ class CheckEmailFraudBlockHandlerTest {
     private static ConfigurationService configurationServiceMock;
     private static ClientService clientServiceMock;
     private static DynamoEmailCheckResultService dbMock;
-    private static ClientRegistry clientRegistry;
     private static UserContext userContext;
     private static AuthSessionService authSessionServiceMock;
 
@@ -88,7 +86,6 @@ class CheckEmailFraudBlockHandlerTest {
         auditServiceMock = mock(StructuredAuditService.class);
         configurationServiceMock = mock(ConfigurationService.class);
         authenticationServiceMock = mock(AuthenticationService.class);
-        clientRegistry = mock(ClientRegistry.class);
         userContext = mock(UserContext.class);
         authSessionServiceMock = mock(AuthSessionService.class);
     }
@@ -98,7 +95,6 @@ class CheckEmailFraudBlockHandlerTest {
         Mockito.reset(auditServiceMock);
 
         var userProfile = generateUserProfile();
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
