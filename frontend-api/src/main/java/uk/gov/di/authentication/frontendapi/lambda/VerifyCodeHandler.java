@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -158,193 +157,176 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Context context,
             VerifyCodeRequest codeRequest,
             UserContext userContext) {
-        try {
-            LOG.info("Processing request");
+        LOG.info("Processing request");
 
-            AuthSessionItem authSession = userContext.getAuthSession();
+        AuthSessionItem authSession = userContext.getAuthSession();
 
-            var notificationType = codeRequest.notificationType();
-            var journeyType = getJourneyType(codeRequest, notificationType);
-            var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-            var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-            var auditContext =
-                    auditContextFromUserContext(
-                            userContext,
-                            authSession.getInternalCommonSubjectId(),
-                            authSession.getEmailAddress(),
-                            IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
-                            extractPersistentIdFromHeaders(input.getHeaders()));
-
-            userContext
-                    .getClient()
-                    .orElseThrow(
-                            () ->
-                                    new ClientNotFoundException(
-                                            "Could not find client in user context"));
-
-            Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
-            UserProfile userProfile = userProfileMaybe.orElse(null);
-            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
-
-            String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
-
-            if (journeyType == JourneyType.REAUTHENTICATION
-                    && (userProfile == null || subjectId == null)) {
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
-            }
-
-            if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                    journeyType, subjectId, auditContext, maybeRpPairwiseId))
-                return generateApiGatewayProxyErrorResponse(
-                        400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-
-            if (isCodeBlockedForSession(authSession, codeBlockedKeyPrefix)) {
-                ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
-                return generateApiGatewayProxyErrorResponse(400, errorResponse);
-            }
-
-            // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
-            var deprecatedCodeRequestType =
-                    CodeRequestType.getDeprecatedCodeRequestTypeString(
-                            notificationType.getMfaMethodType(), journeyType);
-            if (deprecatedCodeRequestType != null
-                    && isCodeBlockedForSession(
-                            authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
-                ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
-                return generateApiGatewayProxyErrorResponse(400, errorResponse);
-            }
-
-            var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
-            List<MFAMethod> retrievedMfaMethods = new ArrayList<>();
-            if (retrieveMfaMethods.isFailure()) {
-                var failure = retrieveMfaMethods.getFailure();
-                if (failure == USER_DOES_NOT_HAVE_ACCOUNT) {
-                    LOG.info(
-                            "User does not have account associated with email address, using empty list of MFA methods");
-                } else if (failure
-                        == UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP) {
-                    return generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
-                } else {
-                    String message =
-                            String.format(
-                                    "Unexpected error occurred while retrieving mfa methods: %s",
-                                    failure);
-                    LOG.error(message);
-                    return generateApiGatewayProxyErrorResponse(
-                            500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
-                }
-            } else {
-                retrievedMfaMethods = retrieveMfaMethods.getSuccess();
-            }
-
-            var maybeRequestedSmsMfaMethod =
-                    getMfaMethodOrDefaultMfaMethod(
-                            retrievedMfaMethods, codeRequest.mfaMethodId(), MFAMethodType.SMS);
-
-            if (notificationType.isForPhoneNumber() && maybeRequestedSmsMfaMethod.isEmpty()) {
-                return generateApiGatewayProxyErrorResponse(400, PHONE_NUMBER_NOT_REGISTERED);
-            }
-
-            var code =
-                    getCode(notificationType, authSession, userContext, maybeRequestedSmsMfaMethod);
-
-            var errorResponse =
-                    ValidationHelper.validateVerificationCode(
-                            notificationType,
-                            journeyType,
-                            code,
-                            codeRequest.code(),
-                            codeStorageService,
-                            authSession.getEmailAddress(),
-                            configurationService);
-
-            if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-            }
-
-            authSessionService.updateSession(authSession);
-
-            if (errorResponse.isPresent()) {
-                handleInvalidVerificationCode(
-                        codeRequest,
-                        journeyType,
-                        notificationType,
-                        subjectId,
-                        errorResponse.get(),
-                        authSession,
-                        auditContext,
-                        maybeRequestedSmsMfaMethod);
-
-                if (userHasExceededAllowedAttemptsForReauthenticationJourney(
-                        journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-                }
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-            }
-
-            if (codeRequestType.equals(CodeRequestType.MFA_PW_RESET_MFA)) {
-                SessionHelper.updateSessionWithSubject(
+        var notificationType = codeRequest.notificationType();
+        var journeyType = getJourneyType(codeRequest, notificationType);
+        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        var auditContext =
+                auditContextFromUserContext(
                         userContext,
-                        authSessionService,
-                        authenticationService,
+                        authSession.getInternalCommonSubjectId(),
+                        authSession.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()));
+
+        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+        UserProfile userProfile = userProfileMaybe.orElse(null);
+        Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
+
+        String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
+
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && (userProfile == null || subjectId == null)) {
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+                journeyType, subjectId, auditContext, maybeRpPairwiseId))
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+
+        if (isCodeBlockedForSession(authSession, codeBlockedKeyPrefix)) {
+            ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
+            return generateApiGatewayProxyErrorResponse(400, errorResponse);
+        }
+
+        // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
+        var deprecatedCodeRequestType =
+                CodeRequestType.getDeprecatedCodeRequestTypeString(
+                        notificationType.getMfaMethodType(), journeyType);
+        if (deprecatedCodeRequestType != null
+                && isCodeBlockedForSession(
+                        authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedCodeRequestType)) {
+            ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
+            return generateApiGatewayProxyErrorResponse(400, errorResponse);
+        }
+
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(authSession.getEmailAddress());
+        List<MFAMethod> retrievedMfaMethods = new ArrayList<>();
+        if (retrieveMfaMethods.isFailure()) {
+            var failure = retrieveMfaMethods.getFailure();
+            if (failure == USER_DOES_NOT_HAVE_ACCOUNT) {
+                LOG.info(
+                        "User does not have account associated with email address, using empty list of MFA methods");
+            } else if (failure
+                    == UNEXPECTED_ERROR_CREATING_MFA_IDENTIFIER_FOR_NON_MIGRATED_AUTH_APP) {
+                return generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.AUTH_APP_MFA_ID_ERROR);
+            } else {
+                String message =
+                        String.format(
+                                "Unexpected error occurred while retrieving mfa methods: %s",
+                                failure);
+                LOG.error(message);
+                return generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR);
+            }
+        } else {
+            retrievedMfaMethods = retrieveMfaMethods.getSuccess();
+        }
+
+        var maybeRequestedSmsMfaMethod =
+                getMfaMethodOrDefaultMfaMethod(
+                        retrievedMfaMethods, codeRequest.mfaMethodId(), MFAMethodType.SMS);
+
+        if (notificationType.isForPhoneNumber() && maybeRequestedSmsMfaMethod.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, PHONE_NUMBER_NOT_REGISTERED);
+        }
+
+        var code = getCode(notificationType, authSession, userContext, maybeRequestedSmsMfaMethod);
+
+        var errorResponse =
+                ValidationHelper.validateVerificationCode(
+                        notificationType,
+                        journeyType,
+                        code,
+                        codeRequest.code(),
+                        codeStorageService,
+                        authSession.getEmailAddress(),
                         configurationService);
-            }
 
-            if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
-                var mfaCodeRequestType =
-                        CodeRequestType.getCodeRequestType(
-                                CodeRequestType.SupportedCodeType.MFA,
-                                JourneyType.PASSWORD_RESET_MFA);
-                // TODO remove temporary ZDD measure to reference existing deprecated keys when
-                //  expired
-                var deprecatedMfaCodeRequestType =
-                        CodeRequestType.getDeprecatedCodeRequestTypeString(
-                                MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA);
+        if (errorResponse.stream().anyMatch(ErrorResponse.INVALID_NOTIFICATION_TYPE::equals)) {
+            return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+        }
 
-                if (isCodeBlockedForSession(
-                        authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-                }
-                if (deprecatedMfaCodeRequestType != null
-                        && isCodeBlockedForSession(
-                                authSession,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-                }
+        authSessionService.updateSession(authSession);
 
-                if (isCodeBlockedForSession(
-                        authSession, CODE_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-                }
-                if (deprecatedMfaCodeRequestType != null
-                        && isCodeBlockedForSession(
-                                authSession,
-                                CODE_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
-                    return generateApiGatewayProxyErrorResponse(
-                            400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-                }
-            }
-
-            processSuccessfulCodeRequest(
+        if (errorResponse.isPresent()) {
+            handleInvalidVerificationCode(
                     codeRequest,
-                    userContext,
-                    subjectId,
                     journeyType,
+                    notificationType,
+                    subjectId,
+                    errorResponse.get(),
+                    authSession,
                     auditContext,
-                    maybeRpPairwiseId,
                     maybeRequestedSmsMfaMethod);
 
-            return generateEmptySuccessApiGatewayResponse();
-        } catch (ClientNotFoundException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
+            if (userHasExceededAllowedAttemptsForReauthenticationJourney(
+                    journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+            }
+            return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
         }
+
+        if (codeRequestType.equals(CodeRequestType.MFA_PW_RESET_MFA)) {
+            SessionHelper.updateSessionWithSubject(
+                    userContext, authSessionService, authenticationService, configurationService);
+        }
+
+        if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
+            var mfaCodeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            CodeRequestType.SupportedCodeType.MFA, JourneyType.PASSWORD_RESET_MFA);
+            // TODO remove temporary ZDD measure to reference existing deprecated keys when
+            //  expired
+            var deprecatedMfaCodeRequestType =
+                    CodeRequestType.getDeprecatedCodeRequestTypeString(
+                            MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA);
+
+            if (isCodeBlockedForSession(
+                    authSession, CODE_REQUEST_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            }
+            if (deprecatedMfaCodeRequestType != null
+                    && isCodeBlockedForSession(
+                            authSession,
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+            }
+
+            if (isCodeBlockedForSession(
+                    authSession, CODE_BLOCKED_KEY_PREFIX + mfaCodeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            }
+            if (deprecatedMfaCodeRequestType != null
+                    && isCodeBlockedForSession(
+                            authSession, CODE_BLOCKED_KEY_PREFIX + deprecatedMfaCodeRequestType)) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+            }
+        }
+
+        processSuccessfulCodeRequest(
+                codeRequest,
+                userContext,
+                subjectId,
+                journeyType,
+                auditContext,
+                maybeRpPairwiseId,
+                maybeRequestedSmsMfaMethod);
+
+        return generateEmptySuccessApiGatewayResponse();
     }
 
     private boolean userHasExceededAllowedAttemptsForReauthenticationJourney(
