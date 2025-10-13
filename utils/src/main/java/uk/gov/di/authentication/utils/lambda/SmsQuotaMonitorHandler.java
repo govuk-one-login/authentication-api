@@ -39,6 +39,7 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
     private final double domesticSmsQuotaThreshold;
     private final double internationalSmsQuotaThreshold;
     private final String smsSentMetricProducer;
+    private final String accountManagementSmsSentMetricProducer;
 
     public SmsQuotaMonitorHandler() {
         this.configurationService = ConfigurationService.getInstance();
@@ -52,6 +53,8 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
         this.internationalSmsQuotaThreshold =
                 configurationService.getInternationalSmsQuotaThreshold();
         this.smsSentMetricProducer = configurationService.getEmailSqsLambdaFunctionName();
+        this.accountManagementSmsSentMetricProducer =
+                configurationService.getAccountManagementSqsLambdaFunctionName();
     }
 
     public SmsQuotaMonitorHandler(
@@ -62,6 +65,8 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
         this.internationalSmsQuotaThreshold =
                 configurationService.getInternationalSmsQuotaThreshold();
         this.smsSentMetricProducer = configurationService.getEmailSqsLambdaFunctionName();
+        this.accountManagementSmsSentMetricProducer =
+                configurationService.getAccountManagementSqsLambdaFunctionName();
     }
 
     @Override
@@ -129,6 +134,11 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
             Instant start,
             Instant end,
             int periodSeconds) {
+        var metricProducer =
+                application == ONE_LOGIN_HOME
+                        ? accountManagementSmsSentMetricProducer
+                        : smsSentMetricProducer;
+
         // NOTE: All dimensions must be provided here, including those added by the AWS EMF
         // MetricsLogger.
         return GetMetricStatisticsRequest.builder()
@@ -145,11 +155,11 @@ public class SmsQuotaMonitorHandler implements RequestHandler<ScheduledEvent, Vo
                                 .build(),
                         Dimension.builder()
                                 .name(LOG_GROUP.getValue())
-                                .value(smsSentMetricProducer)
+                                .value(metricProducer)
                                 .build(),
                         Dimension.builder()
                                 .name(SERVICE_NAME.getValue())
-                                .value(smsSentMetricProducer)
+                                .value(metricProducer)
                                 .build(),
                         Dimension.builder()
                                 .name(SERVICE_TYPE.getValue())
