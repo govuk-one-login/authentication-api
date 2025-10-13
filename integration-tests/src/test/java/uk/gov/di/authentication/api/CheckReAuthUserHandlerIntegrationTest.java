@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
@@ -102,9 +101,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                 }
             };
 
-    private final AuthenticationAttemptsService authenticationService =
-            new AuthenticationAttemptsService(CONFIGURATION_SERVICE);
-
     @BeforeEach
     void setup() throws Json.JsonException {
         authSessionExtension.addSession(SESSION_ID);
@@ -119,14 +115,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     class SuccessTests {
         @Test
         void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, INTERNAL_SECTOR_HOST);
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+            setupUser("https://" + INTERNAL_SECTOR_HOST, INTERNAL_SECTOR_HOST);
+            var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
                     makeRequest(
@@ -150,14 +140,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     class UserNotFoundTests {
         @Test
         void shouldReturn404WhenUserNotFound() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+            setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+            var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
                     makeRequest(
@@ -172,14 +156,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         @Test
         void shouldReturn404WhenUserNotMatched() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+            setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+            var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
                     makeRequest(
