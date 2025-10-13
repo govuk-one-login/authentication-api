@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper;
 import uk.gov.di.authentication.frontendapi.services.IPVReverificationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
@@ -70,7 +69,6 @@ class MfaResetAuthorizeHandlerTest {
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private static final ClientService clientService = mock(ClientService.class);
-    private static final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final Context context = mock(Context.class);
     private static final UserContext userContext = mock(UserContext.class);
     private static final AuditService auditService = mock(AuditService.class);
@@ -117,9 +115,6 @@ class MfaResetAuthorizeHandlerTest {
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("https://gov.uk");
-
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         when(authenticationService.getOrGenerateSalt(userProfile))

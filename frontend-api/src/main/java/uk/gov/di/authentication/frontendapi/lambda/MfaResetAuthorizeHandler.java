@@ -141,9 +141,6 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
                     userContext
                             .getUserProfile()
                             .orElseThrow(() -> new RuntimeException("UserProfile not found"));
-            userContext
-                    .getClient()
-                    .orElseThrow(() -> new RuntimeException("ClientRegistry not found"));
 
             String rpPairwiseId =
                     ClientSubjectHelper.getSubject(userProfile, authSession, authenticationService)
