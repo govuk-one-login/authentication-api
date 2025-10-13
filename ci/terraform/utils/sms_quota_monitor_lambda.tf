@@ -1,13 +1,3 @@
-data "terraform_remote_state" "oidc" {
-  backend = "s3"
-  config = {
-    bucket      = var.shared_state_bucket
-    key         = "${var.environment}-terraform.tfstate"
-    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
-    region      = var.aws_region
-  }
-}
-
 data "aws_iam_policy_document" "sms_quota_monitor_cloudwatch_access" {
   statement {
     sid    = "AllowAccessToCloudWatchMetrics"
