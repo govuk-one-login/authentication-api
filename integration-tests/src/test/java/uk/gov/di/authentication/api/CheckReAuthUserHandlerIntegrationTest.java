@@ -195,173 +195,102 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @Nested
     class LockoutTests {
-        @Test
-        void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        void shouldLockoutAfterMaxIncorrectEmailAttempts() {
+            setupUser();
+            var expectedPairwiseId = setupPairwiseId();
 
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-            var maxRetriesAllowed = 6;
-            int count = maxRetriesAllowed - 1;
-            while (count-- > 0) {
-                authenticationService.createOrIncrementCount(
-                        SUBJECT.getValue(),
-                        NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_EMAIL);
-            }
-
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
-            var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-            var response =
-                    makeRequest(
-                            Optional.of(request),
-                            requestHeaders,
-                            Collections.emptyMap(),
-                            Collections.emptyMap(),
-                            Map.of("principalId", expectedPairwiseId));
-
-            assertThat(response, hasStatus(400));
-            assertThat(
-                    authCodeExtension.getAuthenticationAttempt(
-                            SUBJECT.getValue(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_EMAIL),
-                    equalTo(maxRetriesAllowed));
-
-            assertAuditEventExpectations(
-                    txmaAuditQueue,
-                    List.of(
-                            new AuditEventExpectation(BASE_REAUTH_FAILED_EXPECTATION)
-                                    .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
-                            new AuditEventExpectation(BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION)
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
-                            new AuditEventExpectation(BASE_LIMIT_BREACHED_EXPECTATION)
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
-        }
-
-        @Test
-        void
-                shouldReturn400WhenUserEnteredInvalidEmailTooManyTimesAcrossRpPairwiseIdAndSubjectId() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
-
-            var subjectIdCount = 3;
-            var rpPairwiseIdCount = 2;
-            for (int i = 0; i < subjectIdCount; i++) {
-                authenticationService.createOrIncrementCount(
-                        SUBJECT.getValue(),
-                        NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_EMAIL);
-            }
-            for (int i = 0; i < rpPairwiseIdCount; i++) {
-                authenticationService.createOrIncrementCount(
-                        expectedPairwiseId,
-                        NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_EMAIL);
-            }
-
-            var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-            var response =
-                    makeRequest(
-                            Optional.of(request),
-                            requestHeaders,
-                            Collections.emptyMap(),
-                            Collections.emptyMap(),
-                            Map.of("principalId", expectedPairwiseId));
-
-            assertThat(response, hasStatus(400));
-            assertThat(
-                    authCodeExtension.getAuthenticationAttempt(
-                            SUBJECT.getValue(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_EMAIL),
-                    equalTo(subjectIdCount + 1));
-
-            assertAuditEventExpectations(
-                    txmaAuditQueue,
-                    List.of(
-                            new AuditEventExpectation(BASE_REAUTH_FAILED_EXPECTATION)
-                                    .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
-                            new AuditEventExpectation(BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION)
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
-                            new AuditEventExpectation(BASE_LIMIT_BREACHED_EXPECTATION)
-                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
-        }
-
-        @Test
-        void shouldReturn400WhenUserHasExceededMaxPasswordRetries() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-
-            var ttl = Instant.now().getEpochSecond() + 60L;
-            IntStream.range(0, 6)
-                    .forEach(
-                            i ->
-                                    authCodeExtension.createOrIncrementCount(
-                                            SUBJECT.getValue(),
-                                            ttl,
-                                            JourneyType.REAUTHENTICATION,
-                                            CountType.ENTER_PASSWORD));
-
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
-            var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-            var response =
-                    makeRequest(
-                            Optional.of(request),
-                            requestHeaders,
-                            Collections.emptyMap(),
-                            Collections.emptyMap(),
-                            Map.of("principalId", expectedPairwiseId));
-
-            assertThat(response, hasStatus(400));
-            assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-        }
-
-        @Test
-        void shouldReturn400WhenUserHasExceededMaxEmailRetriesAcrossSubjectIdAndPairwiseId() {
-            userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-
-            authSessionExtension.addRpSectorIdentifierHostToSession(
-                    SESSION_ID, "randomSectorIDuRI.COM");
-            byte[] salt = userStore.addSalt(TEST_EMAIL);
-            var expectedPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
-
-            var ttl = Instant.now().getEpochSecond() + 60L;
-            IntStream.range(0, 3)
+            IntStream.rangeClosed(1, 5)
                     .forEach(
                             i -> {
-                                authCodeExtension.createOrIncrementCount(
-                                        SUBJECT.getValue(),
-                                        ttl,
-                                        JourneyType.REAUTHENTICATION,
-                                        CountType.ENTER_EMAIL);
-                                authCodeExtension.createOrIncrementCount(
-                                        expectedPairwiseId,
-                                        ttl,
-                                        JourneyType.REAUTHENTICATION,
-                                        CountType.ENTER_EMAIL);
+                                var request =
+                                        new CheckReauthUserRequest(
+                                                "wrong@example.com", expectedPairwiseId);
+                                var response =
+                                        makeRequest(
+                                                Optional.of(request),
+                                                requestHeaders,
+                                                Collections.emptyMap(),
+                                                Collections.emptyMap(),
+                                                Map.of());
+                                assertThat(response, hasStatus(404));
+
+                                assertAuditEventExpectations(
+                                        txmaAuditQueue,
+                                        List.of(
+                                                new AuditEventExpectation(
+                                                                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED)
+                                                        .withAttribute(
+                                                                INCORRECT_EMAIL_ATTEMPT_COUNT,
+                                                                String.valueOf(i))
+                                                        .withAttribute(
+                                                                USER_SUPPLIED_EMAIL,
+                                                                "wrong@example.com")
+                                                        .withAttribute(
+                                                                RP_PAIRWISE_ID,
+                                                                expectedPairwiseId)));
                             });
+
+            var finalRequest = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+            var finalResponse =
+                    makeRequest(
+                            Optional.of(finalRequest),
+                            requestHeaders,
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.of("principalId", expectedPairwiseId));
+
+            assertThat(finalResponse, hasStatus(400));
+            assertThat(
+                    authCodeExtension.getAuthenticationAttempt(
+                            SUBJECT.getValue(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_EMAIL),
+                    equalTo(6));
+
+            assertAuditEventExpectations(
+                    txmaAuditQueue,
+                    List.of(
+                            new AuditEventExpectation(BASE_REAUTH_FAILED_EXPECTATION)
+                                    .withAttribute(INCORRECT_OTP_CODE_ATTEMPT_COUNT, "0")
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_INCORRECT_EMAIL_ENTERED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId),
+                            new AuditEventExpectation(BASE_LIMIT_BREACHED_EXPECTATION)
+                                    .withAttribute(RP_PAIRWISE_ID, expectedPairwiseId)));
+        }
+
+        @Test
+        void shouldLockoutWhenCombinedAttemptsAcrossSubjectIdAndPairwiseIdExceedLimit() {
+            setupUser();
+            var expectedPairwiseId = setupPairwiseId();
+
+            createEmailAttempts(SUBJECT.getValue(), 3);
+            createEmailAttempts(expectedPairwiseId, 2);
+
+            var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+            var response =
+                    makeRequest(
+                            Optional.of(request),
+                            requestHeaders,
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.of("principalId", expectedPairwiseId));
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    authCodeExtension.getAuthenticationAttempt(
+                            SUBJECT.getValue(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_EMAIL),
+                    equalTo(4));
+        }
+
+        @Test
+        void should400WhenUserAlreadyHasMaxPasswordAttempts() {
+            setupUser();
+            var expectedPairwiseId = setupPairwiseId();
+
+            createPasswordAttempts(SUBJECT.getValue(), 6);
 
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
@@ -375,6 +304,45 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
             assertThat(response, hasStatus(400));
             assertThat(response, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
+    }
+
+    private void setupUser() {
+        setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+    }
+
+    private void setupUser(String clientUri, String sectorHost) {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        authSessionExtension.addRpSectorIdentifierHostToSession(SESSION_ID, sectorHost);
+    }
+
+    private String setupPairwiseId() {
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        return ClientSubjectHelper.calculatePairwiseIdentifier(
+                SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+    }
+
+    private void createEmailAttempts(String identifier, int count) {
+        var ttl = NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond();
+        IntStream.range(0, count)
+                .forEach(
+                        i ->
+                                authCodeExtension.createOrIncrementCount(
+                                        identifier,
+                                        ttl,
+                                        JourneyType.REAUTHENTICATION,
+                                        CountType.ENTER_EMAIL));
+    }
+
+    private void createPasswordAttempts(String identifier, int count) {
+        var ttl = Instant.now().getEpochSecond() + 60L;
+        IntStream.range(0, count)
+                .forEach(
+                        i ->
+                                authCodeExtension.createOrIncrementCount(
+                                        identifier,
+                                        ttl,
+                                        JourneyType.REAUTHENTICATION,
+                                        CountType.ENTER_PASSWORD));
     }
 
     private Map<String, String> createHeaders(String sessionId) {
