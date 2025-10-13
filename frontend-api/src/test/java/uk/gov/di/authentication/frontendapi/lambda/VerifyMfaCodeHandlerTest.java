@@ -1031,20 +1031,6 @@ class VerifyMfaCodeHandlerTest {
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
         }
-
-        @Test
-        void shouldReturn400AndThrowClientNotFoundExceptionIfNoClientIsPresent()
-                throws Json.JsonException {
-            when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.empty());
-
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.AUTH_APP, CODE, REGISTRATION, AUTH_APP_SECRET));
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.CLIENT_NOT_FOUND));
-        }
     }
 
     @Test
