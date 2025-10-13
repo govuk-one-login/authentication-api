@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -91,7 +90,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient emailSqsClient,
             AwsSqsClient pendingEmailCheckSqsClient,
@@ -105,7 +103,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         super(
                 SendNotificationRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 true,
                 authSessionService);

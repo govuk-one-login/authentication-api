@@ -17,7 +17,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -35,7 +34,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -54,7 +52,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -90,7 +87,6 @@ class CheckUserExistsHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
@@ -98,7 +94,6 @@ class CheckUserExistsHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String CLIENT_ID = "test-client-id";
     private static final String SECTOR_HOST = "sector-identifier";
-    private static final String SECTOR_URI = "http://" + SECTOR_HOST;
     private final AuthSessionItem authSession =
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
@@ -143,7 +138,6 @@ class CheckUserExistsHandlerTest {
                 new CheckUserExistsHandler(
                         configurationService,
                         authSessionService,
-                        clientService,
                         authenticationService,
                         auditService,
                         permissionDecisionManager);
@@ -431,7 +425,6 @@ class CheckUserExistsHandlerTest {
 
     @Test
     void shouldReturn400IfEmailAddressIsInvalid() {
-        setupClient();
         authSessionExists();
 
         var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
@@ -447,7 +440,6 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn400IfAuthSessionExpired() {
         authSessionMissing();
-        setupClient();
 
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -474,18 +466,6 @@ class CheckUserExistsHandlerTest {
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
     }
 
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList("http://localhost/oidc/redirect"))
-                .withClientID(CLIENT_ID)
-                .withContacts(singletonList(EMAIL_ADDRESS))
-                .withPublicKey(null)
-                .withSectorIdentifierUri(SECTOR_URI)
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(true)
-                .withSubjectType("pairwise");
-    }
-
     private static String getExpectedRpPairwiseId() {
         return ClientSubjectHelper.calculatePairwiseIdentifier(
                 SUBJECT.getValue(), "sector-identifier", SALT.array());
@@ -503,11 +483,6 @@ class CheckUserExistsHandlerTest {
                                 .thenReturn(SALT.array()));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(maybeUserProfile);
-        setupClient();
-    }
-
-    private void setupClient() {
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
     }
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
@@ -531,7 +506,6 @@ class CheckUserExistsHandlerTest {
         @BeforeEach
         void setup() {
             authSessionExists();
-            setupClient();
         }
 
         private static Stream<Arguments> decisionErrorToExpectedStatusAndErrorResponse() {

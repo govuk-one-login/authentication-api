@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
@@ -103,7 +102,6 @@ class AccountInterventionsHandlerTest {
     private final UserContext userContext = mock(UserContext.class, Mockito.RETURNS_DEEP_STUBS);
     private final AccountInterventionsService accountInterventionsService =
             mock(AccountInterventionsService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
@@ -161,7 +159,6 @@ class AccountInterventionsHandlerTest {
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         accountInterventionsService,
                         auditService,

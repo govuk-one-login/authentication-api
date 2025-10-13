@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -60,7 +59,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             AuthenticationAttemptsService authenticationAttemptsService,
@@ -69,7 +67,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;

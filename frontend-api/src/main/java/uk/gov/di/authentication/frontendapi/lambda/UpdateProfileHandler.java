@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -45,12 +44,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             AuthenticationService authenticationService,
             ConfigurationService configurationService,
             AuditService auditService,
-            ClientService clientService,
             AuthSessionService authSessionService) {
         super(
                 UpdateProfileRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;

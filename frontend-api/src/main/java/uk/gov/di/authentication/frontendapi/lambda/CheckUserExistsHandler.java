@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
@@ -57,14 +56,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             AuthSessionService authSessionService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             PermissionDecisionManager permissionDecisionManager) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;

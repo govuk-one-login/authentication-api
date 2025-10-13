@@ -15,7 +15,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -31,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -105,7 +103,6 @@ class ResetPasswordRequestHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final PermissionDecisionManager permissionDecisionManager =
@@ -114,16 +111,6 @@ class ResetPasswordRequestHandlerTest {
     private final Context context = mock(Context.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
     private static final String CLIENT_ID = "test-client-id";
-
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    CommonTestVariables.EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
 
     private final AuthSessionItem authSession =
             new AuthSessionItem()
@@ -135,7 +122,6 @@ class ResetPasswordRequestHandlerTest {
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
-                    clientService,
                     authenticationService,
                     awsSqsClient,
                     codeGeneratorService,
@@ -173,7 +159,6 @@ class ResetPasswordRequestHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);

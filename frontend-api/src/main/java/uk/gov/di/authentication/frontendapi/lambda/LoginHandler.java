@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -97,7 +96,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     public LoginHandler(
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
-            ClientService clientService,
             UserMigrationService userMigrationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -111,7 +109,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         super(
                 LoginRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 true,
                 authSessionService);

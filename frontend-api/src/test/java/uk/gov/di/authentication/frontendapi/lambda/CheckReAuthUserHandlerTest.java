@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -58,7 +57,6 @@ class CheckReAuthUserHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
@@ -69,7 +67,6 @@ class CheckReAuthUserHandlerTest {
             "not.signedin.email@digital.cabinet-office.gov.uk";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String SECTOR_IDENTIFIER_HOST = "example.com";
-    private static final String INTERNAL_SECTOR_URI = "http://" + SECTOR_IDENTIFIER_HOST;
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
     private static final UserProfile USER_PROFILE =
             new UserProfile()
@@ -144,7 +141,6 @@ class CheckReAuthUserHandlerTest {
         handler =
                 new CheckReAuthUserHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         auditService,
                         authenticationAttemptsService,

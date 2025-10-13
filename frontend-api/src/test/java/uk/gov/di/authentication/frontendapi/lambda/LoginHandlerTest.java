@@ -23,7 +23,6 @@ import uk.gov.di.authentication.frontendapi.entity.mfa.SmsMfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapter;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -45,7 +44,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -147,7 +145,6 @@ class LoginHandlerTest {
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -208,8 +205,6 @@ class LoginHandlerTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
@@ -222,7 +217,6 @@ class LoginHandlerTest {
                 new LoginHandler(
                         configurationService,
                         authenticationService,
-                        clientService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
@@ -1205,7 +1199,6 @@ class LoginHandlerTest {
     @Test
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        setUpSmokeTestClient();
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -1454,25 +1447,6 @@ class LoginHandlerTest {
                 .withLegacySubjectID(legacySubjectId)
                 .withTermsAndConditions(
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
-                .withSubjectType("public");
-    }
-
-    private void setUpSmokeTestClient() {
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                new ClientRegistry()
-                                        .withSmokeTest(true)
-                                        .withClientID(CLIENT_ID.getValue())
-                                        .withSectorIdentifierUri(
-                                                "https://" + SECTOR_IDENTIFIER_HOST)));
     }
 
     private void verifyInternalCommonSubjectIdentifierSaved() {

@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -74,7 +73,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            ClientService clientService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
@@ -86,7 +84,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.authenticationService = authenticationService;

@@ -21,7 +21,6 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -40,7 +39,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -143,7 +141,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -179,9 +176,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
@@ -190,7 +184,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 new LoginHandler(
                         configurationService,
                         authenticationService,
-                        clientService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
@@ -571,14 +564,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 .withLegacySubjectID(legacySubjectId)
                 .withTermsAndConditions(
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
-                .withSubjectType("public");
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(

@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 
@@ -50,7 +49,6 @@ class AccountRecoveryHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoAccountModifiersService dynamoAccountModifiersService =
             mock(DynamoAccountModifiersService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private AccountRecoveryHandler handler;
@@ -84,7 +82,6 @@ class AccountRecoveryHandlerTest {
         handler =
                 new AccountRecoveryHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         dynamoAccountModifiersService,
                         auditService,

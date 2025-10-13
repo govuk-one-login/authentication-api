@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -78,19 +77,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             ConfigurationService configurationService,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             AwsSqsClient sqsClient,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             TestUserHelper testUserHelper) {
-        super(
-                MfaRequest.class,
-                configurationService,
-                clientService,
-                authenticationService,
-                authSessionService);
+        super(MfaRequest.class, configurationService, authenticationService, authSessionService);
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;

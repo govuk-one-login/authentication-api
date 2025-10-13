@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
@@ -96,7 +95,6 @@ class ReverificationResultHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final ReverificationResultService reverificationResultService =
             mock(ReverificationResultService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final IDReverificationStateService idReverificationStateService =
             mock(IDReverificationStateService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -148,7 +146,6 @@ class ReverificationResultHandlerTest {
         handler =
                 new ReverificationResultHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         reverificationResultService,
                         auditService,

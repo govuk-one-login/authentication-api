@@ -11,7 +11,6 @@ import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -22,7 +21,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
@@ -87,7 +85,6 @@ class AuthenticationAuthCodeHandlerTest {
     private final DynamoAuthCodeService dynamoAuthCodeService = mock(DynamoAuthCodeService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private AuthSessionItem authSession;
@@ -116,8 +113,6 @@ class AuthenticationAuthCodeHandlerTest {
                         .withClientId(CLIENT_ID)
                         .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
         UserProfile userProfile = generateUserProfile();
@@ -128,7 +123,6 @@ class AuthenticationAuthCodeHandlerTest {
                 new AuthenticationAuthCodeHandler(
                         dynamoAuthCodeService,
                         configurationService,
-                        clientService,
                         authenticationService,
                         auditService,
                         cloudwatchMetricsService,

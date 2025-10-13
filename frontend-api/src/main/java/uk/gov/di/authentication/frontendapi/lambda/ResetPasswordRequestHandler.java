@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -70,7 +69,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
@@ -84,7 +82,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         super(
                 ResetPasswordRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.sqsClient = sqsClient;
@@ -94,36 +91,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
-        this.testUserHelper = testUserHelper;
-    }
-
-    public ResetPasswordRequestHandler(
-            ConfigurationService configurationService,
-            ClientService clientService,
-            AuthenticationService authenticationService,
-            AwsSqsClient sqsClient,
-            CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService,
-            AuditService auditService,
-            AuthSessionService authSessionService,
-            MFAMethodsService mfaMethodsService,
-            TestUserHelper testUserHelper) {
-        super(
-                ResetPasswordRequest.class,
-                configurationService,
-                clientService,
-                authenticationService,
-                authSessionService);
-        this.sqsClient = sqsClient;
-        this.codeGeneratorService = codeGeneratorService;
-        this.codeStorageService = codeStorageService;
-        this.auditService = auditService;
-        this.mfaMethodsService = mfaMethodsService;
-        this.permissionDecisionManager =
-                new PermissionDecisionManager(configurationService, codeStorageService);
-        this.userActionsManager =
-                new UserActionsManager(
-                        configurationService, codeStorageService, authSessionService);
         this.testUserHelper = testUserHelper;
     }
 

@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -91,7 +90,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
@@ -104,7 +102,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         super(
                 VerifyCodeRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.codeStorageService = codeStorageService;

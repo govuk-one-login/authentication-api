@@ -13,7 +13,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -30,7 +29,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -100,7 +98,6 @@ class MfaHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
@@ -157,15 +154,6 @@ class MfaHandlerTest {
                     .withEmailAddress(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withClientId(TEST_CLIENT_ID);
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
 
     private static final NotifyRequest notifyRequest =
             new NotifyRequest(
@@ -209,14 +197,12 @@ class MfaHandlerTest {
                         configurationService,
                         codeGeneratorService,
                         codeStorageService,
-                        clientService,
                         authenticationService,
                         auditService,
                         sqsClient,
                         authSessionService,
                         mfaMethodsService,
                         testUserHelper);
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
     }
 
     @Test
