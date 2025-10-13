@@ -28,8 +28,10 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -57,6 +59,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private final AuditService auditService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final UserActionsManager userActionsManager;
 
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
@@ -64,7 +67,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             AuditService auditService,
             AuthenticationAttemptsService authenticationAttemptsService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            UserActionsManager userActionsManager) {
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
@@ -73,6 +77,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = auditService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.userActionsManager = userActionsManager;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
@@ -81,6 +86,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        var codeStorageService = new CodeStorageService(configurationService);
+        this.userActionsManager =
+                new UserActionsManager(
+                        configurationService,
+                        codeStorageService,
+                        this.authSessionService,
+                        this.authenticationAttemptsService);
     }
 
     public CheckReAuthUserHandler() {
