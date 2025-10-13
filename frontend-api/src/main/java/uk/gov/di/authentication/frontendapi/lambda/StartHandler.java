@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -94,10 +93,7 @@ public class StartHandler
         this.auditService = new AuditService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.startService =
-                new StartService(
-                        new DynamoClientService(configurationService),
-                        new DynamoService(configurationService));
+        this.startService = new StartService(new DynamoService(configurationService));
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();

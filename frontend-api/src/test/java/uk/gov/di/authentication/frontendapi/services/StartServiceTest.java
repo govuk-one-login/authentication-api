@@ -19,8 +19,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -33,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -47,7 +44,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,25 +71,19 @@ class StartServiceTest {
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
     private final UserContext basicUserContext =
-            buildUserContext(true, ClientType.WEB, true, Optional.empty(), Optional.empty(), false);
+            buildUserContext(Optional.empty(), Optional.empty());
 
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService);
+        startService = new StartService(dynamoService);
     }
 
     @Test
     void shouldCreateUserContextFromSessionAndAuthSession() {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.getValue(), false)));
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(mock(UserProfile.class)));
         when(dynamoService.getUserCredentialsFromEmail(EMAIL))
@@ -117,28 +107,21 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartInfo() {
         return Stream.of(
-                Arguments.of("some-cookie-consent", null, false, false),
-                Arguments.of(null, "ga-tracking-id", false, true));
+                Arguments.of("some-cookie-consent", null, false),
+                Arguments.of(null, "ga-tracking-id", true));
     }
 
     @ParameterizedTest
     @MethodSource("userStartInfo")
     void shouldCreateUserStartInfo(
-            String cookieConsent,
-            String gaTrackingId,
-            boolean rpSupportsIdentity,
-            boolean isAuthenticated) {
+            String cookieConsent, String gaTrackingId, boolean isAuthenticated) {
         var userContext =
                 buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        rpSupportsIdentity,
                         Optional.of(
                                 new UserProfile()
                                         .withSubjectID(new Subject().getValue())
                                         .withEmail(EMAIL)),
-                        Optional.empty(),
-                        false);
+                        Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
@@ -305,14 +288,7 @@ class StartServiceTest {
             boolean expectedUpliftRequiredValue,
             UserProfile userProfile,
             UserCredentials userCredentials) {
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        Optional.of(userCredentials),
-                        false);
+        var userContext = buildUserContext(Optional.of(userProfile), Optional.of(userCredentials));
         var requestedVtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(vtrString));
         var requestedCredentialTrustLevel = requestedVtr.getCredentialTrustLevel();
@@ -388,14 +364,7 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = new UserCredentials().withEmail(EMAIL).withMfaMethods(mfaMethods);
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        Optional.of(userCredentials),
-                        false);
+        var userContext = buildUserContext(Optional.of(userProfile), Optional.of(userCredentials));
 
         var userStartInfo =
                 startService.buildUserStartInfo(
@@ -412,14 +381,7 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = Optional.<UserCredentials>empty();
-        var userContext =
-                buildUserContext(
-                        true,
-                        ClientType.WEB,
-                        true,
-                        Optional.of(userProfile),
-                        userCredentials,
-                        false);
+        var userContext = buildUserContext(Optional.of(userProfile), userCredentials);
 
         var userStartInfo =
                 startService.buildUserStartInfo(
@@ -462,14 +424,6 @@ class StartServiceTest {
     @MethodSource("cookieConsentValues")
     void shouldReturnCookieConsentValueWhenPresentAndValid(
             String cookieConsentValue, boolean cookieConsentShared, String expectedValue) {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(),
-                                        CLIENT_ID.getValue(),
-                                        cookieConsentShared)));
-
         assertThat(
                 startService.getCookieConsentValue(cookieConsentValue, cookieConsentShared),
                 equalTo(expectedValue));
@@ -499,53 +453,9 @@ class StartServiceTest {
                 Arguments.of(true, generateSignedJWT(), false));
     }
 
-    private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, boolean cookieConsentShared) {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList(redirectURI))
-                .withClientID(clientID)
-                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .withPublicKey(null)
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(cookieConsentShared);
-    }
-
     private UserContext buildUserContext(
-            boolean cookieConsentShared,
-            ClientType clientType,
-            boolean identityVerificationSupport,
-            Optional<UserProfile> userProfile,
-            Optional<UserCredentials> userCredentials,
-            boolean oneLoginService) {
-        return buildUserContext(
-                cookieConsentShared,
-                clientType,
-                identityVerificationSupport,
-                userProfile,
-                userCredentials,
-                oneLoginService,
-                Optional.empty());
-    }
-
-    private UserContext buildUserContext(
-            boolean cookieConsentShared,
-            ClientType clientType,
-            boolean identityVerificationSupport,
-            Optional<UserProfile> userProfile,
-            Optional<UserCredentials> userCredentials,
-            boolean oneLoginService,
-            Optional<String> serviceTypeOpt) {
-        var clientRegistry =
-                new ClientRegistry()
-                        .withClientID(CLIENT_ID.getValue())
-                        .withClientName(CLIENT_NAME)
-                        .withCookieConsentShared(cookieConsentShared)
-                        .withClientType(clientType.getValue())
-                        .withIdentityVerificationSupported(identityVerificationSupport)
-                        .withOneLoginService(oneLoginService);
-        serviceTypeOpt.ifPresent(clientRegistry::setServiceType);
+            Optional<UserProfile> userProfile, Optional<UserCredentials> userCredentials) {
         return UserContext.builder(AUTH_SESSION)
-                .withClient(clientRegistry)
                 .withUserCredentials(userCredentials)
                 .withUserProfile(userProfile)
                 .build();

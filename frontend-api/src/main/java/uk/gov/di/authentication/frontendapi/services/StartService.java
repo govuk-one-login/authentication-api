@@ -7,14 +7,11 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -28,40 +25,30 @@ import static java.util.function.Predicate.not;
 
 public class StartService {
 
-    private final ClientService clientService;
     private final DynamoService dynamoService;
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
     private static final Logger LOG = LogManager.getLogger(StartService.class);
 
-    public StartService(ClientService clientService, DynamoService dynamoService) {
-        this.clientService = clientService;
+    public StartService(DynamoService dynamoService) {
         this.dynamoService = dynamoService;
     }
 
     public UserContext buildUserContext(AuthSessionItem authSession) {
         var builder = UserContext.builder(authSession);
         UserContext userContext;
-        try {
-            var clientRegistry = getClient(authSession.getClientId());
-            Optional.of(authSession)
-                    .map(AuthSessionItem::getEmailAddress)
-                    .flatMap(dynamoService::getUserProfileByEmailMaybe)
-                    .ifPresent(
-                            t ->
-                                    builder.withUserProfile(t)
-                                            .withUserCredentials(
-                                                    Optional.of(
-                                                            dynamoService
-                                                                    .getUserCredentialsFromEmail(
-                                                                            authSession
-                                                                                    .getEmailAddress()))));
-            userContext = builder.withClient(clientRegistry).build();
-        } catch (ClientNotFoundException e) {
-            LOG.error("Error creating UserContext");
-            throw new RuntimeException("Error when creating UserContext", e);
-        }
+        Optional.of(authSession)
+                .map(AuthSessionItem::getEmailAddress)
+                .flatMap(dynamoService::getUserProfileByEmailMaybe)
+                .ifPresent(
+                        t ->
+                                builder.withUserProfile(t)
+                                        .withUserCredentials(
+                                                Optional.of(
+                                                        dynamoService.getUserCredentialsFromEmail(
+                                                                authSession.getEmailAddress()))));
+        userContext = builder.build();
         return userContext;
     }
 
@@ -154,15 +141,6 @@ public class StartService {
             return false;
         }
         return currentCredentialStrength.isLowerThan(requestedCredentialStrength);
-    }
-
-    public ClientRegistry getClient(String clientId) throws ClientNotFoundException {
-        return clientService
-                .getClient(clientId)
-                .orElseThrow(
-                        () ->
-                                new ClientNotFoundException(
-                                        "Could not find client for start service"));
     }
 
     public MFAMethodType getMfaMethodType(UserContext userContext) {
