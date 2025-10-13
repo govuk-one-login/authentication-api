@@ -21,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -63,7 +64,10 @@ class AuthoriseAccessTokenIntegrationTest
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
                 generateSignedAccessToken(
-                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), validDate);
+                        scopes,
+                        Optional.of(CLIENT_ID.getValue()),
+                        PUBLIC_SUBJECT.getValue(),
+                        validDate);
         setUpClient(scopes);
 
         var authPolicy = makeRequest(accessToken.toAuthorizationHeader());
@@ -83,7 +87,10 @@ class AuthoriseAccessTokenIntegrationTest
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
                 generateSignedAccessToken(
-                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), expiryDate);
+                        scopes,
+                        Optional.of(CLIENT_ID.getValue()),
+                        PUBLIC_SUBJECT.getValue(),
+                        expiryDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
@@ -94,21 +101,24 @@ class AuthoriseAccessTokenIntegrationTest
         var scopes = List.of(OIDCScopeValue.OPENID.getValue());
         var accessToken =
                 generateSignedAccessToken(
-                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), validDate);
+                        scopes,
+                        Optional.of(CLIENT_ID.getValue()),
+                        PUBLIC_SUBJECT.getValue(),
+                        validDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
     }
 
     @Test
-    void shouldThrowExceptionWhenAccessTokenHasInvalidClientId() {
+    void shouldThrowExceptionWhenAccessTokenHasMissingClientId() {
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
                 generateSignedAccessToken(
-                        scopes, "rubbish-client-id", PUBLIC_SUBJECT.getValue(), validDate);
+                        scopes, Optional.empty(), PUBLIC_SUBJECT.getValue(), validDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
@@ -137,18 +147,20 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     private AccessToken generateSignedAccessToken(
-            List<String> scopes, String clientId, String publicSubject, Date expiryDate) {
-        var claimsSet =
+            List<String> scopes,
+            Optional<String> clientIdOpt,
+            String publicSubject,
+            Date expiryDate) {
+        var claimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
-                        .claim("client_id", clientId)
                         .subject(publicSubject)
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
+                        .jwtID(UUID.randomUUID().toString());
+        clientIdOpt.ifPresent(clientId -> claimsSetBuilder.claim("client_id", clientId));
+        var signedJWT = tokenSigner.signJwt(claimsSetBuilder.build());
         return new BearerAccessToken(signedJWT.serialize());
     }
 }

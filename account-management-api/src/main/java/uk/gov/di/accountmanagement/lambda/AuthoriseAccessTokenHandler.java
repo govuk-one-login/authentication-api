@@ -16,7 +16,6 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -35,12 +34,9 @@ public class AuthoriseAccessTokenHandler
     private static final Logger LOG = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenValidationService tokenValidationService;
-    private final DynamoClientService clientService;
 
-    public AuthoriseAccessTokenHandler(
-            TokenValidationService tokenValidationService, DynamoClientService clientService) {
+    public AuthoriseAccessTokenHandler(TokenValidationService tokenValidationService) {
         this.tokenValidationService = tokenValidationService;
-        this.clientService = clientService;
     }
 
     public AuthoriseAccessTokenHandler() {
@@ -54,7 +50,6 @@ public class AuthoriseAccessTokenHandler
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
                         configurationService);
-        clientService = new DynamoClientService(configurationService);
     }
 
     @Override
@@ -101,10 +96,6 @@ public class AuthoriseAccessTokenHandler
             String clientId = claimsSet.getStringClaim("client_id");
             if (clientId == null) {
                 LOG.warn("Access Token client_id is missing");
-                throw new RuntimeException("Unauthorized");
-            }
-            if (!clientService.isValidClient(clientId)) {
-                LOG.warn("Access Token client_id does not exist in Dynamo. ClientId {}", clientId);
                 throw new RuntimeException("Unauthorized");
             }
             String subject = claimsSet.getSubject();
