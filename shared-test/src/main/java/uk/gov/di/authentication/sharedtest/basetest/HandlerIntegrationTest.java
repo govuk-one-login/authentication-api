@@ -6,14 +6,10 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
@@ -22,7 +18,6 @@ import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
@@ -31,10 +26,8 @@ import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
-import java.net.URI;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -42,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.valueOf;
-import static java.util.Collections.singletonList;
 import static java.util.Map.entry;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
@@ -250,9 +242,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
-    protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
-
-    @RegisterExtension
     protected static final AuthSessionExtension authSessionStore = new AuthSessionExtension();
 
     @RegisterExtension
@@ -301,28 +290,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
         headers.put(TXMA_AUDIT_ENCODED_HEADER, "base64 encoded");
         return headers;
-    }
-
-    public static void registerClient(
-            String emailAddress,
-            ClientID clientId,
-            String clientName,
-            URI redirectUri,
-            String sectorIdentifierUri) {
-        clientStore.registerClient(
-                clientId.getValue(),
-                clientName,
-                singletonList(redirectUri.toString()),
-                singletonList(emailAddress),
-                new Scope(OIDCScopeValue.OPENID).toStringList(),
-                Base64.getMimeEncoder()
-                        .encodeToString(
-                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                valueOf(ServiceType.MANDATORY),
-                sectorIdentifierUri,
-                "public");
     }
 
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {

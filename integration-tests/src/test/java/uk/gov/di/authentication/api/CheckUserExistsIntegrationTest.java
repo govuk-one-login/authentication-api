@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,10 +43,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final URI REDIRECT_URI =
-            URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
     private static final String TEST_EMAIL_1 = "joe.bloggs+1@digital.cabinet-office.gov.uk";
     private static final String TEST_EMAIL_2 = "joe.bloggs+2@digital.cabinet-office.gov.uk";
@@ -138,7 +134,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             var sessionId = IdGenerator.generate();
             authSessionStore.addSession(sessionId);
             var clientSessionId = IdGenerator.generate();
-            setupClient(TEST_EMAIL_2, sessionId);
+            setupClient(sessionId);
 
             var request = new CheckUserExistsRequest(TEST_EMAIL_2);
             var response =
@@ -267,18 +263,12 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, TEST_CREDENTIAL);
         }
 
-        setupClient(emailAddress, sessionId);
+        setupClient(sessionId);
 
         return sessionId;
     }
 
-    private void setupClient(String emailAddress, String sessionId) {
-        registerClient(
-                emailAddress,
-                CLIENT_ID,
-                CLIENT_NAME,
-                REDIRECT_URI,
-                "https://" + SECTOR_IDENTIFIER_HOST);
+    private void setupClient(String sessionId) {
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
     }
 
