@@ -581,7 +581,7 @@ class StartHandlerTest {
                 userContext, getClientStartInfo(), getUserStartInfo(null, null));
         useValidSession();
 
-        var invalidRedirectUri = "://invalid-uri"; // Invalid URI - targets line 274-277
+        var invalidRedirectUri = "://invalid-uri";
         var body =
                 objectMapper.writeValueAsString(
                         new StartRequest(
@@ -624,8 +624,7 @@ class StartHandlerTest {
                         new AuthSessionItem()
                                 .withSessionId(SESSION_ID)
                                 .withClientId(CLIENT_ID)
-                                .withInternalCommonSubjectId(
-                                        null)); // No subject ID - targets line 301
+                                .withInternalCommonSubjectId(null));
 
         when(authenticationAttemptsService.getCountsByJourney(any(), any()))
                 .thenReturn(Map.of(ENTER_EMAIL, MAX_ALLOWED_RETRIES)); // Blocked but no subject ID
@@ -672,7 +671,7 @@ class StartHandlerTest {
                                 COOKIE_CONSENT,
                                 null,
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue(),
-                                null, // null requestedLevelOfConfidence - targets line 159
+                                null,
                                 STATE.toString(),
                                 TEST_CLIENT_ID,
                                 REDIRECT_URL.toString(),
