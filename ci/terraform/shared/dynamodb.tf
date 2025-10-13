@@ -620,7 +620,7 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
       condition {
         test     = "StringNotLike"
         variable = "aws:PrincipalARN"
-        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*"]
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdmin*"]
       }
     }
   }
@@ -793,7 +793,7 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
       condition {
         test     = "StringNotLike"
         variable = "aws:PrincipalARN"
-        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*"]
+        values   = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdmin*"]
       }
     }
   }
