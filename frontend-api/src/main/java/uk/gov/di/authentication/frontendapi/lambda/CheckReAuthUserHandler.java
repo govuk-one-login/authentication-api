@@ -30,6 +30,8 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
@@ -84,24 +86,34 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.permissionDecisionManager = permissionDecisionManager;
     }
 
-    public CheckReAuthUserHandler(ConfigurationService configurationService) {
-        super(CheckReauthUserRequest.class, configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        var codeStorageService = new CodeStorageService(configurationService);
-        this.userActionsManager =
+    public CheckReAuthUserHandler(
+            ConfigurationService configurationService,
+            CodeStorageService codeStorageService,
+            AuthenticationAttemptsService authenticationAttemptsService,
+            AuthSessionService authSessionService) {
+        this(
+                configurationService,
+                new DynamoClientService(configurationService),
+                new DynamoService(configurationService),
+                new AuditService(configurationService),
+                authenticationAttemptsService,
+                new CloudwatchMetricsService(),
+                authSessionService,
                 new UserActionsManager(
                         configurationService,
                         codeStorageService,
-                        this.authSessionService,
-                        this.authenticationAttemptsService);
-        this.permissionDecisionManager =
+                        authSessionService,
+                        authenticationAttemptsService),
                 new PermissionDecisionManager(
-                        configurationService,
-                        codeStorageService,
-                        this.authenticationAttemptsService);
+                        configurationService, codeStorageService, authenticationAttemptsService));
+    }
+
+    public CheckReAuthUserHandler(ConfigurationService configurationService) {
+        this(
+                configurationService,
+                new CodeStorageService(configurationService),
+                new AuthenticationAttemptsService(configurationService),
+                new AuthSessionService(configurationService));
     }
 
     public CheckReAuthUserHandler() {
