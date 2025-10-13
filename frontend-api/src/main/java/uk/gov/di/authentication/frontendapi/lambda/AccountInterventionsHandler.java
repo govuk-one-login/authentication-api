@@ -300,7 +300,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                 e.getHttpCode(),
-                e.getMessage());
+                e.getMessage(),
+                e);
         if (!configurationService.abortOnAccountInterventionsErrorResponse()
                 || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
