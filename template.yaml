@@ -5061,9 +5061,9 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !If
-          - IsProduction
-          - !Ref OrchProdSlackEvents
+          - IsNotProduction
           - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
