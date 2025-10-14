@@ -66,6 +66,7 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
+    ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME     = var.account_interventions_error_metric_name
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
     JAVA_TOOL_OPTIONS                           = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
