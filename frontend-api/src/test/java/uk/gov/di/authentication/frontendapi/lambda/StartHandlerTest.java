@@ -647,7 +647,7 @@ class StartHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        // Should not emit reauth failed event when no subject ID is present (line 301 branch)
+        // Should not emit reauth failed event when no subject ID is present
         verify(auditService, never())
                 .submitAuditEvent(
                         eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
@@ -704,10 +704,7 @@ class StartHandlerTest {
 
         var body =
                 makeRequestBody(
-                        null,
-                        "",
-                        TEST_RP_PAIRWISE_ID,
-                        false); // empty previousGovUkSigninJourneyId - targets line 326
+                        null, "", TEST_RP_PAIRWISE_ID, false); // empty previousGovUkSigninJourneyId
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -732,10 +729,7 @@ class StartHandlerTest {
 
         var body =
                 makeRequestBody(
-                        null,
-                        TEST_PREVIOUS_SIGN_IN_JOURNEY_ID,
-                        "",
-                        false); // empty rpPairwiseId - targets line 330
+                        null, TEST_PREVIOUS_SIGN_IN_JOURNEY_ID, "", false); // empty rpPairwiseId
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -761,8 +755,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
-        var body =
-                makeRequestBody(null, null, null, false); // both null - targets lines 326 and 330
+        var body = makeRequestBody(null, null, null, false); // both null
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -781,7 +774,7 @@ class StartHandlerTest {
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
 
-        // Headers without Reauthenticate header (null case) - targets line 205-206
+        // Headers without Reauthenticate header (null case)
         var headersWithoutReauth = new HashMap<>(VALID_HEADERS);
         // Don't add Reauthenticate header at all
 
@@ -829,7 +822,7 @@ class StartHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        // Should handle null failure reason and use "unknown" - targets line 317
+        // Should handle null failure reason and use "unknown"
         verify(cloudwatchMetricsService)
                 .incrementCounter(eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
     }
@@ -839,7 +832,7 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(false); // Disabled - targets line 244
+                .thenReturn(false); // Disabled
         useValidSession();
 
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
