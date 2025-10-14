@@ -747,9 +747,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getEmailSqsLambdaFunctionName() {
-        return System.getenv()
-                .getOrDefault(
-                        "SMS_SENT_METRIC_PRODUCER",
-                        String.format("%s-email-notification-sqs-lambda", getEnvironment()));
+        return String.format("%s-email-notification-sqs-lambda", getEnvironment());
+    }
+
+    public String getAccountManagementSqsLambdaFunctionName() {
+        return String.format("%s-account-management-sqs-lambda", getEnvironment());
     }
 }

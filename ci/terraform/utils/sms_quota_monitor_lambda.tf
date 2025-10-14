@@ -1,13 +1,3 @@
-data "terraform_remote_state" "oidc" {
-  backend = "s3"
-  config = {
-    bucket      = var.shared_state_bucket
-    key         = "${var.environment}-terraform.tfstate"
-    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
-    region      = var.aws_region
-  }
-}
-
 data "aws_iam_policy_document" "sms_quota_monitor_cloudwatch_access" {
   statement {
     sid    = "AllowAccessToCloudWatchMetrics"
@@ -68,7 +58,6 @@ resource "aws_lambda_function" "sms_quota_monitor_lambda" {
       ENVIRONMENT                       = var.environment
       DOMESTIC_SMS_QUOTA_THRESHOLD      = var.domestic_sms_quota_threshold
       INTERNATIONAL_SMS_QUOTA_THRESHOLD = var.international_sms_quota_threshold
-      SMS_SENT_METRIC_PRODUCER          = data.terraform_remote_state.oidc.outputs.email_sqs_lambda_function_name
     }
   }
 

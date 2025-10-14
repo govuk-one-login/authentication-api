@@ -42,7 +42,3 @@ output "txma_audit_queue_arn" {
 output "txma_audit_key_arn" {
   value = module.oidc_txma_audit.kms_key_arn
 }
-
-output "email_sqs_lambda_function_name" {
-  value = aws_lambda_function.email_sqs_lambda.function_name
-}
