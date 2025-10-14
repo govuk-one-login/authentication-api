@@ -11,6 +11,7 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest
       Environment:
         Variables:
+          ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !Sub
             - "{{resolve:ssm:/deploy/${env}/account_intervention_service_abort_on_error}}"
             - env:
