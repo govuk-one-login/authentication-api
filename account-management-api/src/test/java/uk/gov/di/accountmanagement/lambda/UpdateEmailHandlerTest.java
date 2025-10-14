@@ -3,10 +3,16 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
@@ -17,6 +23,9 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -24,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -40,11 +50,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,6 +82,8 @@ class UpdateEmailHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private UpdateEmailHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "bloggs.joe@digital.cabinet-office.gov.uk";
@@ -113,7 +127,8 @@ class UpdateEmailHandlerTest {
                         sqsClient,
                         codeStorageService,
                         auditService,
-                        configurationService);
+                        configurationService,
+                        structuredAuditService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
@@ -158,7 +173,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldSubmitAuditEventWhenEmailCheckResultRecordDoesNotExist() {
+    void shouldSubmitEmailFraudCheckBypassedAuditEventWhenEmailCheckResultRecordDoesNotExist() {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -181,15 +196,93 @@ class UpdateEmailHandlerTest {
                             withMessageContaining(
                                     "UpdateEmailHandler: Experian email verification status: PENDING")));
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
-                            auditContext.withSubjectId(INTERNAL_SUBJECT.getValue()),
-                            AUDIT_EVENT_COMPONENT_ID_AUTH,
-                            AuditService.MetadataPair.pair(
-                                    "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                            AuditService.MetadataPair.pair(
-                                    "assessment_checked_at_timestamp", mockedTimestamp));
+            ArgumentCaptor<AuthEmailFraudCheckBypassed> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthEmailFraudCheckBypassed.class);
+            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+
+            AuthEmailFraudCheckBypassed capturedEvent = auditEventCaptor.getValue();
+            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_BYPASSED"));
+            assertThat(capturedEvent.clientId(), is(auditContext.clientId()));
+            assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
+            assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
+            assertThat(
+                    capturedEvent.user().persistentSessionId(),
+                    is(auditContext.persistentSessionId()));
+            assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
+            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
+            assertThat(
+                    capturedEvent.extensions().journeyType(),
+                    is(JourneyType.REGISTRATION.getValue()));
+            assertThat(
+                    capturedEvent.extensions().assessmentCheckedAtTimestamp(), is(mockedTimestamp));
+        }
+    }
+
+    private static Stream<Arguments> successfulEmailCheckResultStatus() {
+        return Stream.of(
+                Arguments.of(EmailCheckResultStatus.ALLOW),
+                Arguments.of(EmailCheckResultStatus.DENY));
+    }
+
+    @ParameterizedTest
+    @MethodSource("successfulEmailCheckResultStatus")
+    void shouldSubmitEmailCheckDecisionUsedAuditEventWhenEmailCheckIsPresent(
+            EmailCheckResultStatus status) {
+        Gson gson = new Gson();
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+                .thenReturn(true);
+        var resultStore = new EmailCheckResultStore();
+        var mockEmailCheckResponse = CommonTestVariables.TEST_EMAIL_CHECK_RESPONSE;
+        AuthEmailFraudCheckDecisionUsed.Extensions expectedExtensions =
+                new AuthEmailFraudCheckDecisionUsed.Extensions(
+                        JourneyType.REGISTRATION.getValue(),
+                        "some-reference-number",
+                        status.getValue(),
+                        true,
+                        gson.toJsonTree(Map.of("type", "EMAIL_FRAUD_CHECK")));
+        JsonElement expectedRestricted =
+                gson.toJsonTree(Map.of("domain_name", "digital.cabinet-office.gov.uk"));
+        resultStore.setStatus(status);
+        resultStore.setReferenceNumber("some-reference-number");
+        resultStore.setEmailCheckResponse(mockEmailCheckResponse);
+        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(resultStore));
+
+        long mockedTimestamp = 1719376320;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
+                    .thenReturn(mockedTimestamp);
+            var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+            handler.handleRequest(event, context);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    String.format(
+                                            "UpdateEmailHandler: Experian email verification status: %s",
+                                            status))));
+
+            ArgumentCaptor<AuthEmailFraudCheckDecisionUsed> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthEmailFraudCheckDecisionUsed.class);
+            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+
+            AuthEmailFraudCheckDecisionUsed capturedEvent = auditEventCaptor.getValue();
+            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_DECISION_USED"));
+            assertThat(capturedEvent.clientId(), is(CLIENT_ID));
+            assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
+            assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
+            assertThat(
+                    capturedEvent.user().persistentSessionId(),
+                    is(auditContext.persistentSessionId()));
+            assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
+            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
+            assertThat(capturedEvent.extensions(), is(expectedExtensions));
+            assertThat(capturedEvent.restricted(), is(expectedRestricted));
         }
     }
 

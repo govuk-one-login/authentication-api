@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import com.google.gson.JsonParser;
+import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 
@@ -83,4 +85,23 @@ public class CommonTestVariables {
                     List.of("testItem1", "testItem2"),
                     "testObject",
                     Map.of("testNestedString", "testNestedValue", "testNestedNumber", 789));
+    public static final String extensionsJsonString =
+            """
+            {
+                "emailFraudCheckResponse": {
+                    "type": "EMAIL_FRAUD_CHECK"
+                }
+            }
+            """;
+
+    public static final String restrictedJsonString =
+            """
+            {
+                "domain_name": "digital.cabinet-office.gov.uk"
+            }
+            """;
+    public static final EmailCheckResponse TEST_EMAIL_CHECK_RESPONSE =
+            new EmailCheckResponse(
+                    JsonParser.parseString(extensionsJsonString),
+                    JsonParser.parseString(restrictedJsonString));
 }

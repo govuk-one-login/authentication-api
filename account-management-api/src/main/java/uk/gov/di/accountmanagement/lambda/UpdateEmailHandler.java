@@ -17,7 +17,11 @@ import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckBypassed;
+import uk.gov.di.authentication.auditevents.entity.AuthEmailFraudCheckDecisionUsed;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
@@ -40,19 +44,20 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResult;
+import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResult;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class UpdateEmailHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -65,6 +70,7 @@ public class UpdateEmailHandler
     private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
     private final AuditService auditService;
     private final ConfigurationService configurationService;
+    private final StructuredAuditService structuredAuditService;
 
     public UpdateEmailHandler() {
         this(ConfigurationService.getInstance());
@@ -76,13 +82,15 @@ public class UpdateEmailHandler
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            StructuredAuditService structuredAuditService) {
         this.dynamoService = dynamoService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.configurationService = configurationService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
@@ -98,6 +106,7 @@ public class UpdateEmailHandler
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
         this.configurationService = configurationService;
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
@@ -156,19 +165,24 @@ public class UpdateEmailHandler
                                             new UserNotFoundException(
                                                     "User not found with given email"));
 
-            AtomicReference<EmailCheckResultStatus> emailCheckResultStatus =
-                    new AtomicReference<>(EmailCheckResultStatus.PENDING);
-            dynamoEmailCheckResultService
-                    .getEmailCheckStore(updateInfoRequest.getReplacementEmailAddress())
-                    .ifPresent(result -> emailCheckResultStatus.set(result.getStatus()));
+            var emailCheckResult =
+                    dynamoEmailCheckResultService.getEmailCheckStore(
+                            updateInfoRequest.getReplacementEmailAddress());
+
+            var emailCheckResultStatus =
+                    emailCheckResult
+                            .map(EmailCheckResultStore::getStatus)
+                            .orElse(EmailCheckResultStatus.PENDING);
             LOG.info(
                     "UpdateEmailHandler: Experian email verification status: {}",
-                    emailCheckResultStatus.get());
+                    emailCheckResultStatus);
 
-            if (emailCheckResultStatus.get() == EmailCheckResultStatus.DENY) {
-                return generateApiGatewayProxyErrorResponse(
-                        403, ErrorResponse.EMAIL_ADDRESS_DENIED);
-            }
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            dynamoService);
 
             var auditContext =
                     new AuditContext(
@@ -178,7 +192,7 @@ public class UpdateEmailHandler
                                     .toString(),
                             ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                             sessionId,
-                            AuditService.UNKNOWN,
+                            internalCommonSubjectIdentifier.getValue(),
                             updateInfoRequest.getReplacementEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
@@ -186,15 +200,17 @@ public class UpdateEmailHandler
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()),
                             new ArrayList<>());
 
-            if (emailCheckResultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
-                auditService.submitAuditEvent(
-                        AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
-                        auditContext.withSubjectId(userProfile.getSubjectID()),
-                        AUDIT_EVENT_COMPONENT_ID_AUTH,
-                        pair("journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                        pair(
-                                "assessment_checked_at_timestamp",
-                                NowHelper.toUnixTimestamp(NowHelper.now())));
+            if (emailCheckResultStatus.equals(EmailCheckResultStatus.PENDING)) {
+                submitEmailFraudCheckBypassedAuditEvent(auditContext);
+            } else {
+                emailCheckResult.ifPresent(
+                        result ->
+                                submitEmailFraudCheckDecisionUsedAuditEvent(auditContext, result));
+            }
+
+            if (emailCheckResultStatus == EmailCheckResultStatus.DENY) {
+                return generateApiGatewayProxyErrorResponse(
+                        403, ErrorResponse.EMAIL_ADDRESS_DENIED);
             }
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
@@ -222,13 +238,6 @@ public class UpdateEmailHandler
                 sqsClient.send(objectMapper.writeValueAsString((notifyEmailAddressUpdateRequest)));
             }
 
-            LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            dynamoService);
-
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                     auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
@@ -243,5 +252,49 @@ public class UpdateEmailHandler
         } catch (JsonException | IllegalArgumentException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+    }
+
+    private void submitEmailFraudCheckBypassedAuditEvent(AuditContext auditContext) {
+        var newAuditEvent =
+                AuthEmailFraudCheckBypassed.create(
+                        auditContext.clientId(),
+                        new AuthEmailFraudCheckBypassed.User(
+                                auditContext.subjectId(),
+                                auditContext.email(),
+                                auditContext.ipAddress(),
+                                auditContext.persistentSessionId(),
+                                auditContext.sessionId()),
+                        new AuthEmailFraudCheckBypassed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                NowHelper.toUnixTimestamp(NowHelper.now())));
+
+        structuredAuditService.submitAuditEvent(newAuditEvent);
+    }
+
+    private void submitEmailFraudCheckDecisionUsedAuditEvent(
+            AuditContext auditContext, EmailCheckResultStore emailCheckResult) {
+        var decision_reused =
+                !Objects.equals(
+                        auditContext.sessionId(), emailCheckResult.getGovukSigninJourneyId());
+        var newAuditEvent =
+                AuthEmailFraudCheckDecisionUsed.create(
+                        auditContext.clientId(),
+                        new AuthEmailFraudCheckDecisionUsed.User(
+                                auditContext.subjectId(),
+                                auditContext.email(),
+                                auditContext.ipAddress(),
+                                auditContext.persistentSessionId(),
+                                auditContext.sessionId()),
+                        new AuthEmailFraudCheckDecisionUsed.Extensions(
+                                JourneyType.REGISTRATION.getValue(),
+                                decision_reused ? emailCheckResult.getReferenceNumber() : null,
+                                emailCheckResult.getStatus().name(),
+                                decision_reused,
+                                decision_reused
+                                        ? getEmailFraudCheckResponseJsonFromResult(emailCheckResult)
+                                        : null),
+                        decision_reused ? getRestrictedJsonFromResult(emailCheckResult) : null);
+
+        structuredAuditService.submitAuditEvent(newAuditEvent);
     }
 }
