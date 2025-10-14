@@ -8,6 +8,26 @@ data "terraform_remote_state" "shared" {
   }
 }
 
+data "terraform_remote_state" "oidc" {
+  backend = "s3"
+  config = {
+    bucket      = var.shared_state_bucket
+    key         = "${var.environment}-terraform.tfstate"
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
+  }
+}
+
+data "terraform_remote_state" "account_management" {
+  backend = "s3"
+  config = {
+    bucket      = var.shared_state_bucket
+    key         = "${var.environment}-account-managment-api-terraform.tfstate"
+    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
+    region      = var.aws_region
+  }
+}
+
 locals {
   cloudwatch_encryption_key_arn             = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   bulk_user_email_table_encryption_key_arn  = data.terraform_remote_state.shared.outputs.bulk_user_email_table_encryption_key_arn

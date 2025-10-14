@@ -122,10 +122,13 @@ class SmsQuotaMonitorHandlerTest {
     @Test
     void shouldUseCorrectMetricNamesAndDimensions() {
         var smsSentMetricProducer = "production-email-notification-sqs-lambda";
+        var accountManagementSmsSentMetricProducer = "production-account-management-sqs-lambda";
 
         when(configurationService.getEnvironment()).thenReturn("production");
         when(configurationService.getEmailSqsLambdaFunctionName())
                 .thenReturn(smsSentMetricProducer);
+        when(configurationService.getAccountManagementSqsLambdaFunctionName())
+                .thenReturn(accountManagementSmsSentMetricProducer);
         when(configurationService.getDomesticSmsQuotaThreshold()).thenReturn(300000.0);
         when(configurationService.getInternationalSmsQuotaThreshold()).thenReturn(3600.0);
 
@@ -140,29 +143,39 @@ class SmsQuotaMonitorHandlerTest {
 
         var requests = getCaptor.getAllValues();
 
-        // Group requests by metric name and application
+        // Group requests by metric name, application, and "metric producer".
         var domesticAuthRequests =
                 requests.stream()
                         .filter(r -> "DomesticSmsSent".equals(r.metricName()))
                         .filter(r -> hasApplicationDimension(r, AUTHENTICATION.getValue()))
+                        .filter(r -> hasProducerDimensions(r, smsSentMetricProducer))
                         .toList();
 
         var domesticHomeRequests =
                 requests.stream()
                         .filter(r -> "DomesticSmsSent".equals(r.metricName()))
                         .filter(r -> hasApplicationDimension(r, ONE_LOGIN_HOME.getValue()))
+                        .filter(
+                                r ->
+                                        hasProducerDimensions(
+                                                r, accountManagementSmsSentMetricProducer))
                         .toList();
 
         var internationalAuthRequests =
                 requests.stream()
                         .filter(r -> "InternationalSmsSent".equals(r.metricName()))
                         .filter(r -> hasApplicationDimension(r, AUTHENTICATION.getValue()))
+                        .filter(r -> hasProducerDimensions(r, smsSentMetricProducer))
                         .toList();
 
         var internationalHomeRequests =
                 requests.stream()
                         .filter(r -> "InternationalSmsSent".equals(r.metricName()))
                         .filter(r -> hasApplicationDimension(r, ONE_LOGIN_HOME.getValue()))
+                        .filter(
+                                r ->
+                                        hasProducerDimensions(
+                                                r, accountManagementSmsSentMetricProducer))
                         .toList();
 
         // Verify we have exactly one of each type
@@ -175,8 +188,6 @@ class SmsQuotaMonitorHandlerTest {
         requests.forEach(
                 request -> {
                     assertDimensionEquals(request, "Environment", "production");
-                    assertDimensionEquals(request, "LogGroup", smsSentMetricProducer);
-                    assertDimensionEquals(request, "ServiceName", smsSentMetricProducer);
                     assertDimensionEquals(request, "ServiceType", "AWS::Lambda::Function");
                 });
     }
@@ -188,6 +199,25 @@ class SmsQuotaMonitorHandlerTest {
                         dim ->
                                 "Application".equals(dim.name())
                                         && applicationValue.equals(dim.value()));
+    }
+
+    private boolean hasProducerDimensions(
+            GetMetricStatisticsRequest request, String producerValue) {
+        boolean hasLogGroup =
+                request.dimensions().stream()
+                        .anyMatch(
+                                dim ->
+                                        "LogGroup".equals(dim.name())
+                                                && producerValue.equals(dim.value()));
+
+        boolean hasServiceName =
+                request.dimensions().stream()
+                        .anyMatch(
+                                dim ->
+                                        "ServiceName".equals(dim.name())
+                                                && producerValue.equals(dim.value()));
+
+        return hasLogGroup && hasServiceName;
     }
 
     private void assertDimensionEquals(
