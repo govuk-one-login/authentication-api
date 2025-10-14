@@ -752,11 +752,4 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         "SMS_SENT_METRIC_PRODUCER",
                         String.format("%s-email-notification-sqs-lambda", getEnvironment()));
     }
-
-    public String getAccountManagementSqsLambdaFunctionName() {
-        return System.getenv()
-                .getOrDefault(
-                        "AM_SMS_SENT_METRIC_PRODUCER",
-                        String.format("%s-account-management-sqs-lambda", getEnvironment()));
-    }
 }
