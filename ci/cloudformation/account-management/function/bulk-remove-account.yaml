@@ -1,0 +1,288 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  BulkRemoveAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-account-management-bulk-remove-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      MemorySize:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          bulkRemoveAccountMemorySize,
+          DefaultValue: 1536,
+        ]
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAL_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://identity.${Environment}.account.gov.uk/"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
+            - IsProduction
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                legacyAccountDeletionTopicArn,
+                DefaultValue: "",
+              ]
+            - !Ref MockAccountDeletionTopic
+      LoggingConfig:
+        LogGroup: !Ref BulkRemoveAccountFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoUserDeleteAccessPolicy
+        - !Ref DynamoAccountModifiersReadAccessPolicy
+        - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref LegacyAccountDeletionTopicPolicy
+      SnapStart:
+        ApplyOn: None
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !If
+            - IsProduction
+            - !Ref RedisSecurityGroup
+            - !Ref AWS::NoValue
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  BulkRemoveAccountFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt BulkRemoveAccountFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  BulkRemoveAccountFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref BulkRemoveAccountFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  BulkRemoveAccountFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-bulk-remove-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-BulkRemoveAccountFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/bulk-remove-account.yaml
+
+  BulkRemoveAccountFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-account-management-bulk-remove-account-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref BulkRemoveAccountFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-account-management-bulk-remove-account-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  BulkRemoveAccountFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-bulk-remove-account-lambda function. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmName: !Sub
+        - ${Env}-account-management-bulk-remove-account-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-account-management-bulk-remove-account-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  BulkRemoveAccountFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of 25% has been reached in the ${Env}-account-management-bulk-remove-account-lambda. https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmName: !Sub
+        - ${Env}-account-management-bulk-remove-account-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-bulk-remove-account-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-bulk-remove-account-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold: 25
+
+  BulkRemoveAccountFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref BulkRemoveAccountFunctionLogGroup
+
+  MockAccountDeletionTopic:
+    Condition: IsNotProduction
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub
+        - ${Env}-mock-account-deletion-topic
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsMasterKeyId: !GetAtt MainKmsKey.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-MockAccountDeletionTopic"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/bulk-remove-account.yaml
+
+  LegacyAccountDeletionTopicPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub
+        - ${Env}-legacy-account-deletion-topic-policy
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sns:Publish
+            Resource:
+              - !If
+                - IsProduction
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    legacyAccountDeletionTopicArn,
+                    DefaultValue: "",
+                  ]
+                - !Ref MockAccountDeletionTopic
+
+  BulkRemoveAccountInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: ShouldCreateBulkRemoveAccountPolicy
+    Properties:
+      ManagedPolicyName: !Sub
+        - ${Env}-bulk-remove-account-user-policy
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: /control-tower/am/
+      Description: Policy for use in Control Tower to be attached to the role assumed by support users to bulk account deletions
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: permitInvokeBulkRemoveAccountLambda
+            Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt BulkRemoveAccountFunction.Arn

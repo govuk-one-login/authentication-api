@@ -152,6 +152,18 @@ Conditions:
               - !Ref SubEnvironment
               - none
 
+  ShouldCreateBulkRemoveAccountPolicy:
+    Fn::Or:
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+      - Fn::Equals:
+          - !Ref Environment
+          - integration
+      - Fn::Equals:
+          - !Ref Environment
+          - staging
+
   ProvisionTestClientSecret:
     !Or [
       !And [
@@ -226,6 +238,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
       updatePhoneNumberMaxConcurrency: 10
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 10
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -280,6 +295,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
       updatePhoneNumberMaxConcurrency: 10
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 10
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -334,6 +352,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
       updatePhoneNumberMaxConcurrency: 10
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 10
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
       supportReauthSignoutEnabled: true
@@ -388,6 +409,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
       updatePhoneNumberMaxConcurrency: 10
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 10
       orchApiVpcEndpointId: ""
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
@@ -452,6 +476,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 5
       updatePhoneNumberMaxConcurrency: 20
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 20
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
@@ -521,6 +548,9 @@ Mappings:
       updatePhoneNumberMemorySize: 2048
       updatePhoneNumberProvisionedConcurrency: 10
       updatePhoneNumberMaxConcurrency: 50
+      bulkRemoveAccountMemorySize: 2048
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 50
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
@@ -589,6 +619,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 2
       updatePhoneNumberMaxConcurrency: 15
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 15
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
@@ -658,6 +691,9 @@ Mappings:
       updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 2
       updatePhoneNumberMaxConcurrency: 15
+      bulkRemoveAccountMemorySize: 1536
+      bulkRemoveAccountProvisionedConcurrency: 0
+      bulkRemoveAccountMaxConcurrency: 15
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
@@ -680,6 +716,7 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/9b57120e-3bcd-4fce-ada8-89ea9d1412d6
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/b2979629-c62f-458d-992b-ac4239c2cf81
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:533266965190:key/e9f1350d-75e2-4532-be84-8bec6de99755
+      legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:172348255554:legacy-account-deletion-topic
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
