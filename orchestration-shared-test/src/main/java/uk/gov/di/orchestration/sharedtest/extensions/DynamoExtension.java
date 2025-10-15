@@ -22,6 +22,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -126,7 +127,7 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
                                         .attributeName(s)
                                         .build()));
 
-        var attributeDefinitions = new ArrayList<AttributeDefinition>();
+        var attributeDefinitions = new HashSet<AttributeDefinition>();
         attributeDefinitions.add(stringAttribute(partitionKeyField));
         sortKey.ifPresent(s -> attributeDefinitions.add(stringAttribute(s)));
         var requestBuilder =
