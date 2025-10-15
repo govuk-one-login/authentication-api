@@ -4508,6 +4508,7 @@ Resources:
                 ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
             - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
