@@ -208,20 +208,6 @@ class OrchestrationAuthorizationServiceTest {
         assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentSessionId));
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldIdentifyATestUserJourney(boolean dynamoClientServiceReturns) {
-        when(dynamoClientService.isTestJourney(CLIENT_ID.toString(), "test@test.com"))
-                .thenReturn(dynamoClientServiceReturns);
-
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-    }
-
     @Test
     void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
         var claim1Value = "JWT claim 1";
