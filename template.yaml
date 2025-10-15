@@ -585,6 +585,26 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        Fn::If:
+          - IsNotDevEnvironment
+          - PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: AuthUserInfoTable
@@ -944,6 +964,61 @@ Resources:
                           !Ref Environment,
                           newauthAccountId,
                         ]
+            - Fn::If:
+                - IsNotDevEnvironment
+                - Sid: DenyNonAdminTeamRolesAccess
+                  Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+                - !Ref AWS::NoValue
+            - Fn::If:
+                - IsNotDevEnvironment
+                - Sid: DenyAuthAccountNonAdminTeamRolesAccess
+                  Effect: Deny
+                  Principal:
+                    AWS: !Sub
+                      - arn:aws:iam::${AuthAccountId}:root
+                      - AuthAccountId:
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ]
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub
+                        - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                        - AuthAccountId:
+                            !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              authAccountId,
+                            ]
+                    StringLike:
+                      aws:PrincipalARN: !Sub
+                        - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+                        - AuthAccountId:
+                            !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              authAccountId,
+                            ]
+                - !Ref AWS::NoValue
   #endregion
 
   #region RP Public Key DynamoDB Table
@@ -1117,6 +1192,26 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        Fn::If:
+          - IsNotDevEnvironment
+          - PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: DocAppCredentialTable
