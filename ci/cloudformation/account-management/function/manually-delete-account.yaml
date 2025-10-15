@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  ManuallyDeleteAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-manually-delete-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      MemorySize:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          manuallyDeleteAccountMemorySize,
+          DefaultValue: 1536,
+        ]
+      ReservedConcurrentExecutions:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          manuallyDeleteAccountReservedConcurrency,
+          DefaultValue: 1,
+        ]
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAL_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://identity.${Environment}.account.gov.uk/"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
+            - IsProduction
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                legacyAccountDeletionTopicArn,
+                DefaultValue: "",
+              ]
+            - !Ref MockAccountDeletionTopic
+      LoggingConfig:
+        LogGroup: !Ref ManuallyDeleteAccountFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoUserDeleteAccessPolicy
+        - !Ref DynamoAccountModifiersReadAccessPolicy
+        - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref LegacyAccountDeletionTopicPolicy
+      SnapStart:
+        ApplyOn: None
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref RedisSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  ManuallyDeleteAccountFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-manually-delete-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-ManuallyDeleteAccountFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/manually-delete-account.yaml
+
+  ManuallyDeleteAccountFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ManuallyDeleteAccountFunctionLogGroup
+
+  ManuallyDeleteAccountInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: ShouldCreateBulkRemoveAccountPolicy
+    Properties:
+      ManagedPolicyName: !Sub
+        - ${Env}-manual-account-deletion-user-policy
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Path: /control-tower/am/
+      Description: Policy for use in Control Tower to be attached to the role assumed by support users to perform account deletions
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: permitInvokeLambda
+            Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ManuallyDeleteAccountFunction.Arn
