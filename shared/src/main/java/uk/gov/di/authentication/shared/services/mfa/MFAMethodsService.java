@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
@@ -132,6 +133,19 @@ public class MFAMethodsService {
 
         if (maybeMfaMethod.isEmpty()) {
             return Result.failure(UNKNOWN_MFA_IDENTIFIER);
+        }
+
+        if (maybeMfaMethod.get().getPriority() == null) {
+            var mfaMethodCount = mfaMethods.size();
+            var mfaMethodPrioritiesForUser =
+                    mfaMethods.stream()
+                            .map(m -> Optional.ofNullable(m.getPriority()).orElse("null"))
+                            .collect(Collectors.joining(", "));
+
+            LOG.error(
+                    "Potential data corruption, retrieved MFA method has priority null. User MFA method count: {}, MFA method priorities: {}.",
+                    mfaMethodCount,
+                    mfaMethodPrioritiesForUser);
         }
 
         return Result.success(new GetMfaResult(maybeMfaMethod.get(), mfaMethods));
