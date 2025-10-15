@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.state;
 
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -13,7 +12,6 @@ public class UserContext {
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
-    private final Optional<ClientRegistry> client;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
     private final String txmaAuditEncoded;
@@ -22,7 +20,6 @@ public class UserContext {
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
-            Optional<ClientRegistry> client,
             SupportedLanguage userLanguage,
             String clientSessionId,
             String txmaAuditEncoded,
@@ -30,7 +27,6 @@ public class UserContext {
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
         this.userAuthenticated = userAuthenticated;
-        this.client = client;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.txmaAuditEncoded = txmaAuditEncoded;
@@ -47,10 +43,6 @@ public class UserContext {
 
     public boolean isUserAuthenticated() {
         return userAuthenticated;
-    }
-
-    public Optional<ClientRegistry> getClient() {
-        return client;
     }
 
     public SupportedLanguage getUserLanguage() {
@@ -78,7 +70,6 @@ public class UserContext {
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
         private boolean userAuthenticated = false;
-        private Optional<ClientRegistry> client = Optional.empty();
         private SupportedLanguage userLanguage;
         private String clientSessionId;
         private String txmaAuditEncoded;
@@ -106,15 +97,6 @@ public class UserContext {
             return this;
         }
 
-        public Builder withClient(ClientRegistry client) {
-            return withClient(Optional.of(client));
-        }
-
-        public Builder withClient(Optional<ClientRegistry> client) {
-            this.client = client;
-            return this;
-        }
-
         public Builder withUserLanguage(SupportedLanguage userLanguage) {
             this.userLanguage = userLanguage;
             return this;
@@ -135,7 +117,6 @@ public class UserContext {
                     userProfile,
                     userCredentials,
                     userAuthenticated,
-                    client,
                     userLanguage,
                     clientSessionId,
                     txmaAuditEncoded,

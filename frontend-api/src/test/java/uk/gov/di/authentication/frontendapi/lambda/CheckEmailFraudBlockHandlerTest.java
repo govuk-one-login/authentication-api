@@ -21,7 +21,6 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -31,7 +30,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -70,9 +68,7 @@ class CheckEmailFraudBlockHandlerTest {
     private static AuthenticationService authenticationServiceMock;
     private static Context contextMock;
     private static ConfigurationService configurationServiceMock;
-    private static ClientService clientServiceMock;
     private static DynamoEmailCheckResultService dbMock;
-    private static ClientRegistry clientRegistry;
     private static UserContext userContext;
     private static AuthSessionService authSessionServiceMock;
 
@@ -84,11 +80,9 @@ class CheckEmailFraudBlockHandlerTest {
     static void init() {
         contextMock = mock(Context.class);
         dbMock = mock(DynamoEmailCheckResultService.class);
-        clientServiceMock = mock(ClientService.class);
         auditServiceMock = mock(StructuredAuditService.class);
         configurationServiceMock = mock(ConfigurationService.class);
         authenticationServiceMock = mock(AuthenticationService.class);
-        clientRegistry = mock(ClientRegistry.class);
         userContext = mock(UserContext.class);
         authSessionServiceMock = mock(AuthSessionService.class);
     }
@@ -98,7 +92,6 @@ class CheckEmailFraudBlockHandlerTest {
         Mockito.reset(auditServiceMock);
 
         var userProfile = generateUserProfile();
-        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getAuthSession()).thenReturn(authSession);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
@@ -110,7 +103,6 @@ class CheckEmailFraudBlockHandlerTest {
         handler =
                 new CheckEmailFraudBlockHandler(
                         configurationServiceMock,
-                        clientServiceMock,
                         authenticationServiceMock,
                         dbMock,
                         auditServiceMock,

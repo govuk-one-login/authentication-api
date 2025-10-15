@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
@@ -11,7 +10,6 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +27,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final URI REDIRECT_URI =
-            URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
 
     private CodeStorageService codeStorageService;
@@ -60,8 +54,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(
-                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         var response =
@@ -95,8 +87,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(
-                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         // Make multiple requests to exceed the limit (default is 6)
@@ -129,8 +119,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(
-                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         // Block user from requesting password resets
@@ -162,8 +150,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(
-                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         // Block user from entering invalid codes
@@ -237,8 +223,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         authSessionStore.addEmailToSession(sessionId, email);
         String persistentSessionId = "test-persistent-id";
         var clientSessionId = IdGenerator.generate();
-        registerClient(
-                email, CLIENT_ID, CLIENT_NAME, REDIRECT_URI, "https://" + SECTOR_IDENTIFIER_HOST);
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, SECTOR_IDENTIFIER_HOST);
 
         // Make exactly 6 requests - the 6th should return TOO_MANY_PW_RESET_REQUESTS

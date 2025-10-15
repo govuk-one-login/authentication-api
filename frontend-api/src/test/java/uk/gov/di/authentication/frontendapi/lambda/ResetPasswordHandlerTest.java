@@ -13,7 +13,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -33,7 +32,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -85,7 +83,6 @@ class ResetPasswordHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
@@ -144,22 +141,11 @@ class ResetPasswordHandlerTest {
                     .withEmailAddress(EMAIL)
                     .withClientId(TEST_CLIENT_ID);
 
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
-
     @BeforeEach
     void setUp() {
         doReturn(Optional.of(ErrorResponse.INVALID_PW_CHARS))
                 .when(passwordValidator)
                 .validate("password");
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         usingValidSession();
@@ -169,7 +155,6 @@ class ResetPasswordHandlerTest {
                         sqsClient,
                         codeStorageService,
                         configurationService,
-                        clientService,
                         auditService,
                         commonPasswordsService,
                         passwordValidator,

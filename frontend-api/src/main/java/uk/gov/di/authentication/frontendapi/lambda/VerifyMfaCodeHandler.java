@@ -17,7 +17,6 @@ import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -38,7 +37,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -91,7 +89,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
@@ -104,7 +101,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.codeStorageService = codeStorageService;
@@ -179,12 +175,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
-        Optional<ClientRegistry> clientMaybe = userContext.getClient();
-        if (clientMaybe.isEmpty()) {
-            LOG.warn("Client not found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.CLIENT_NOT_FOUND);
-        }
-        ClientRegistry client = clientMaybe.get();
 
         Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
 
@@ -207,20 +197,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-                journeyType, userProfile, auditContext, maybeRpPairwiseId, client))
+                journeyType, userProfile, auditContext, maybeRpPairwiseId))
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
 
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input,
-                    codeRequest,
-                    userContext,
-                    subjectID,
-                    maybeRpPairwiseId,
-                    client,
-                    userProfile);
+                    input, codeRequest, userContext, subjectID, maybeRpPairwiseId, userProfile);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
@@ -251,8 +235,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             UserProfile userProfile,
             AuditContext auditContext,
-            Optional<String> maybeRpPairwiseId,
-            ClientRegistry client) {
+            Optional<String> maybeRpPairwiseId) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
@@ -269,7 +252,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
 
-            if (!countTypesWhereLimitExceeded.isEmpty() && client != null) {
+            if (!countTypesWhereLimitExceeded.isEmpty()) {
                 ReauthFailureReasons failureReason =
                         getReauthFailureReasonFromCountTypes(countTypesWhereLimitExceeded);
                 auditService.submitAuditEvent(
@@ -303,7 +286,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             Optional<String> maybeRpPairwiseId,
-            ClientRegistry client,
             UserProfile userProfile) {
 
         var authSession = userContext.getAuthSession();
@@ -412,8 +394,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 codeRequest.getJourneyType(),
                 userContext.getUserProfile().orElse(null),
                 auditContext,
-                maybeRpPairwiseId,
-                client)) {
+                maybeRpPairwiseId)) {
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }

@@ -18,7 +18,6 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -39,7 +38,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -123,7 +121,6 @@ class SendNotificationHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
@@ -131,13 +128,6 @@ class SendNotificationHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
-    private final ClientRegistry clientRegistry =
-            new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(List.of(EMAIL));
 
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
@@ -165,7 +155,6 @@ class SendNotificationHandlerTest {
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
                     configurationService,
-                    clientService,
                     authenticationService,
                     emailSqsClient,
                     pendingEmailCheckSqsClient,
@@ -204,8 +193,6 @@ class SendNotificationHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
 
         var userCreds =
                 new UserCredentials()

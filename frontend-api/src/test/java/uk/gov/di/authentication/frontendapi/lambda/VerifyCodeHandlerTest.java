@@ -19,7 +19,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -37,7 +36,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -142,7 +140,6 @@ class VerifyCodeHandlerTest {
                     .withClientId(CLIENT_ID)
                     .withClientName(CLIENT_NAME)
                     .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST);
-    private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -154,22 +151,6 @@ class VerifyCodeHandlerTest {
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final TestUserHelper testUserHelper = mock(TestUserHelper.class);
-
-    private final ClientRegistry clientRegistry =
-            new ClientRegistry()
-                    .withTestClient(false)
-                    .withClientID(CLIENT_ID)
-                    .withClientName(CLIENT_NAME)
-                    .withSectorIdentifierUri("https://" + CLIENT_SECTOR_HOST);
-    private final ClientRegistry testClientRegistry =
-            new ClientRegistry()
-                    .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "testclient.user1@digital.cabinet-office.gov.uk",
-                                    "^(.+)@digital.cabinet-office.gov.uk$",
-                                    "testclient.user2@internet.com"));
 
     private final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -205,7 +186,6 @@ class VerifyCodeHandlerTest {
         handler =
                 new VerifyCodeHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         codeStorageService,
                         auditService,
@@ -313,7 +293,6 @@ class VerifyCodeHandlerTest {
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         CODE, emailNotificationType.toString());
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
 
         var result = handler.handleRequest(event, context);
 
@@ -1155,8 +1134,6 @@ class VerifyCodeHandlerTest {
 
         when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(session);
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
 
         return handler.handleRequest(event, context);
     }

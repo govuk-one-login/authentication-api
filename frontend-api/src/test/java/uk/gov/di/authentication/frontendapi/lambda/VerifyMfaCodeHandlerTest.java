@@ -26,7 +26,6 @@ import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -47,7 +46,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -152,8 +150,6 @@ class VerifyMfaCodeHandlerTest {
     private final AuthAppCodeProcessor authAppCodeProcessor = mock(AuthAppCodeProcessor.class);
     private final PhoneNumberCodeProcessor phoneNumberCodeProcessor =
             mock(PhoneNumberCodeProcessor.class);
-    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -186,8 +182,6 @@ class VerifyMfaCodeHandlerTest {
     void setUp() {
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
@@ -204,7 +198,6 @@ class VerifyMfaCodeHandlerTest {
         handler =
                 new VerifyMfaCodeHandler(
                         configurationService,
-                        clientService,
                         authenticationService,
                         codeStorageService,
                         auditService,
@@ -1031,20 +1024,6 @@ class VerifyMfaCodeHandlerTest {
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
         }
-
-        @Test
-        void shouldReturn400AndThrowClientNotFoundExceptionIfNoClientIsPresent()
-                throws Json.JsonException {
-            when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.empty());
-
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.AUTH_APP, CODE, REGISTRATION, AUTH_APP_SECRET));
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.CLIENT_NOT_FOUND));
-        }
     }
 
     @Test
@@ -1086,7 +1065,6 @@ class VerifyMfaCodeHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
-        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + CLIENT_SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
 
         var codeRequest =

@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
@@ -54,7 +53,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
     public ReverificationResultHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             ReverificationResultService reverificationResultService,
             AuditService auditService,
@@ -64,7 +62,6 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         super(
                 ReverificationResultRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.reverificationResultService = reverificationResultService;

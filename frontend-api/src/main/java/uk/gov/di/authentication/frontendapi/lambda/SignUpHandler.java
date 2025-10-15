@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -47,18 +46,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     public SignUpHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
             AuthSessionService authSessionService) {
-        super(
-                SignupRequest.class,
-                configurationService,
-                clientService,
-                authenticationService,
-                authSessionService);
+        super(SignupRequest.class, configurationService, authenticationService, authSessionService);
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
@@ -135,16 +128,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
-                    userContext
-                            .getClient()
-                            .map(
-                                    client ->
-                                            ClientSubjectHelper.getSubject(
-                                                            user.getUserProfile(),
-                                                            authSessionItem,
-                                                            authenticationService)
-                                                    .getValue())
-                            .orElse(AuditService.UNKNOWN);
+                    ClientSubjectHelper.getSubject(
+                                    user.getUserProfile(), authSessionItem, authenticationService)
+                            .getValue();
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,

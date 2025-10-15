@@ -15,7 +15,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
-import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -30,8 +29,6 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
-import java.security.KeyPair;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +37,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -108,7 +104,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var response =
                 makeRequest(
                         Optional.of(
@@ -184,7 +180,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -248,7 +244,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var state = new State();
         var scope = new Scope(OIDCScopeValue.OPENID);
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var response =
                 makeRequest(
@@ -297,7 +293,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
 
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -327,7 +323,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var isAuthenticated = true;
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(sessionId);
-        registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
 
         var response =
                 makeRequest(
@@ -371,7 +367,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             state = new State();
             scope = new Scope();
             scope.add(OIDCScopeValue.OPENID);
-            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+            KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         }
 
         @Test
@@ -455,7 +451,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
             userStore.signUp(EMAIL, "password");
-            registerWebClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR());
+            KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             scope.add(OIDCScopeValue.OPENID);
         }
 
@@ -556,23 +552,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         requestBodyMap.put(
                                 "requested_level_of_confidence", levelOfConfidence.getValue()));
         return SerializationService.getInstance().writeValueAsString(requestBodyMap);
-    }
-
-    private void registerWebClient(KeyPair keyPair) {
-        clientStore.registerClient(
-                CLIENT_ID,
-                TEST_CLIENT_NAME,
-                singletonList(REDIRECT_URI.toString()),
-                singletonList(EMAIL),
-                List.of("openid", "email"),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                ClientType.WEB,
-                true);
     }
 
     private void verifyStandardClientInformationSetOnResponse(

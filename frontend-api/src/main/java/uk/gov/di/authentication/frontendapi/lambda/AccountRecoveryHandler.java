@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -34,7 +33,6 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
 
     protected AccountRecoveryHandler(
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             DynamoAccountModifiersService dynamoAccountModifiersService,
             AuditService auditService,
@@ -42,7 +40,6 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
         super(
                 AccountRecoveryRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;

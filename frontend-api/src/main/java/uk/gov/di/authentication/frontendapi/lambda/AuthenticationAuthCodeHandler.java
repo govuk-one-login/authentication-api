@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
@@ -49,7 +48,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -57,7 +55,6 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         super(
                 AuthCodeRequest.class,
                 configurationService,
-                clientService,
                 authenticationService,
                 authSessionService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;

@@ -16,9 +16,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -49,7 +47,6 @@ public abstract class BaseFrontendHandler<T>
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
-    protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final AuthSessionService authSessionService;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -58,12 +55,10 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             AuthSessionService authSessionService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.clientService = clientService;
         this.authenticationService = authenticationService;
         this.authSessionService = authSessionService;
     }
@@ -71,18 +66,16 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            ClientService clientService,
             AuthenticationService authenticationService,
             boolean loadUserCredentials,
             AuthSessionService authSessionService) {
-        this(clazz, configurationService, clientService, authenticationService, authSessionService);
+        this(clazz, configurationService, authenticationService, authSessionService);
         this.loadUserCredentials = loadUserCredentials;
     }
 
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
-        this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
     }
@@ -170,8 +163,6 @@ public abstract class BaseFrontendHandler<T>
         var clientID = Optional.ofNullable(authSession.get().getClientId());
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
-
-        clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)

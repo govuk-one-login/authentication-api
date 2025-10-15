@@ -15,7 +15,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -33,7 +32,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -101,7 +99,6 @@ class LoginHandlerReauthenticationRedisTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -159,8 +156,6 @@ class LoginHandlerReauthenticationRedisTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getEnvironment()).thenReturn("test");
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
@@ -169,7 +164,6 @@ class LoginHandlerReauthenticationRedisTest {
                 new LoginHandler(
                         configurationService,
                         authenticationService,
-                        clientService,
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
@@ -293,14 +287,6 @@ class LoginHandlerReauthenticationRedisTest {
                 .withLegacySubjectID(legacySubjectId)
                 .withTermsAndConditions(
                         new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withClientName(CLIENT_NAME)
-                .withSectorIdentifierUri("https://" + SECTOR_IDENTIFIER_HOST)
-                .withSubjectType("public");
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
