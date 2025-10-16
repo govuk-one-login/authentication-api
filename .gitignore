@@ -32,6 +32,10 @@ logs/
 node_modules
 .infracost
 
+# API Tests
+api-tests/reports/
+api-tests/*.log
+
 # REST client private env variables
 *.private.env.json
 

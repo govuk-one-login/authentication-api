@@ -34,6 +34,8 @@ public class LocalAuthApi {
     public LocalAuthApi() {
         var app = Javalin.create();
 
+        app.get("/", ctx -> ctx.result("Authentication API Local"));
+
         // Frontend API
         app.get("/mfa-reset-jwk.json", handlerFor(new MfaResetStorageTokenJwkHandler()));
         app.get("/reverification-jwk.json", handlerFor(new MfaResetJarJwkHandler()));
