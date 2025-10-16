@@ -247,7 +247,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldReturnLockedOutWhenBlocked() {
+        void shouldReturnLockedOutWhenBlockedForPassword() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
             when(codeStorageService.isBlockedForEmail(
@@ -268,6 +268,48 @@ class PermissionDecisionManagerTest {
                     ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                     lockedOut.forbiddenReason());
             assertEquals(5, lockedOut.attemptCount());
+        }
+
+        @Test
+        void shouldReturnLockedOutWhenBlockedForEmailOtp() {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
+                    .thenReturn(true);
+
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+        }
+
+        @Test
+        void shouldReturnLockedOutWhenBlockedForEmailOtpRequests() {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+            when(codeStorageService.isBlockedForEmail(EMAIL, codeRequestBlockedKeyPrefix))
+                    .thenReturn(true);
+
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, lockedOut.forbiddenReason());
         }
 
         @Test
@@ -403,7 +445,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldUseMaxRetriesWhenBlockedRegardlessOfCurrentCount() {
+        void shouldUseMaxRetriesWhenBlockedForPasswordRegardlessOfCurrentCount() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(3);
             when(codeStorageService.isBlockedForEmail(
@@ -420,7 +462,39 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isSuccess());
             var lockedOut =
                     assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
             assertEquals(7, lockedOut.attemptCount());
+        }
+
+        @Test
+        void shouldPrioritizeEmailOtpBlocksOverPasswordBlocks() {
+            var userContext = createUserContext(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+            // Both email OTP and password are blocked, but email OTP should take priority
+            when(codeStorageService.isBlockedForEmail(EMAIL, codeAttemptsBlockedKeyPrefix))
+                    .thenReturn(true);
+            when(codeStorageService.isBlockedForEmail(
+                            EMAIL,
+                            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                    + JourneyType.PASSWORD_RESET))
+                    .thenReturn(true);
+
+            var result =
+                    permissionDecisionManager.canReceivePassword(
+                            JourneyType.PASSWORD_RESET, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut =
+                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
         }
     }
 
