@@ -147,36 +147,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
-        try {
-            boolean isBlocked =
-                    getCodeStorageService()
-                            .isBlockedForEmail(
-                                    userPermissionContext.emailAddress(),
-                                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
-                                            + JourneyType.PASSWORD_RESET);
-
-            int attemptCount =
-                    isBlocked
-                            ? configurationService.getMaxPasswordRetries()
-                            : getCodeStorageService()
-                                    .getIncorrectPasswordCount(
-                                            userPermissionContext.emailAddress());
-
-            if (isBlocked) {
-                return Result.success(
-                        new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                attemptCount,
-                                Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration()),
-                                false));
-            }
-
-            return Result.success(new Decision.Permitted(attemptCount));
-        } catch (RuntimeException e) {
-            LOG.error("Could not retrieve from lock details.", e);
-            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
-        }
+        return checkForPasswordResetLockout(userPermissionContext.emailAddress());
     }
 
     @Override
@@ -412,5 +383,67 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         return Result.success(new Decision.Permitted(0));
+    }
+
+    private Result<DecisionError, Decision> checkForPasswordResetLockout(String emailAddress) {
+        try {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+
+            // Check for email OTP verification blocks first
+            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            if (getCodeStorageService()
+                    .isBlockedForEmail(emailAddress, codeAttemptsBlockedKeyPrefix)) {
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                configurationService.getCodeMaxRetries(),
+                                Instant.now()
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
+            }
+
+            // Check for email OTP request blocks
+            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+            if (getCodeStorageService()
+                    .isBlockedForEmail(emailAddress, codeRequestBlockedKeyPrefix)) {
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
+                                configurationService.getCodeMaxRetries(),
+                                Instant.now()
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
+            }
+
+            // Check for password blocks
+            boolean isPasswordBlocked =
+                    getCodeStorageService()
+                            .isBlockedForEmail(
+                                    emailAddress,
+                                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                            + JourneyType.PASSWORD_RESET);
+
+            int attemptCount =
+                    isPasswordBlocked
+                            ? configurationService.getMaxPasswordRetries()
+                            : getCodeStorageService().getIncorrectPasswordCount(emailAddress);
+
+            if (isPasswordBlocked) {
+                return Result.success(
+                        new Decision.TemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                attemptCount,
+                                Instant.now()
+                                        .plusSeconds(configurationService.getLockoutDuration()),
+                                false));
+            }
+
+            return Result.success(new Decision.Permitted(attemptCount));
+        } catch (RuntimeException e) {
+            LOG.error("Could not retrieve password reset lock details.", e);
+            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
+        }
     }
 }

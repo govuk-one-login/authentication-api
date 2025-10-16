@@ -215,15 +215,14 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
                     .thenReturn(
                             Result.success(
-                                    new Decision.TemporarilyLockedOut(
+                                    new Decision.ReauthLockedOut(
                                             ForbiddenReason
                                                     .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                             MAX_ALLOWED_RETRIES,
                                             Instant.now().plusSeconds(900),
-                                            false)));
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(String.class), any(String.class), eq(JourneyType.REAUTHENTICATION)))
-                    .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1));
+                                            false,
+                                            Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1),
+                                            java.util.List.of(ENTER_PASSWORD))));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -265,9 +264,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
                             pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair(
-                                    "incorrectPasswordCount",
-                                    configurationService.getMaxPasswordRetries()),
+                            pair("incorrectPasswordCount", MAX_ALLOWED_RETRIES),
                             pair(
                                     "attemptNoFailedAt",
                                     configurationService.getMaxPasswordRetries()));
@@ -337,11 +334,16 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(
                             Result.success(
-                                    new Decision.TemporarilyLockedOut(
+                                    new Decision.ReauthLockedOut(
                                             forbiddenReason,
                                             MAX_ALLOWED_RETRIES,
                                             Instant.now().plusSeconds(900),
-                                            false)));
+                                            false,
+                                            Map.of(
+                                                    ENTER_EMAIL, expectedEmailAttemptCount,
+                                                    ENTER_PASSWORD, expectedPasswordAttemptCount,
+                                                    ENTER_MFA_CODE, expectedOtpAttemptCount),
+                                            java.util.List.of(countType))));
 
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
 
