@@ -70,6 +70,11 @@ Parameters:
       - "true"
       - "false"
 
+  DlqAlarmThreshold:
+    Type: Number
+    Description: Threshold for dead letter queue alarm
+    Default: 1
+
 Conditions:
   AddOrchApiVpcEndpointId:
     Fn::Not:

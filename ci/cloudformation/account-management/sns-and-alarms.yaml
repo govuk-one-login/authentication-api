@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "SNS Topics and CloudWatch Alarms for Account Management"
+
+Resources:
+  SlackEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub
+        - ${Env}-account-management-slack-events
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      DisplayName: !Sub
+        - ${Env} Account Management Slack Events
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - Key: Service
+          Value: account-management-sns
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/sns-and-alarms.yaml
+
+  SqsDeadletterCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-account-managament-dlq-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: !Sub
+        - ${DlqAlarmThreshold} or more messages have appeared on the ${Env}-account-management-notification-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Period: 300
+      Statistic: Sum
+      Threshold: !Ref DlqAlarmThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !Sub
+            - ${Env}-account-management-notification-dlq
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmActions: !If
+        - UseAlarmActions
+        - [!Ref SlackEventsTopic]
+        - []
+
+Outputs:
+  SlackEventsTopicArn:
+    Description: "ARN of the Slack Events SNS Topic"
+    Value: !Ref SlackEventsTopic
+
+  SqsDeadletterAlarmArn:
+    Description: "ARN of the SQS Dead Letter Queue CloudWatch Alarm"
+    Value: !Ref SqsDeadletterCloudwatchAlarm
