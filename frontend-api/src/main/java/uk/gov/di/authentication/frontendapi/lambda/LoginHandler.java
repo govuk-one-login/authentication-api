@@ -427,7 +427,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
         if (userMfaDetail.isMfaRequired()) {
-            if (defaultMfaMethod.isPresent()) {
+            if (defaultMfaMethod.isPresent() && userMfaDetail.mfaMethodVerified()) {
                 Optional<ErrorResponse> codeBlocks =
                         checkMfaCodeBlocks(journeyType, userPermissionContext);
 
