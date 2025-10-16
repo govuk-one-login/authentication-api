@@ -4818,6 +4818,48 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
+  ManualUpdateClientRegistryFunctionManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsNotProduction
+    Properties:
+      ManagedPolicyName: ManualUpdateClientRegistryFunctionManagedPolicy
+      Description: Allows invoking the ManualUpdateClientRegistry Lambda
+      Path: /runbooks/
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+              - lambda:GetFunction
+            Resource:
+              - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Environment}-ManualUpdateClientRegistryFunction
+
+  ManualUpdateClientRegistryFunctionInvokeRole:
+    Type: AWS::IAM::Role
+    Condition: IsNotProduction
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-RunbookManualUpdateClientRegistryRole
+      Description: "This role allows approved support team to perform updates to client registry"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: "sts:AssumeRole"
+            Condition:
+              ArnLike:
+                aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedServiceSupport*
+      ManagedPolicyArns:
+        - !Ref ManualUpdateClientRegistryFunctionManagedPolicy
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      MaxSessionDuration: 43200
+      Path: /runbooks/
+
   # endregion
 
   #region Stub SPOT Request Queue
