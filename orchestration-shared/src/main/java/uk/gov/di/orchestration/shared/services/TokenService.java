@@ -60,7 +60,6 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
-    private final OrchAccessTokenService orchAccessTokenService;
     private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
@@ -75,12 +74,10 @@ public class TokenService {
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
-            OrchAccessTokenService orchAccessTokenService,
             OidcAPI oidcApi) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
-        this.orchAccessTokenService = orchAccessTokenService;
         this.oidcApi = oidcApi;
     }
 
@@ -95,8 +92,7 @@ public class TokenService {
             JWSAlgorithm signingAlgorithm,
             String journeyId,
             String vot,
-            Long authTime,
-            String authCode) {
+            Long authTime) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
@@ -109,8 +105,7 @@ public class TokenService {
                                         internalPairwiseSubject,
                                         claimsRequest,
                                         signingAlgorithm,
-                                        journeyId,
-                                        authCode));
+                                        journeyId));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
@@ -152,8 +147,7 @@ public class TokenService {
             List<String> scopes,
             Subject rpPaiwiseSubject,
             Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm,
-            String authCode) {
+            JWSAlgorithm signingAlgorithm) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
                         clientID,
@@ -162,8 +156,7 @@ public class TokenService {
                         internalPairwiseSubject,
                         null,
                         signingAlgorithm,
-                        "refreshToken",
-                        authCode);
+                        "refreshToken");
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
                         clientID,
@@ -298,8 +291,7 @@ public class TokenService {
             Subject internalPairwiseSubject,
             OIDCClaimsRequest claimsRequest,
             JWSAlgorithm signingAlgorithm,
-            String journeyId,
-            String authCode) {
+            String journeyId) {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
@@ -351,20 +343,6 @@ public class TokenService {
             LOG.error("Unable to save access token to Redis");
             throw new RuntimeException(e);
         }
-
-        String clientAndRpPairwiseId = clientId + "." + rpPairwiseSubject.getValue();
-        try {
-            orchAccessTokenService.saveAccessToken(
-                    clientAndRpPairwiseId,
-                    authCode,
-                    accessToken.getValue(),
-                    internalPairwiseSubject.getValue(),
-                    journeyId);
-        } catch (Exception e) {
-            LOG.warn("Unable to save access token to DynamoDB");
-            // Not throwing exceptions here until we transfer reads from redis to dynamo
-        }
-
         return accessToken;
     }
 
