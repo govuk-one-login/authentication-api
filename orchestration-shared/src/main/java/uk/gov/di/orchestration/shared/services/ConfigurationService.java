@@ -218,14 +218,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrThrow("AUTH_FRONTEND_BASE_URL");
     }
 
-    public URI getOrchFrontendBaseURL() {
-        return getURIOrThrow("ORCH_FRONTEND_BASE_URL");
-    }
-
-    public boolean getOrchFrontendEnabled() {
-        return getFlagOrFalse("ORCH_FRONTEND_ENABLED");
-    }
-
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
     }
