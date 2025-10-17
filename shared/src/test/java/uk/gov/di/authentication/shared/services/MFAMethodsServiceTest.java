@@ -3,6 +3,8 @@ package uk.gov.di.authentication.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -13,12 +15,15 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,8 +38,14 @@ import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_SMS_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class MFAMethodsServiceTest {
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(MFAMethodsService.class);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService persistentService = mock(AuthenticationService.class);
@@ -133,6 +144,35 @@ public class MFAMethodsServiceTest {
             var result = service.getMfaMethod(EMAIL, "some-other-identifier").getFailure();
 
             assertEquals(MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER, result);
+        }
+
+        @Test
+        void logsAnErrorIfPriorityIdentifierIsNull() {
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            MFAMethod defaultMfaMethodWithNullPriority =
+                    MFAMethod.smsMfaMethod(
+                                    true,
+                                    true,
+                                    UK_MOBILE_NUMBER,
+                                    PriorityIdentifier.DEFAULT,
+                                    "default-sms-identifier")
+                            .withPriority(null);
+            mockUserCredentials.setMfaMethods(
+                    List.of(defaultMfaMethodWithNullPriority, BACKUP_AUTH_APP_METHOD));
+            when(persistentService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(mockUserCredentials);
+            when(persistentService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+
+            service.getMfaMethod(EMAIL, DEFAULT_SMS_METHOD.getMfaIdentifier()).getSuccess();
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Potential data corruption, retrieved MFA method has priority null. User MFA method count: 2, MFA method priorities: null, BACKUP.")));
         }
     }
 
