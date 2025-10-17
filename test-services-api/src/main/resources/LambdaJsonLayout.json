@@ -42,10 +42,6 @@
   "contextStack": {
     "$resolver": "ndc"
   },
-  "loggerFqcn": {
-    "$resolver": "logger",
-    "field": "fqcn"
-  },
   "source": {
     "class": {
       "$resolver": "source",
