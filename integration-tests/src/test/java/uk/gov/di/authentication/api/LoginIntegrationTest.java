@@ -394,7 +394,12 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var sixthResponse = makeRequest(Optional.of(wrongRequest), headers, Map.of());
             assertThat(sixthResponse, hasStatus(400));
-            assertThat(sixthResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
+            assertThat(
+                    sixthResponse,
+                    hasJsonBody(
+                            isReauth
+                                    ? ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS
+                                    : ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
             assertAuditEventExpectations(
                     txmaAuditQueue,
                     List.of(

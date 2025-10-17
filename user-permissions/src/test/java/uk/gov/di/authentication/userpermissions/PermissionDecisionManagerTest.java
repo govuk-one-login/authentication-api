@@ -382,7 +382,7 @@ class PermissionDecisionManagerTest {
 
         @ParameterizedTest
         @MethodSource("countTypeToForbiddenReasonProvider")
-        void shouldReturnTemporarilyLockedOutForReauthenticationWhenCountExceeded(
+        void shouldReturnReauthLockedOutForReauthenticationWhenCountExceeded(
                 CountType countType, ForbiddenReason expectedReason) {
             var userContext = createUserContext(3);
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
@@ -399,8 +399,7 @@ class PermissionDecisionManagerTest {
                             JourneyType.REAUTHENTICATION, userContext);
 
             assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
             assertEquals(expectedReason, lockedOut.forbiddenReason());
             assertEquals(6, lockedOut.attemptCount());
         }
