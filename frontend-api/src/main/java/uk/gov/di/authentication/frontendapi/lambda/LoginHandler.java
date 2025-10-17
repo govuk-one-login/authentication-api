@@ -268,10 +268,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (decision instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             if (isReauthJourney) {
-                ReauthFailureReasons reauthFailureReason =
-                        ForbiddenReasonAntiCorruption.toReauthFailureReason(
-                                temporarilyLockedOut.forbiddenReason());
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
@@ -279,9 +275,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 .withAllIncorrectAttemptCounts(
                                         getReauthAttemptCounts(
                                                 journeyType,
-                                                userPermissionContext.internalSubjectId(),
-                                                userPermissionContext.rpPairwiseId()))
-                                .withFailureReason(reauthFailureReason)
+                                                userProfile.getSubjectID(),
+                                                calculatedPairwiseId))
+                                .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
                                 .build());
                 cloudwatchMetricsService.incrementCounter(
                         CloudwatchMetrics.REAUTH_FAILED.getValue(),
@@ -289,7 +285,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 ENVIRONMENT.getValue(),
                                 configurationService.getEnvironment(),
                                 FAILURE_REASON.getValue(),
-                                reauthFailureReason.getValue()));
+                                ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(
                         400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
@@ -542,7 +538,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
 
             return generateApiGatewayProxyErrorResponse(
-                    400, ErrorResponse.TOO_MANY_INVALID_PW_ENTERED);
+                    400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
         }
 
         if (decision instanceof Decision.TemporarilyLockedOut) {
