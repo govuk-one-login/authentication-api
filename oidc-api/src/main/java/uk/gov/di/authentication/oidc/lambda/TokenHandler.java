@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -87,6 +88,7 @@ public class TokenHandler
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
     private final OrchClientSessionService orchClientSessionService;
+    private final OrchAccessTokenService orchAccessTokenService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
@@ -99,6 +101,7 @@ public class TokenHandler
     public TokenHandler(
             TokenService tokenService,
             ConfigurationService configurationService,
+            OrchAccessTokenService orchAccessTokenService,
             OrchAuthCodeService orchAuthCodeService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
@@ -110,6 +113,7 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.orchAuthCodeService = orchAuthCodeService;
         this.orchClientSessionService = orchClientSessionService;
+        this.orchAccessTokenService = orchAccessTokenService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
@@ -123,8 +127,14 @@ public class TokenHandler
 
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
+                new TokenService(
+                        configurationService,
+                        this.redisConnectionService,
+                        kms,
+                        orchAccessTokenService,
+                        oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
@@ -144,8 +154,14 @@ public class TokenHandler
 
         this.configurationService = configurationService;
         this.redisConnectionService = redis;
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
+                new TokenService(
+                        configurationService,
+                        this.redisConnectionService,
+                        kms,
+                        orchAccessTokenService,
+                        oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.tokenValidationService =
@@ -209,14 +225,15 @@ public class TokenHandler
                                     clientRegistry.getScopes(),
                                     new RefreshToken(requestBody.get("refresh_token")),
                                     clientRegistry.getClientID(),
-                                    getSigningAlgorithm(clientRegistry)));
+                                    getSigningAlgorithm(clientRegistry),
+                                    requestBody.get("code")));
         }
 
+        String authCode = requestBody.get("code");
         Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe;
 
         try {
-            authCodeExchangeDataMaybe =
-                    orchAuthCodeService.getExchangeDataForCode(requestBody.get("code"));
+            authCodeExchangeDataMaybe = orchAuthCodeService.getExchangeDataForCode(authCode);
         } catch (Exception e) {
             LOG.error(
                     "Failed to retrieve authorisation code from orch auth code DynamoDB store. Error: {}",
@@ -274,7 +291,8 @@ public class TokenHandler
                         clientRegistry,
                         authRequest,
                         getSigningAlgorithm(clientRegistry),
-                        authCodeExchangeData);
+                        authCodeExchangeData,
+                        authCode);
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
         orchClientSessionService.updateStoredClientSession(
@@ -339,7 +357,8 @@ public class TokenHandler
             List<String> clientScopes,
             RefreshToken currentRefreshToken,
             String clientId,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String authCode) {
         boolean refreshTokenSignatureValid =
                 tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
@@ -387,7 +406,8 @@ public class TokenHandler
                         scopes,
                         rpPairwiseSubject,
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
-                        signingAlgorithm);
+                        signingAlgorithm,
+                        authCode);
         LOG.info("Generating successful RefreshToken response");
         return ApiResponse.ok(tokenResponse);
     }
@@ -451,7 +471,8 @@ public class TokenHandler
             ClientRegistry clientRegistry,
             AuthenticationRequest authRequest,
             JWSAlgorithm signingAlgorithm,
-            AuthCodeExchangeData authCodeExchangeData) {
+            AuthCodeExchangeData authCodeExchangeData,
+            String authCode) {
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         if (authRequest.getNonce() != null) {
             additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -486,7 +507,8 @@ public class TokenHandler
                                         signingAlgorithm,
                                         clientSessionId,
                                         vot,
-                                        null);
+                                        null,
+                                        authCode);
                             });
         } else {
             String rpPairwiseSubjectId =
@@ -512,7 +534,8 @@ public class TokenHandler
                                             signingAlgorithm,
                                             clientSessionId,
                                             vot,
-                                            authCodeExchangeData.getAuthTime()));
+                                            authCodeExchangeData.getAuthTime(),
+                                            authCode));
         }
 
         var user =

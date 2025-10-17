@@ -60,6 +60,7 @@ import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -103,6 +104,7 @@ public class AuthenticationCallbackHandler
     private final ConfigurationService configurationService;
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
+    private final OrchAccessTokenService orchAccessTokenService;
     private final OrchSessionService orchSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
@@ -129,6 +131,7 @@ public class AuthenticationCallbackHandler
         this.authorisationService = new AuthenticationAuthorizationService(stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -149,6 +152,7 @@ public class AuthenticationCallbackHandler
                                 configurationService,
                                 redisConnectionService,
                                 kmsConnectionService,
+                                orchAccessTokenService,
                                 oidcApi));
         this.accountInterventionService =
                 new AccountInterventionService(
@@ -169,6 +173,7 @@ public class AuthenticationCallbackHandler
         this.authorisationService = new AuthenticationAuthorizationService(stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
+        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -188,6 +193,7 @@ public class AuthenticationCallbackHandler
                                 configurationService,
                                 redisConnectionService,
                                 kmsConnectionService,
+                                new OrchAccessTokenService(configurationService),
                                 new OidcAPI(configurationService)));
         this.accountInterventionService =
                 new AccountInterventionService(
@@ -202,6 +208,7 @@ public class AuthenticationCallbackHandler
             ConfigurationService configurationService,
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
+            OrchAccessTokenService orchAccessTokenService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
@@ -217,6 +224,7 @@ public class AuthenticationCallbackHandler
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
+        this.orchAccessTokenService = orchAccessTokenService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;

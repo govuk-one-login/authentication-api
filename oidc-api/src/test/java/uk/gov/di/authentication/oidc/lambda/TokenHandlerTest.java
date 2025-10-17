@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -161,6 +162,8 @@ public class TokenHandlerTest {
             mock(TokenClientAuthValidatorFactory.class);
     private final TokenClientAuthValidator tokenClientAuthValidator =
             mock(TokenClientAuthValidator.class);
+    private final OrchAccessTokenService orchAccessTokenService =
+            mock(OrchAccessTokenService.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -182,6 +185,7 @@ public class TokenHandlerTest {
                 new TokenHandler(
                         tokenService,
                         configurationService,
+                        orchAccessTokenService,
                         orchAuthCodeService,
                         orchClientSessionService,
                         tokenValidationService,
@@ -243,7 +247,8 @@ public class TokenHandlerTest {
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
                         vot,
-                        AUTH_TIME))
+                        AUTH_TIME,
+                        authCode))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -316,7 +321,8 @@ public class TokenHandlerTest {
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
                         vot,
-                        AUTH_TIME))
+                        AUTH_TIME,
+                        authCode))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -378,7 +384,8 @@ public class TokenHandlerTest {
                         JWSAlgorithm.RS256,
                         CLIENT_SESSION_ID,
                         vot,
-                        AUTH_TIME))
+                        AUTH_TIME,
+                        authCode))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -440,12 +447,15 @@ public class TokenHandlerTest {
                 .thenReturn(null);
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.ES256)))
+                        eq(JWSAlgorithm.ES256),
+                        any()))
+                // TO DO: replace any() with the authCode from refresh token (ATO-2015)
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -502,12 +512,15 @@ public class TokenHandlerTest {
                 .thenReturn(null);
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.RS256)))
+                        eq(JWSAlgorithm.RS256),
+                        any()))
+                // TO DO: replace any() with the authCode from refresh token (ATO-2015)
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -586,6 +599,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        String authCode = new AuthorizationCode().getValue();
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -597,11 +611,10 @@ public class TokenHandlerTest {
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
                         vot,
-                        AUTH_TIME))
+                        AUTH_TIME,
+                        authCode))
                 .thenReturn(tokenResponse);
         setupNoClientSessions();
-
-        String authCode = new AuthorizationCode().getValue();
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, true);
@@ -788,7 +801,8 @@ public class TokenHandlerTest {
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
                             vot,
-                            AUTH_TIME))
+                            AUTH_TIME,
+                            authCode))
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
@@ -1038,7 +1052,8 @@ public class TokenHandlerTest {
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
                             vot,
-                            AUTH_TIME))
+                            AUTH_TIME,
+                            authCode))
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
@@ -1109,7 +1124,8 @@ public class TokenHandlerTest {
                             JWSAlgorithm.ES256,
                             CLIENT_SESSION_ID,
                             vot,
-                            AUTH_TIME))
+                            AUTH_TIME,
+                            authCode))
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
@@ -1249,7 +1265,8 @@ public class TokenHandlerTest {
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
                         vot,
-                        null))
+                        null,
+                        authCode))
                 .thenReturn(tokenResponse);
 
         var result = generateApiGatewayRequest(privateKeyJWT, authCode, true);
@@ -1328,7 +1345,8 @@ public class TokenHandlerTest {
                         eq(JWSAlgorithm.RS256),
                         eq(CLIENT_SESSION_ID),
                         eq(lowestLevelVtr.retrieveVectorOfTrustForToken()),
-                        eq(AUTH_TIME)))
+                        eq(AUTH_TIME),
+                        eq(authCode)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -1391,7 +1409,8 @@ public class TokenHandlerTest {
                         eq(JWSAlgorithm.RS256),
                         eq(CLIENT_SESSION_ID),
                         eq(lowestLevelVtr.retrieveVectorOfTrustForToken()),
-                        eq(AUTH_TIME)))
+                        eq(AUTH_TIME),
+                        eq(authCode)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -1442,7 +1461,8 @@ public class TokenHandlerTest {
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
                         vot,
-                        AUTH_TIME))
+                        AUTH_TIME,
+                        authCode))
                 .thenReturn(tokenResponse);
 
         when(orchAuthCodeService.getExchangeDataForCode(authCode))
@@ -1673,6 +1693,7 @@ public class TokenHandlerTest {
                         any(),
                         finalClaimsRequestCaptor.capture(),
                         anyBoolean(),
+                        any(),
                         any(),
                         any(),
                         any(),
