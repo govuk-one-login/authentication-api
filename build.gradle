@@ -166,7 +166,7 @@ subprojects {
             }
         }
 
-        spotbugs "com.github.spotbugs:spotbugs:4.9.6"
+        spotbugs "com.github.spotbugs:spotbugs:4.9.7"
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
     }
 }
