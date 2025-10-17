@@ -143,7 +143,7 @@ Resources:
     Properties:
       AlarmActions: !If
         - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
         - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-check-reauth-user-lambda function. ${RunbookLink}"
@@ -186,7 +186,7 @@ Resources:
     Properties:
       AlarmActions: !If
         - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
         - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-check-reauth-user-lambda. ${RunbookLink}"
