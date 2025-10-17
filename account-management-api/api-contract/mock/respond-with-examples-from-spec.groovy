@@ -10,7 +10,12 @@ def request = context.request
 def method = request.method.toLowerCase()
 
 if (method == "get" || method == "post" || method == "put" || method == "delete") {
-    def publicSubjectId = context.request.pathParams.publicSubjectId
+    def publicSubjectId = context.request.pathParams?.publicSubjectId
+
+    // Skip processing if no publicSubjectId (e.g., for /authenticate endpoint)
+    if (publicSubjectId == null) {
+        return
+    }
     def responseStatusCode
     def responseBody
 
