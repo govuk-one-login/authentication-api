@@ -1,15 +1,10 @@
 package uk.gov.di.authentication.local;
 
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
-import uk.gov.di.authentication.local.initialisers.DynamoDbInitialiser;
 import uk.gov.di.authentication.local.initialisers.KmsInitialiser;
 import uk.gov.di.authentication.local.initialisers.ParameterInitialiser;
+import uk.gov.di.authentication.local.initialisers.SecretsInitialiser;
 import uk.gov.di.authentication.local.initialisers.SqsInitialiser;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.ServiceType;
-
-import java.util.List;
 
 import static java.lang.String.valueOf;
 
@@ -36,6 +31,12 @@ public class App {
         parameterInitialiser.setParam(
                 "local-notify-callback-bearer-token", "notify-test-@bearer-token");
 
+        // Set up localstack secrets
+        //
+        // We could also consider overriding test user behaviour for local specifically
+        var secretsInitialiser = new SecretsInitialiser();
+        secretsInitialiser.setSecret("/local/test-client-email-allow-list", "^.*$");
+
         // Set up localstack KMS keys
         //
         // These signing operations could use a local key instead
@@ -56,27 +57,5 @@ public class App {
         sqsInitialiser.createQueue("local-experian-phone-checker-queue");
         sqsInitialiser.createQueue("local-pending-email-check-queue");
         sqsInitialiser.createQueue("local-txma-audit-queue");
-
-        // Set up data in the DynamoDB tables
-        //
-        // Tables generally initialised automatically in the 'warm up' step
-        // Once we remove reliance on the client registry this can be removed as well
-        var dynamoInitialiser = new DynamoDbInitialiser();
-        dynamoInitialiser.addRecords(
-                "local-client-registry",
-                ClientRegistry.class,
-                List.of(
-                        new ClientRegistry()
-                                .withClientID("local-client-id")
-                                .withClientName("local-client-name")
-                                .withRedirectUrls(List.of("http://local-rp/redirect"))
-                                .withScopes(List.of("openid", "email"))
-                                .withPublicKey("placeholder-key")
-                                .withServiceType(ServiceType.MANDATORY.name())
-                                .withSubjectType("public")
-                                .withClientType(ClientType.WEB.name())
-                                .withIdentityVerificationSupported(true)
-                                .withTestClient(true)
-                                .withTestClientEmailAllowlist(List.of("^.*$"))));
     }
 }

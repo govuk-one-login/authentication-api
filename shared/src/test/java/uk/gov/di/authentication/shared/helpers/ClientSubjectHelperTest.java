@@ -1,21 +1,16 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static com.nimbusds.openid.connect.sdk.SubjectType.PAIRWISE;
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +25,6 @@ class ClientSubjectHelperTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
-    private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject PUBLIC_SUBJECT = new Subject();
@@ -153,87 +147,6 @@ class ClientSubjectHelperTest {
                         () -> ClientSubjectHelper.returnHost("test..com"),
                         "Expected to throw exception");
         assertEquals(NullPointerException.class, expectedException.getCause().getClass());
-    }
-
-    @Test
-    void shouldBeValidClientWithoutSectorId() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), null, false);
-
-        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
-    }
-
-    @Test
-    void shouldBeValidClientWithSectorId() {
-        var clientRegistry = createClient(CLIENT_ID_1, PUBLIC.toString(), SECTOR_HOST, false);
-
-        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
-    }
-
-    @Test
-    void shouldBeValidClientWithSectorIdAndTwoRedirectHosts() {
-        var clientRegistry =
-                createClient(
-                        CLIENT_ID_1,
-                        PUBLIC.toString(),
-                        SECTOR_HOST,
-                        List.of("https://www.test.com", "https://www.test2.com"),
-                        false);
-
-        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
-    }
-
-    @Test
-    void shouldBeInvalidClientWithoutSectorIdAndTwoRedirectHosts() {
-        var clientRegistry =
-                createClient(
-                        CLIENT_ID_1,
-                        PUBLIC.toString(),
-                        null,
-                        List.of("https://www.test.com", "https://www.test2.com"),
-                        false);
-
-        assertFalse(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
-    }
-
-    @Test
-    void shouldBeValidClientWithoutSectorIdAndOneRedirectHostsWithTwoRedirectUris() {
-        var clientRegistry =
-                createClient(
-                        CLIENT_ID_1,
-                        PUBLIC.toString(),
-                        null,
-                        List.of("https://www.test.com/1", "https://www.test.com/2"),
-                        false);
-
-        assertTrue(ClientSubjectHelper.hasValidClientConfig(clientRegistry));
-    }
-
-    private ClientRegistry createClient(
-            String clientID, String subjectType, String sectorHost, boolean oneLoginService) {
-        return createClient(
-                clientID, subjectType, sectorHost, singletonList(REDIRECT_URI), oneLoginService);
-    }
-
-    private ClientRegistry createClient(
-            String clientID,
-            String subjectType,
-            String sectorHost,
-            List<String> redirectUrls,
-            boolean oneLoginService) {
-        return new ClientRegistry()
-                .withClientID(clientID)
-                .withClientName("test-client")
-                .withRedirectUrls(redirectUrls)
-                .withScopes(
-                        new Scope(
-                                        OIDCScopeValue.OPENID,
-                                        OIDCScopeValue.EMAIL,
-                                        OIDCScopeValue.OFFLINE_ACCESS)
-                                .toStringList())
-                .withContacts(singletonList(TEST_EMAIL))
-                .withSectorIdentifierUri(sectorHost != null ? "https://" + sectorHost : null)
-                .withOneLoginService(oneLoginService)
-                .withSubjectType(subjectType);
     }
 
     private UserProfile generateUserProfile() {
