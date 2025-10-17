@@ -40,8 +40,26 @@ paths:
           description: Successful Operation. The password is correct for this user.
         "400":
           description: One of the required fields is missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestIsMissingParameters"
+              examples:
+                post-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
         "401":
           description: This user does not have an account or the password is wrong.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleError"
+              examples:
+                post-when-invalid-credentials:
+                  value:
+                    code: 1002
+                    message: "Invalid email or password"
         "403":
           description: This user cannot authenticate because of a suspension.
           content:

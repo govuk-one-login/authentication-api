@@ -138,6 +138,39 @@ http DELETE :8080/v1/mfa-methods/delete-when-mfa-method-not-found/id
 http DELETE :8080/v1/mfa-methods/delete-when-cannot-delete-default-priority-mfa-method/id
 
 #########################################################################################################
+# AUTHENTICATE
+#########################################################################################################
+
+# POST 204 success response (any valid email)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  email="user@example.gov.uk" \
+  password="test"
+
+# POST 400 error response (missing email)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  password="test"
+
+# POST 401 error response (invalid credentials)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  email="invalid@example.gov.uk" \
+  password="test"
+
+# POST 403 error response (blocked account)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  email="blocked@example.gov.uk" \
+  password="test"
+
+# POST 403 error response (suspended account)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  email="suspended@example.gov.uk" \
+  password="test"
+
+#########################################################################################################
 # UPDATE EMAIL
 #########################################################################################################
 
