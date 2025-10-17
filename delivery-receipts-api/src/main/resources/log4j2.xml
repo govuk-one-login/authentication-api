@@ -1,12 +1,7 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
-                <KeyValuePair key="notification-id" value="$${ctx:notificationId:-unknown}"/>
-                <KeyValuePair key="unique-notification-reference" value="$${ctx:uniqueNotificationReference:-unknown}"/>
-                <KeyValuePair key="govuk_signin_journey_id" value="$${ctx:journeyId:-unknown}"/>
-                <KeyValuePair key="trace-id" value="$${ctx:traceId:-}"/>
-            </JsonLayout>
+            <JsonTemplateLayout eventTemplateUri="classpath:LambdaJsonLayout.json" />
         </Lambda>
     </Appenders>
     <Loggers>
