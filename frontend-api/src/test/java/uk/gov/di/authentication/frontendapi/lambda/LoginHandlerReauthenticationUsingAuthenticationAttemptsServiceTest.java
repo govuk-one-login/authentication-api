@@ -381,6 +381,146 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     }
 
     @ParameterizedTest
+    @MethodSource("reauthCountTypesAndMetadata")
+    void shouldHandleReauthLockedOutDecisionWhenCheckingPasswordPermission(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason) {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+
+            ForbiddenReason forbiddenReason =
+                    switch (countType) {
+                        case ENTER_EMAIL -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+                        case ENTER_EMAIL_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+                        case ENTER_PASSWORD -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
+                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+                    };
+
+            var detailedCounts =
+                    Map.of(
+                            ENTER_EMAIL, expectedEmailAttemptCount,
+                            ENTER_PASSWORD, expectedPasswordAttemptCount,
+                            ENTER_MFA_CODE, expectedOtpAttemptCount);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            forbiddenReason,
+                                            0,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            detailedCounts,
+                                            java.util.List.of(countType))));
+
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, true);
+
+            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    expectedFailureReason));
+        }
+    }
+
+    @Test
+    void shouldHandleReauthLockedOutDecisionWhenPasswordIsIncorrect() {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+
+            var detailedCounts = Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                    .thenReturn(
+                            Result.success(
+                                    new Decision.ReauthLockedOut(
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            MAX_ALLOWED_RETRIES,
+                                            Instant.now().plusSeconds(900),
+                                            false,
+                                            detailedCounts,
+                                            java.util.List.of(ENTER_PASSWORD))));
+
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, false);
+
+            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", 0),
+                            pair("incorrect_password_attempt_count", MAX_ALLOWED_RETRIES),
+                            pair("incorrect_otp_code_attempt_count", 0),
+                            pair("failure-reason", "incorrect_password"));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    FAILURE_REASON.getValue(),
+                                    "incorrect_password"));
+        }
+    }
+
+    @ParameterizedTest
     @EnumSource(JourneyType.class)
     void
             shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthenticationWhenUserAlreadyBlocked(
