@@ -70,12 +70,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     .isBlockedForEmail(
                             userPermissionContext.emailAddress(), codeRequestBlockedKeyPrefix)) {
                 return Result.success(
-                        new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
-                                0, // Use 0 instead of -1
-                                Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration()),
-                                false));
+                        createTemporarilyLockedOut(
+                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST, 0, false));
             }
 
             // Check if count will reach limit after increment
@@ -83,11 +79,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 boolean isFirstTime =
                         (codeRequestCount == configurationService.getCodeMaxRetries() - 1);
                 return Result.success(
-                        new Decision.TemporarilyLockedOut(
+                        createTemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_SEND_EMAIL_OTP_NOTIFICATION_LIMIT,
                                 codeRequestCount,
-                                Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration()),
                                 isFirstTime));
             }
 
@@ -110,11 +104,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     .isBlockedForEmail(
                             userPermissionContext.emailAddress(), codeAttemptsBlockedKeyPrefix)) {
                 return Result.success(
-                        new Decision.TemporarilyLockedOut(
+                        createTemporarilyLockedOut(
                                 ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
                                 0,
-                                Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration()),
                                 false));
             }
         }
@@ -139,43 +131,15 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return this.checkForAnyReauthLockout(
                     userPermissionContext.internalSubjectId(),
                     userPermissionContext.rpPairwiseId(),
-                    CountType.ENTER_PASSWORD);
+                    CountType.ENTER_PASSWORD,
+                    true);
         }
 
         if (userPermissionContext.emailAddress() == null) {
             return Result.failure(DecisionError.INVALID_USER_CONTEXT);
         }
 
-        try {
-            boolean isBlocked =
-                    getCodeStorageService()
-                            .isBlockedForEmail(
-                                    userPermissionContext.emailAddress(),
-                                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
-                                            + JourneyType.PASSWORD_RESET);
-
-            int attemptCount =
-                    isBlocked
-                            ? configurationService.getMaxPasswordRetries()
-                            : getCodeStorageService()
-                                    .getIncorrectPasswordCount(
-                                            userPermissionContext.emailAddress());
-
-            if (isBlocked) {
-                return Result.success(
-                        new Decision.TemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                attemptCount,
-                                Instant.now()
-                                        .plusSeconds(configurationService.getLockoutDuration()),
-                                false));
-            }
-
-            return Result.success(new Decision.Permitted(attemptCount));
-        } catch (RuntimeException e) {
-            LOG.error("Could not retrieve from lock details.", e);
-            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
-        }
+        return checkForPasswordResetLockout(userPermissionContext.emailAddress());
     }
 
     @Override
@@ -276,6 +240,25 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public Result<DecisionError, Decision> canStartJourney(
             JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (userPermissionContext.rpPairwiseId() == null) {
+                return Result.failure(DecisionError.INVALID_USER_CONTEXT);
+            }
+
+            var reauthCounts =
+                    userPermissionContext.internalSubjectId() != null
+                            ? getAuthenticationAttemptsService()
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            userPermissionContext.internalSubjectId(),
+                                            userPermissionContext.rpPairwiseId(),
+                                            JourneyType.REAUTHENTICATION)
+                            : getAuthenticationAttemptsService()
+                                    .getCountsByJourney(
+                                            userPermissionContext.rpPairwiseId(),
+                                            JourneyType.REAUTHENTICATION);
+
+            return checkForReauthLockout(reauthCounts, true);
+        }
         return Result.success(new Decision.Permitted(0));
     }
 
@@ -296,7 +279,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     private Result<DecisionError, Decision> checkForAnyReauthLockout(
-            String internalSubjectId, String rpPairwiseId, CountType primaryCountCheck) {
+            String internalSubjectId,
+            String rpPairwiseId,
+            CountType primaryCountCheck,
+            boolean returnReauthLockedOut) {
 
         var reauthCounts =
                 getAuthenticationAttemptsService()
@@ -309,27 +295,139 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
         if (!exceedingCounts.isEmpty()) {
             CountType exceededType = exceedingCounts.get(0);
+            ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
 
             return Result.success(
-                    new Decision.TemporarilyLockedOut(
-                            switch (exceededType) {
-                                case ENTER_EMAIL -> ForbiddenReason
-                                        .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
-                                case ENTER_EMAIL_CODE -> ForbiddenReason
-                                        .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
-                                case ENTER_PASSWORD -> ForbiddenReason
-                                        .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-                                case ENTER_MFA_CODE,
-                                        ENTER_SMS_CODE,
-                                        ENTER_AUTH_APP_CODE -> ForbiddenReason
-                                        .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
-                            },
+                    createReauthDecision(
+                            returnReauthLockedOut,
+                            reason,
                             reauthCounts.getOrDefault(exceededType, 0),
-                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                            false));
+                            reauthCounts,
+                            exceedingCounts));
         }
 
-        return Result.success(
-                new Decision.Permitted(reauthCounts.getOrDefault(primaryCountCheck, 0)));
+        int count = primaryCountCheck != null ? reauthCounts.getOrDefault(primaryCountCheck, 0) : 0;
+        return Result.success(new Decision.Permitted(count));
+    }
+
+    private Result<DecisionError, Decision> checkForReauthLockout(
+            java.util.Map<CountType, Integer> reauthCounts, boolean returnReauthLockedOut) {
+
+        var exceedingCounts =
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        reauthCounts, configurationService);
+
+        if (!exceedingCounts.isEmpty()) {
+            CountType exceededType = exceedingCounts.get(0);
+            ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
+
+            return Result.success(
+                    createReauthDecision(
+                            returnReauthLockedOut,
+                            reason,
+                            reauthCounts.getOrDefault(exceededType, 0),
+                            reauthCounts,
+                            exceedingCounts));
+        }
+
+        return Result.success(new Decision.Permitted(0));
+    }
+
+    private Result<DecisionError, Decision> checkForPasswordResetLockout(String emailAddress) {
+        try {
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+
+            // Check for email OTP verification blocks first
+            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            if (getCodeStorageService()
+                    .isBlockedForEmail(emailAddress, codeAttemptsBlockedKeyPrefix)) {
+                return Result.success(
+                        createTemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                                configurationService.getCodeMaxRetries(),
+                                false));
+            }
+
+            // Check for email OTP request blocks
+            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+            if (getCodeStorageService()
+                    .isBlockedForEmail(emailAddress, codeRequestBlockedKeyPrefix)) {
+                return Result.success(
+                        createTemporarilyLockedOut(
+                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
+                                configurationService.getCodeMaxRetries(),
+                                false));
+            }
+
+            // Check for password blocks
+            boolean isPasswordBlocked =
+                    getCodeStorageService()
+                            .isBlockedForEmail(
+                                    emailAddress,
+                                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX
+                                            + JourneyType.PASSWORD_RESET);
+
+            int attemptCount =
+                    isPasswordBlocked
+                            ? configurationService.getMaxPasswordRetries()
+                            : getCodeStorageService().getIncorrectPasswordCount(emailAddress);
+
+            if (isPasswordBlocked) {
+                return Result.success(
+                        createTemporarilyLockedOut(
+                                ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                attemptCount,
+                                false));
+            }
+
+            return Result.success(new Decision.Permitted(attemptCount));
+        } catch (RuntimeException e) {
+            LOG.error("Could not retrieve password reset lock details.", e);
+            return Result.failure(DecisionError.STORAGE_SERVICE_ERROR);
+        }
+    }
+
+    private ForbiddenReason mapCountTypeToForbiddenReason(CountType countType) {
+        return switch (countType) {
+            case ENTER_EMAIL -> ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
+            case ENTER_EMAIL_CODE -> ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
+            case ENTER_PASSWORD -> ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
+            case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
+                    .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
+        };
+    }
+
+    private Decision createReauthDecision(
+            boolean returnReauthLockedOut,
+            ForbiddenReason reason,
+            int attemptCount,
+            java.util.Map<CountType, Integer> reauthCounts,
+            java.util.List<CountType> exceedingCounts) {
+        if (returnReauthLockedOut) {
+            return new Decision.ReauthLockedOut(
+                    reason,
+                    attemptCount,
+                    Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                    false,
+                    reauthCounts,
+                    exceedingCounts);
+        } else {
+            return new Decision.TemporarilyLockedOut(
+                    reason,
+                    attemptCount,
+                    Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                    false);
+        }
+    }
+
+    private Decision.TemporarilyLockedOut createTemporarilyLockedOut(
+            ForbiddenReason reason, int attemptCount, boolean isFirstTime) {
+        return new Decision.TemporarilyLockedOut(
+                reason,
+                attemptCount,
+                Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                isFirstTime);
     }
 }
