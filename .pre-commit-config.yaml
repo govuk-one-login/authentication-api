@@ -27,19 +27,10 @@ repos:
           docker-compose.*|\
           .pre-commit-config.yaml|\
           orchestration-canary-alarms.template.yaml|\
-          .*.approved.json|\
           checkov-policies.*|\
           .terraform-docs.yml|\
-          package.json|\
-          deprecation-config.json|\
-          http-client.env.json|\
-          package-lock.json|\
-          .*provider.json|\
-          quality-gate.manifest.json|\
-          account-management-api/api-contract(/.*)?|\
-          babel.config.json|\
-          jest.config.json$"
-        files: ^.*\.(json|yml|yaml)$
+          account-management-api/api-contract(/.*)?$"
+        files: ^.*\.(yml|yaml)$
 
   - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
     rev: 0.0.1
