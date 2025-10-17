@@ -598,7 +598,7 @@ data "aws_iam_policy_document" "new_auth_cross_account_table_resource_policy_doc
   }
 
   dynamic "statement" {
-    for_each = var.environment == "staging" ? [1] : []
+    for_each = contains(["integration", "production"], var.environment) ? [1] : []
     content {
       sid    = "DenyNonAdminTeamRolesAccess"
       effect = "Deny"
@@ -771,7 +771,7 @@ data "aws_iam_policy_document" "auth_cross_account_table_resource_policy_documen
   }
 
   dynamic "statement" {
-    for_each = var.environment == "staging" ? [1] : []
+    for_each = contains(["integration", "production"], var.environment) ? [1] : []
     content {
       sid    = "DenyNonAdminTeamRolesAccess"
       effect = "Deny"
