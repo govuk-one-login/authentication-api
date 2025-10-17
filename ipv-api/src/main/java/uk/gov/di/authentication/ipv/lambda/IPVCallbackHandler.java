@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -198,12 +199,12 @@ public class IPVCallbackHandler
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
-            var clientSessionId = sessionCookiesIds.getClientSessionId();
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var orchClientSession =
+            var clientSessionIdFromCookie = sessionCookiesIds.getClientSessionId();
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdFromCookie);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdFromCookie);
+            var orchClientSessionFromCookie =
                     orchClientSessionService
-                            .getClientSession(clientSessionId)
+                            .getClientSession(clientSessionIdFromCookie)
                             .orElseThrow(
                                     () ->
                                             new IPVCallbackNoSessionException(
@@ -211,23 +212,40 @@ public class IPVCallbackHandler
 
             var mismatchedEntity =
                     crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            input.getQueryStringParameters(), clientSessionId, orchSession);
+                            input.getQueryStringParameters(), clientSessionIdFromCookie);
 
             if (mismatchedEntity.isPresent()) {
+                if (orchSession
+                        .getClientSessions()
+                        .contains(mismatchedEntity.get().getClientSessionId())) {
+                    LOG.info("Recovering client session from state");
+                } else {
+                    var authRequestFromStateDerivedRP =
+                            AuthenticationRequest.parse(
+                                    mismatchedEntity
+                                            .get()
+                                            .getClientSession()
+                                            .getAuthRequestParams());
+                    attachLogFieldToLogs(
+                            CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
 
-                var authRequestFromStateDerivedRP =
-                        AuthenticationRequest.parse(
-                                mismatchedEntity.get().getClientSession().getAuthRequestParams());
-                attachLogFieldToLogs(
-                        CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
-
-                return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                        authRequestFromStateDerivedRP,
-                        mismatchedEntity.get().getErrorObject(),
-                        false,
-                        mismatchedEntity.get().getClientSessionId(),
-                        AuditService.UNKNOWN);
+                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                            authRequestFromStateDerivedRP,
+                            mismatchedEntity.get().getErrorObject(),
+                            false,
+                            mismatchedEntity.get().getClientSessionId(),
+                            AuditService.UNKNOWN);
+                }
             }
+
+            var clientSessionId =
+                    mismatchedEntity
+                            .map(CrossBrowserEntity::getClientSessionId)
+                            .orElse(clientSessionIdFromCookie);
+            var orchClientSession =
+                    mismatchedEntity
+                            .map(CrossBrowserEntity::getClientSession)
+                            .orElse(orchClientSessionFromCookie);
 
             var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
