@@ -132,7 +132,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     userPermissionContext.internalSubjectId(),
                     userPermissionContext.rpPairwiseId(),
                     CountType.ENTER_PASSWORD,
-                    false);
+                    true);
         }
 
         if (userPermissionContext.emailAddress() == null) {
