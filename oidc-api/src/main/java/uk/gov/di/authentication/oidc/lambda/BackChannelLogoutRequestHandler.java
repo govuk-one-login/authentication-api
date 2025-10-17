@@ -20,7 +20,6 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -56,7 +55,6 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                         configurationService,
                         null,
                         new KmsConnectionService(configurationService),
-                        new OrchAccessTokenService(configurationService),
                         oidcApi);
         this.clock = new NowClock(Clock.systemUTC());
     }

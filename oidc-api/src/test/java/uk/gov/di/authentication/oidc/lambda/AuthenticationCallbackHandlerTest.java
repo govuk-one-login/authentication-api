@@ -69,7 +69,6 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
@@ -122,8 +121,6 @@ class AuthenticationCallbackHandlerTest {
     private static final AuthenticationAuthorizationService authorizationService =
             mock(AuthenticationAuthorizationService.class);
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
-    private final OrchAccessTokenService orchAccessTokenService =
-            mock(OrchAccessTokenService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -247,7 +244,6 @@ class AuthenticationCallbackHandlerTest {
                         configurationService,
                         authorizationService,
                         tokenService,
-                        orchAccessTokenService,
                         orchSessionService,
                         orchClientSessionService,
                         auditService,
