@@ -40,7 +40,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, attributeCombinationsForAuthAppUsersCount={}}",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}}",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -79,7 +79,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}}"
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}}"
                         .formatted(size, size),
                 handler.handleRequest("", mock(Context.class)));
     }
@@ -134,7 +134,7 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}}"
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}}"
                         .formatted(size, expectedCount, size - expectedCount, expectedCount),
                 handler.handleRequest("", mock(Context.class)));
     }
@@ -153,7 +153,33 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, attributeCombinationsForAuthAppUsersCount={}}",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}}",
+                handler.handleRequest("", mock(Context.class)));
+    }
+
+    @Test
+    void shouldCountPhoneDestinationTypes() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+
+        List<Map<String, AttributeValue>> phoneItems =
+                List.of(
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777778").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+33777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+17777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("invalid").build()));
+
+        mockPhoneNumberIndexScanWithItems(phoneItems);
+
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        mockCredentialsScan(items, 0);
+
+        List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
+        mockProfileBatchGetItem(requestKeys, items);
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        assertEquals(
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=5, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=5, phoneDestinationCounts={DOMESTIC=2, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}}",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -177,10 +203,30 @@ class MFAMethodAnalysisHandlerTest {
                                 .filterExpression("PhoneNumberVerified = :v")
                                 .expressionAttributeValues(
                                         Map.of(":v", AttributeValue.builder().n("1").build()))
+                                .projectionExpression("PhoneNumber")
                                 .exclusiveStartKey(null)
                                 .build()))
                 .thenReturn(
                         ScanResponse.builder().count(resultCount).scannedCount(scanCount).build());
+    }
+
+    private void mockPhoneNumberIndexScanWithItems(List<Map<String, AttributeValue>> items) {
+        when(client.scan(
+                        ScanRequest.builder()
+                                .tableName("test-user-profile")
+                                .indexName("PhoneNumberIndex")
+                                .filterExpression("PhoneNumberVerified = :v")
+                                .expressionAttributeValues(
+                                        Map.of(":v", AttributeValue.builder().n("1").build()))
+                                .projectionExpression("PhoneNumber")
+                                .exclusiveStartKey(null)
+                                .build()))
+                .thenReturn(
+                        ScanResponse.builder()
+                                .items(items)
+                                .count(items.size())
+                                .scannedCount(items.size())
+                                .build());
     }
 
     private void mockProfileBatchGetItem(
