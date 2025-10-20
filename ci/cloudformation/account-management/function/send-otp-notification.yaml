@@ -91,6 +91,10 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref PendingEmailCheckQueueAccessPolicy
         - !Ref DynamoEmailCheckResultReadAccessPolicy
+        - !Ref ClientRegistryTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref S3AcceptanceTestsBucketPolicy
         - !If
           - ProvisionTestClientSecret
           - !Ref TestClientEmailAllowListSecretAccessPolicy

@@ -2795,3 +2795,73 @@ Resources:
               - kms:Decrypt
             Resource:
               - !GetAtt TestClientEmailAllowListSecretEncryptionKey.Arn
+
+  # Missing KMS policies from Terraform migration
+  ClientRegistryTableKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for client registry table KMS encryption key access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
+            Condition:
+              StringEquals:
+                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+
+  EmailCheckResultsTableKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for email check results table KMS encryption key access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
+            Condition:
+              StringEquals:
+                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+
+  UserProfileTableKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for user profile table KMS encryption key access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
+            Condition:
+              StringEquals:
+                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+
+  S3AcceptanceTestsBucketPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for S3 acceptance tests OTP bucket access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowS3Access
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::am-api-acceptance-tests-otp-${Environment}/*"
