@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
-public class MFAMethodAnalysisHandler implements RequestHandler<String, String> {
+public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> {
 
     private static final Logger LOG = LogManager.getLogger(MFAMethodAnalysisHandler.class);
     private final DynamoDbClient client;
@@ -49,7 +49,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<String, String> 
     }
 
     @Override
-    public String handleRequest(String input, Context context) {
+    public String handleRequest(Object input, Context context) {
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
         try {
