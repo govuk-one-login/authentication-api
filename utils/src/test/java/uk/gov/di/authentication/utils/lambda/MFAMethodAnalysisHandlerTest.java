@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +41,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}}",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}}",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -79,8 +80,8 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}}"
-                        .formatted(size, size),
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, mfaMethodPriorityIdentifierCombinations={no-methods=%s}}"
+                        .formatted(size, size, size),
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -134,8 +135,8 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}}"
-                        .formatted(size, expectedCount, size - expectedCount, expectedCount),
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, mfaMethodPriorityIdentifierCombinations={null=%s}}"
+                        .formatted(size, expectedCount, size - expectedCount, expectedCount, size),
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -153,7 +154,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}}",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}}",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -179,8 +180,54 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=5, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=5, phoneDestinationCounts={DOMESTIC=2, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}}",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=5, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=5, phoneDestinationCounts={DOMESTIC=2, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}}",
                 handler.handleRequest("", mock(Context.class)));
+    }
+
+    @Test
+    void shouldCountMfaMethodPriorityIdentifierCombinations() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+        mockPhoneNumberIndexScan(0, 0);
+
+        List<String> nullOnly = new ArrayList<>();
+        nullOnly.add(null);
+
+        List<String> backupAndNull = new ArrayList<>();
+        backupAndNull.add("BACKUP");
+        backupAndNull.add(null);
+
+        List<Map<String, AttributeValue>> credentialItems =
+                List.of(
+                        createUserWithMfaMethods(1, List.of()),
+                        createUserWithMfaMethods(2, List.of("DEFAULT")),
+                        createUserWithMfaMethods(3, List.of("DEFAULT")),
+                        createUserWithMfaMethods(4, List.of("DEFAULT", "BACKUP")),
+                        createUserWithMfaMethods(5, List.of("BACKUP", "DEFAULT")),
+                        createUserWithMfaMethods(6, nullOnly),
+                        createUserWithMfaMethods(7, backupAndNull),
+                        createUserWithMfaMethods(8, List.of("DEFAULT", "DEFAULT")),
+                        createUserWithMfaMethods(9, backupAndNull));
+        mockCredentialsScan(credentialItems, credentialItems.size());
+
+        List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
+        List<Map<String, AttributeValue>> profileItems = new ArrayList<>();
+        for (Map<String, AttributeValue> item : credentialItems) {
+            String email = item.get("Email").s();
+            requestKeys.add(Map.of("Email", AttributeValue.builder().s(email).build()));
+            profileItems.add(Map.of("Email", AttributeValue.builder().s(email).build()));
+        }
+        mockProfileBatchGetItem(requestKeys, profileItems);
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        String result = handler.handleRequest("", mock(Context.class));
+
+        assertTrue(result.contains("no-methods=1"));
+        assertTrue(result.contains("DEFAULT=2"));
+        assertTrue(result.contains("DEFAULT,BACKUP=1"));
+        assertTrue(result.contains("BACKUP,DEFAULT=1"));
+        assertTrue(result.contains("null=1"));
+        assertTrue(result.contains("DEFAULT,DEFAULT=1"));
+        assertTrue(result.contains("BACKUP,null=2"));
     }
 
     private void mockCredentialsScan(List<Map<String, AttributeValue>> items, int size) {
@@ -244,6 +291,26 @@ class MFAMethodAnalysisHandlerTest {
 
         when(client.batchGetItem(BatchGetItemRequest.builder().requestItems(requestItems).build()))
                 .thenReturn(BatchGetItemResponse.builder().responses(responses).build());
+    }
+
+    private Map<String, AttributeValue> createUserWithMfaMethods(
+            int userIndex, List<String> priorities) {
+        Map<String, AttributeValue> user = new HashMap<>();
+        user.put("Email", AttributeValue.builder().s(getTestEmail(userIndex)).build());
+
+        if (priorities != null && !priorities.isEmpty()) {
+            List<AttributeValue> methods = new ArrayList<>();
+            for (String priority : priorities) {
+                Map<String, AttributeValue> method = new HashMap<>();
+                if (priority != null) {
+                    method.put("PriorityIdentifier", AttributeValue.builder().s(priority).build());
+                }
+                methods.add(AttributeValue.builder().m(method).build());
+            }
+            user.put("MfaMethods", AttributeValue.builder().l(methods).build());
+        }
+
+        return user;
     }
 
     private String getTestEmail(int counter) {
