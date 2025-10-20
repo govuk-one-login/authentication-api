@@ -57,16 +57,12 @@ Resources:
         LogGroup: !Ref MfaMethodCreateFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
-        - !Ref DynamoAuthSessionStoreReadAccessPolicy
-        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
-        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref ClientRegistryTableKmsPolicy
-        - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
-        - !Ref S3AcceptanceTestsBucketPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

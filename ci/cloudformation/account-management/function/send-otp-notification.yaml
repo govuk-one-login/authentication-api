@@ -84,17 +84,18 @@ Resources:
         LogGroup: !Ref SendOtpNotificationFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
-        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref PendingEmailCheckQueueAccessPolicy
-        - !Ref DynamoEmailCheckResultReadAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref ClientRegistryTableKmsPolicy
-        - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
+        - !Ref PendingEmailCheckQueueAccessPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref DynamoEmailCheckResultReadAccessPolicy
         - !Ref S3AcceptanceTestsBucketPolicy
+        - !Ref TestClientSecretAccessPolicy
         - !If
           - ProvisionTestClientSecret
           - !Ref TestClientEmailAllowListSecretAccessPolicy

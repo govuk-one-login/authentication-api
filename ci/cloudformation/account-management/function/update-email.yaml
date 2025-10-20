@@ -56,16 +56,15 @@ Resources:
         LogGroup: !Ref UpdateEmailFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoUserDeleteAccessPolicy
         - !Ref DynamoEmailCheckResultReadAccessPolicy
-        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref RedisParametersAccessPolicy
-        - !Ref ClientRegistryTableKmsPolicy
-        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref UserProfileTableKmsPolicy
-        - !Ref S3AcceptanceTestsBucketPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

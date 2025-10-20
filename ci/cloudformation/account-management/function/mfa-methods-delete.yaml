@@ -51,6 +51,7 @@ Resources:
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref UserProfileTableKmsPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

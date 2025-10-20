@@ -212,6 +212,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5a160ba9-10ee-4e48-bcec-de21275f9201
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
+      parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/a7f93e1c-d441-4237-8b01-b0c1b4ff39bb
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
@@ -1066,13 +1068,17 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource:
-              - arn:aws:logs:*:*:*
+              - "*"
+              - "arn:aws:logs:*:*:*"
           - Sid: ManagingVPCConnection
             Effect: Allow
             Action:
               - ec2:DescribeNetworkInterfaces
               - ec2:CreateNetworkInterface
               - ec2:DeleteNetworkInterface
+              - ec2:DescribeSubnets
+              - ec2:AssignPrivateIpAddresses
+              - ec2:UnassignPrivateIpAddresses
             Resource: "*"
             Condition:
               ArnLikeIfExists:
@@ -1164,6 +1170,45 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     auditPayloadSigningKey,
+                  ]
+          - Sid: GiveEventsSnsTopicPolicyPublish
+            Effect: Allow
+            Action:
+              - SNS:Publish
+              - SNS:RemovePermission
+              - SNS:SetTopicAttributes
+              - SNS:DeleteTopic
+              - SNS:ListSubscriptionsByTopic
+              - SNS:GetTopicAttributes
+              - SNS:Receive
+              - SNS:AddPermission
+              - SNS:Subscribe
+            Resource:
+              - !Sub
+                - "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Env}-events"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowLambdasToEncryptWithCustomKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    eventsTopicEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    eventsTopicEncryptionKey,
                   ]
 
   DynamoAccountModifiersReadWritePolicy:
@@ -2537,6 +2582,7 @@ Resources:
                 - ssm:GetParameters
               Resource:
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-replica-host
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-password
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-port
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-tls
@@ -2547,13 +2593,34 @@ Resources:
                 - ssm:GetParameters
               Resource:
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-replica-host
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-password
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-port
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-tls
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    parameterStoreKmsKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    parameterStoreKmsKey,
+                  ]
+              - !Sub
+                - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-acct-mgmt-lambda-parameter-store-encryption-key"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
 
   PepperParametersAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2807,13 +2874,20 @@ Resources:
           - Sid: AllowKmsAccess
             Effect: Allow
             Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey
+              - kms:*
             Resource:
-              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
-            Condition:
-              StringEquals:
-                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    clientRegistryTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    clientRegistryTableEncryptionKey,
+                  ]
 
   EmailCheckResultsTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2825,13 +2899,20 @@ Resources:
           - Sid: AllowKmsAccess
             Effect: Allow
             Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey
+              - kms:*
             Resource:
-              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
-            Condition:
-              StringEquals:
-                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    emailCheckResultTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    emailCheckResultTableEncryptionKey,
+                  ]
 
   UserProfileTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2843,13 +2924,20 @@ Resources:
           - Sid: AllowKmsAccess
             Effect: Allow
             Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey
+              - kms:*
             Resource:
-              - !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*"
-            Condition:
-              StringEquals:
-                "kms:ViaService": !Sub "dynamodb.${AWS::Region}.amazonaws.com"
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    userProfileTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    userProfileTableEncryptionKey,
+                  ]
 
   S3AcceptanceTestsBucketPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2864,4 +2952,113 @@ Resources:
               - s3:GetObject
               - s3:PutObject
             Resource:
-              - !Sub "arn:aws:s3:::am-api-acceptance-tests-otp-${Environment}/*"
+              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-tests-otp"
+              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-tests-otp/*"
+
+  # Additional test client secret access policy for Terraform compatibility
+  TestClientSecretAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for accessing test client secrets"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetSecretValue
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource:
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Env}/test-client-email-allow-list-*"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              # Additional pattern for Terraform compatibility
+              - !Sub
+                - "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/${Env}/test-client-email-allow-list-wekalx"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowSecretDecrypt
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    testClientSecretEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    testClientSecretEncryptionKey,
+                  ]
+              - !Sub
+                - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  # Minimal audit signing policy without SNS for simple functions
+  MinimalAuditSigningKeyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Minimal IAM policy for KMS audit signing without SNS permissions"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessToKmsAuditSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+              - kms:Verify
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    auditPayloadSigningKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    auditPayloadSigningKey,
+                  ]
+          - Sid: AllowLambdasToEncryptWithCustomKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    eventsTopicEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    eventsTopicEncryptionKey,
+                  ]
+              # Additional events topic encryption key that some functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
+              # Another missing KMS key that all functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
+              # Another missing KMS key that all functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
