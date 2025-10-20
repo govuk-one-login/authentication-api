@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
@@ -53,14 +54,24 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     @Override
     public String handleRequest(Object input, Context context) {
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
+        AtomicLong missingUserProfileCount = new AtomicLong(0);
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
         try {
             fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
-            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks);
+            fetchUserCredentialsAndProfileStatistics(
+                    forkJoinPool, parallelTasks, missingUserProfileCount);
             Pool.gracefulPoolShutdown(forkJoinPool);
+
             String analysis = combineTaskResults(parallelTasks).toString();
             LOG.info("Analysis result: {}", analysis);
-            return analysis;
+
+            String userProfileRetrievalAnalysis =
+                    String.format(
+                            "User profile retrieval failures: %,d accounts missing userProfile items.",
+                            missingUserProfileCount.get());
+            LOG.info(userProfileRetrievalAnalysis);
+
+            return String.format("%s %s", analysis, userProfileRetrievalAnalysis);
         } finally {
             Pool.forcePoolShutdown(forkJoinPool);
         }
@@ -154,7 +165,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private void fetchUserCredentialsAndProfileStatistics(
-            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
+            ForkJoinPool forkJoinPool,
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks,
+            AtomicLong missingUserProfileCount) {
         long totalBatches = 0;
         long totalUserCredentialsFetched = 0;
         Map<String, AttributeValue> lastKey = null;
@@ -219,7 +232,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                             forkJoinPool.submit(
                                     () ->
                                             batchGetUserProfiles(
-                                                    finalTotalBatches, finalCurrentBatch)));
+                                                    finalTotalBatches,
+                                                    finalCurrentBatch,
+                                                    missingUserProfileCount)));
                     currentBatch = new ArrayList<>();
                 }
             }
@@ -230,7 +245,11 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                 List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
                 parallelTasks.add(
                         forkJoinPool.submit(
-                                () -> batchGetUserProfiles(finalTotalBatches, finalCurrentBatch)));
+                                () ->
+                                        batchGetUserProfiles(
+                                                finalTotalBatches,
+                                                finalCurrentBatch,
+                                                missingUserProfileCount)));
             }
 
             lastKey = scanResponse.lastEvaluatedKey();
@@ -238,7 +257,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private MFAMethodAnalysis batchGetUserProfiles(
-            long batchNumber, List<UserCredentialsProfileJoin> batch) {
+            long batchNumber,
+            List<UserCredentialsProfileJoin> batch,
+            AtomicLong missingUserProfileCount) {
         if (batchNumber % 1000 == 0) {
             LOG.info("Executing user profile batch {}", batchNumber);
         }
@@ -269,6 +290,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         BatchGetItemResponse batchGetItemResponse = client.batchGetItem(batchGetItemRequest);
         List<Map<String, AttributeValue>> results =
                 batchGetItemResponse.responses().get(userProfileTableName);
+
+        missingUserProfileCount.addAndGet(((long) batch.size()) - results.size());
 
         for (Map<String, AttributeValue> item : results) {
             String email =
