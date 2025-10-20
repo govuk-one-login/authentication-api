@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +42,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}} User profile retrieval failures: 0 accounts missing userProfile items.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -80,8 +81,8 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, mfaMethodPriorityIdentifierCombinations={no-methods=%s}} User profile retrieval failures: 0 accounts missing userProfile items."
-                        .formatted(size, size, size),
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=]=%s}, mfaMethodDetailsCombinations={[]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                        .formatted(size, size, size, size, size),
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -135,8 +136,14 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, mfaMethodPriorityIdentifierCombinations={null=%s}} User profile retrieval failures: 0 accounts missing userProfile items."
-                        .formatted(size, expectedCount, size - expectedCount, expectedCount, size),
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=absent_attribute]=%s}, mfaMethodDetailsCombinations={[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=absent_attribute]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                        .formatted(
+                                size,
+                                expectedCount,
+                                size - expectedCount,
+                                expectedCount,
+                                size,
+                                size),
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -144,17 +151,12 @@ class MFAMethodAnalysisHandlerTest {
     void shouldRetrievePhoneNumberVerifiedStats() {
         when(configurationService.getEnvironment()).thenReturn("test");
 
-        mockPhoneNumberIndexScan(100, 90);
-
-        List<Map<String, AttributeValue>> items = new ArrayList<>();
-        mockCredentialsScan(items, 0);
-
-        List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
-        mockProfileBatchGetItem(requestKeys, items);
+        mockPhoneNumberAndUserCredentialScans(List.of(), 0, 0, List.of(), 90, 100);
+        mockProfileBatchGetItem(new ArrayList<>(), List.of());
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}} User profile retrieval failures: 0 accounts missing userProfile items.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -167,27 +169,23 @@ class MFAMethodAnalysisHandlerTest {
                         Map.of("PhoneNumber", AttributeValue.builder().s("+447777777777").build()),
                         Map.of("PhoneNumber", AttributeValue.builder().s("+447777777778").build()),
                         Map.of("PhoneNumber", AttributeValue.builder().s("+33777777777").build()),
+                        Map.of("PhoneNumber", AttributeValue.builder().s("+447777777779").build()),
                         Map.of("PhoneNumber", AttributeValue.builder().s("+17777777777").build()),
                         Map.of("PhoneNumber", AttributeValue.builder().s("invalid").build()));
 
-        mockPhoneNumberIndexScanWithItems(phoneItems);
-
-        List<Map<String, AttributeValue>> items = new ArrayList<>();
-        mockCredentialsScan(items, 0);
-
-        List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
-        mockProfileBatchGetItem(requestKeys, items);
+        mockPhoneNumberAndUserCredentialScans(
+                List.of(), 0, 0, phoneItems, phoneItems.size(), phoneItems.size());
+        mockProfileBatchGetItem(new ArrayList<>(), List.of());
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=5, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=5, phoneDestinationCounts={DOMESTIC=2, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}, mfaMethodPriorityIdentifierCombinations={}} User profile retrieval failures: 0 accounts missing userProfile items.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=6, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=6, phoneDestinationCounts={DOMESTIC=3, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
     @Test
     void shouldCountMfaMethodPriorityIdentifierCombinations() {
         when(configurationService.getEnvironment()).thenReturn("test");
-        mockPhoneNumberIndexScan(0, 0);
 
         List<String> nullOnly = new ArrayList<>();
         nullOnly.add(null);
@@ -207,7 +205,9 @@ class MFAMethodAnalysisHandlerTest {
                         createUserWithMfaMethods(7, backupAndNull),
                         createUserWithMfaMethods(8, List.of("DEFAULT", "DEFAULT")),
                         createUserWithMfaMethods(9, backupAndNull));
-        mockCredentialsScan(credentialItems, credentialItems.size());
+
+        mockPhoneNumberAndUserCredentialScans(
+                credentialItems, credentialItems.size(), credentialItems.size(), List.of(), 0, 0);
 
         List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
         List<Map<String, AttributeValue>> profileItems = new ArrayList<>();
@@ -221,62 +221,52 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         String result = handler.handleRequest("", mock(Context.class));
 
-        assertTrue(result.contains("no-methods=1"));
-        assertTrue(result.contains("DEFAULT=2"));
-        assertTrue(result.contains("DEFAULT,BACKUP=1"));
-        assertTrue(result.contains("BACKUP,DEFAULT=1"));
-        assertTrue(result.contains("null=1"));
-        assertTrue(result.contains("DEFAULT,DEFAULT=1"));
-        assertTrue(result.contains("BACKUP,null=2"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=]=1"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=DEFAULT]=2"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=DEFAULT,BACKUP]=1"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=BACKUP,DEFAULT]=1"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=absent_attribute]=1"));
+        assertTrue(result.contains("MfaMethodPriorityCombination[methods=DEFAULT,DEFAULT]=1"));
+        assertTrue(
+                result.contains("MfaMethodPriorityCombination[methods=BACKUP,absent_attribute]=2"));
         assertTrue(
                 result.contains(
-                        "User profile retrieval failures: 0 accounts missing userProfile items."));
+                        "User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."));
     }
 
     private void mockCredentialsScan(List<Map<String, AttributeValue>> items, int size) {
-        when(client.scan(
-                        ScanRequest.builder()
-                                .tableName("test-user-credentials")
-                                .filterExpression("attribute_exists(MfaMethods)")
-                                .projectionExpression("Email,MfaMethods")
-                                .exclusiveStartKey(null)
-                                .build()))
-                .thenReturn(
-                        ScanResponse.builder().items(items).count(size).scannedCount(size).build());
+        mockPhoneNumberAndUserCredentialScans(items, size, size, List.of(), 0, 0);
     }
 
     private void mockPhoneNumberIndexScan(int scanCount, int resultCount) {
-        when(client.scan(
-                        ScanRequest.builder()
-                                .tableName("test-user-profile")
-                                .indexName("PhoneNumberIndex")
-                                .filterExpression("PhoneNumberVerified = :v")
-                                .expressionAttributeValues(
-                                        Map.of(":v", AttributeValue.builder().n("1").build()))
-                                .projectionExpression("PhoneNumber")
-                                .exclusiveStartKey(null)
-                                .build()))
-                .thenReturn(
-                        ScanResponse.builder().count(resultCount).scannedCount(scanCount).build());
+        mockPhoneNumberAndUserCredentialScans(List.of(), 0, 0, List.of(), resultCount, scanCount);
     }
 
-    private void mockPhoneNumberIndexScanWithItems(List<Map<String, AttributeValue>> items) {
-        when(client.scan(
-                        ScanRequest.builder()
-                                .tableName("test-user-profile")
-                                .indexName("PhoneNumberIndex")
-                                .filterExpression("PhoneNumberVerified = :v")
-                                .expressionAttributeValues(
-                                        Map.of(":v", AttributeValue.builder().n("1").build()))
-                                .projectionExpression("PhoneNumber")
-                                .exclusiveStartKey(null)
-                                .build()))
-                .thenReturn(
-                        ScanResponse.builder()
-                                .items(items)
-                                .count(items.size())
-                                .scannedCount(items.size())
-                                .build());
+    private void mockPhoneNumberAndUserCredentialScans(
+            List<Map<String, AttributeValue>> credentialItems,
+            int credentialCount,
+            int credentialScannedCount,
+            List<Map<String, AttributeValue>> phoneItems,
+            int phoneCount,
+            int phoneScannedCount) {
+        when(client.scan(any(ScanRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            ScanRequest request = invocation.getArgument(0);
+                            if ("PhoneNumberIndex".equals(request.indexName())) {
+                                return ScanResponse.builder()
+                                        .items(phoneItems)
+                                        .count(phoneCount)
+                                        .scannedCount(phoneScannedCount)
+                                        .build();
+                            }
+
+                            return ScanResponse.builder()
+                                    .items(credentialItems)
+                                    .count(credentialCount)
+                                    .scannedCount(credentialScannedCount)
+                                    .build();
+                        });
     }
 
     private void mockProfileBatchGetItem(
@@ -338,7 +328,131 @@ class MFAMethodAnalysisHandlerTest {
 
         assertTrue(
                 result.contains(
-                        "User profile retrieval failures: 3 accounts missing userProfile items."));
+                        "User profile retrieval failures: userProfile items could not be retrieved for 3 accounts."));
+    }
+
+    @Test
+    void shouldTrackMfaMethodDetailsCombinations() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+        mockPhoneNumberIndexScan(0, 0);
+
+        List<Map<String, AttributeValue>> credentialItems =
+                List.of(
+                        createUserWithMfaMethodDetails(1, "DEFAULT", "AUTH_APP"),
+                        createUserWithMfaMethodDetails(2, "BACKUP", "SMS"),
+                        createUserWithMfaMethodDetails(3, null, "AUTH_APP"), // absent priority
+                        createUserWithMfaMethodDetails(4, "DEFAULT", null), // absent type
+                        createUserWithMfaMethodDetails(5, "DEFAULT", "AUTH_APP"), // duplicate
+                        createUserWithMfaMethodDetails(6, "null", "AUTH_APP"));
+
+        mockCredentialsScan(credentialItems, credentialItems.size());
+        mockProfileBatchGetItem(
+                createKeysFromCredentials(credentialItems),
+                createProfilesFromCredentials(credentialItems));
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        String result = handler.handleRequest("", mock(Context.class));
+
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=2"));
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=absent_attribute]]=1"));
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=null, mfaMethodType=AUTH_APP]]=1"));
+    }
+
+    @Test
+    void shouldHandleMultipleMfaMethodsPerUser() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+        mockPhoneNumberIndexScan(0, 0);
+
+        List<Map<String, AttributeValue>> credentialItems =
+                List.of(
+                        createUserWithMultipleMfaMethods(
+                                1,
+                                List.of(
+                                        Map.of(
+                                                "PriorityIdentifier",
+                                                "DEFAULT",
+                                                "MfaMethodType",
+                                                "AUTH_APP"),
+                                        Map.of(
+                                                "PriorityIdentifier",
+                                                "BACKUP",
+                                                "MfaMethodType",
+                                                "SMS"))),
+                        createUserWithMultipleMfaMethods(
+                                2, List.of(Map.of("MfaMethodType", "AUTH_APP"))) // missing priority
+                        );
+
+        mockCredentialsScan(credentialItems, credentialItems.size());
+        mockProfileBatchGetItem(
+                createKeysFromCredentials(credentialItems),
+                createProfilesFromCredentials(credentialItems));
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        String result = handler.handleRequest("", mock(Context.class));
+
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP], MfaMethodDetails[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+        assertTrue(
+                result.contains(
+                        "[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+    }
+
+    private Map<String, AttributeValue> createUserWithMfaMethodDetails(
+            int userIndex, String priority, String type) {
+        Map<String, String> method = new HashMap<>();
+
+        if (priority != null) {
+            method.put("PriorityIdentifier", priority);
+        }
+        if (type != null) {
+            method.put("MfaMethodType", type);
+        }
+
+        return createUserWithMultipleMfaMethods(userIndex, List.of(method));
+    }
+
+    private Map<String, AttributeValue> createUserWithMultipleMfaMethods(
+            int userIndex, List<Map<String, String>> methods) {
+        Map<String, AttributeValue> user = new HashMap<>();
+        user.put("Email", AttributeValue.builder().s(getTestEmail(userIndex)).build());
+
+        List<AttributeValue> methodList = new ArrayList<>();
+        for (Map<String, String> methodData : methods) {
+            Map<String, AttributeValue> method = new HashMap<>();
+            methodData.forEach(
+                    (key, value) -> method.put(key, AttributeValue.builder().s(value).build()));
+            methodList.add(AttributeValue.builder().m(method).build());
+        }
+
+        user.put("MfaMethods", AttributeValue.builder().l(methodList).build());
+        return user;
+    }
+
+    private List<Map<String, AttributeValue>> createKeysFromCredentials(
+            List<Map<String, AttributeValue>> credentialItems) {
+        return credentialItems.stream()
+                .map(item -> Map.of("Email", item.get("Email")))
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+    }
+
+    private List<Map<String, AttributeValue>> createProfilesFromCredentials(
+            List<Map<String, AttributeValue>> credentialItems) {
+        return credentialItems.stream()
+                .map(item -> Map.of("Email", item.get("Email")))
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 
     private String getTestEmail(int counter) {
