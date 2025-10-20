@@ -65,6 +65,10 @@ Resources:
         - !Ref DynamoAccountModifiersReadAccessPolicy
         - !Ref DynamoAccountModifiersDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref ClientRegistryTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref LegacyAccountDeletionTopicPolicy
       SnapStart:
         ApplyOn: None

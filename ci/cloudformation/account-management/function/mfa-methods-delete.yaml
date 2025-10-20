@@ -49,8 +49,6 @@ Resources:
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
-        - !Ref DynamoAuthSessionStoreReadAccessPolicy
-        - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
       SnapStart:

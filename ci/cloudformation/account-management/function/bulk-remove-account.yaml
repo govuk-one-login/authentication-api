@@ -59,6 +59,10 @@ Resources:
         - !Ref DynamoAccountModifiersDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref LegacyAccountDeletionTopicPolicy
+        - !Ref ClientRegistryTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref S3AcceptanceTestsBucketPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

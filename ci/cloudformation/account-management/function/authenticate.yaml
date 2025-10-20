@@ -53,6 +53,10 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref ClientRegistryTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref S3AcceptanceTestsBucketPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
