@@ -3019,6 +3019,56 @@ Resources:
                       !Ref Environment,
                     ]
 
+  AccountModifiersTableKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for account modifiers table KMS encryption key access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:*
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    accountModifiersTableEncryptionKey,
+                  ]
+
+  CommonPasswordsTableKmsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for common passwords table KMS encryption key access"
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:*
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    commonPasswordsTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    commonPasswordsTableEncryptionKey,
+                  ]
+
   # Minimal audit signing policy without SNS for simple functions
   MinimalAuditSigningKeyPolicy:
     Type: AWS::IAM::ManagedPolicy
