@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.ArrayList;
@@ -81,6 +82,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     taskResult.getCountOfPhoneNumberUsersAssessed());
             finalMFAMethodAnalysis.incrementCountOfUsersWithVerifiedPhoneNumber(
                     taskResult.getCountOfUsersWithVerifiedPhoneNumber());
+            finalMFAMethodAnalysis.mergePhoneDestinationCounts(
+                    taskResult.getPhoneDestinationCounts());
         }
         return finalMFAMethodAnalysis;
     }
@@ -93,6 +96,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                             Map<String, AttributeValue> lastKey = null;
                             int totalCount = 0;
                             int totalScanned = 0;
+                            Map<String, Long> destinationCounts = new HashMap<>();
                             int logThreshold = 100_000;
                             int lastLoggedAt = 0;
 
@@ -108,10 +112,24 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                                                 AttributeValue.builder()
                                                                         .n("1")
                                                                         .build()))
+                                                .projectionExpression("PhoneNumber")
                                                 .exclusiveStartKey(lastKey)
                                                 .build();
 
                                 ScanResponse response = client.scan(request);
+
+                                for (Map<String, AttributeValue> item : response.items()) {
+                                    String phoneNumber = item.get("PhoneNumber").s();
+                                    String destinationType =
+                                            PhoneNumberHelper.maybeGetCountry(phoneNumber)
+                                                    .map(
+                                                            country ->
+                                                                    "44".equals(country)
+                                                                            ? "DOMESTIC"
+                                                                            : "INTERNATIONAL")
+                                                    .orElse("UNKNOWN");
+                                    destinationCounts.merge(destinationType, 1L, Long::sum);
+                                }
 
                                 totalCount += response.count();
                                 totalScanned += response.scannedCount();
@@ -126,6 +144,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                             MFAMethodAnalysis analysis = new MFAMethodAnalysis();
                             analysis.incrementCountOfPhoneNumberUsersAssessed(totalScanned);
                             analysis.incrementCountOfUsersWithVerifiedPhoneNumber(totalCount);
+                            analysis.mergePhoneDestinationCounts(destinationCounts);
 
                             return analysis;
                         }));
@@ -346,6 +365,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private long countOfPhoneNumberUsersAssessed = 0;
         private long countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods = 0;
         private long countOfUsersWithVerifiedPhoneNumber = 0;
+        private final Map<String, Long> phoneDestinationCounts = new HashMap<>();
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
 
@@ -382,6 +402,16 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             this.countOfUsersWithVerifiedPhoneNumber += i;
         }
 
+        public Map<String, Long> getPhoneDestinationCounts() {
+            return phoneDestinationCounts;
+        }
+
+        public void mergePhoneDestinationCounts(Map<String, Long> counts) {
+            for (Map.Entry<String, Long> entry : counts.entrySet()) {
+                this.phoneDestinationCounts.merge(entry.getKey(), entry.getValue(), Long::sum);
+            }
+        }
+
         public Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 getAttributeCombinationsForAuthAppUsersCount() {
             return attributeCombinationsForAuthAppUsersCount;
@@ -408,6 +438,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     + countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods
                     + ", countOfUsersWithVerifiedPhoneNumber="
                     + countOfUsersWithVerifiedPhoneNumber
+                    + ", phoneDestinationCounts="
+                    + phoneDestinationCounts
                     + ", attributeCombinationsForAuthAppUsersCount="
                     + attributeCombinationsForAuthAppUsersCount
                     + '}';
