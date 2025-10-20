@@ -16,6 +16,9 @@ paths:
         uri: "${endpoint_modules.authenticate.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Validates user credentials (email and password) for authentication. Optionally accepts post-authentication action context to indicate the user's intended next action after successful authentication."
+      summary: Authenticate user credentials
+      operationId: "authenticate"
       requestBody:
         content:
           application/json:
@@ -39,16 +42,22 @@ paths:
         "204":
           description: Successful Operation. The password is correct for this user.
         "400":
-          description: One of the required fields is missing.
+          description: Bad Request - Missing parameters or account does not exist.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RequestIsMissingParameters"
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/AccountDoesNotExist"
               examples:
                 post-when-request-is-missing-parameters:
                   value:
                     code: 1001
                     message: "Request is missing parameters"
+                post-when-account-does-not-exist:
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
         "401":
           description: This user does not have an account or the password is wrong.
           content:

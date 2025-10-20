@@ -68,6 +68,17 @@ def handleAuthenticate(request) {
         return
     }
     
+    // 400 - Account does not exist
+    if (email == "nonexistent@example.gov.uk") {
+        def response400 = context.operation.responses["400"]
+        def example = response400.content["application/json"].examples["post-when-account-does-not-exist"]
+        respond()
+            .withContent(example.value.toString())
+            .withHeader("Content-Type", "application/json")
+            .withStatusCode(400)
+        return
+    }
+    
     // 401 - Invalid credentials
     if (email == "invalid@example.gov.uk") {
         def response401 = context.operation.responses["401"]

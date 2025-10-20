@@ -152,6 +152,12 @@ http POST :8080/authenticate \
   Content-Type:application/json \
   password="test"
 
+# POST 400 error response (account does not exist)
+http POST :8080/authenticate \
+  Content-Type:application/json \
+  email="nonexistent@example.gov.uk" \
+  password="test"
+
 # POST 401 error response (invalid credentials)
 http POST :8080/authenticate \
   Content-Type:application/json \
