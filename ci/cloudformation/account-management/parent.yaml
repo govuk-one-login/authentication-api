@@ -1141,6 +1141,10 @@ Resources:
                     !Ref Environment,
                     eventsTopicEncryptionKey,
                   ]
+              # Additional events topic encryption key that some functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
+              # Another missing KMS key that all functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
 
   AuditSigningKeyLambdaKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -1210,6 +1214,10 @@ Resources:
                     !Ref Environment,
                     eventsTopicEncryptionKey,
                   ]
+              # Additional events topic encryption key that some functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
+              # Another missing KMS key that all functions need
+              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
 
   DynamoAccountModifiersReadWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3058,7 +3066,5 @@ Resources:
                   ]
               # Additional events topic encryption key that some functions need
               - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
-              # Another missing KMS key that all functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
               # Another missing KMS key that all functions need
               - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
