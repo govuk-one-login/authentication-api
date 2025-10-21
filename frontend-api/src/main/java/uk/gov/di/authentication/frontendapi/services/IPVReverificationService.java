@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.DefaultResourceRetriever;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -39,6 +40,8 @@ import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+
+import static com.nimbusds.jose.jwk.source.JWKSourceBuilder.DEFAULT_HTTP_SIZE_LIMIT;
 
 public class IPVReverificationService {
     private static final Logger LOG = LogManager.getLogger(IPVReverificationService.class);
@@ -72,15 +75,7 @@ public class IPVReverificationService {
                     new TokenService(
                             configurationService, redisConnectionService, kmsConnectionService);
             this.nowClock = new NowClock(Clock.systemUTC());
-            this.jwkSource =
-                    configurationService.isIpvJwksCallEnabled()
-                            ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
-                                    .retrying(true)
-                                    .refreshAheadCache(false)
-                                    .cache(true)
-                                    .rateLimited(false)
-                                    .build()
-                            : null;
+            this.jwkSource = getJwkSource(configurationService);
 
         } catch (Exception e) {
             LOG.error("Error while initializing IPVReverificationService", e);
@@ -98,15 +93,7 @@ public class IPVReverificationService {
         this.jwtService = jwtService;
         this.tokenService = tokenService;
         this.nowClock = new NowClock(Clock.systemUTC());
-        this.jwkSource =
-                configurationService.isIpvJwksCallEnabled()
-                        ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
-                                .retrying(true)
-                                .refreshAheadCache(false)
-                                .cache(true)
-                                .rateLimited(false)
-                                .build()
-                        : null;
+        this.jwkSource = getJwkSource(configurationService);
     }
 
     public IPVReverificationService(
@@ -141,6 +128,25 @@ public class IPVReverificationService {
         LOG.info("IPV reverification JAR created, redirect URI {}", ipvReverificationRequestURI);
 
         return ipvReverificationRequestURI;
+    }
+
+    private JWKSource<SecurityContext> getJwkSource(ConfigurationService configurationService)
+            throws MalformedURLException {
+        if (!configurationService.isIpvJwksCallEnabled()) return null;
+
+        var jwkSourceBuilder =
+                configurationService.isStubbedEnvironment()
+                        ? JWKSourceBuilder.create(
+                                configurationService.getIpvJwksUrl(),
+                                new DefaultResourceRetriever(3000, 3000, DEFAULT_HTTP_SIZE_LIMIT))
+                        : JWKSourceBuilder.create(configurationService.getIpvJwksUrl());
+
+        return jwkSourceBuilder
+                .retrying(true)
+                .refreshAheadCache(false)
+                .cache(true)
+                .rateLimited(false)
+                .build();
     }
 
     private EncryptedJWT constructMfaResetAuthorizationJWT(
