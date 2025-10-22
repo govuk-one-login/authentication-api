@@ -89,10 +89,16 @@ class TokenServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final OrchAccessTokenService orchAccessTokenService =
+            mock(OrchAccessTokenService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final TokenService tokenService =
             new TokenService(
-                    configurationService, redisConnectionService, kmsConnectionService, oidcApi);
+                    configurationService,
+                    redisConnectionService,
+                    kmsConnectionService,
+                    orchAccessTokenService,
+                    oidcApi);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
@@ -168,7 +174,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -238,7 +245,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -302,7 +310,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -329,7 +338,8 @@ class TokenServiceTest {
                         JWSAlgorithm.ES256,
                         JOURNEY_ID,
                         VOT,
-                        AUTH_TIME);
+                        AUTH_TIME,
+                        AUTH_CODE);
 
         var parsedAccessToken =
                 SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
