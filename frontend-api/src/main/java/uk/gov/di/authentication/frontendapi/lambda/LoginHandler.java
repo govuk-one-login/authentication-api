@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -85,7 +84,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final MFAMethodsService mfaMethodsService;
     private final PermissionDecisionManager permissionDecisionManager;
     private final UserActionsManager userActionsManager;
@@ -98,7 +96,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             CommonPasswordsService commonPasswordsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             PermissionDecisionManager permissionDecisionManager,
@@ -114,7 +111,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.mfaMethodsService = mfaMethodsService;
         this.permissionDecisionManager = permissionDecisionManager;
         this.userActionsManager = userActionsManager;
@@ -130,18 +126,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
-                new PermissionDecisionManager(
-                        configurationService, codeStorageService, authenticationAttemptsService);
+                new PermissionDecisionManager(configurationService, codeStorageService);
         this.userActionsManager =
                 new UserActionsManager(
-                        configurationService,
-                        codeStorageService,
-                        this.authSessionService,
-                        this.authenticationAttemptsService);
+                        configurationService, codeStorageService, this.authSessionService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 
@@ -154,18 +144,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
-        this.authenticationAttemptsService =
-                new AuthenticationAttemptsService(configurationService);
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.permissionDecisionManager =
-                new PermissionDecisionManager(
-                        configurationService, codeStorageService, authenticationAttemptsService);
+                new PermissionDecisionManager(configurationService, codeStorageService);
         this.userActionsManager =
                 new UserActionsManager(
-                        configurationService,
-                        codeStorageService,
-                        this.authSessionService,
-                        this.authenticationAttemptsService);
+                        configurationService, codeStorageService, this.authSessionService);
         this.testUserHelper = new TestUserHelper(configurationService);
     }
 

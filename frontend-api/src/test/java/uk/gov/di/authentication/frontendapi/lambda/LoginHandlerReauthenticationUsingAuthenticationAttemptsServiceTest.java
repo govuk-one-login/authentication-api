@@ -188,7 +188,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         permissionDecisionManager,

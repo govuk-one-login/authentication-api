@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -107,8 +106,6 @@ class LoginHandlerReauthenticationRedisTest {
             mock(CommonPasswordsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final PermissionDecisionManager permissionDecisionManager =
             mock(PermissionDecisionManager.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
@@ -168,7 +165,6 @@ class LoginHandlerReauthenticationRedisTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         permissionDecisionManager,
