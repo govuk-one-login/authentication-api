@@ -100,6 +100,30 @@ resource "aws_iam_policy" "invoke_account_deletion_lambda" {
   policy      = data.aws_iam_policy_document.invoke_account_deletion_lambda.json
 }
 
+resource "aws_iam_role" "account_deletion_role" {
+  count       = local.should_create_account_deletion_policy ? 1 : 0
+  name        = "support-account-deletion-role"
+  path        = "/runbooks/"
+  description = "Role for support users to perform account deletions using lambda exec action"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedServiceSupport*"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "account_deletion_policy" {
+  count      = local.should_create_account_deletion_policy ? 1 : 0
+  role       = aws_iam_role.account_deletion_role[0].name
+  policy_arn = aws_iam_policy.invoke_account_deletion_lambda[0].arn
+}
+
 locals {
   mock_topic_arn                        = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
   account_deletion_topic_arn            = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
