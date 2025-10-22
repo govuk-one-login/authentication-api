@@ -226,7 +226,7 @@ public class AccountInterventionService {
                     SerializationService.getInstance()
                             .readValue(httpResponse.body(), AccountInterventionResponse.class);
         } catch (Exception e) {
-            logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
+            logAndThrowAccountInterventionException("Failed to serialize AIS response body.", e);
         }
         if (Objects.isNull(accountInterventionResponse)) {
             logAndThrowAccountInterventionException("Account Intervention Status is null.");
@@ -255,6 +255,11 @@ public class AccountInterventionService {
 
     private static AccountIntervention noInterventionResponse() {
         return new AccountIntervention(new AccountInterventionState(false, false, false, false));
+    }
+
+    private void logAndThrowAccountInterventionException(String message, Exception cause) {
+        LOG.error(message, cause);
+        throw new AccountInterventionException(message, cause);
     }
 
     private void logAndThrowAccountInterventionException(String message) {
