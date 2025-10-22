@@ -13,7 +13,7 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.USER_LANGUAGE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidOptionalHeader;
 
 public class LocaleHelper {
 
@@ -73,7 +73,7 @@ public class LocaleHelper {
 
     public static Optional<String> getUserLanguageFromRequestHeaders(
             Map<String, String> headers, ConfigurationService configurationService) {
-        if (!headersContainValidHeader(
+        if (!headersContainValidOptionalHeader(
                 headers, USER_LANGUAGE_HEADER, configurationService.getHeadersCaseInsensitive())) {
             return Optional.empty();
         }

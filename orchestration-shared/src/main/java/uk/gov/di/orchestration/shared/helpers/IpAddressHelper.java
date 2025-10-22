@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import static java.util.Collections.emptyMap;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidOptionalHeader;
 
 public class IpAddressHelper {
     private static final String CLOUD_FRONT_VIEWER_ADDRESS_HEADER_NAME =
@@ -25,16 +25,17 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        if (headersContainValidHeader(headers, CLOUD_FRONT_VIEWER_ADDRESS_HEADER_NAME, true)) {
+        if (headersContainValidOptionalHeader(
+                headers, CLOUD_FRONT_VIEWER_ADDRESS_HEADER_NAME, true)) {
             return getHeaderValueFromHeaders(headers, CLOUD_FRONT_VIEWER_ADDRESS_HEADER_NAME, true)
                     .split(":")[0]
                     .trim();
-        } else if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
+        } else if (headersContainValidOptionalHeader(headers, "X-Forwarded-For", true)) {
             return getHeaderValueFromHeaders(headers, "X-Forwarded-For", true).split(",")[0].trim();
         }
 
         LOG.warn(
-                "No IP address present in x-forwarded-for header, attempting to retrieve from request context");
+                "No IP address present in cloudfront viewer or x-forwarded-for header, attempting to retrieve from request context");
 
         return Optional.ofNullable(input)
                 .map(APIGatewayProxyRequestEvent::getRequestContext)
