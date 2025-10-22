@@ -84,6 +84,11 @@ Conditions:
   IsProduction: !Equals [!Ref Environment, production]
   IsNotProduction: !Not [!Condition IsProduction]
   UseGlobalLogoutTxmaQueue: !Equals [staging, !Ref Environment]
+  UseAuthStub:
+    !Equals [
+      !FindInMap [EnvironmentConfiguration, !Ref Environment, authStubEnabled],
+      true,
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -116,6 +121,7 @@ Mappings:
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
       ipvStubDomain: "ipvstub.oidc.authdev3.dev.account.gov.uk"
+      authStubEnabled: false
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -2746,7 +2752,24 @@ Resources:
                   !Ref Environment,
                   aisUriSecretId,
                 ]
-          AUTHENTICATION_BACKEND_URI: "https://authstub.oidc.sandpit.account.gov.uk/"
+          AUTHENTICATION_BACKEND_URI: !If
+            - UseAuthStub
+            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
+              - AuthExternalApiId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authExternalApiId,
+                  ]
+                VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           CREDENTIAL_STORE_URI: !Sub
@@ -2862,7 +2885,17 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          AUTH_FRONTEND_BASE_URL: "https://authstub.oidc.sandpit.account.gov.uk/"
+          AUTH_FRONTEND_BASE_URL: !If
+            - UseAuthStub
+            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://signin.${ServiceDomain}/
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
             !If [AisAbortOnError, true, false]
           STORAGE_TOKEN_SIGNING_KEY_ALIAS:
@@ -3484,7 +3517,17 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          AUTH_FRONTEND_BASE_URL: "https://authstub.oidc.sandpit.account.gov.uk/"
+          AUTH_FRONTEND_BASE_URL: !If
+            - UseAuthStub
+            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://signin.${ServiceDomain}/
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -3516,6 +3559,10 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
+          ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM: !If
+            - UseAuthStub
+            - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
+            - !Sub ${Environment}-auth-public-encryption-key
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
@@ -5969,7 +6016,10 @@ Resources:
               - ssm:GetParameter
               - ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
+              - !If
+                - UseAuthStub
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/orch-stubs/dev-auth-stub-auth-public-encryption-key
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
