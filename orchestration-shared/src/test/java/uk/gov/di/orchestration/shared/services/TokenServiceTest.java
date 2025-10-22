@@ -91,6 +91,8 @@ class TokenServiceTest {
             mock(RedisConnectionService.class);
     private final OrchAccessTokenService orchAccessTokenService =
             mock(OrchAccessTokenService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final TokenService tokenService =
             new TokenService(
@@ -98,6 +100,7 @@ class TokenServiceTest {
                     redisConnectionService,
                     kmsConnectionService,
                     orchAccessTokenService,
+                    orchRefreshTokenService,
                     oidcApi);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
@@ -180,10 +183,12 @@ class TokenServiceTest {
         assertSuccessfulTokenResponse(tokenResponse);
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
+        String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
         RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                new RefreshTokenStore(refreshTokenValue, INTERNAL_PAIRWISE_SUBJECT.getValue());
+        var refreshToken = SignedJWT.parse(refreshTokenValue);
+        var jti = refreshToken.getJWTClaimsSet().getJWTID();
+
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -191,9 +196,13 @@ class TokenServiceTest {
                         eq(objectMapper.writeValueAsString(refreshTokenStore)),
                         eq(300L));
 
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
-        var jti = refreshToken.getJWTClaimsSet().getJWTID();
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        eq(jti),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        eq(refreshTokenValue),
+                        eq(AUTH_CODE));
+
         assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
         assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
@@ -270,10 +279,11 @@ class TokenServiceTest {
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
 
+        String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
+        var refreshToken = SignedJWT.parse(refreshTokenValue);
+        var jti = refreshToken.getJWTClaimsSet().getJWTID();
         RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(
-                        tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                new RefreshTokenStore(refreshTokenValue, INTERNAL_PAIRWISE_SUBJECT.getValue());
 
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
@@ -282,9 +292,13 @@ class TokenServiceTest {
                         eq(objectMapper.writeValueAsString(refreshTokenStore)),
                         eq(300L));
 
-        var refreshToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue());
-        var jti = refreshToken.getJWTClaimsSet().getJWTID();
+        verify(orchRefreshTokenService)
+                .saveRefreshToken(
+                        eq(jti),
+                        eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
+                        eq(refreshTokenValue),
+                        eq(AUTH_CODE));
+
         assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
         assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
@@ -595,6 +609,14 @@ class TokenServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
+
+        verify(orchAccessTokenService)
+                .saveAccessToken(
+                        CLIENT_ID + "." + PUBLIC_SUBJECT.getValue(),
+                        AUTH_CODE,
+                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
 
         var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
 

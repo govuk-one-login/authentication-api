@@ -72,6 +72,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
 import java.net.URI;
@@ -124,6 +125,8 @@ class AuthenticationCallbackHandlerTest {
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
     private final OrchAccessTokenService orchAccessTokenService =
             mock(OrchAccessTokenService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -248,6 +251,7 @@ class AuthenticationCallbackHandlerTest {
                         authorizationService,
                         tokenService,
                         orchAccessTokenService,
+                        orchRefreshTokenService,
                         orchSessionService,
                         orchClientSessionService,
                         auditService,

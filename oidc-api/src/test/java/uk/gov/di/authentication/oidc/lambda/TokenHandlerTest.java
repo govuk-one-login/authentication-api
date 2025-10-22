@@ -66,6 +66,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
@@ -164,6 +165,8 @@ public class TokenHandlerTest {
             mock(TokenClientAuthValidator.class);
     private final OrchAccessTokenService orchAccessTokenService =
             mock(OrchAccessTokenService.class);
+    private final OrchRefreshTokenService orchRefreshTokenService =
+            mock(OrchRefreshTokenService.class);
     private final OrchAuthCodeService orchAuthCodeService = mock(OrchAuthCodeService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
@@ -186,6 +189,7 @@ public class TokenHandlerTest {
                         tokenService,
                         configurationService,
                         orchAccessTokenService,
+                        orchRefreshTokenService,
                         orchAuthCodeService,
                         orchClientSessionService,
                         tokenValidationService,
@@ -455,7 +459,7 @@ public class TokenHandlerTest {
                         eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.ES256),
                         eq("placeholder-for-auth-code")))
-                // TO DO: replace placeholder with the authCode from refresh token (ATO-2015)
+                // TO DO: replace placeholder with the authCode from refresh token (ATO-2016)
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -520,7 +524,7 @@ public class TokenHandlerTest {
                         eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.RS256),
                         eq("placeholder-for-auth-code")))
-                // TO DO: replace placeholder with the authCode from refresh token (ATO-2015)
+                // TO DO: replace placeholder with the authCode from refresh token (ATO-2016)
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
