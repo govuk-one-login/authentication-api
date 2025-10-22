@@ -481,12 +481,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         configurationService.getMaxPasswordRetries()));
 
         if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            ReauthFailureReasons reauthFailureReason =
+                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                            reauthLockedOut.forbiddenReason());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext.withSubjectId(authSession.getInternalCommonSubjectId()),
                     ReauthMetadataBuilder.builder(userPermissionContext.rpPairwiseId())
                             .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
-                            .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
+                            .withFailureReason(reauthFailureReason)
                             .build());
             cloudwatchMetricsService.incrementCounter(
                     CloudwatchMetrics.REAUTH_FAILED.getValue(),
@@ -494,7 +497,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             ENVIRONMENT.getValue(),
                             configurationService.getEnvironment(),
                             FAILURE_REASON.getValue(),
-                            ReauthFailureReasons.INCORRECT_PASSWORD.getValue()));
+                            reauthFailureReason.getValue()));
 
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
