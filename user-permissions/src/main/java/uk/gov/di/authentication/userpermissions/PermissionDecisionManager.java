@@ -245,19 +245,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 return Result.failure(DecisionError.INVALID_USER_CONTEXT);
             }
 
-            var reauthCounts =
-                    userPermissionContext.internalSubjectId() != null
-                            ? getAuthenticationAttemptsService()
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            userPermissionContext.internalSubjectId(),
-                                            userPermissionContext.rpPairwiseId(),
-                                            JourneyType.REAUTHENTICATION)
-                            : getAuthenticationAttemptsService()
-                                    .getCountsByJourney(
-                                            userPermissionContext.rpPairwiseId(),
-                                            JourneyType.REAUTHENTICATION);
-
-            return checkForReauthLockout(reauthCounts, true);
+            return this.checkForAnyReauthLockout(
+                    userPermissionContext.internalSubjectId(),
+                    userPermissionContext.rpPairwiseId(),
+                    null,
+                    true);
         }
         return Result.success(new Decision.Permitted(0));
     }
