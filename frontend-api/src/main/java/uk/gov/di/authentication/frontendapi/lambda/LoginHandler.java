@@ -382,7 +382,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 MFAMethodsService.getMfaMethodOrDefaultMfaMethod(retrievedMfaMethods, null, null);
 
         if (userMfaDetail.isMfaRequired()) {
-            if (defaultMfaMethod.isPresent() && userMfaDetail.mfaMethodVerified()) {
+            if (defaultMfaMethod.isPresent()) {
                 Optional<ErrorResponse> codeBlocks =
                         checkMfaCodeBlocks(journeyType, userPermissionContext);
 
@@ -409,44 +409,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
-    }
-
-    private Optional<ErrorResponse> checkMfaCodeBlocks(
-            JourneyType journeyType, UserPermissionContext userPermissionContext) {
-        var canSendSmsOtpResult =
-                permissionDecisionManager.canSendSmsOtpNotification(
-                        journeyType, userPermissionContext);
-        if (canSendSmsOtpResult.isFailure()) {
-            DecisionError failure = canSendSmsOtpResult.getFailure();
-            LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
-            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
-        }
-
-        Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
-        if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
-            LOG.info("User is blocked from requesting any OTP codes");
-            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
-        } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
-            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
-        }
-
-        var canVerifyMfaOtpResult =
-                permissionDecisionManager.canVerifyMfaOtp(journeyType, userPermissionContext);
-        if (canVerifyMfaOtpResult.isFailure()) {
-            DecisionError failure = canVerifyMfaOtpResult.getFailure();
-            LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
-            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
-        }
-
-        Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
-        if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
-            LOG.info("User is blocked from entering any OTP codes");
-            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
-        } else if (!(canVerifyMfaOtpDecision instanceof Decision.Permitted)) {
-            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
-        }
-
-        return Optional.empty();
     }
 
     private APIGatewayProxyResponseEvent handleInvalidCredentials(
@@ -523,6 +485,44 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         return generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_LOGIN_CREDS);
+    }
+
+    private Optional<ErrorResponse> checkMfaCodeBlocks(
+            JourneyType journeyType, UserPermissionContext userPermissionContext) {
+        var canSendSmsOtpResult =
+                permissionDecisionManager.canSendSmsOtpNotification(
+                        journeyType, userPermissionContext);
+        if (canSendSmsOtpResult.isFailure()) {
+            DecisionError failure = canSendSmsOtpResult.getFailure();
+            LOG.error("Failure to get canSendSmsOtpNotification decision due to {}", failure);
+            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
+        }
+
+        Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
+        if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
+            LOG.info("User is blocked from requesting any OTP codes");
+            return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
+        } else if (!(canSendSmsOtpDecision instanceof Decision.Permitted)) {
+            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+        }
+
+        var canVerifyMfaOtpResult =
+                permissionDecisionManager.canVerifyMfaOtp(journeyType, userPermissionContext);
+        if (canVerifyMfaOtpResult.isFailure()) {
+            DecisionError failure = canVerifyMfaOtpResult.getFailure();
+            LOG.error("Failure to get canVerifyMfaOtp decision due to {}", failure);
+            return Optional.of(DecisionErrorAntiCorruption.toErrorResponse(failure));
+        }
+
+        Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
+        if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
+            LOG.info("User is blocked from entering any OTP codes");
+            return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
+        } else if (!(canVerifyMfaOtpDecision instanceof Decision.Permitted)) {
+            return Optional.of(ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
+        }
+
+        return Optional.empty();
     }
 
     private String getInternalCommonSubjectId(UserProfile userProfile) {
