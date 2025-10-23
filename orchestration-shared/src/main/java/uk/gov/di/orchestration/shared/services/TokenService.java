@@ -61,6 +61,7 @@ public class TokenService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
@@ -76,11 +77,13 @@ public class TokenService {
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OidcAPI oidcApi) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.oidcApi = oidcApi;
     }
 
@@ -140,7 +143,8 @@ public class TokenService {
                                             scopesForToken,
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
-                                            signingAlgorithm));
+                                            signingAlgorithm,
+                                            authCode));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -170,7 +174,8 @@ public class TokenService {
                         scopes,
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
-                        signingAlgorithm);
+                        signingAlgorithm,
+                        authCode);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -373,7 +378,8 @@ public class TokenService {
             List<String> scopes,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String authCode) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -402,6 +408,14 @@ public class TokenService {
                     configService.getSessionExpiry());
         } catch (JsonException e) {
             throw new RuntimeException("Error serializing refresh token store", e);
+        }
+
+        try {
+            orchRefreshTokenService.saveRefreshToken(
+                    jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);
+        } catch (Exception e) {
+            LOG.warn("Unable to save refresh token to DynamoDB");
+            // Not throwing exceptions here until we transfer reads from redis to dynamo
         }
 
         return refreshToken;

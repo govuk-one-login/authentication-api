@@ -45,6 +45,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
@@ -89,6 +90,7 @@ public class TokenHandler
     private final OrchAuthCodeService orchAuthCodeService;
     private final OrchClientSessionService orchClientSessionService;
     private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
@@ -102,6 +104,7 @@ public class TokenHandler
             TokenService tokenService,
             ConfigurationService configurationService,
             OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OrchAuthCodeService orchAuthCodeService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
@@ -114,6 +117,7 @@ public class TokenHandler
         this.orchAuthCodeService = orchAuthCodeService;
         this.orchClientSessionService = orchClientSessionService;
         this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
@@ -128,12 +132,14 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.tokenService =
                 new TokenService(
                         configurationService,
                         this.redisConnectionService,
                         kms,
                         orchAccessTokenService,
+                        orchRefreshTokenService,
                         oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -155,12 +161,14 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.redisConnectionService = redis;
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.tokenService =
                 new TokenService(
                         configurationService,
                         this.redisConnectionService,
                         kms,
                         orchAccessTokenService,
+                        orchRefreshTokenService,
                         oidcApi);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
@@ -399,7 +407,7 @@ public class TokenHandler
         }
 
         String placeholderForAuthCode = "placeholder-for-auth-code";
-        // TO DO: auth code to be extracted from refresh token when made available in ATO-2015
+        // TO DO: auth code to be extracted from refresh token when made available in ATO-2016
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(

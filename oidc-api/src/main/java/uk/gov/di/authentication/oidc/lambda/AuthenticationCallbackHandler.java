@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
@@ -105,6 +106,7 @@ public class AuthenticationCallbackHandler
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
     private final OrchAccessTokenService orchAccessTokenService;
+    private final OrchRefreshTokenService orchRefreshTokenService;
     private final OrchSessionService orchSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final AuditService auditService;
@@ -132,6 +134,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -153,6 +156,7 @@ public class AuthenticationCallbackHandler
                                 redisConnectionService,
                                 kmsConnectionService,
                                 orchAccessTokenService,
+                                orchRefreshTokenService,
                                 oidcApi));
         this.accountInterventionService =
                 new AccountInterventionService(
@@ -174,6 +178,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
+        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.orchSessionService = new OrchSessionService(configurationService);
         this.orchClientSessionService = new OrchClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -193,7 +198,8 @@ public class AuthenticationCallbackHandler
                                 configurationService,
                                 redisConnectionService,
                                 kmsConnectionService,
-                                new OrchAccessTokenService(configurationService),
+                                orchAccessTokenService,
+                                orchRefreshTokenService,
                                 new OidcAPI(configurationService)));
         this.accountInterventionService =
                 new AccountInterventionService(
@@ -209,6 +215,7 @@ public class AuthenticationCallbackHandler
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
             OrchAccessTokenService orchAccessTokenService,
+            OrchRefreshTokenService orchRefreshTokenService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
             AuditService auditService,
@@ -225,6 +232,7 @@ public class AuthenticationCallbackHandler
         this.authorisationService = responseService;
         this.tokenService = tokenService;
         this.orchAccessTokenService = orchAccessTokenService;
+        this.orchRefreshTokenService = orchRefreshTokenService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.auditService = auditService;
