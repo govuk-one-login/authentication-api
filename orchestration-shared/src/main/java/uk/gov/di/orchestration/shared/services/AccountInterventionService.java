@@ -197,7 +197,7 @@ public class AccountInterventionService {
 
         } catch (IOException | InterruptedException e) {
             logAndThrowAccountInterventionException(
-                    "Failed to send request to Account Intervention Service.");
+                    "Failed to send request to Account Intervention Service.", e);
         }
         var durationMs = (System.nanoTime() - start) / 1_000_000L;
         if (httpResponse != null) {
