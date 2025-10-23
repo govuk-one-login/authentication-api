@@ -9,5 +9,5 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # SMS Quota Monitor
 sms_quota_monitor_schedule_rate   = "rate(10 minutes)"
-domestic_sms_quota_threshold      = "300000"
+domestic_sms_quota_threshold      = "375000"
 international_sms_quota_threshold = "9000"
