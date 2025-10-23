@@ -131,8 +131,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return this.checkForAnyReauthLockout(
                     userPermissionContext.internalSubjectId(),
                     userPermissionContext.rpPairwiseId(),
-                    CountType.ENTER_PASSWORD,
-                    true);
+                    CountType.ENTER_PASSWORD);
         }
 
         if (userPermissionContext.emailAddress() == null) {
@@ -248,8 +247,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return this.checkForAnyReauthLockout(
                     userPermissionContext.internalSubjectId(),
                     userPermissionContext.rpPairwiseId(),
-                    null,
-                    true);
+                    null);
         }
         return Result.success(new Decision.Permitted(0));
     }
@@ -271,10 +269,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     private Result<DecisionError, Decision> checkForAnyReauthLockout(
-            String internalSubjectId,
-            String rpPairwiseId,
-            CountType primaryCountCheck,
-            boolean returnReauthLockedOut) {
+            String internalSubjectId, String rpPairwiseId, CountType primaryCountCheck) {
 
         var reauthCounts =
                 getAuthenticationAttemptsService()
@@ -290,10 +285,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
             ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
 
             return Result.success(
-                    createReauthDecision(
-                            returnReauthLockedOut,
+                    new Decision.ReauthLockedOut(
                             reason,
                             reauthCounts.getOrDefault(exceededType, 0),
+                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                            false,
                             reauthCounts,
                             exceedingCounts));
         }
@@ -303,7 +299,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     private Result<DecisionError, Decision> checkForReauthLockout(
-            java.util.Map<CountType, Integer> reauthCounts, boolean returnReauthLockedOut) {
+            java.util.Map<CountType, Integer> reauthCounts) {
 
         var exceedingCounts =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
@@ -314,10 +310,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
             ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
 
             return Result.success(
-                    createReauthDecision(
-                            returnReauthLockedOut,
+                    new Decision.ReauthLockedOut(
                             reason,
                             reauthCounts.getOrDefault(exceededType, 0),
+                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
+                            false,
                             reauthCounts,
                             exceedingCounts));
         }
@@ -363,29 +360,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
             case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
                     .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
         };
-    }
-
-    private Decision createReauthDecision(
-            boolean returnReauthLockedOut,
-            ForbiddenReason reason,
-            int attemptCount,
-            java.util.Map<CountType, Integer> reauthCounts,
-            java.util.List<CountType> exceedingCounts) {
-        if (returnReauthLockedOut) {
-            return new Decision.ReauthLockedOut(
-                    reason,
-                    attemptCount,
-                    Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                    false,
-                    reauthCounts,
-                    exceedingCounts);
-        } else {
-            return new Decision.TemporarilyLockedOut(
-                    reason,
-                    attemptCount,
-                    Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                    false);
-        }
     }
 
     private Decision.TemporarilyLockedOut createTemporarilyLockedOut(
