@@ -335,32 +335,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     private Result<DecisionError, Decision> checkForPasswordResetLockout(String emailAddress) {
         try {
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-
-            // Check for email OTP verification blocks first
-            var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-            if (getCodeStorageService()
-                    .isBlockedForEmail(emailAddress, codeAttemptsBlockedKeyPrefix)) {
-                return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
-                                configurationService.getCodeMaxRetries(),
-                                false));
-            }
-
-            // Check for email OTP request blocks
-            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-            if (getCodeStorageService()
-                    .isBlockedForEmail(emailAddress, codeRequestBlockedKeyPrefix)) {
-                return Result.success(
-                        createTemporarilyLockedOut(
-                                ForbiddenReason.BLOCKED_FOR_PW_RESET_REQUEST,
-                                configurationService.getCodeMaxRetries(),
-                                false));
-            }
-
             // Check for password blocks
             boolean isPasswordBlocked =
                     getCodeStorageService()
