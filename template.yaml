@@ -8006,7 +8006,7 @@ Resources:
       OKActions:
         - !Ref PagerDutyEvents
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} IPV handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmDescription: !Sub "50 or more errors have occurred in the ${Environment} IPV handback lambdas.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5761204264/Runbook+IPV+handback+alarm"
       AlarmName: !Sub ${Environment}-pagerduty-ipv-handback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       Threshold: 50
