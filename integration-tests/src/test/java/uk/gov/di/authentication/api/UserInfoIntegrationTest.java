@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAccessTokenExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
@@ -101,6 +102,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
+
+    @RegisterExtension
+    protected static final OrchAccessTokenExtension orchAccessTokenExtension =
+            new OrchAccessTokenExtension();
 
     private static final IntegrationTestConfigurationService configuration =
             new IntegrationTestConfigurationService(
