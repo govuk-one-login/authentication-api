@@ -17,7 +17,7 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          DOMESTIC_SMS_QUOTA_THRESHOLD: "300000"
+          DOMESTIC_SMS_QUOTA_THRESHOLD: "375000"
           INTERNATIONAL_SMS_QUOTA_THRESHOLD: "9000"
       LoggingConfig:
         LogGroup: !Ref SmsQuotaMonitorFunctionLogGroup
