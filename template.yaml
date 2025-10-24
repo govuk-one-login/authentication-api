@@ -151,6 +151,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
       ipvStubDomain: "ipvstub.oidc.build.account.gov.uk"
+      authStubEnabled: false
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -181,6 +182,7 @@ Mappings:
       aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
       globalLogoutQueueArn: arn:aws:sqs:eu-west-2:178023842775:self-staging-EC-SQS-Output-Queue-orchGlobalLogout
       globalLogoutQueueKmsKeyArn: arn:aws:kms:eu-west-2:178023842775:key/7cf407f9-958e-4039-a095-c46ba0a08d82
+      authStubEnabled: false
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -209,6 +211,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
+      authStubEnabled: false
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
@@ -237,6 +240,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
+      authStubEnabled: false
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
