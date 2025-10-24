@@ -298,30 +298,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
         return Result.success(new Decision.Permitted(count));
     }
 
-    private Result<DecisionError, Decision> checkForReauthLockout(
-            java.util.Map<CountType, Integer> reauthCounts) {
-
-        var exceedingCounts =
-                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                        reauthCounts, configurationService);
-
-        if (!exceedingCounts.isEmpty()) {
-            CountType exceededType = exceedingCounts.get(0);
-            ForbiddenReason reason = mapCountTypeToForbiddenReason(exceededType);
-
-            return Result.success(
-                    new Decision.ReauthLockedOut(
-                            reason,
-                            reauthCounts.getOrDefault(exceededType, 0),
-                            Instant.now().plusSeconds(configurationService.getLockoutDuration()),
-                            false,
-                            reauthCounts,
-                            exceedingCounts));
-        }
-
-        return Result.success(new Decision.Permitted(0));
-    }
-
     private Result<DecisionError, Decision> checkForPasswordResetLockout(String emailAddress) {
         try {
             // Check for password blocks
