@@ -53,7 +53,7 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       KmsDataKeyReusePeriodSeconds: 300
       KmsMasterKeyId: alias/aws/sqs
-      MessageRetentionPeriod: 432000 # 5 days
+      MessageRetentionPeriod: 21600 # 6 hours
       Tags:
         - Key: Service
           Value: account-management-notification
