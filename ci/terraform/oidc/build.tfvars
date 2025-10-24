@@ -16,11 +16,13 @@ ipv_authorisation_uri = "https://ipvstub.signin.build.account.gov.uk/authorize/"
 ipv_auth_authorize_callback_uri = "https://signin.build.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
 ipv_audience                    = "https://ipvstub.signin.build.account.gov.uk"
+ipv_jwks_url                    = "https://ipvstub.signin.build.account.gov.uk/.well-known/jwks.json"
+internal_sector_uri             = "https://identity.build.account.gov.uk"
 
-internal_sector_uri  = "https://identity.build.account.gov.uk"
-test_clients_enabled = true
-ipv_api_enabled      = true
-call_ticf_cri        = true
+test_clients_enabled  = true
+ipv_api_enabled       = true
+call_ticf_cri         = true
+ipv_jwks_call_enabled = true
 
 ## lockout config
 lockout_duration                          = 60
