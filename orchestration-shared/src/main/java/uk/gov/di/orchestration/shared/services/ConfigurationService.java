@@ -231,7 +231,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-        var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
+        var paramName = System.getenv("ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM");
         try {
             var request =
                     GetParameterRequest.builder().withDecryption(true).name(paramName).build();
