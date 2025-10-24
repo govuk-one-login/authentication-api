@@ -47,7 +47,7 @@ junitPlatform = "org.junit.platform:junit-platform-launcher:1.13.4"
 jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
 jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
-lettuceCore = "io.lettuce:lettuce-core:6.8.1.RELEASE"
+lettuceCore = "io.lettuce:lettuce-core:7.0.0.RELEASE"
 libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.15"
 mockitoCore = "org.mockito:mockito-core:5.20.0"
 nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.4.2"
