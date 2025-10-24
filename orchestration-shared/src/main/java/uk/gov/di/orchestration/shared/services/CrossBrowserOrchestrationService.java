@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserItem;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.util.Map;
@@ -89,9 +88,7 @@ public class CrossBrowserOrchestrationService {
     }
 
     public Optional<CrossBrowserEntity> generateEntityForMismatchInClientSessionId(
-            Map<String, String> queryStringParameters,
-            String clientSessionIdFromCookie,
-            OrchSessionItem orchSession)
+            Map<String, String> queryStringParameters, String clientSessionIdFromCookie)
             throws NoSessionException {
         if (!isStatePresentInQueryParams(queryStringParameters)) {
             LOG.warn("No state value in query params");
@@ -131,12 +128,6 @@ public class CrossBrowserOrchestrationService {
             attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(orchClientSession));
         } catch (Exception e) {
             LOG.warn("Failed to attach client details to logs");
-        }
-
-        if (!isAccessDeniedErrorPresent(queryStringParameters)) {
-            LOG.info(
-                    "Client session may be recoverable. Client session linked to active session: {}",
-                    orchSession.getClientSessions().contains(clientSessionIdFromState));
         }
 
         var errorObject =
