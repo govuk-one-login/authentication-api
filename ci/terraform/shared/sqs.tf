@@ -68,6 +68,6 @@ resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm
   dimensions = {
     QueueName = aws_sqs_queue.pending_email_check_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/4164649233/BAU+Daytime+Support+Hygiene+and+Optimisation+Rota#SUP-7%3A-Resolve-DLQ-messages"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}. Runbook: https://govukverify.atlassian.net/wiki/spaces/LO/pages/5752979509/Runbook+Handling+Email+Blocks"
   alarm_actions     = [aws_sns_topic.slack_events.arn]
 }
