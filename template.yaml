@@ -7243,6 +7243,7 @@ Resources:
               - dynamodb:Query
             Resource:
               - !Sub ${AccessTokenTable.Arn}/index/*
+              - !GetAtt AccessTokenTable.Arn
           - Sid: AllowAccessTokenTableDecryption
             Effect: Allow
             Action:
