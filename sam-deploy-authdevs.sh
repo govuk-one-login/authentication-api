@@ -25,6 +25,7 @@ Usage:
     $0 [options]
 
 Options:
+    -a  --AccMgmt               deploy the Account Management APIs
     -b, --build                 run gradle and buildZip tasks
     --no-build                  do not run gradle and buildZip tasks
     -p, --prompt                prompt for confirmation before sam deploy
@@ -32,6 +33,7 @@ Options:
     -h, --help                  display this help message
     -x, --authapi               deploy the Auth Int & ext API
     -s  --Stubsapi              deploy the Stubs API
+
 
 Dependencies:
     AWS CLI, AWS SAM, rain
@@ -53,10 +55,12 @@ function sso_login() {
   fi
 }
 
+O_DEPLOYAM=0       # -a, --accmgmt
 O_BUILD=0          # -b, --build
 O_CLEAN=""         # -c, --clean
 O_DEPLOYAUTHAPI=0  # -x, --auth-internal-external-api
 O_DEPLOYSTUBSAPI=0 # -s, --stubs-api
+AMAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/am-template.yaml}"
 AUTHAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/auth-template.yaml}"
 STUBSAPI_TEMPLATE_FILE="${TEMPLATE_FILE:-${DIR}/stubs-template.yaml}"
 SAMCONFIG_FILE=${SAMCONFIG_FILE:-${DIR}/scripts/dev-samconfig.toml}
@@ -64,6 +68,7 @@ CONFIRM_CHANGESET_OPTION="--no-confirm-changeset"
 
 while [[ $# -gt 0 ]]; do
   case "${1}" in
+    -a | --accmgmt) O_DEPLOYAM=1 ;;
     -b | --build) O_BUILD=1 ;;
     --no-build) O_BUILD=0 ;;
     -p | --prompt) CONFIRM_CHANGESET_OPTION="--confirm-changeset" ;;
@@ -122,6 +127,40 @@ if [[ ${O_DEPLOYAUTHAPI} -eq 1 ]]; then
   sam deploy \
     --no-fail-on-empty-changeset \
     --config-env "${ENVIRONMENT}" \
+    --config-file "${SAMCONFIG_FILE}" \
+    ${CONFIRM_CHANGESET_OPTION}
+
+  echo "Deployment complete!"
+fi
+
+if [[ ${O_DEPLOYAM} -eq 1 ]]; then
+  sso_login
+
+  if [[ ${ENVIRONMENT} == "dev" ]]; then
+    SAM_CONFIG_ENV="authdevam"
+  elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+    SAM_CONFIG_ENV="authdev1am"
+  elif [[ ${ENVIRONMENT} == "authdev2" ]]; then
+    SAM_CONFIG_ENV="authdev2am"
+  elif [[ ${ENVIRONMENT} == "authdev3" ]]; then
+    SAM_CONFIG_ENV="authdev3am"
+  else
+    SAM_CONFIG_ENV="${ENVIRONMENT}"
+  fi
+
+  echo "Merging all ${DIR}/ci/cloudformation/account-management templates into a single ${AMAPI_TEMPLATE_FILE}"
+  # shellcheck disable=SC2046
+  rain merge $(find "${DIR}/ci/cloudformation/account-management" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AMAPI_TEMPLATE_FILE}"
+
+  echo "Lint template file"
+  sam validate --lint --template-file="${AMAPI_TEMPLATE_FILE}"
+
+  echo "Running sam build on template file"
+  sam build --parallel --template-file="${AMAPI_TEMPLATE_FILE}"
+
+  sam deploy \
+    --no-fail-on-empty-changeset \
+    --config-env "${SAM_CONFIG_ENV}" \
     --config-file "${SAMCONFIG_FILE}" \
     ${CONFIRM_CHANGESET_OPTION}
 

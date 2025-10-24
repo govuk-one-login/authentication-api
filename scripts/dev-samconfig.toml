@@ -43,6 +43,49 @@ parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambd
 image_repositories = []
 signing_profiles = "SmsQuotaMonitorFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountInterventionsFunction=\"SigningProfile_bdzyxbYzrSD8\" AccountRecoveryFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthTokenFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthUserInfoFunction=\"SigningProfile_bdzyxbYzrSD8\" CheckEmailFraudBlockFunction=\"SigningProfile_bdzyxbYzrSD8\" CheckReAuthUserFunction=\"SigningProfile_bdzyxbYzrSD8\" EmailNotificationQueueFunction=\"SigningProfile_bdzyxbYzrSD8\" IDReverificationStateFunction=\"SigningProfile_bdzyxbYzrSD8\" LoginFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetAuthorizeFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetJarJwkFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaResetStorageTokenJwkFunction=\"SigningProfile_bdzyxbYzrSD8\" OrchAuthCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" ResetPasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" ResetPasswordRequestFunction=\"SigningProfile_bdzyxbYzrSD8\" ReverificationResultFunction=\"SigningProfile_bdzyxbYzrSD8\" SecretString-JAVA_LAYER}}-cd3ae82ef4=\"SigningProfile_bdzyxbYzrSD8\" SendNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" SignUpFunction=\"SigningProfile_bdzyxbYzrSD8\" StartFunction=\"SigningProfile_bdzyxbYzrSD8\" TicfCriFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateProfileFunction=\"SigningProfile_bdzyxbYzrSD8\" UserExistsFunction=\"SigningProfile_bdzyxbYzrSD8\" VerifyCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" VerifyMfaCodeFunction=\"SigningProfile_bdzyxbYzrSD8\" ProcessingIdentityFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
+[devam.deploy.parameters]
+stack_name = "dev-am-api"
+resolve_s3 = false
+s3_bucket = "dev-stubs-api-pipeline-githubartifactsourcebucket-b7dnxunc9qmu"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/dev-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-062fed07fc11\" Environment=\"dev\" SubEnvironment=\"none\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthenticateFunction=\"SigningProfile_bdzyxbYzrSD8\" SendOtpNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateEmailFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePhoneNumberFunction=\"SigningProfile_bdzyxbYzrSD8\" BulkRemoveAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" ManuallyDeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" DeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthorizerFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev1am.deploy.parameters]
+stack_name = "authdev1-am-api"
+resolve_s3 = false
+s3_bucket = "authdev1-account-manageme-githubartifactsourcebuck-c4guwyroibhk"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev1\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev1-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-0658cbc8c2d9\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthenticateFunction=\"SigningProfile_bdzyxbYzrSD8\" SendOtpNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateEmailFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePhoneNumberFunction=\"SigningProfile_bdzyxbYzrSD8\" BulkRemoveAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" ManuallyDeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" DeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthorizerFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev2am.deploy.parameters]
+stack_name = "authdev2-am-api"
+resolve_s3 = false
+s3_bucket = "authdev2-account-manageme-githubartifactsourcebuck-tdydpnyxbc3t"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev2\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev2-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-068f2dede043\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthenticateFunction=\"SigningProfile_bdzyxbYzrSD8\" SendOtpNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateEmailFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePhoneNumberFunction=\"SigningProfile_bdzyxbYzrSD8\" BulkRemoveAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" ManuallyDeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" DeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthorizerFunction=\"SigningProfile_bdzyxbYzrSD8\""
+
+[authdev3am.deploy.parameters]
+stack_name = "authdev3-am-api"
+resolve_s3 = false
+s3_bucket = "authdev3-account-manageme-githubartifactsourcebuck-ol2pyqyfnacd"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_NAMED_IAM"
+parameter_overrides = "VpcStackName=\"vpc\" Environment=\"dev\" SubEnvironment=\"authdev3\" CodeSigningConfigArn=\"arn:aws:lambda:eu-west-2:975050272416:code-signing-config:csc-006e0d5d35d5a5545\" PermissionsBoundary=\"arn:aws:iam::975050272416:policy/authdev3-stubs-api-pipeline-AppProgrammaticPermissionsBoundary-0a6d8a2e8df1\" LambdaDeploymentPreference=\"AllAtOnce\" LoggingSubscriptionEndpointArn=\"arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2\""
+image_repositories = []
+signing_profiles = "AuthenticateFunction=\"SigningProfile_bdzyxbYzrSD8\" SendOtpNotificationFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodUpdateFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodDeleteFunction=\"SigningProfile_bdzyxbYzrSD8\" MfaMethodRetrieveFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdateEmailFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePasswordFunction=\"SigningProfile_bdzyxbYzrSD8\" UpdatePhoneNumberFunction=\"SigningProfile_bdzyxbYzrSD8\" BulkRemoveAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" ManuallyDeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" DeleteAccountFunction=\"SigningProfile_bdzyxbYzrSD8\" AuthorizerFunction=\"SigningProfile_bdzyxbYzrSD8\""
 
 [devstubs.deploy.parameters]
 stack_name = "dev-auth-stubs-api"
