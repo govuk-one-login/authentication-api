@@ -171,7 +171,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: bfd50b92-6ea2-40c7-9125-f7e27ca9b896
-      authStubEnabled: false
+      authStubEnabled: true
       syncWaitForSpotTimeout: 20000
       oldIdTokenECPublicKeys: '[{
         "kty": "EC",
