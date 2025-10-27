@@ -431,7 +431,7 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0704b783d794cea52
