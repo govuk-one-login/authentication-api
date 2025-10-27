@@ -5161,19 +5161,6 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: StorageTokenJwkFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - StorageTokenJwkFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
