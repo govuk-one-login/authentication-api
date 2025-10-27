@@ -251,31 +251,21 @@ public class IPVCallbackHandler
 
             if (errorObject.isPresent()) {
                 var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
-                AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                new AuditContext(
-                                                        clientSessionId,
-                                                        sessionId,
-                                                        clientId,
-                                                        orchSession.getInternalCommonSubjectId(),
-                                                        AuditService.UNKNOWN,
-                                                        ipAddress,
-                                                        AuditService.UNKNOWN,
-                                                        persistentId)));
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (intervention.getBlocked() || intervention.getSuspended())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            destroySessionRequest,
-                            orchSession.getInternalCommonSubjectId(),
-                            input,
-                            clientId,
-                            intervention);
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                sessionId,
+                                clientId,
+                                orchSession.getInternalCommonSubjectId(),
+                                AuditService.UNKNOWN,
+                                ipAddress,
+                                AuditService.UNKNOWN,
+                                persistentId);
+                var logoutOptional =
+                        performAccountIntervention(input, clientId, auditContext, orchSession);
+                if (logoutOptional.isPresent()) {
+                    return logoutOptional.get();
                 }
-
                 if (errorObject.get().isSessionInvalidation()) {
                     return logoutService.handleSessionInvalidationLogout(
                             destroySessionRequest,
@@ -461,10 +451,22 @@ public class IPVCallbackHandler
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
                                     clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
-            var redirectURI = frontend.ipvCallbackURI();
-            LOG.info("Successful IPV callback. Redirecting to frontend");
+            boolean featureFlag = false;
+            String redirectUriString = "";
+            if (featureFlag) {
+                // Wait for processing identity status (ATO-2072)
+                //      If errored/failed
+                //          RedirectService.redirectToFrontendErrorPage()
+                //      If successful
+                //          Perform AIS intervention (using performAccountIntervention)
+                //          calculate redirect URL (ATO-2073)
+                //          and redirect as below;
+            } else {
+                LOG.info("Successful IPV callback. Redirecting to frontend");
+                redirectUriString = frontend.ipvCallbackURI().toString();
+            }
             return generateApiGatewayProxyResponse(
-                    302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
+                    302, "", Map.of(ResponseHeaders.LOCATION, redirectUriString), null);
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
@@ -523,5 +525,29 @@ public class IPVCallbackHandler
                                 .getUserInfoClaimsRequest()
                                 .get(RETURN_CODE.getValue())
                         != null;
+    }
+
+    private Optional<APIGatewayProxyResponseEvent> performAccountIntervention(
+            APIGatewayProxyRequestEvent input,
+            String clientId,
+            AuditContext auditContext,
+            OrchSessionItem orchSession) {
+        AccountIntervention intervention =
+                segmentedFunctionCall(
+                        "AIS: getAccountIntervention",
+                        () ->
+                                this.accountInterventionService.getAccountIntervention(
+                                        orchSession.getInternalCommonSubjectId(), auditContext));
+        if (configurationService.isAccountInterventionServiceActionEnabled()
+                && (intervention.getBlocked() || intervention.getSuspended())) {
+            return Optional.of(
+                    logoutService.handleAccountInterventionLogout(
+                            new DestroySessionsRequest(orchSession.getSessionId(), orchSession),
+                            orchSession.getInternalCommonSubjectId(),
+                            input,
+                            clientId,
+                            intervention));
+        }
+        return Optional.empty();
     }
 }

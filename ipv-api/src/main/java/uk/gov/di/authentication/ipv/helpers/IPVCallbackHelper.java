@@ -158,15 +158,36 @@ public class IPVCallbackHelper {
             String subjectId) {
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         var clientSessionId = clientSession.getClientSessionId();
-        var clientName = clientSession.getClientName();
         var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
-        var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
         segmentedFunctionCall(
                 "saveIdentityClaims",
                 () ->
                         saveIdentityClaimsToDynamo(
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+        return generateAuthenticationResponse(
+                authRequest,
+                orchSession,
+                clientSession,
+                ipAddress,
+                persistentSessionId,
+                clientId,
+                email,
+                subjectId);
+    }
 
+    public AuthenticationSuccessResponse generateAuthenticationResponse(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            OrchClientSessionItem clientSession,
+            String ipAddress,
+            String persistentSessionId,
+            String clientId,
+            String email,
+            String subjectId) {
+        var clientSessionId = clientSession.getClientSessionId();
+        var clientName = clientSession.getClientName();
+        var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
+        var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
         var authCode =
                 orchAuthCodeService.generateAndSaveAuthorisationCode(
                         clientId,
