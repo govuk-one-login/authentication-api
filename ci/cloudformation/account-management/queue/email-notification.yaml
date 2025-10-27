@@ -42,8 +42,8 @@ Resources:
             Principal:
               AWS:
                 - !GetAtt MfaMethodCreateFunctionRole.Arn
-            #    - !GetAtt MfaMethodDeleteFunctionRole.Arn
-            #    - !GetAtt MfaMethodUpdateFunctionRole.Arn
+                - !GetAtt MfaMethodDeleteFunctionRole.Arn
+                - !GetAtt MfaMethodUpdateFunctionRole.Arn
 
   EmailNotificationDeadLetterQueue:
     Type: AWS::SQS::Queue
