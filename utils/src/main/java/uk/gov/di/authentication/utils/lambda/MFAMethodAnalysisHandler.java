@@ -276,7 +276,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                 userProfileTableName,
                 KeysAndAttributes.builder()
                         .keys(keys)
-                        .projectionExpression("Email,PhoneNumberVerified")
+                        .projectionExpression("Email,PhoneNumberVerified,mfaMethodsMigrated")
                         .build());
 
         BatchGetItemRequest batchGetItemRequest =
@@ -298,10 +298,19 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                 .map(AttributeValue::n)
                                 .map(n -> n.equals("1"));
 
+                Optional<Boolean> mfaMethodsMigrated =
+                        Optional.ofNullable(item.get("mfaMethodsMigrated"))
+                                .map(AttributeValue::n)
+                                .map(n -> n.equals("1"));
+
                 batch.stream()
                         .filter(user -> email.equalsIgnoreCase(user.getEmail()))
                         .findFirst()
-                        .ifPresent(user -> user.setPhoneNumberVerified(phoneNumberVerified));
+                        .ifPresent(
+                                user -> {
+                                    user.setPhoneNumberVerified(phoneNumberVerified);
+                                    user.setMfaMethodsMigrated(mfaMethodsMigrated);
+                                });
             }
         }
 
@@ -326,7 +335,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         Map<List<MfaMethodDetails>, Long> mfaMethodDetailsCombinations = new HashMap<>();
         long accountsWithoutAnyMfaMethods = 0;
         for (UserCredentialsProfileJoin item : batch) {
-            if (item.getMfaMethodDetails().isEmpty()) {
+            if (item.hasNoMfaMethods()) {
                 accountsWithoutAnyMfaMethods++;
             }
             mfaMethodDetailsCombinations.merge(item.getMfaMethodDetails(), 1L, Long::sum);
@@ -383,6 +392,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private final Optional<Boolean> authAppEnabled;
         private final Optional<Boolean> authAppMethodVerified;
         private Optional<Boolean> phoneNumberVerified = Optional.empty();
+        private Optional<Boolean> mfaMethodsMigrated = Optional.empty();
         private final List<MfaMethodDetails> mfaMethodDetails;
 
         public UserCredentialsProfileJoin(
@@ -402,6 +412,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
         public void setPhoneNumberVerified(Optional<Boolean> phoneNumberVerified) {
             this.phoneNumberVerified = phoneNumberVerified;
+        }
+
+        public void setMfaMethodsMigrated(Optional<Boolean> mfaMethodsMigrated) {
+            this.mfaMethodsMigrated = mfaMethodsMigrated;
         }
 
         public List<MfaMethodDetails> getMfaMethodDetails() {
@@ -424,6 +438,20 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     authAppEnabled.map(String::valueOf).orElse(EMPTY),
                     authAppMethodVerified.map(String::valueOf).orElse(EMPTY),
                     phoneNumberVerified.map(String::valueOf).orElse(EMPTY));
+        }
+
+        public boolean hasNoMfaMethods() {
+            // If MFA methods have been migrated, check the new MfaMethods attribute
+            if (mfaMethodsMigrated.orElse(false)) {
+                return mfaMethodDetails.isEmpty();
+            }
+
+            // If not migrated, check both old auth app attributes and phone number verification
+            boolean hasAuthApp =
+                    authAppEnabled.orElse(false) && authAppMethodVerified.orElse(false);
+            boolean hasSms = phoneNumberVerified.orElse(false);
+
+            return !hasAuthApp && !hasSms;
         }
 
         public record AttributeCombinations(
