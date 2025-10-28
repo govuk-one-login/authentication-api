@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
@@ -55,21 +54,20 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     @Override
     public String handleRequest(Object input, Context context) {
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
-        AtomicLong missingUserProfileCount = new AtomicLong(0);
         ForkJoinPool forkJoinPool = new ForkJoinPool(100);
         try {
             fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
-            fetchUserCredentialsAndProfileStatistics(
-                    forkJoinPool, parallelTasks, missingUserProfileCount);
+            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks);
             Pool.gracefulPoolShutdown(forkJoinPool);
 
-            String analysis = combineTaskResults(parallelTasks).toString();
+            MFAMethodAnalysis combinedResults = combineTaskResults(parallelTasks);
+            String analysis = combinedResults.toString();
             LOG.info("Analysis result: {}", analysis);
 
             String userProfileRetrievalAnalysis =
                     String.format(
                             "User profile retrieval failures: userProfile items could not be retrieved for %,d accounts.",
-                            missingUserProfileCount.get());
+                            combinedResults.getMissingUserProfileCount());
             LOG.info(userProfileRetrievalAnalysis);
 
             return String.format("%s %s", analysis, userProfileRetrievalAnalysis);
@@ -106,6 +104,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     taskResult.getCountOfUsersWithMfaMethodsMigrated());
             finalMFAMethodAnalysis.incrementCountOfUsersWithoutMfaMethodsMigrated(
                     taskResult.getCountOfUsersWithoutMfaMethodsMigrated());
+            finalMFAMethodAnalysis.incrementMissingUserProfileCount(
+                    taskResult.getMissingUserProfileCount());
         }
         return finalMFAMethodAnalysis;
     }
@@ -173,9 +173,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private void fetchUserCredentialsAndProfileStatistics(
-            ForkJoinPool forkJoinPool,
-            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks,
-            AtomicLong missingUserProfileCount) {
+            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
         long totalBatches = 0;
         long totalUserCredentialsFetched = 0;
         Map<String, AttributeValue> lastKey = null;
@@ -231,9 +229,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                             forkJoinPool.submit(
                                     () ->
                                             batchGetUserProfiles(
-                                                    finalTotalBatches,
-                                                    finalCurrentBatch,
-                                                    missingUserProfileCount)));
+                                                    finalTotalBatches, finalCurrentBatch)));
                     currentBatch = new ArrayList<>();
                 }
             }
@@ -244,11 +240,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                 List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
                 parallelTasks.add(
                         forkJoinPool.submit(
-                                () ->
-                                        batchGetUserProfiles(
-                                                finalTotalBatches,
-                                                finalCurrentBatch,
-                                                missingUserProfileCount)));
+                                () -> batchGetUserProfiles(finalTotalBatches, finalCurrentBatch)));
             }
 
             lastKey = scanResponse.lastEvaluatedKey();
@@ -256,9 +248,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private MFAMethodAnalysis batchGetUserProfiles(
-            long batchNumber,
-            List<UserCredentialsProfileJoin> batch,
-            AtomicLong missingUserProfileCount) {
+            long batchNumber, List<UserCredentialsProfileJoin> batch) {
         if (batchNumber % 1000 == 0) {
             LOG.info("Executing user profile batch {}", batchNumber);
         }
@@ -290,7 +280,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         List<Map<String, AttributeValue>> results =
                 batchGetItemResponse.responses().get(userProfileTableName);
 
-        missingUserProfileCount.addAndGet(((long) batch.size()) - results.size());
+        long missingCount = batch.size() - results.size();
 
         for (Map<String, AttributeValue> item : results) {
             String email =
@@ -354,8 +344,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         mfaMethodAnalysis.incrementCountOfAccountsWithoutAnyMfaMethods(
                 accountsWithoutAnyMfaMethods);
         mfaMethodAnalysis.incrementCountOfUsersWithMfaMethodsMigrated(usersWithMfaMethodsMigrated);
-        mfaMethodAnalysis.incrementCountOfUsersWithoutMfaMethodsMigrated(usersWithoutMfaMethodsMigrated);
+        mfaMethodAnalysis.incrementCountOfUsersWithoutMfaMethodsMigrated(
+                usersWithoutMfaMethodsMigrated);
         mfaMethodAnalysis.mergeMfaMethodDetailsCombinations(mfaMethodDetailsCombinations);
+        mfaMethodAnalysis.incrementMissingUserProfileCount(missingCount);
 
         return mfaMethodAnalysis;
     }
@@ -486,6 +478,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private long countOfAccountsWithoutAnyMfaMethods = 0;
         private long countOfUsersWithMfaMethodsMigrated = 0;
         private long countOfUsersWithoutMfaMethodsMigrated = 0;
+        private long missingUserProfileCount = 0;
         private final Map<String, Long> phoneDestinationCounts = new HashMap<>();
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
@@ -547,6 +540,14 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
         public void incrementCountOfUsersWithoutMfaMethodsMigrated(long i) {
             this.countOfUsersWithoutMfaMethodsMigrated += i;
+        }
+
+        public long getMissingUserProfileCount() {
+            return missingUserProfileCount;
+        }
+
+        public void incrementMissingUserProfileCount(long i) {
+            this.missingUserProfileCount += i;
         }
 
         public Map<String, Long> getPhoneDestinationCounts() {
@@ -624,6 +625,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     + countOfUsersWithMfaMethodsMigrated
                     + ", countOfUsersWithoutMfaMethodsMigrated="
                     + countOfUsersWithoutMfaMethodsMigrated
+                    + ", missingUserProfileCount="
+                    + missingUserProfileCount
                     + ", mfaMethodPriorityIdentifierCombinations="
                     + getMfaMethodPriorityIdentifierCombinations()
                     + ", mfaMethodDetailsCombinations="
