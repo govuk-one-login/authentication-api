@@ -11,10 +11,10 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 
 public class MfaHelper {
     private static final Logger LOG = LogManager.getLogger(MfaHelper.class);
@@ -93,16 +93,8 @@ public class MfaHelper {
                     MFAMethodType.valueOf(defaultMethod.getMfaMethodType()),
                     phoneNumberForMigratedMethod);
         } else {
-            var mfaMethodCount = userCredentials.getMfaMethods().size();
-            var mfaMethodPrioritiesForUser =
-                    userCredentials.getMfaMethods().stream()
-                            .map(MFAMethod::getPriority)
-                            .collect(Collectors.joining(", "));
+            logNoDefaultMfaMethodDebug(userCredentials.getMfaMethods(), true);
 
-            LOG.error(
-                    "Unexpected error retrieving default mfa method for migrated user: no default method exists. User MFA method count: {}, MFA method priorities: {}",
-                    mfaMethodCount,
-                    mfaMethodPrioritiesForUser);
             return new UserMfaDetail(isMfaRequired, false, MFAMethodType.NONE, null);
         }
     }
