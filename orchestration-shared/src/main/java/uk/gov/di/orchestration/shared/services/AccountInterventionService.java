@@ -196,6 +196,9 @@ public class AccountInterventionService {
             httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             logAndThrowAccountInterventionException(
                     "Failed to send request to Account Intervention Service.");
         }
