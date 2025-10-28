@@ -88,6 +88,18 @@ export const sendAlertToSlack = async function (messageRequestBody) {
   }
 };
 
+const getSlackChannel = async function () {
+  if (process.env.SLACK_CHANNEL_ID) {
+    return process.env.SLACK_CHANNEL_ID;
+  } else if (process.env.SLACK_CHANNEL_PARAM) {
+    return await getParameter(process.env.SLACK_CHANNEL_PARAM);
+  } else {
+    return await getParameter(
+      process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id",
+    );
+  }
+};
+
 // eslint-disable-next-line no-unused-vars
 export const handler = async function (event, context) {
   console.log("Alert lambda triggered");
@@ -104,19 +116,7 @@ export const handler = async function (event, context) {
     snsMessageFooter,
   );
 
-  const isEnabledForProd = process.env.DEPLOY_ENVIRONMENT === "production";
-  const isPagerDutyAlarm = snsMessage.AlarmName.includes("pagerduty");
-  if (isPagerDutyAlarm && isEnabledForProd) {
-    console.log("PagerDuty alarm, sending 2 notifications");
-    const pagerDutyMessageBody = {
-      ...messageRequestBody,
-      channel: getParameter("pagerduty-slack-channel-id"),
-    };
-    await sendAlertToSlack(pagerDutyMessageBody);
-  }
-  messageRequestBody.channel =
-    process.env.SLACK_CHANNEL_ID ||
-    (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id"));
+  messageRequestBody.channel = await getSlackChannel();
 
   console.log("Sending alert to slack");
   await sendAlertToSlack(messageRequestBody);
