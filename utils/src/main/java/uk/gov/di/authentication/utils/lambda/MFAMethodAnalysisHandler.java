@@ -102,6 +102,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     taskResult.getPhoneDestinationCounts());
             finalMFAMethodAnalysis.mergeMfaMethodDetailsCombinations(
                     taskResult.getMfaMethodDetailsCombinations());
+            finalMFAMethodAnalysis.incrementCountOfUsersWithMfaMethodsMigrated(
+                    taskResult.getCountOfUsersWithMfaMethodsMigrated());
+            finalMFAMethodAnalysis.incrementCountOfUsersWithoutMfaMethodsMigrated(
+                    taskResult.getCountOfUsersWithoutMfaMethodsMigrated());
         }
         return finalMFAMethodAnalysis;
     }
@@ -298,10 +302,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                 .map(AttributeValue::n)
                                 .map(n -> n.equals("1"));
 
-                Optional<Boolean> mfaMethodsMigrated =
+                boolean mfaMethodsMigrated =
                         Optional.ofNullable(item.get("mfaMethodsMigrated"))
-                                .map(AttributeValue::n)
-                                .map(n -> n.equals("1"));
+                                .map(AttributeValue::bool)
+                                .orElse(false);
 
                 batch.stream()
                         .filter(user -> email.equalsIgnoreCase(user.getEmail()))
@@ -309,7 +313,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                         .ifPresent(
                                 user -> {
                                     user.setPhoneNumberVerified(phoneNumberVerified);
-                                    user.setMfaMethodsMigrated(mfaMethodsMigrated);
+                                    user.setMfaMethodsMigrated(Optional.of(mfaMethodsMigrated));
                                 });
             }
         }
@@ -334,14 +338,23 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
         Map<List<MfaMethodDetails>, Long> mfaMethodDetailsCombinations = new HashMap<>();
         long accountsWithoutAnyMfaMethods = 0;
+        long usersWithMfaMethodsMigrated = 0;
+        long usersWithoutMfaMethodsMigrated = 0;
         for (UserCredentialsProfileJoin item : batch) {
             if (item.hasNoMfaMethods()) {
                 accountsWithoutAnyMfaMethods++;
+            }
+            if (item.getMfaMethodsMigrated().orElse(false)) {
+                usersWithMfaMethodsMigrated++;
+            } else {
+                usersWithoutMfaMethodsMigrated++;
             }
             mfaMethodDetailsCombinations.merge(item.getMfaMethodDetails(), 1L, Long::sum);
         }
         mfaMethodAnalysis.incrementCountOfAccountsWithoutAnyMfaMethods(
                 accountsWithoutAnyMfaMethods);
+        mfaMethodAnalysis.incrementCountOfUsersWithMfaMethodsMigrated(usersWithMfaMethodsMigrated);
+        mfaMethodAnalysis.incrementCountOfUsersWithoutMfaMethodsMigrated(usersWithoutMfaMethodsMigrated);
         mfaMethodAnalysis.mergeMfaMethodDetailsCombinations(mfaMethodDetailsCombinations);
 
         return mfaMethodAnalysis;
@@ -418,6 +431,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             this.mfaMethodsMigrated = mfaMethodsMigrated;
         }
 
+        public Optional<Boolean> getMfaMethodsMigrated() {
+            return mfaMethodsMigrated;
+        }
+
         public List<MfaMethodDetails> getMfaMethodDetails() {
             return mfaMethodDetails;
         }
@@ -467,6 +484,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private long countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods = 0;
         private long countOfUsersWithVerifiedPhoneNumber = 0;
         private long countOfAccountsWithoutAnyMfaMethods = 0;
+        private long countOfUsersWithMfaMethodsMigrated = 0;
+        private long countOfUsersWithoutMfaMethodsMigrated = 0;
         private final Map<String, Long> phoneDestinationCounts = new HashMap<>();
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
@@ -512,6 +531,22 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
         public void incrementCountOfAccountsWithoutAnyMfaMethods(long i) {
             this.countOfAccountsWithoutAnyMfaMethods += i;
+        }
+
+        public long getCountOfUsersWithMfaMethodsMigrated() {
+            return countOfUsersWithMfaMethodsMigrated;
+        }
+
+        public void incrementCountOfUsersWithMfaMethodsMigrated(long i) {
+            this.countOfUsersWithMfaMethodsMigrated += i;
+        }
+
+        public long getCountOfUsersWithoutMfaMethodsMigrated() {
+            return countOfUsersWithoutMfaMethodsMigrated;
+        }
+
+        public void incrementCountOfUsersWithoutMfaMethodsMigrated(long i) {
+            this.countOfUsersWithoutMfaMethodsMigrated += i;
         }
 
         public Map<String, Long> getPhoneDestinationCounts() {
@@ -585,6 +620,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     + attributeCombinationsForAuthAppUsersCount
                     + ", countOfAccountsWithoutAnyMfaMethods="
                     + countOfAccountsWithoutAnyMfaMethods
+                    + ", countOfUsersWithMfaMethodsMigrated="
+                    + countOfUsersWithMfaMethodsMigrated
+                    + ", countOfUsersWithoutMfaMethodsMigrated="
+                    + countOfUsersWithoutMfaMethodsMigrated
                     + ", mfaMethodPriorityIdentifierCombinations="
                     + getMfaMethodPriorityIdentifierCombinations()
                     + ", mfaMethodDetailsCombinations="

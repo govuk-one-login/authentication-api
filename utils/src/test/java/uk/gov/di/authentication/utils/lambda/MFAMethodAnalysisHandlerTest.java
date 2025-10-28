@@ -42,7 +42,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -81,8 +81,8 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=]=%s}, mfaMethodDetailsCombinations={[]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
-                        .formatted(size, size, size, size, size),
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=]=%s}, mfaMethodDetailsCombinations={[]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                        .formatted(size, size, size, size, size, size),
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -129,7 +129,7 @@ class MFAMethodAnalysisHandlerTest {
             item.put(
                     "PhoneNumberVerified",
                     AttributeValue.builder().n(i % denominator == 0 ? "0" : "1").build());
-            item.put("mfaMethodsMigrated", AttributeValue.builder().n("0").build());
+            item.put("mfaMethodsMigrated", AttributeValue.builder().bool(false).build());
             profileItems.add(item);
         }
         mockProfileBatchGetItem(requestKeys, profileItems);
@@ -137,13 +137,14 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=absent_attribute]=%s}, mfaMethodDetailsCombinations={[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=absent_attribute]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=absent_attribute]=%s}, mfaMethodDetailsCombinations={[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=absent_attribute]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
                         .formatted(
                                 size,
                                 expectedCount,
                                 size - expectedCount,
                                 expectedCount,
                                 expectedCount,
+                                size,
                                 size,
                                 size),
                 handler.handleRequest("", mock(Context.class)));
@@ -158,7 +159,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=100, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=90, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -181,7 +182,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=6, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=6, phoneDestinationCounts={DOMESTIC=3, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=0, countOfPhoneNumberUsersAssessed=6, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=6, phoneDestinationCounts={DOMESTIC=3, UNKNOWN=1, INTERNATIONAL=2}, attributeCombinationsForAuthAppUsersCount={}, countOfAccountsWithoutAnyMfaMethods=0, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=0, mfaMethodPriorityIdentifierCombinations={}, mfaMethodDetailsCombinations={}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts.",
                 handler.handleRequest("", mock(Context.class)));
     }
 
@@ -458,7 +459,8 @@ class MFAMethodAnalysisHandlerTest {
                             Map<String, AttributeValue> profile = new HashMap<>();
                             profile.put("Email", item.get("Email"));
                             profile.put(
-                                    "mfaMethodsMigrated", AttributeValue.builder().n("1").build());
+                                    "mfaMethodsMigrated",
+                                    AttributeValue.builder().bool(true).build());
                             return profile;
                         })
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
@@ -492,6 +494,8 @@ class MFAMethodAnalysisHandlerTest {
         String result = handler.handleRequest("", mock(Context.class));
 
         assertTrue(result.contains("countOfAccountsWithoutAnyMfaMethods=2"));
+        assertTrue(result.contains("countOfUsersWithMfaMethodsMigrated=3"));
+        assertTrue(result.contains("countOfUsersWithoutMfaMethodsMigrated=0"));
     }
 
     @Test
@@ -529,6 +533,8 @@ class MFAMethodAnalysisHandlerTest {
         // Only user 1 has no MFA methods (no auth app and no SMS)
         // User 2 has verified auth app, User 3 and 4 have SMS
         assertTrue(result.contains("countOfAccountsWithoutAnyMfaMethods=1"));
+        assertTrue(result.contains("countOfUsersWithMfaMethodsMigrated=0"));
+        assertTrue(result.contains("countOfUsersWithoutMfaMethodsMigrated=4"));
     }
 
     private Map<String, AttributeValue> createUserWithAuthApp(
@@ -555,7 +561,7 @@ class MFAMethodAnalysisHandlerTest {
             int userIndex, boolean migrated, boolean phoneVerified, boolean hasPhone) {
         Map<String, AttributeValue> profile = new HashMap<>();
         profile.put("Email", AttributeValue.builder().s(getTestEmail(userIndex)).build());
-        profile.put("mfaMethodsMigrated", AttributeValue.builder().n(migrated ? "1" : "0").build());
+        profile.put("mfaMethodsMigrated", AttributeValue.builder().bool(migrated).build());
         profile.put(
                 "PhoneNumberVerified",
                 AttributeValue.builder().n(phoneVerified ? "1" : "0").build());
