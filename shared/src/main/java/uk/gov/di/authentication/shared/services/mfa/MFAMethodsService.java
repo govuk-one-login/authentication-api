@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
@@ -35,6 +34,7 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
 
@@ -136,16 +136,7 @@ public class MFAMethodsService {
         }
 
         if (maybeMfaMethod.get().getPriority() == null) {
-            var mfaMethodCount = mfaMethods.size();
-            var mfaMethodPrioritiesForUser =
-                    mfaMethods.stream()
-                            .map(m -> Optional.ofNullable(m.getPriority()).orElse("null"))
-                            .collect(Collectors.joining(", "));
-
-            LOG.error(
-                    "Potential data corruption, retrieved MFA method has priority null. User MFA method count: {}, MFA method priorities: {}.",
-                    mfaMethodCount,
-                    mfaMethodPrioritiesForUser);
+            logNoDefaultMfaMethodDebug(mfaMethods);
         }
 
         return Result.success(new GetMfaResult(maybeMfaMethod.get(), mfaMethods));

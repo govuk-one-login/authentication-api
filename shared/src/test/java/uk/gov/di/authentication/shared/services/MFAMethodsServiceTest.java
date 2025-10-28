@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest.MfaMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
+import uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -46,6 +47,10 @@ public class MFAMethodsServiceTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(MFAMethodsService.class);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension noDefaultMfaMethodLogging =
+            new CaptureLoggingExtension(NoDefaultMfaMethodLogHelper.class);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuthenticationService persistentService = mock(AuthenticationService.class);
@@ -169,10 +174,10 @@ public class MFAMethodsServiceTest {
             service.getMfaMethod(EMAIL, DEFAULT_SMS_METHOD.getMfaIdentifier()).getSuccess();
 
             assertThat(
-                    logging.events(),
+                    noDefaultMfaMethodLogging.events(),
                     hasItem(
                             withMessageContaining(
-                                    "Potential data corruption, retrieved MFA method has priority null. User MFA method count: 2, MFA method priorities: null, BACKUP.")));
+                                    "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 2, MFA method priority-type pairs: (absent_attribute,SMS), (BACKUP,AUTH_APP).")));
         }
     }
 
