@@ -116,7 +116,8 @@ class UserInfoHandlerTest {
                         "client-id",
                         TxmaAuditUser.user()
                                 .withUserId(AUDIT_SUBJECT_ID.getValue())
-                                .withGovukSigninJourneyId(JOURNEY_ID));
+                                .withGovukSigninJourneyId(JOURNEY_ID),
+                        List.of());
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -151,7 +152,7 @@ class UserInfoHandlerTest {
                         TxmaAuditUser.user()
                                 .withUserId(AUDIT_SUBJECT_ID.getValue())
                                 .withGovukSigninJourneyId(JOURNEY_ID),
-                        AuditService.MetadataPair.pair("return-code", RETURN_CODE));
+                        List.of(AuditService.MetadataPair.pair("return-code", RETURN_CODE)));
     }
 
     @Test

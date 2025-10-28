@@ -10,6 +10,7 @@ import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -62,6 +63,14 @@ public class AuditService {
             String clientId,
             TxmaAuditUser user,
             MetadataPair... metadataPairs) {
+        submitAuditEvent(event, clientId, user, Arrays.asList(metadataPairs));
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
+            TxmaAuditUser user,
+            List<MetadataPair> metadataPairs) {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
@@ -74,8 +83,7 @@ public class AuditService {
                     Map.of("encoded", ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName())));
         }
 
-        Arrays.stream(metadataPairs)
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+        metadataPairs.forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
 
         Optional.ofNullable(user.phone())
                 .filter(not(String::isBlank))

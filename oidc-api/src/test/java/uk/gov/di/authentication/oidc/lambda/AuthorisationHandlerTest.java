@@ -50,6 +50,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -103,7 +104,6 @@ import java.text.ParseException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -3025,23 +3025,22 @@ class AuthorisationHandlerTest {
         metadataPairs.put("reauthRequested", false);
         metadataPairs.put("credential_trust_level", "MEDIUM_LEVEL");
         metadataPairs.putAll(extraOrSubstituteMetadata);
-        AuditService.MetadataPair[] expectedMetadataPairs =
+        List<AuditService.MetadataPair> expectedMetadataPairs =
                 metadataPairs.entrySet().stream()
                         .map(entry -> pair(entry.getKey(), entry.getValue()))
-                        .toArray(AuditService.MetadataPair[]::new);
-        ArgumentCaptor<AuditService.MetadataPair[]> metadataPairCaptor =
-                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+                        .toList();
 
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED),
                         eq(CLIENT_ID.getValue()),
                         eq(BASE_AUDIT_USER),
-                        metadataPairCaptor.capture());
-
-        assertThat(
-                Arrays.asList(metadataPairCaptor.getValue()),
-                containsInAnyOrder(expectedMetadataPairs));
+                        ArgumentMatchers.<List<AuditService.MetadataPair>>assertArg(
+                                actualMetadataPairs ->
+                                        assertThat(
+                                                actualMetadataPairs,
+                                                containsInAnyOrder(
+                                                        expectedMetadataPairs.toArray()))));
     }
 
     private static ECKey generateECSigningKey() {

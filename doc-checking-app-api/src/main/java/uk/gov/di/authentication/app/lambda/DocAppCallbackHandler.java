@@ -298,7 +298,7 @@ public class DocAppCallbackHandler
                         AUTH_CODE_ISSUED,
                         clientId,
                         user.withIpAddress(IpAddressHelper.extractIpAddress(input)),
-                        metadataPairs.toArray(AuditService.MetadataPair[]::new));
+                        metadataPairs);
 
                 return generateApiGatewayProxyResponse(
                         302,

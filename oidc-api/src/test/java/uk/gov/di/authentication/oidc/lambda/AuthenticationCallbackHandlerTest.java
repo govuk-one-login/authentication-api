@@ -318,22 +318,22 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("credential_trust_level", "LOW_LEVEL")));
         verify(auditService)
                 .submitAuditEvent(
-                        eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
-                        eq(CLIENT_ID.getValue()),
-                        eq(
-                                TxmaAuditUser.user()
-                                        .withSessionId(SESSION_ID)
-                                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
-                                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
-                                        .withIpAddress("123.123.123.123")
-                                        .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
-                                        .withEmail(TEST_EMAIL_ADDRESS)
-                                        .withPhone("1234")),
-                        eq(pair("internalSubjectId", AuditService.UNKNOWN)),
-                        eq(pair("isNewAccount", true)),
-                        eq(pair("rpPairwiseId", RP_PAIRWISE_ID.getValue())),
-                        eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())),
-                        eq(pair("nonce", RP_NONCE.getValue())));
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_ID.getValue(),
+                        TxmaAuditUser.user()
+                                .withSessionId(SESSION_ID)
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withIpAddress("123.123.123.123")
+                                .withUserId(TEST_INTERNAL_COMMON_SUBJECT_ID)
+                                .withEmail(TEST_EMAIL_ADDRESS)
+                                .withPhone("1234"),
+                        List.of(
+                                pair("internalSubjectId", AuditService.UNKNOWN),
+                                pair("isNewAccount", true),
+                                pair("rpPairwiseId", RP_PAIRWISE_ID.getValue()),
+                                pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue()),
+                                pair("nonce", RP_NONCE.getValue())));
         assertOrchSessionUpdated();
         assertClientSessionUpdated();
 

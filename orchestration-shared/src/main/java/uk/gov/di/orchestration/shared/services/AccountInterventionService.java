@@ -9,7 +9,6 @@ import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.helpers.HttpClientHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,7 +16,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -118,16 +116,14 @@ public class AccountInterventionService {
 
     private static AuditContext addStatusMetadata(
             AuditContext auditContext, AccountIntervention intervention) {
-        var existingMetadataPairs = Arrays.stream(auditContext.metadataPairs());
+        var existingMetadataPairs = auditContext.metadataPairs().stream();
         var statusMetadataPairs =
                 Stream.of(
                         pair("blocked", intervention.getBlocked()),
                         pair("suspended", intervention.getSuspended()),
                         pair("resetPassword", intervention.getResetPassword()),
                         pair("reproveIdentity", intervention.getReproveIdentity()));
-        var metadataPairs =
-                Stream.concat(existingMetadataPairs, statusMetadataPairs)
-                        .toArray(MetadataPair[]::new);
+        var metadataPairs = Stream.concat(existingMetadataPairs, statusMetadataPairs).toList();
 
         return new AuditContext(
                 auditContext.clientSessionId(),

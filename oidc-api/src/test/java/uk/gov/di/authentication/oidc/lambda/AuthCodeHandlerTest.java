@@ -304,11 +304,12 @@ class AuthCodeHandlerTest {
                                 .withEmail(EMAIL)
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
-                        pair("internalSubjectId", SUBJECT.getValue()),
-                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
-                        pair("rpPairwiseId", expectedRpPairwiseId),
-                        pair("authCode", authorizationCode),
-                        pair("nonce", NONCE.getValue()));
+                        List.of(
+                                pair("internalSubjectId", SUBJECT.getValue()),
+                                pair("isNewAccount", OrchSessionItem.AccountState.NEW),
+                                pair("rpPairwiseId", expectedRpPairwiseId),
+                                pair("authCode", authorizationCode),
+                                pair("nonce", NONCE.getValue())));
 
         var dimensions =
                 Map.of(
@@ -407,11 +408,12 @@ class AuthCodeHandlerTest {
                                 .withEmail("")
                                 .withIpAddress("123.123.123.123")
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
-                        pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", OrchSessionItem.AccountState.NEW),
-                        pair("rpPairwiseId", AuditService.UNKNOWN),
-                        pair("authCode", authorizationCode),
-                        pair("nonce", NONCE.getValue()));
+                        List.of(
+                                pair("internalSubjectId", AuditService.UNKNOWN),
+                                pair("isNewAccount", OrchSessionItem.AccountState.NEW),
+                                pair("rpPairwiseId", AuditService.UNKNOWN),
+                                pair("authCode", authorizationCode),
+                                pair("nonce", NONCE.getValue())));
 
         var expectedDimensions =
                 Map.of(

@@ -546,10 +546,7 @@ public class AuthenticationCallbackHandler
                 }
 
                 auditService.submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        clientId,
-                        user,
-                        metadataPairs.toArray(AuditService.MetadataPair[]::new));
+                        OidcAuditableEvent.AUTH_CODE_ISSUED, clientId, user, metadataPairs);
 
                 return generateApiGatewayProxyResponse(
                         302,

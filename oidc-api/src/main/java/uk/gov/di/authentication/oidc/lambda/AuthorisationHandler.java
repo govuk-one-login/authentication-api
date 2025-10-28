@@ -508,7 +508,7 @@ public class AuthorisationHandler
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
                 user,
-                auditEventExtensions.toArray(AuditService.MetadataPair[]::new));
+                auditEventExtensions);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {

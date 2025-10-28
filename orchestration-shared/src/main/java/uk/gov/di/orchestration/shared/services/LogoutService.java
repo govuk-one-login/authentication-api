@@ -234,11 +234,7 @@ public class LogoutService {
         metadata.add(pair(LOGOUT_REASON, logoutReason.getValue()));
         rpPairwiseId.ifPresent(i -> metadata.add(pair("rpPairwiseId", i)));
         sessionAge.ifPresent(age -> metadata.add(pair("sessionAge", age.intValue())));
-        auditService.submitAuditEvent(
-                LOG_OUT_SUCCESS,
-                auditClientId,
-                auditUser,
-                metadata.toArray(AuditService.MetadataPair[]::new));
+        auditService.submitAuditEvent(LOG_OUT_SUCCESS, auditClientId, auditUser, metadata);
     }
 
     private TxmaAuditUser createAuditUser(

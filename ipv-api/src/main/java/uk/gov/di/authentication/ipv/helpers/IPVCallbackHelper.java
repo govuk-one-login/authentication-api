@@ -208,7 +208,7 @@ public class IPVCallbackHelper {
                         .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
-                metadataPairs.toArray(AuditService.MetadataPair[]::new));
+                metadataPairs);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 

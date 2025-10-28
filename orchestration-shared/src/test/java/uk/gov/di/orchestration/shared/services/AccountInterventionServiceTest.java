@@ -14,7 +14,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -280,15 +280,16 @@ class AccountInterventionServiceTest {
                         someAuditContext.ipAddress(),
                         someAuditContext.phoneNumber(),
                         someAuditContext.persistentSessionId(),
-                        AuditService.MetadataPair.pair("blocked", false),
-                        AuditService.MetadataPair.pair("suspended", true),
-                        AuditService.MetadataPair.pair("resetPassword", false),
-                        AuditService.MetadataPair.pair("reproveIdentity", true));
+                        List.of(
+                                AuditService.MetadataPair.pair("blocked", false),
+                                AuditService.MetadataPair.pair("suspended", true),
+                                AuditService.MetadataPair.pair("resetPassword", false),
+                                AuditService.MetadataPair.pair("reproveIdentity", true)));
 
         verify(auditService)
                 .submitAuditEvent(auditEventNameCaptor.capture(), auditContextCaptor.capture());
         assertEquals(AIS_RESPONSE_RECEIVED, auditEventNameCaptor.getValue());
-        assertMatchingAuditContext(expectedAuditContext, auditContextCaptor.getValue());
+        assertEquals(expectedAuditContext, auditContextCaptor.getValue());
     }
 
     @Test
@@ -331,17 +332,5 @@ class AccountInterventionServiceTest {
                 () ->
                         accountInterventionService.getAccountIntervention(
                                 internalPairwiseSubjectId, null));
-    }
-
-    private void assertMatchingAuditContext(AuditContext expected, AuditContext actual) {
-        assertEquals(expected.clientSessionId(), actual.clientSessionId());
-        assertEquals(expected.sessionId(), actual.sessionId());
-        assertEquals(expected.clientId(), actual.clientId());
-        assertEquals(expected.subjectId(), actual.subjectId());
-        assertEquals(expected.email(), actual.email());
-        assertEquals(expected.ipAddress(), actual.ipAddress());
-        assertEquals(expected.phoneNumber(), actual.phoneNumber());
-        assertEquals(expected.persistentSessionId(), actual.persistentSessionId());
-        assertTrue(Arrays.deepEquals(expected.metadataPairs(), actual.metadataPairs()));
     }
 }

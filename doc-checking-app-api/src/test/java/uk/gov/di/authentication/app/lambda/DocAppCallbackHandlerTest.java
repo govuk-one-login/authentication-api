@@ -210,11 +210,12 @@ class DocAppCallbackHandlerTest {
                         DocAppAuditableEvent.AUTH_CODE_ISSUED,
                         CLIENT_ID.getValue(),
                         BASE_AUDIT_USER.withIpAddress("123.123.123.123"),
-                        pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", orchSession.getIsNewAccount()),
-                        pair("rpPairwiseId", AuditService.UNKNOWN),
-                        pair("authCode", AUTH_CODE),
-                        pair("nonce", NONCE.getValue()));
+                        List.of(
+                                pair("internalSubjectId", AuditService.UNKNOWN),
+                                pair("isNewAccount", orchSession.getIsNewAccount()),
+                                pair("rpPairwiseId", AuditService.UNKNOWN),
+                                pair("authCode", AUTH_CODE),
+                                pair("nonce", NONCE.getValue())));
 
         verifyNoMoreInteractions(auditService);
         verify(dynamoDocAppCriService)

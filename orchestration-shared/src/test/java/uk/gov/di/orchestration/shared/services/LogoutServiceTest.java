@@ -208,8 +208,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -240,8 +241,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -272,8 +274,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -305,8 +308,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -352,7 +356,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "intervention"));
+                        List.of(pair("logoutReason", "intervention")));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService)
@@ -385,7 +389,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "intervention"));
+                        List.of(pair("logoutReason", "intervention")));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(cloudwatchMetricsService)
@@ -428,8 +432,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         auditUserWhenNoCookie,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
     }
 
     @Test
@@ -472,8 +477,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
     }
 
     @Test
@@ -500,8 +506,9 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "front-channel"),
-                        pair("rpPairwiseId", rpPairwiseId.get()));
+                        List.of(
+                                pair("logoutReason", "front-channel"),
+                                pair("rpPairwiseId", rpPairwiseId.get())));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
         verify(backChannelLogoutService)
@@ -555,7 +562,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "reauthentication-failure"));
+                        List.of(pair("logoutReason", "reauthentication-failure")));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 is(equalTo(REAUTH_FAILURE_URI.toString())));
@@ -594,10 +601,7 @@ class LogoutServiceTest {
         expectedExtensions.add(pair("sessionAge", 3600));
         verify(auditService)
                 .submitAuditEvent(
-                        LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        auditUser,
-                        expectedExtensions.toArray(AuditService.MetadataPair[]::new));
+                        LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUser, expectedExtensions);
     }
 
     @Test
@@ -617,7 +621,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        pair("logoutReason", "intervention"));
+                        List.of(pair("logoutReason", "intervention")));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(argThat(withClientId("client-id")), eq(rpPairwiseId.get()));
 

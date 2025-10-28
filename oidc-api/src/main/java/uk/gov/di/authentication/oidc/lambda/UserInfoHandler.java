@@ -31,6 +31,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
@@ -178,11 +179,10 @@ public class UserInfoHandler
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
 
         var returnCodeClaim = userInfo.getClaim(ValidClaims.RETURN_CODE.getValue());
-        var metadataPairs = new AuditService.MetadataPair[] {};
-
-        if (returnCodeClaim != null) {
-            metadataPairs = new AuditService.MetadataPair[] {pair("return-code", returnCodeClaim)};
-        }
+        var metadataPairs =
+                returnCodeClaim != null
+                        ? List.of(pair("return-code", returnCodeClaim))
+                        : List.<AuditService.MetadataPair>of();
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,

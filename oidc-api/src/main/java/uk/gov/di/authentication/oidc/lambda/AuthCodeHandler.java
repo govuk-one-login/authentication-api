@@ -295,7 +295,7 @@ public class AuthCodeHandler
                             .withPersistentSessionId(
                                     PersistentIdHelper.extractPersistentIdFromHeaders(
                                             input.getHeaders())),
-                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
+                    metadataPairs);
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
