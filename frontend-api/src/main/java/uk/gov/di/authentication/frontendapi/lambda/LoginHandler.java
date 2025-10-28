@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -56,7 +55,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
@@ -72,6 +70,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
@@ -412,21 +411,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     return generateApiGatewayProxyErrorResponse(400, codeBlocks.get());
                 }
             } else if (!retrievedMfaMethods.isEmpty()) {
-                var mfaMethodCount = retrievedMfaMethods.size();
-                var mfaMethodPrioritiesForUser =
-                        retrievedMfaMethods.stream()
-                                .map(MFAMethod::getPriority)
-                                .collect(Collectors.joining(", "));
-
-                LOG.error(
-                        "Unexpected error retrieving default mfa method: no default method exists but session requires MFA. User will be prompted to add an MFA method. User MFA method count: {}, MFA method priorities: {}. userMfaDetail.mfaMethodType(): {}",
-                        mfaMethodCount,
-                        mfaMethodPrioritiesForUser,
-                        userMfaDetail.mfaMethodType().getValue());
-            } else {
-                LOG.info(
-                        "User has no MFA methods, but session requires MFA. This may be a partially created account. User will be prompted to add an MFA method. userMfaDetail.mfaMethodType(): {}",
-                        userMfaDetail.mfaMethodType().getValue());
+                logNoDefaultMfaMethodDebug(retrievedMfaMethods);
             }
         }
 
