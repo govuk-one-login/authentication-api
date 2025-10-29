@@ -26,7 +26,6 @@ import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -46,7 +45,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -56,8 +54,6 @@ class AccessTokenServiceTest {
             mock(RedisConnectionService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
-    private final OrchAccessTokenService orchAccessTokenService =
-            mock(OrchAccessTokenService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final Subject SUBJECT = new Subject("some-subject");
@@ -91,10 +87,7 @@ class AccessTokenServiceTest {
     void setUp() {
         accessTokenService =
                 new AccessTokenService(
-                        redisConnectionService,
-                        clientService,
-                        tokenValidationService,
-                        orchAccessTokenService);
+                        redisConnectionService, clientService, tokenValidationService);
     }
 
     @AfterEach
@@ -140,8 +133,6 @@ class AccessTokenServiceTest {
         assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
         assertThat(accessTokenInfo.getIdentityClaims(), equalTo(expectedIdentityClaims));
-        verify(orchAccessTokenService)
-                .getAccessTokensForClientAndRpPairwiseId(CLIENT_ID + "." + SUBJECT);
     }
 
     @Test
@@ -167,8 +158,6 @@ class AccessTokenServiceTest {
         assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
         assertThat(accessTokenInfo.getIdentityClaims(), equalTo(null));
-        verify(orchAccessTokenService)
-                .getAccessTokensForClientAndRpPairwiseId(CLIENT_ID + "." + SUBJECT);
     }
 
     @ParameterizedTest
