@@ -8,12 +8,14 @@ account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
 call_ticf_cri                               = true
-ipv_backend_uri                             = "https://ipvstub.signin.authdev2.dev.account.gov.uk"
+ipv_jwks_call_enabled                       = true
 
+ipv_backend_uri                 = "https://ipvstub.signin.authdev2.dev.account.gov.uk"
 ipv_authorisation_uri           = "https://ipvstub.signin.authdev2.dev.account.gov.uk/authorize/"
 ipv_auth_authorize_callback_uri = "https://signin.authdev2.dev.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
 ipv_audience                    = "https://ipvstub.signin.authdev2.dev.account.gov.uk"
+ipv_jwks_url                    = "https://ipvstub.signin.authdev2.dev.account.gov.uk/.well-known/jwks.json"
 evcs_audience                   = "https://credential-store.authdev2.dev.account.gov.uk"
 auth_issuer_claim_for_evcs      = "https://signin.authdev2.dev.account.gov.uk"
 

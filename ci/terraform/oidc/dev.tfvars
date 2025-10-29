@@ -15,6 +15,7 @@ ipv_backend_uri      = "https://ipvstub.signin.dev.account.gov.uk"
 ## AUTH to IPV reverification
 ## Shared with orch
 ipv_authorisation_uri = "https://ipvstub.signin.dev.account.gov.uk/authorize/"
+
 ## auth only
 ipv_auth_authorize_callback_uri = "https://signin.dev.account.gov.uk/ipv/callback/authorize"
 ipv_auth_authorize_client_id    = "authTestClient"
@@ -55,6 +56,8 @@ doc_app_new_aud_claim_enabled               = true
 spot_enabled                                = false
 custom_doc_app_claim_enabled                = true
 ipv_audience                                = "https://ipvstub.signin.dev.account.gov.uk"
+ipv_jwks_call_enabled                       = true
+ipv_jwks_url                                = "https://ipvstub.signin.dev.account.gov.uk/.well-known/jwks.json"
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
