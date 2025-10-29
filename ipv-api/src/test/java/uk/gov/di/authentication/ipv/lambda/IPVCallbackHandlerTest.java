@@ -46,7 +46,6 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
-import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -1054,14 +1053,11 @@ class IPVCallbackHandlerTest {
         verifyNoInteractions(dynamoIdentityService);
     }
 
-    @ParameterizedTest
-    @MethodSource("getFrontendCases")
-    void getFrontendShouldReturnCorrectFrontendDependingOnValueOfOrchFrontendEnabledFlag(
-            boolean orchFrontendEnabled, Class<? extends CommonFrontend> expectedFrontendClass) {
+    @Test
+    void getFrontendShouldReturnAuthFrontend() {
         var configurationService = mock(ConfigurationService.class);
-        when(configurationService.getOrchFrontendEnabled()).thenReturn(orchFrontendEnabled);
         var actualFrontendClass = IPVCallbackHandler.getFrontend(configurationService).getClass();
-        assertThat(actualFrontendClass, is(equalTo(expectedFrontendClass)));
+        assertThat(actualFrontendClass, is(equalTo(AuthFrontend.class)));
     }
 
     @Test
@@ -1278,11 +1274,6 @@ class IPVCallbackHandlerTest {
                     .saveIdentityClaimsToDynamo(
                             any(String.class), any(Subject.class), any(UserInfo.class));
         }
-    }
-
-    static Stream<Arguments> getFrontendCases() {
-        return Stream.of(
-                Arguments.of(true, OrchFrontend.class), Arguments.of(false, AuthFrontend.class));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
