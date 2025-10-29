@@ -7,7 +7,7 @@ Resources:
         - ${Env}-account-management-sqs-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize: 512
+      MemorySize: !FindInMap [LambdaDefaults, Global, memorySize]
       Timeout: 30
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.NotificationHandler::handleRequest

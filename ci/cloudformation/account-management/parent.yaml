@@ -196,6 +196,11 @@ Conditions:
     ]
 
 Mappings:
+  LambdaDefaults:
+    Global:
+      memorySize: 1536
+      provisionedConcurrency: 0
+      maxConcurrency: 10
   EnvironmentConfiguration:
     authdev1:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/89650062-091c-465d-b1db-98ba23a72fc2
@@ -224,31 +229,10 @@ Mappings:
       lockoutDuration: 600
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 1
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 1
-      mfaMethodsCreateMaxConcurrency: 10
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteProvisionedConcurrency: 0
-      mfaMethodsDeleteMaxConcurrency: 10
-      mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateProvisionedConcurrency: 0
-      mfaMethodsUpdateMaxConcurrency: 10
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 1
-      updateEmailMaxConcurrency: 10
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
-      updatePasswordMaxConcurrency: 10
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
-      updatePhoneNumberMaxConcurrency: 10
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
-      bulkRemoveAccountMaxConcurrency: 10
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -283,31 +267,10 @@ Mappings:
       lockoutDuration: 600
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 1
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 1
-      mfaMethodsCreateMaxConcurrency: 10
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteProvisionedConcurrency: 0
-      mfaMethodsDeleteMaxConcurrency: 10
-      mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateProvisionedConcurrency: 0
-      mfaMethodsUpdateMaxConcurrency: 10
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 1
-      updateEmailMaxConcurrency: 10
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
-      updatePasswordMaxConcurrency: 10
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
-      updatePhoneNumberMaxConcurrency: 10
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
-      bulkRemoveAccountMaxConcurrency: 10
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -342,31 +305,10 @@ Mappings:
       lockoutDuration: 600
       otpCodeTtlDuration: 600
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 1
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 1
-      mfaMethodsCreateMaxConcurrency: 10
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteProvisionedConcurrency: 0
-      mfaMethodsDeleteMaxConcurrency: 10
-      mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateProvisionedConcurrency: 0
-      mfaMethodsUpdateMaxConcurrency: 10
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 1
-      updateEmailMaxConcurrency: 10
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
-      updatePasswordMaxConcurrency: 10
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
-      updatePhoneNumberMaxConcurrency: 10
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
-      bulkRemoveAccountMaxConcurrency: 10
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       reauthEnterEmailCountTtl: 120
       reducedLockoutDuration: 300
@@ -401,31 +343,10 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 1
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 1
-      mfaMethodsCreateMaxConcurrency: 10
-      mfaMethodsDeleteMemorySize: 1536
-      mfaMethodsDeleteProvisionedConcurrency: 0
-      mfaMethodsDeleteMaxConcurrency: 10
-      mfaMethodsUpdateMemorySize: 1536
-      mfaMethodsUpdateProvisionedConcurrency: 0
-      mfaMethodsUpdateMaxConcurrency: 10
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 1
-      updateEmailMaxConcurrency: 10
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
-      updatePasswordMaxConcurrency: 10
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 1
-      updatePhoneNumberMaxConcurrency: 10
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
-      bulkRemoveAccountMaxConcurrency: 10
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       orchApiVpcEndpointId: ""
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
@@ -470,31 +391,19 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 5
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 5
       mfaMethodsCreateMaxConcurrency: 20
-      mfaMethodsDeleteMemorySize: 1536
       mfaMethodsDeleteProvisionedConcurrency: 5
       mfaMethodsDeleteMaxConcurrency: 20
-      mfaMethodsUpdateMemorySize: 1536
       mfaMethodsUpdateProvisionedConcurrency: 5
       mfaMethodsUpdateMaxConcurrency: 20
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 5
       updateEmailMaxConcurrency: 20
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
       updatePasswordMaxConcurrency: 20
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 5
       updatePhoneNumberMaxConcurrency: 20
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
       bulkRemoveAccountMaxConcurrency: 20
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
@@ -543,7 +452,6 @@ Mappings:
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
-      lambdaMaxConcurrency: 10
       authenticateMemorySize: 2048
       sendOtpNotificationMemorySize: 2048
       sendOtpNotificationProvisionedConcurrency: 10
@@ -560,15 +468,12 @@ Mappings:
       updateEmailProvisionedConcurrency: 10
       updateEmailMaxConcurrency: 50
       updatePasswordMemorySize: 2048
-      updatePasswordProvisionedConcurrency: 0
       updatePasswordMaxConcurrency: 50
       updatePhoneNumberMemorySize: 2048
       updatePhoneNumberProvisionedConcurrency: 10
       updatePhoneNumberMaxConcurrency: 50
       bulkRemoveAccountMemorySize: 2048
-      bulkRemoveAccountProvisionedConcurrency: 0
       bulkRemoveAccountMaxConcurrency: 50
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
@@ -615,33 +520,20 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 2
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 2
       mfaMethodsCreateMaxConcurrency: 15
-      mfaMethodsDeleteMemorySize: 1536
       mfaMethodsDeleteProvisionedConcurrency: 2
       mfaMethodsDeleteMaxConcurrency: 15
-      mfaMethodsUpdateMemorySize: 1536
       mfaMethodsUpdateProvisionedConcurrency: 2
       mfaMethodsUpdateMaxConcurrency: 15
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 2
       updateEmailMaxConcurrency: 15
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
       updatePasswordMaxConcurrency: 15
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 2
       updatePhoneNumberMaxConcurrency: 15
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
       bulkRemoveAccountMaxConcurrency: 15
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutCountTtl: 900
       lockoutDuration: 7200
@@ -689,33 +581,20 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
-      lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
-      authenticateMemorySize: 1536
-      sendOtpNotificationMemorySize: 1536
       sendOtpNotificationProvisionedConcurrency: 2
-      mfaMethodsCreateMemorySize: 1536
       mfaMethodsCreateProvisionedConcurrency: 2
       mfaMethodsCreateMaxConcurrency: 15
-      mfaMethodsDeleteMemorySize: 1536
       mfaMethodsDeleteProvisionedConcurrency: 2
       mfaMethodsDeleteMaxConcurrency: 15
-      mfaMethodsUpdateMemorySize: 1536
       mfaMethodsUpdateProvisionedConcurrency: 2
       mfaMethodsUpdateMaxConcurrency: 15
-      updateEmailMemorySize: 1536
       updateEmailProvisionedConcurrency: 2
       updateEmailMaxConcurrency: 15
-      updatePasswordMemorySize: 1536
-      updatePasswordProvisionedConcurrency: 0
       updatePasswordMaxConcurrency: 15
-      updatePhoneNumberMemorySize: 1536
       updatePhoneNumberProvisionedConcurrency: 2
       updatePhoneNumberMaxConcurrency: 15
-      bulkRemoveAccountMemorySize: 1536
-      bulkRemoveAccountProvisionedConcurrency: 0
       bulkRemoveAccountMaxConcurrency: 15
-      manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutCountTtl: 900
       lockoutDuration: 7200
@@ -831,7 +710,6 @@ Globals:
     KmsKeyArn: !GetAtt MainKmsKey.Arn
     Layers:
       - arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_313_36_20250507-184408_with_collector_java:1
-    MemorySize: 1536
     PermissionsBoundary: !If
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary

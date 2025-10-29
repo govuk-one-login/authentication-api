@@ -7,13 +7,7 @@ Resources:
         - ${Env}-manually-delete-account-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          manuallyDeleteAccountMemorySize,
-          DefaultValue: 1536,
-        ]
+      MemorySize: !FindInMap [LambdaDefaults, Global, memorySize]
       ReservedConcurrentExecutions:
         !FindInMap [
           EnvironmentConfiguration,
