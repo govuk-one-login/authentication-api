@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "production"
+  },
+  {
+    "ParameterKey": "SlackChannelId",
+    "ParameterValue": "C072F1QUKQV"
+  },
+  {
+    "ParameterKey": "DeployChatBot",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "BuildNotificationsStackName",
+    "ParameterValue": "build-notifications"
+  }
+]

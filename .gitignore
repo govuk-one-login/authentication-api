@@ -4,6 +4,7 @@ build/
 .gradle
 build
 !ci/cloudfront-orchestration/*/build
+!ci/backup-vault-monitoring/build
 !ci/stack-orchestration/**/build
 **/.terraform/
 │**/*.tfstate*
