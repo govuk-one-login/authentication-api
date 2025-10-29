@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
+import uk.gov.di.orchestration.shared.api.OrchFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -151,7 +152,9 @@ public class IPVCallbackHandler
     }
 
     public static CommonFrontend getFrontend(ConfigurationService configurationService) {
-        return new AuthFrontend(configurationService);
+        return configurationService.getOrchFrontendEnabled()
+                ? new OrchFrontend(configurationService)
+                : new AuthFrontend(configurationService);
     }
 
     @Override
