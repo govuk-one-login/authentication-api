@@ -13,17 +13,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
-import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -43,7 +39,6 @@ public class AccessTokenService {
     private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
-    private final OrchAccessTokenService orchAccessTokenService;
     private final Json objectMapper = SerializationService.getInstance();
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
@@ -51,12 +46,10 @@ public class AccessTokenService {
     public AccessTokenService(
             RedisConnectionService redisConnectionService,
             DynamoClientService clientService,
-            TokenValidationService tokenValidationService,
-            OrchAccessTokenService orchAccessTokenService) {
+            TokenValidationService tokenValidationService) {
         this.redisConnectionService = redisConnectionService;
         this.clientService = clientService;
         this.tokenValidationService = tokenValidationService;
-        this.orchAccessTokenService = orchAccessTokenService;
     }
 
     public AccessTokenInfo parse(String authorizationHeader, boolean identityEnabled)
@@ -68,15 +61,10 @@ public class AccessTokenService {
             throw new AccessTokenException(
                     "Unable to parse AccessToken", BearerTokenError.INVALID_TOKEN);
         }
-
         SignedJWT signedJWT;
-        JWTClaimsSet claimsSet;
-        ClientRegistry client;
-        List<String> scopes;
-        List<String> identityClaims = null;
         try {
             signedJWT = SignedJWT.parse(accessToken.getValue());
-            claimsSet = signedJWT.getJWTClaimsSet();
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             LOG.info(
                     "Successfully processed UserInfo request with JWT ID of {}",
                     claimsSet.getJWTID());
@@ -99,7 +87,7 @@ public class AccessTokenService {
                                                     BearerTokenError.INVALID_TOKEN));
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
-            client =
+            var client =
                     clientService
                             .getClient(clientID)
                             .orElseThrow(
@@ -108,16 +96,43 @@ public class AccessTokenService {
                                                     "Client not found",
                                                     BearerTokenError.INVALID_TOKEN));
 
-            scopes = getScopesFromClaimsSet(claimsSet);
+            List<String> scopes = getScopesFromClaimsSet(claimsSet);
             List<String> clientScopes = client.getScopes();
             if (!ValidScopes.areScopesValid(scopes) || !clientScopes.containsAll(scopes)) {
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
 
+            List<String> identityClaims = null;
             if (identityEnabled && client.isIdentityVerificationSupported()) {
                 LOG.info("Identity is enabled AND client supports identity verification");
                 identityClaims = getIdentityClaims(claimsSet);
             }
+
+            var subject = claimsSet.getSubject();
+            var accessTokenStore = getAccessTokenStore(clientID, subject);
+            if (accessTokenStore.isEmpty()) {
+                LOG.warn(
+                        "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
+                        claimsSet.getExpirationTime(),
+                        NowHelper.now(),
+                        claimsSet.getJWTID());
+                throw new AccessTokenException(
+                        INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
+            }
+            if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
+                var storeJwtId =
+                        SignedJWT.parse(accessTokenStore.get().getToken())
+                                .getJWTClaimsSet()
+                                .getJWTID();
+                LOG.warn(
+                        "Access Token in Access Token Store (JWTID: {}), is different to Access Token sent in request (JWTID: {})",
+                        storeJwtId,
+                        claimsSet.getJWTID());
+                throw new AccessTokenException(
+                        INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
+            }
+            return new AccessTokenInfo(
+                    accessTokenStore.get(), subject, scopes, identityClaims, client.getClientID());
         } catch (ParseException e) {
             throw new AccessTokenException(
                     "Unable to parse AccessToken to SignedJWT", BearerTokenError.INVALID_TOKEN);
@@ -125,70 +140,6 @@ public class AccessTokenService {
             throw new AccessTokenException(
                     "Unable to parse ClaimSet in AccessToken", BearerTokenError.INVALID_TOKEN);
         }
-
-        var subject = claimsSet.getSubject();
-        var accessTokenStore = getAccessTokenStore(client.getClientID(), subject);
-        if (accessTokenStore.isEmpty()) {
-            LOG.warn(
-                    "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
-                    claimsSet.getExpirationTime(),
-                    NowHelper.now(),
-                    claimsSet.getJWTID());
-            throw new AccessTokenException(INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
-        }
-        if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
-            String storeJwtId;
-            try {
-                storeJwtId =
-                        SignedJWT.parse(accessTokenStore.get().getToken())
-                                .getJWTClaimsSet()
-                                .getJWTID();
-            } catch (ParseException e) {
-                throw new AccessTokenException(
-                        "Unable to parse Access Token from store", BearerTokenError.INVALID_TOKEN);
-            }
-            LOG.warn(
-                    "Access Token in Access Token Store (JWTID: {}), is different to Access Token sent in request (JWTID: {})",
-                    storeJwtId,
-                    claimsSet.getJWTID());
-            throw new AccessTokenException(INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
-        }
-
-        String clientAndRpPairwiseId = client.getClientID() + "." + subject;
-        Optional<OrchAccessTokenItem> orchAccessTokenItem;
-        try {
-            orchAccessTokenItem =
-                    orchAccessTokenService
-                            .getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId)
-                            .stream()
-                            .filter(item -> Objects.equals(item.getToken(), accessToken.getValue()))
-                            .findFirst();
-
-            if (orchAccessTokenItem.isEmpty()) {
-                LOG.warn("There is no access token in dynamo matching the token in the request");
-            } else {
-                LOG.info(
-                        "Token value from access token in dynamo matches the token value in redis");
-                LOG.info(
-                        "Does internal pairwise subject id from access token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchAccessTokenItem.get().getInternalPairwiseSubjectId(),
-                                accessTokenStore.get().getInternalPairwiseSubjectId()));
-                LOG.info(
-                        "Does client session id from access token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchAccessTokenItem.get().getClientSessionId(),
-                                accessTokenStore.get().getJourneyId()));
-                if (orchAccessTokenItem.get().getAuthCode().equals("placeholder-for-auth-code")) {
-                    LOG.info("The access token in dynamo has a placeholder for auth code.");
-                }
-            }
-        } catch (OrchAccessTokenException e) {
-            LOG.warn("Unable to get Orch Access Token from Dynamo");
-        }
-
-        return new AccessTokenInfo(
-                accessTokenStore.get(), subject, scopes, identityClaims, client.getClientID());
     }
 
     private boolean hasAccessTokenExpired(Date expirationTime) {

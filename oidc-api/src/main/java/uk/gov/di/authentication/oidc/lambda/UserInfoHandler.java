@@ -27,7 +27,6 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -96,8 +95,7 @@ public class UserInfoHandler
                                 new JwksService(
                                         configurationService,
                                         new KmsConnectionService(configurationService)),
-                                configurationService),
-                        new OrchAccessTokenService(configurationService));
+                                configurationService));
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
@@ -121,8 +119,7 @@ public class UserInfoHandler
                                 new JwksService(
                                         configurationService,
                                         new KmsConnectionService(configurationService)),
-                                configurationService),
-                        new OrchAccessTokenService(configurationService));
+                                configurationService));
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
