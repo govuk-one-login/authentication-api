@@ -11,12 +11,7 @@ Resources:
         - ${Env}-account-management-send-otp-notification-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          sendOtpNotificationMemorySize,
-        ]
+      MemorySize: !FindInMap [LambdaDefaults, Global, memorySize]
       ProvisionedConcurrencyConfig:
         ProvisionedConcurrentExecutions:
           !FindInMap [

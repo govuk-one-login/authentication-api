@@ -7,13 +7,7 @@ Resources:
         - ${Env}-api_gateway_authorizer
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          authorizerMemorySize,
-          DefaultValue: 1536,
-        ]
+      MemorySize: !FindInMap [LambdaDefaults, Global, memorySize]
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest
       Runtime: java17

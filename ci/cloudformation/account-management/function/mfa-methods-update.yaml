@@ -11,13 +11,7 @@ Resources:
         - ${Env}-account-management-mfa-methods-update-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      MemorySize:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          mfaMethodsUpdateMemorySize,
-          DefaultValue: 1536,
-        ]
+      MemorySize: !FindInMap [LambdaDefaults, Global, memorySize]
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.MFAMethodsPutHandler::handleRequest
       Environment:
