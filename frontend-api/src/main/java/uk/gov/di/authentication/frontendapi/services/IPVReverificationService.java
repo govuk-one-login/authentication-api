@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -26,7 +27,6 @@ import uk.gov.di.authentication.frontendapi.exceptions.IPVReverificationServiceE
 import uk.gov.di.authentication.frontendapi.exceptions.JwtServiceException;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.JwksHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -72,7 +72,15 @@ public class IPVReverificationService {
                     new TokenService(
                             configurationService, redisConnectionService, kmsConnectionService);
             this.nowClock = new NowClock(Clock.systemUTC());
-            this.jwkSource = JwksHelper.getJwkSource(configurationService);
+            this.jwkSource =
+                    configurationService.isIpvJwksCallEnabled()
+                            ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
+                                    .retrying(true)
+                                    .refreshAheadCache(false)
+                                    .cache(true)
+                                    .rateLimited(false)
+                                    .build()
+                            : null;
 
         } catch (Exception e) {
             LOG.error("Error while initializing IPVReverificationService", e);
@@ -90,7 +98,15 @@ public class IPVReverificationService {
         this.jwtService = jwtService;
         this.tokenService = tokenService;
         this.nowClock = new NowClock(Clock.systemUTC());
-        this.jwkSource = JwksHelper.getJwkSource(configurationService);
+        this.jwkSource =
+                configurationService.isIpvJwksCallEnabled()
+                        ? JWKSourceBuilder.create(configurationService.getIpvJwksUrl())
+                                .retrying(true)
+                                .refreshAheadCache(false)
+                                .cache(true)
+                                .rateLimited(false)
+                                .build()
+                        : null;
     }
 
     public IPVReverificationService(

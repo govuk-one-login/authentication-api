@@ -523,10 +523,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
-    public boolean isStubbedEnvironment() {
-        return List.of("dev", "authdev1", "authdev2", "build").contains(getEnvironment());
-    }
-
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
