@@ -177,75 +177,104 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         long totalBatches = 0;
         long totalUserCredentialsFetched = 0;
         Map<String, AttributeValue> lastKey = null;
+
         do {
-            ScanRequest scanRequest =
-                    ScanRequest.builder()
-                            .tableName(userCredentialsTableName)
-                            .projectionExpression("Email,MfaMethods")
-                            .exclusiveStartKey(lastKey)
-                            .build();
-
-            ScanResponse scanResponse = client.scan(scanRequest);
-
+            ScanResponse scanResponse = scanUserCredentials(lastKey);
             List<UserCredentialsProfileJoin> currentBatch = new ArrayList<>();
+
             for (Map<String, AttributeValue> userCredentialsItem : scanResponse.items()) {
                 totalUserCredentialsFetched++;
-                if (totalUserCredentialsFetched % 100000 == 0) {
-                    LOG.info("Fetched {} user credentials records", totalUserCredentialsFetched);
-                }
+                logProgressIfNeeded(totalUserCredentialsFetched);
 
-                String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
-
-                Map<String, AttributeValue> firstMfaMethod = null;
-                List<MfaMethodDetails> methodDetails = new ArrayList<>();
-                if (userCredentialsItem.containsKey("MfaMethods")) {
-                    List<AttributeValue> mfaList = userCredentialsItem.get("MfaMethods").l();
-                    if (!mfaList.isEmpty()) {
-                        firstMfaMethod = mfaList.get(0).m();
-                    }
-                    methodDetails = extractMfaMethodDetails(mfaList);
-                }
-
-                Optional<Boolean> enabled =
-                        Optional.ofNullable(firstMfaMethod)
-                                .map(map -> map.get("Enabled"))
-                                .map(AttributeValue::n)
-                                .map(n -> n.equals("1"));
-
-                Optional<Boolean> methodVerified =
-                        Optional.ofNullable(firstMfaMethod)
-                                .map(map -> map.get("MethodVerified"))
-                                .map(AttributeValue::n)
-                                .map(n -> n.equals("1"));
-                currentBatch.add(
-                        new UserCredentialsProfileJoin(
-                                email, enabled, methodVerified, methodDetails));
+                UserCredentialsProfileJoin userJoin =
+                        createUserCredentialsProfileJoin(userCredentialsItem);
+                currentBatch.add(userJoin);
 
                 if (currentBatch.size() >= 100) {
                     totalBatches++;
-                    long finalTotalBatches = totalBatches;
-                    List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
-                    parallelTasks.add(
-                            forkJoinPool.submit(
-                                    () ->
-                                            batchGetUserProfiles(
-                                                    finalTotalBatches, finalCurrentBatch)));
+                    submitBatch(
+                            forkJoinPool,
+                            parallelTasks,
+                            new ArrayList<>(currentBatch),
+                            totalBatches);
                     currentBatch = new ArrayList<>();
                 }
             }
 
             if (!currentBatch.isEmpty()) {
                 totalBatches++;
-                long finalTotalBatches = totalBatches;
-                List<UserCredentialsProfileJoin> finalCurrentBatch = currentBatch;
-                parallelTasks.add(
-                        forkJoinPool.submit(
-                                () -> batchGetUserProfiles(finalTotalBatches, finalCurrentBatch)));
+                submitBatch(forkJoinPool, parallelTasks, currentBatch, totalBatches);
             }
 
             lastKey = scanResponse.lastEvaluatedKey();
         } while (lastKey != null && !lastKey.isEmpty());
     }
+
+    private ScanResponse scanUserCredentials(Map<String, AttributeValue> lastKey) {
+        ScanRequest scanRequest =
+                ScanRequest.builder()
+                        .tableName(userCredentialsTableName)
+                        .projectionExpression("Email,MfaMethods")
+                        .exclusiveStartKey(lastKey)
+                        .build();
+        return client.scan(scanRequest);
+    }
+
+    private void logProgressIfNeeded(long totalFetched) {
+        if (totalFetched % 100000 == 0) {
+            LOG.info("Fetched {} user credentials records", totalFetched);
+        }
+    }
+
+    private UserCredentialsProfileJoin createUserCredentialsProfileJoin(
+            Map<String, AttributeValue> userCredentialsItem) {
+        String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
+
+        MfaMethodInfo mfaInfo = extractMfaMethodInfo(userCredentialsItem);
+
+        return new UserCredentialsProfileJoin(
+                email, mfaInfo.enabled, mfaInfo.methodVerified, mfaInfo.methodDetails);
+    }
+
+    private MfaMethodInfo extractMfaMethodInfo(Map<String, AttributeValue> userCredentialsItem) {
+        if (!userCredentialsItem.containsKey("MfaMethods")) {
+            return new MfaMethodInfo(Optional.empty(), Optional.empty(), new ArrayList<>());
+        }
+
+        List<AttributeValue> mfaList = userCredentialsItem.get("MfaMethods").l();
+        List<MfaMethodDetails> methodDetails = extractMfaMethodDetails(mfaList);
+
+        if (mfaList.isEmpty()) {
+            return new MfaMethodInfo(Optional.empty(), Optional.empty(), methodDetails);
+        }
+
+        Map<String, AttributeValue> firstMfaMethod = mfaList.get(0).m();
+        Optional<Boolean> enabled = extractBooleanAttribute(firstMfaMethod, "Enabled");
+        Optional<Boolean> methodVerified =
+                extractBooleanAttribute(firstMfaMethod, "MethodVerified");
+
+        return new MfaMethodInfo(enabled, methodVerified, methodDetails);
+    }
+
+    private Optional<Boolean> extractBooleanAttribute(
+            Map<String, AttributeValue> attributeMap, String attributeName) {
+        return Optional.ofNullable(attributeMap.get(attributeName))
+                .map(AttributeValue::n)
+                .map(n -> n.equals("1"));
+    }
+
+    private void submitBatch(
+            ForkJoinPool forkJoinPool,
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks,
+            List<UserCredentialsProfileJoin> batch,
+            long batchNumber) {
+        parallelTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batchNumber, batch)));
+    }
+
+    private record MfaMethodInfo(
+            Optional<Boolean> enabled,
+            Optional<Boolean> methodVerified,
+            List<MfaMethodDetails> methodDetails) {}
 
     private MFAMethodAnalysis batchGetUserProfiles(
             long batchNumber, List<UserCredentialsProfileJoin> batch) {
@@ -280,7 +309,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         List<Map<String, AttributeValue>> results =
                 batchGetItemResponse.responses().get(userProfileTableName);
 
-        long missingCount = batch.size() - results.size();
+        int missingCount = batch.size() - results.size();
 
         for (Map<String, AttributeValue> item : results) {
             String email =

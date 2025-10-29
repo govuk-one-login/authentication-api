@@ -483,10 +483,9 @@ class MFAMethodAnalysisHandlerTest {
 
         List<Map<String, AttributeValue>> profileItems =
                 List.of(
-                        createProfileWithMigrationStatus(1, true, false, false), // Migrated, no MFA
-                        createProfileWithMigrationStatus(
-                                2, true, false, false), // Migrated, has MFA
-                        createProfileWithMigrationStatus(3, true, false, false) // Migrated, no MFA
+                        createProfileWithMigrationStatus(1, true, false), // Migrated, no MFA
+                        createProfileWithMigrationStatus(2, true, false), // Migrated, has MFA
+                        createProfileWithMigrationStatus(3, true, false) // Migrated, no MFA
                         );
 
         mockProfileBatchGetItem(createKeysFromCredentials(credentialItems), profileItems);
@@ -516,14 +515,11 @@ class MFAMethodAnalysisHandlerTest {
 
         List<Map<String, AttributeValue>> profileItems =
                 List.of(
+                        createProfileWithMigrationStatus(1, false, false), // Not migrated, no SMS
                         createProfileWithMigrationStatus(
-                                1, false, false, false), // Not migrated, no SMS
-                        createProfileWithMigrationStatus(
-                                2, false, false, false), // Not migrated, no SMS, but has auth app
-                        createProfileWithMigrationStatus(
-                                3, false, true, false), // Not migrated, has SMS
-                        createProfileWithMigrationStatus(
-                                4, false, true, false) // Not migrated, has SMS
+                                2, false, false), // Not migrated, no SMS, but has auth app
+                        createProfileWithMigrationStatus(3, false, true), // Not migrated, has SMS
+                        createProfileWithMigrationStatus(4, false, true) // Not migrated, has SMS
                         );
 
         mockProfileBatchGetItem(createKeysFromCredentials(credentialItems), profileItems);
@@ -559,7 +555,7 @@ class MFAMethodAnalysisHandlerTest {
     }
 
     private Map<String, AttributeValue> createProfileWithMigrationStatus(
-            int userIndex, boolean migrated, boolean phoneVerified, boolean hasPhone) {
+            int userIndex, boolean migrated, boolean phoneVerified) {
         Map<String, AttributeValue> profile = new HashMap<>();
         profile.put("Email", AttributeValue.builder().s(getTestEmail(userIndex)).build());
         profile.put("mfaMethodsMigrated", AttributeValue.builder().bool(migrated).build());
