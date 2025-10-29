@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 
+import java.util.List;
 import java.util.Optional;
 
 public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenItem> {
@@ -37,6 +38,22 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
                     clientAndRpPairwiseId);
         }
         return orchAccessToken;
+    }
+
+    public List<OrchAccessTokenItem> getAccessTokensForClientAndRpPairwiseId(
+            String clientAndRpPairwiseId) {
+        List<OrchAccessTokenItem> orchAccessTokens = List.of();
+        try {
+            orchAccessTokens = queryTableStream(clientAndRpPairwiseId).toList();
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException("Failed to get Orch access tokens from Dynamo", e);
+        }
+        if (orchAccessTokens.isEmpty()) {
+            LOG.info(
+                    "No Orch access token found for clientAndRpPairwiseId {}",
+                    clientAndRpPairwiseId);
+        }
+        return orchAccessTokens;
     }
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
