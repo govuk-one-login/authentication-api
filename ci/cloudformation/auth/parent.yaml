@@ -474,12 +474,12 @@ Mappings:
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"
-      frontendBaseUrl: https://apitest.signin.account.gov.uk
+      frontendBaseUrl: https://signin.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
-      lambdaMinConcurrency: 0
+      lambdaMinConcurrency: 3
       lockoutCountTtl: 900
       lockoutDuration: 7200
       orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
