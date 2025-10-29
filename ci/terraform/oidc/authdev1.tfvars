@@ -74,6 +74,8 @@ is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
 
+orch_frontend_api_gateway_integration_enabled = false
+
 orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"
 
 authorize_protected_subnet_enabled = true

@@ -77,6 +77,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.processing-identity.method_trigger_value,
       module.orch_auth_code.integration_trigger_value,
       module.orch_auth_code.method_trigger_value,
+      module.identity_progress.integration_trigger_value,
+      module.identity_progress.method_trigger_value,
       module.mfa_reset_storage_token_jwk.integration_trigger_value,
       module.mfa_reset_storage_token_jwk.method_trigger_value,
       module.reverification_result.integration_trigger_value,
