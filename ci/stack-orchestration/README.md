@@ -8,8 +8,8 @@ Clone the repo https://github.com/govuk-one-login/devplatform-deploy in a direct
 
 To run this tool you will need the below CLI's
 
-* aws cli for management of Cloudformation stacks
-* jq for formatting and conversion
+- aws cli for management of Cloudformation stacks
+- jq for formatting and conversion
 
 ## How to use
 
@@ -18,7 +18,7 @@ terminal, run `aws configure sso` and enter the start URL and region from AWS on
 profile that you can set as an environment variable, by running `export AWS_PROFILE=<profile>`.
 
 After this you can then run the below, replacing `<environment>`with one
-of `dev`, `build`, `stage`, `int`, `prod`:
+of `dev`, `build`, `staging`, `integration`, `production`:
 
 ```shell
 ./provision_all.sh <environment>
@@ -36,6 +36,7 @@ the `configuration/[ENVIRONMENT]/[PIPELINE]/parameters.json` files.
 ## SSM Parameters
 
 The following parameters are not provisioned by CloudFormation, and instead are managed manually in Systems Manager Parameter Store:
+
 - `<environment>-ipv-capacity`
 - `<environment>-auth-public-encryption-key`
 - `<environment>-ipv-public-encryption-key`
