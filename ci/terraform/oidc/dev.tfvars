@@ -107,4 +107,5 @@ performance_tuning = {
   }
 }
 
-use_strongly_consistent_reads = true
+use_strongly_consistent_reads  = true
+support_reauth_signout_enabled = true
