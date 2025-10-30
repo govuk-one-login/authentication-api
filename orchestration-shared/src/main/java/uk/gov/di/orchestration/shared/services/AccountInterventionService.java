@@ -196,6 +196,15 @@ public class AccountInterventionService {
             httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client which fails all future requests
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making AIS request, exiting with fault", e);
+                System.exit(1);
+            }
             logAndThrowAccountInterventionException(
                     "Failed to send request to Account Intervention Service.", e);
         }
