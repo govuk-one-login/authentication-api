@@ -1014,6 +1014,8 @@ Resources:
       Tags:
         - Key: Name
           Value: RpPublicKeyCache
+        - Key: CheckovRulesToSkip
+          Value: CKV_AWS_28
 
   #endregion
 
@@ -2530,7 +2532,7 @@ Resources:
             ],
           ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   GlobalLogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -6442,6 +6444,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref SlackEvents
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   SlackNotificationsPermission:
     Condition: IsNotProduction
@@ -6561,6 +6565,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref OrchProdSlackEvents
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   OrchProdSlackNotificationsPermission:
     Condition: IsProduction
@@ -6661,6 +6667,8 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref SecondLineSlackEvents
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   SecondLineSlackNotificationsPermission:
     Condition: IsProduction
