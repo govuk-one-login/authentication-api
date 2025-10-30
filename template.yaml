@@ -6933,7 +6933,7 @@ Resources:
         - !If
           - IsNotProduction
           - !Ref SlackEvents
-          - !Ref OrchProdSlackEvents
+          - !Ref SecondLineSlackEvents
   #endregion
 
   #region ClientRateLimitTable policies
