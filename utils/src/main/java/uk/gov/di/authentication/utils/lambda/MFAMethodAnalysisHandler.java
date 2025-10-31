@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -230,37 +231,58 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             Map<String, AttributeValue> userCredentialsItem) {
         String email = userCredentialsItem.get(UserCredentials.ATTRIBUTE_EMAIL).s();
 
-        MfaMethodInfo mfaInfo = extractMfaMethodInfo(userCredentialsItem);
+        List<MfaMethodDetails> mfaMethodDetails = extractMfaMethodDetails(userCredentialsItem);
 
-        return new UserCredentialsProfileJoin(
-                email, mfaInfo.enabled, mfaInfo.methodVerified, mfaInfo.methodDetails);
+        return new UserCredentialsProfileJoin(email, mfaMethodDetails);
     }
 
-    private MfaMethodInfo extractMfaMethodInfo(Map<String, AttributeValue> userCredentialsItem) {
+    private List<MfaMethodDetails> extractMfaMethodDetails(
+            Map<String, AttributeValue> userCredentialsItem) {
         if (!userCredentialsItem.containsKey("MfaMethods")) {
-            return new MfaMethodInfo(Optional.empty(), Optional.empty(), new ArrayList<>());
+            return new ArrayList<>();
         }
 
         List<AttributeValue> mfaList = userCredentialsItem.get("MfaMethods").l();
-        List<MfaMethodDetails> methodDetails = extractMfaMethodDetails(mfaList);
 
-        if (mfaList.isEmpty()) {
-            return new MfaMethodInfo(Optional.empty(), Optional.empty(), methodDetails);
-        }
+        // NOTE: ABSENT_ATTRIBUTE constant indicates absent DynamoDB attribute; string "null"
+        // represents existing attribute with "null" value.
+        return mfaList.stream()
+                .map(AttributeValue::m)
+                .map(
+                        mfaMethod -> {
+                            String mfaMethodType =
+                                    Optional.ofNullable(mfaMethod.get("MfaMethodType"))
+                                            .map(AttributeValue::s)
+                                            .orElse(ABSENT_ATTRIBUTE);
 
-        Map<String, AttributeValue> firstMfaMethod = mfaList.get(0).m();
-        Optional<Boolean> enabled = extractBooleanAttribute(firstMfaMethod, "Enabled");
-        Optional<Boolean> methodVerified =
-                extractBooleanAttribute(firstMfaMethod, "MethodVerified");
-
-        return new MfaMethodInfo(enabled, methodVerified, methodDetails);
+                            return new MfaMethodDetails(
+                                    Optional.ofNullable(mfaMethod.get("PriorityIdentifier"))
+                                            .map(AttributeValue::s)
+                                            .orElse(ABSENT_ATTRIBUTE),
+                                    mfaMethodType,
+                                    extractBooleanAttribute(mfaMethod, "Enabled"),
+                                    extractBooleanAttribute(mfaMethod, "MethodVerified"),
+                                    hasAuthAppCredential(mfaMethod, mfaMethodType));
+                        })
+                .toList();
     }
 
-    private Optional<Boolean> extractBooleanAttribute(
+    private static Optional<Boolean> extractBooleanAttribute(
             Map<String, AttributeValue> attributeMap, String attributeName) {
         return Optional.ofNullable(attributeMap.get(attributeName))
                 .map(AttributeValue::n)
                 .map(n -> n.equals("1"));
+    }
+
+    private static Optional<Boolean> hasAuthAppCredential(
+            Map<String, AttributeValue> attributeMap, String mfaMethodType) {
+        if (!MFAMethodType.AUTH_APP.name().equals(mfaMethodType)) {
+            return Optional.empty();
+        }
+
+        AttributeValue credential = attributeMap.get("CredentialValue");
+
+        return Optional.of(isAttributeNonEmptyString(credential));
     }
 
     private void submitBatch(
@@ -271,10 +293,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         parallelTasks.add(forkJoinPool.submit(() -> batchGetUserProfiles(batchNumber, batch)));
     }
 
-    private record MfaMethodInfo(
-            Optional<Boolean> enabled,
-            Optional<Boolean> methodVerified,
-            List<MfaMethodDetails> methodDetails) {}
+    private static boolean isAttributeNonEmptyString(AttributeValue value) {
+        return Optional.ofNullable(value)
+                .map(AttributeValue::s)
+                .map(s -> !s.trim().isEmpty())
+                .orElse(false);
+    }
 
     private MFAMethodAnalysis batchGetUserProfiles(
             long batchNumber, List<UserCredentialsProfileJoin> batch) {
@@ -299,7 +323,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                 userProfileTableName,
                 KeysAndAttributes.builder()
                         .keys(keys)
-                        .projectionExpression("Email,PhoneNumberVerified,mfaMethodsMigrated")
+                        .projectionExpression(
+                                "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
                         .build());
 
         BatchGetItemRequest batchGetItemRequest =
@@ -333,6 +358,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                 user -> {
                                     user.setPhoneNumberVerified(phoneNumberVerified);
                                     user.setMfaMethodsMigrated(Optional.of(mfaMethodsMigrated));
+                                    user.setHasPhoneNumber(
+                                            isAttributeNonEmptyString(item.get("PhoneNumber")));
                                 });
             }
         }
@@ -355,7 +382,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         mfaMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
                 attributeCombinationsCount);
 
-        Map<List<MfaMethodDetails>, Long> mfaMethodDetailsCombinations = new HashMap<>();
+        Map<List<MfaMethodOutput>, Long> mfaMethodDetailsCombinations = new HashMap<>();
         long accountsWithoutAnyMfaMethods = 0;
         long usersWithMfaMethodsMigrated = 0;
         long usersWithoutMfaMethodsMigrated = 0;
@@ -368,7 +395,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             } else {
                 usersWithoutMfaMethodsMigrated++;
             }
-            mfaMethodDetailsCombinations.merge(item.getMfaMethodDetails(), 1L, Long::sum);
+
+            List<MfaMethodOutput> outputMethods =
+                    item.getMfaMethodDetails().stream().map(MfaMethodDetails::toOutput).toList();
+            mfaMethodDetailsCombinations.merge(outputMethods, 1L, Long::sum);
         }
         mfaMethodAnalysis.incrementCountOfAccountsWithoutAnyMfaMethods(
                 accountsWithoutAnyMfaMethods);
@@ -381,24 +411,19 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         return mfaMethodAnalysis;
     }
 
-    private static List<MfaMethodDetails> extractMfaMethodDetails(List<AttributeValue> mfaList) {
-        // NOTE: MISSING_ATTRIBUTE constant indicates absent DynamoDB attribute; string "null"
-        // represents existing attribute with "null" value.
-        return mfaList.stream()
-                .map(AttributeValue::m)
-                .map(
-                        mfaMethod ->
-                                new MfaMethodDetails(
-                                        Optional.ofNullable(mfaMethod.get("PriorityIdentifier"))
-                                                .map(AttributeValue::s)
-                                                .orElse(ABSENT_ATTRIBUTE),
-                                        Optional.ofNullable(mfaMethod.get("MfaMethodType"))
-                                                .map(AttributeValue::s)
-                                                .orElse(ABSENT_ATTRIBUTE)))
-                .toList();
+    private record MfaMethodDetails(
+            String priorityIdentifier,
+            String mfaMethodType,
+            Optional<Boolean> enabled,
+            Optional<Boolean> methodVerified,
+            Optional<Boolean> hasAuthAppCredential) {
+
+        public MfaMethodOutput toOutput() {
+            return new MfaMethodOutput(priorityIdentifier, mfaMethodType);
+        }
     }
 
-    private record MfaMethodDetails(String priorityIdentifier, String mfaMethodType) {}
+    private record MfaMethodOutput(String priorityIdentifier, String mfaMethodType) {}
 
     private static class Pool {
         private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
@@ -423,21 +448,30 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     private static class UserCredentialsProfileJoin {
         public static final String EMPTY = "empty";
         private final String email;
-        private final Optional<Boolean> authAppEnabled;
-        private final Optional<Boolean> authAppMethodVerified;
+        private Optional<Boolean> hasAuthAppCredential;
+        private Optional<Boolean> authAppEnabled;
+        private Optional<Boolean> authAppMethodVerified;
+        private boolean hasPhoneNumber;
         private Optional<Boolean> phoneNumberVerified = Optional.empty();
         private Optional<Boolean> mfaMethodsMigrated = Optional.empty();
         private final List<MfaMethodDetails> mfaMethodDetails;
 
-        public UserCredentialsProfileJoin(
-                String email,
-                Optional<Boolean> authAppEnabled,
-                Optional<Boolean> authAppMethodVerified,
-                List<MfaMethodDetails> mfaMethodDetails) {
+        public UserCredentialsProfileJoin(String email, List<MfaMethodDetails> mfaMethodDetails) {
             this.email = email;
-            this.authAppEnabled = authAppEnabled;
-            this.authAppMethodVerified = authAppMethodVerified;
             this.mfaMethodDetails = mfaMethodDetails;
+
+            setAuthAppAttributes();
+        }
+
+        private void setAuthAppAttributes() {
+            Optional<MfaMethodDetails> authApp =
+                    mfaMethodDetails.stream()
+                            .filter(m -> MFAMethodType.AUTH_APP.name().equals(m.mfaMethodType()))
+                            .findFirst();
+
+            this.authAppEnabled = authApp.flatMap(MfaMethodDetails::enabled);
+            this.authAppMethodVerified = authApp.flatMap(MfaMethodDetails::methodVerified);
+            this.hasAuthAppCredential = authApp.flatMap(MfaMethodDetails::hasAuthAppCredential);
         }
 
         public String getEmail() {
@@ -450,6 +484,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
         public void setMfaMethodsMigrated(Optional<Boolean> mfaMethodsMigrated) {
             this.mfaMethodsMigrated = mfaMethodsMigrated;
+        }
+
+        public void setHasPhoneNumber(boolean hasPhoneNumber) {
+            this.hasPhoneNumber = hasPhoneNumber;
         }
 
         public Optional<Boolean> getMfaMethodsMigrated() {
@@ -486,11 +524,16 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
             // If not migrated, check both old auth app attributes and phone number verification
             boolean hasAuthApp =
-                    authAppEnabled.orElse(false) && authAppMethodVerified.orElse(false);
-            boolean hasSms = phoneNumberVerified.orElse(false);
+                    authAppEnabled.orElse(false)
+                            && authAppMethodVerified.orElse(false)
+                            && hasAuthAppCredential.orElse(false);
+            boolean hasSms = hasPhoneNumber && phoneNumberVerified.orElse(false);
 
             return !hasAuthApp && !hasSms;
         }
+
+        public record MfaMethodPriorityAndTypeAttributeCombinations(
+                String priorityIdentifier, String mfaMethodType) {}
 
         public record AttributeCombinations(
                 String authAppEnabled, String authAppMethodVerified, String phoneNumberVerified) {}
@@ -511,7 +554,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private final Map<String, Long> phoneDestinationCounts = new HashMap<>();
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
-        private final Map<List<MfaMethodDetails>, Long> mfaMethodDetailsCombinations =
+        private final Map<List<MfaMethodOutput>, Long> mfaMethodDetailsCombinations =
                 new HashMap<>();
 
         public long getCountOfAuthAppUsersAssessed() {
@@ -604,7 +647,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             }
         }
 
-        public Map<List<MfaMethodDetails>, Long> getMfaMethodDetailsCombinations() {
+        public Map<List<MfaMethodOutput>, Long> getMfaMethodDetailsCombinations() {
             return mfaMethodDetailsCombinations;
         }
 
@@ -618,7 +661,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                                     .MfaMethodPriorityCombination(
                                                     entry.getKey().stream()
                                                             .map(
-                                                                    MfaMethodDetails
+                                                                    MfaMethodOutput
                                                                             ::priorityIdentifier)
                                                             .map(s -> s == null ? "null" : s)
                                                             .collect(Collectors.joining(","))),
@@ -626,8 +669,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         }
 
         public void mergeMfaMethodDetailsCombinations(
-                Map<List<MfaMethodDetails>, Long> combinations) {
-            for (Map.Entry<List<MfaMethodDetails>, Long> entry : combinations.entrySet()) {
+                Map<List<MfaMethodOutput>, Long> combinations) {
+            for (Map.Entry<List<MfaMethodOutput>, Long> entry : combinations.entrySet()) {
                 this.mfaMethodDetailsCombinations.merge(
                         entry.getKey(), entry.getValue(), Long::sum);
             }

@@ -9,7 +9,9 @@ import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.ArrayList;
@@ -98,7 +100,14 @@ class MFAMethodAnalysisHandlerTest {
         for (int i = 1; i < size + 1; i++) {
             Map<String, AttributeValue> item = new HashMap<>();
             item.put("Email", AttributeValue.builder().s(getTestEmail(i)).build());
+
             Map<String, AttributeValue> mfaMethodEntry = new HashMap<>();
+            mfaMethodEntry.put(
+                    "MfaMethodType",
+                    AttributeValue.builder().s(MFAMethodType.AUTH_APP.name()).build());
+            mfaMethodEntry.put(
+                    "PriorityIdentifier",
+                    AttributeValue.builder().s(PriorityIdentifier.DEFAULT.name()).build());
             mfaMethodEntry.put(
                     "Enabled",
                     AttributeValue.builder().n(i % denominator == 0 ? "1" : "0").build());
@@ -109,6 +118,7 @@ class MFAMethodAnalysisHandlerTest {
                     AttributeValue.builder()
                             .l(AttributeValue.builder().m(mfaMethodEntry).build())
                             .build();
+
             item.put("MfaMethods", mfaMethods);
             credentialItems.add(item);
         }
@@ -126,6 +136,7 @@ class MFAMethodAnalysisHandlerTest {
         for (int i = 1; i < size + 1; i++) {
             Map<String, AttributeValue> item = new HashMap<>();
             item.put("Email", AttributeValue.builder().s(getTestEmail(i)).build());
+            item.put("PhoneNumber", AttributeValue.builder().s(getTestPhone(i)).build());
             item.put(
                     "PhoneNumberVerified",
                     AttributeValue.builder().n(i % denominator == 0 ? "0" : "1").build());
@@ -137,7 +148,7 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=absent_attribute]=%s}, mfaMethodDetailsCombinations={[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=absent_attribute]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=DEFAULT]=%s}, mfaMethodDetailsCombinations={[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
                         .formatted(
                                 size,
                                 expectedCount,
@@ -279,7 +290,8 @@ class MFAMethodAnalysisHandlerTest {
                 "test-user-profile",
                 KeysAndAttributes.builder()
                         .keys(keys)
-                        .projectionExpression("Email,PhoneNumberVerified,mfaMethodsMigrated")
+                        .projectionExpression(
+                                "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
                         .build());
 
         Map<String, List<Map<String, AttributeValue>>> responses = new HashMap<>();
@@ -359,19 +371,19 @@ class MFAMethodAnalysisHandlerTest {
 
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=2"));
+                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=2"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=absent_attribute]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=absent_attribute]]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=null, mfaMethodType=AUTH_APP]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=null, mfaMethodType=AUTH_APP]]=1"));
     }
 
     @Test
@@ -408,10 +420,10 @@ class MFAMethodAnalysisHandlerTest {
 
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP], MfaMethodDetails[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP], MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodDetails[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+                        "[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
     }
 
     private Map<String, AttributeValue> createUserWithMfaMethodDetails(
@@ -541,9 +553,18 @@ class MFAMethodAnalysisHandlerTest {
 
         if (enabled || verified) {
             Map<String, AttributeValue> mfaMethod = new HashMap<>();
+            mfaMethod.put(
+                    "MfaMethodType",
+                    AttributeValue.builder().s(MFAMethodType.AUTH_APP.name()).build());
+            mfaMethod.put(
+                    "PriorityIdentifier",
+                    AttributeValue.builder().s(PriorityIdentifier.DEFAULT.name()).build());
             mfaMethod.put("Enabled", AttributeValue.builder().n(enabled ? "1" : "0").build());
             mfaMethod.put(
                     "MethodVerified", AttributeValue.builder().n(verified ? "1" : "0").build());
+            mfaMethod.put(
+                    "CredentialValue", AttributeValue.builder().s("credential-value").build());
+
             user.put(
                     "MfaMethods",
                     AttributeValue.builder()
@@ -559,6 +580,7 @@ class MFAMethodAnalysisHandlerTest {
         Map<String, AttributeValue> profile = new HashMap<>();
         profile.put("Email", AttributeValue.builder().s(getTestEmail(userIndex)).build());
         profile.put("mfaMethodsMigrated", AttributeValue.builder().bool(migrated).build());
+        profile.put("PhoneNumber", AttributeValue.builder().s(getTestPhone(userIndex)).build());
         profile.put(
                 "PhoneNumberVerified",
                 AttributeValue.builder().n(phoneVerified ? "1" : "0").build());
@@ -567,5 +589,9 @@ class MFAMethodAnalysisHandlerTest {
 
     private String getTestEmail(int counter) {
         return "test-" + counter + "@example.com";
+    }
+
+    private String getTestPhone(int counter) {
+        return String.format("%011d", counter);
     }
 }
