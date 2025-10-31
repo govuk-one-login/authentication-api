@@ -66,7 +66,7 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
-    void shouldDoNothingIfPayloadIsInvalid() {
+    void shouldDoNothingIfPayloadIsInvalid() throws Exception {
         handler.handleRequest(sqsEventWithPayload(null), context);
 
         verify(tokenService, never())
@@ -75,7 +75,7 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
-    void shouldSendRequestToRelyingPartyEndpoint() {
+    void shouldSendRequestToRelyingPartyEndpoint() throws Exception {
         var input =
                 new BackChannelLogoutMessage(
                         "client-id", "https://test.account.gov.uk", "some-subject-id");
@@ -95,7 +95,8 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
-    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithPostRequestFailureException() {
+    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithPostRequestFailureException()
+            throws Exception {
         var firstInput =
                 new BackChannelLogoutMessage(
                         "client-id", "https://test-1.account.gov.uk", "some-subject-id");
@@ -135,7 +136,8 @@ class BackChannelLogoutRequestHandlerTest {
     }
 
     @Test
-    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithHttpRequestTimeoutException() {
+    void shouldReturnBatchItemFailuresWhenSendRequestFailsWithHttpRequestTimeoutException()
+            throws Exception {
         var firstInput =
                 new BackChannelLogoutMessage(
                         "client-id", "https://test-1.account.gov.uk", "some-subject-id");

@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.oidc.exceptions;
 
-public class HttpRequestTimeoutException extends RuntimeException {
+import java.io.IOException;
+
+public class HttpRequestTimeoutException extends IOException {
     public HttpRequestTimeoutException(String message, Throwable cause) {
         super(message, cause);
     }

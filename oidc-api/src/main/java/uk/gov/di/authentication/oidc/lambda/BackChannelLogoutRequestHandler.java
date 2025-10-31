@@ -10,8 +10,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.oidc.exceptions.HttpRequestTimeoutException;
-import uk.gov.di.authentication.oidc.exceptions.PostRequestFailureException;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
@@ -25,6 +23,7 @@ import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
@@ -93,7 +92,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         for (SQSEvent.SQSMessage message : event.getRecords()) {
             try {
                 sendLogoutMessage(message);
-            } catch (PostRequestFailureException | HttpRequestTimeoutException e) {
+            } catch (IOException e) {
                 LOG.warn(e.getMessage());
                 batchItemFailures.add(
                         new SQSBatchResponse.BatchItemFailure(message.getMessageId()));
@@ -103,7 +102,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         return new SQSBatchResponse(batchItemFailures);
     }
 
-    private void sendLogoutMessage(SQSMessage record) {
+    private void sendLogoutMessage(SQSMessage record) throws IOException {
         LOG.info("Handling backchannel logout request with id: {}", record.getMessageId());
 
         try {
@@ -124,6 +123,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
             httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 
         } catch (JsonException e) {
+            // Error in the payload so no need to retry
             LOG.error("Could not parse logout request payload");
         }
     }

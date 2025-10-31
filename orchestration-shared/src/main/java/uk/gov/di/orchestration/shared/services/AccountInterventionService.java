@@ -200,7 +200,8 @@ public class AccountInterventionService {
                 Thread.currentThread().interrupt();
             }
             if (e.getCause() instanceof LinkageError) {
-                // In rare cases we see a linkage error within the HTTP Client which fails all future requests
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
                 // As a temporary measure we crash the lambda to force a restart
                 LOG.error("Linkage error making AIS request, exiting with fault", e);
                 System.exit(1);

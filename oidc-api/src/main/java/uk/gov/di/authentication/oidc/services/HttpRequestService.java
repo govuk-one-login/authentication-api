@@ -38,7 +38,7 @@ public class HttpRequestService {
         httpClient = HttpClientHelper.newInstrumentedHttpClient();
     }
 
-    public void post(URI uri, String body) {
+    public void post(URI uri, String body) throws IOException {
 
         var request =
                 HttpRequest.newBuilder()
@@ -74,10 +74,18 @@ public class HttpRequestService {
                             configurationService.getBackChannelLogoutCallTimeout()),
                     e);
         } catch (IOException e) {
-            LOG.error("Unable to execute POST request successfully: {}", e.getMessage());
-            throw new RuntimeException(e);
+            LOG.error("Unable to execute POST request successfully", e);
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making AIS request, exiting with fault");
+                System.exit(1);
+            }
+            throw e;
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
         }
     }
 }
