@@ -85,9 +85,31 @@ jobs:
           sam validate --lint -t auth-template.yaml
           sam build --cached --parallel -t auth-template.yaml
 
+      - name: Check for changes
+        id: changes
+        run: |
+          # Generate hash of source files before signing
+          SOURCE_HASH=$(find .aws-sam/build -name "*.jar" -o -name "*.zip" -o -name "template.yaml" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+          echo "source-hash=$SOURCE_HASH" >> $GITHUB_OUTPUT
+
+          # Check if this hash was already deployed
+          if aws s3 ls "s3://${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}/deployment-hashes/$SOURCE_HASH" 2>/dev/null; then
+            echo "No changes detected - skipping deployment"
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected - proceeding with deployment"
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy SAM app
+        if: steps.changes.outputs.deploy == 'true'
         uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
         with:
           artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
           working-directory: .aws-sam/build
+
+      - name: Record deployment hash
+        if: steps.changes.outputs.deploy == 'true'
+        run: |
+          echo "Deployment completed" | aws s3 cp - "s3://${{ secrets.ARTIFACT_SOURCE_BUCKET_NAME }}/deployment-hashes/${{ steps.changes.outputs.source-hash }}"
