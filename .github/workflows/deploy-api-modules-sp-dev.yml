@@ -52,6 +52,14 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
+      - name: Cache SAM build
+        uses: actions/cache@v4
+        with:
+          path: .aws-sam
+          key: sam-build-${{ runner.os }}-${{ hashFiles('**/build.gradle', 'auth-template.yaml', 'ci/cloudformation/auth/**') }}
+          restore-keys: |
+            sam-build-${{ runner.os }}-
+
       - name: Gradle build
         run: |
           ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip
@@ -75,7 +83,7 @@ jobs:
       - name: SAM build
         run: |
           sam validate --lint -t auth-template.yaml
-          sam build --parallel -t auth-template.yaml
+          sam build --cached --parallel -t auth-template.yaml
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
