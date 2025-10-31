@@ -247,7 +247,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldReturnLockedOutWhenBlocked() {
+        void shouldReturnLockedOutWhenBlockedForPassword() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
             when(codeStorageService.isBlockedForEmail(
@@ -340,7 +340,7 @@ class PermissionDecisionManagerTest {
 
         @ParameterizedTest
         @MethodSource("countTypeToForbiddenReasonProvider")
-        void shouldReturnTemporarilyLockedOutForReauthenticationWhenCountExceeded(
+        void shouldReturnReauthLockedOutForReauthenticationWhenCountExceeded(
                 CountType countType, ForbiddenReason expectedReason) {
             var userContext = createUserContext(3);
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
@@ -357,8 +357,7 @@ class PermissionDecisionManagerTest {
                             JourneyType.REAUTHENTICATION, userContext);
 
             assertTrue(result.isSuccess());
-            var lockedOut =
-                    assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
             assertEquals(expectedReason, lockedOut.forbiddenReason());
             assertEquals(6, lockedOut.attemptCount());
         }
@@ -403,7 +402,7 @@ class PermissionDecisionManagerTest {
         }
 
         @Test
-        void shouldUseMaxRetriesWhenBlockedRegardlessOfCurrentCount() {
+        void shouldUseMaxRetriesWhenBlockedForPasswordRegardlessOfCurrentCount() {
             var userContext = createUserContext(0);
             when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(3);
             when(codeStorageService.isBlockedForEmail(
@@ -420,6 +419,9 @@ class PermissionDecisionManagerTest {
             assertTrue(result.isSuccess());
             var lockedOut =
                     assertInstanceOf(Decision.TemporarilyLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
             assertEquals(7, lockedOut.attemptCount());
         }
     }
@@ -474,6 +476,200 @@ class PermissionDecisionManagerTest {
     }
 
     @Nested
+    class CanStartJourney {
+
+        @Test
+        void shouldReturnPermittedForNonReauthJourney() {
+            var userContext = createUserContext(0);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(JourneyType.SIGN_IN, userContext);
+
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(0, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnPermittedForReauthWhenNotBlocked() {
+            var userContext = createUserContext(0);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(0, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnReauthLockedOutWhenPasswordCountExceeded() {
+            var userContext = createUserContext(0);
+            var counts = Map.of(CountType.ENTER_PASSWORD, 6);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(counts, lockedOut.detailedCounts());
+            assertEquals(1, lockedOut.blockedCountTypes().size());
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_PASSWORD));
+        }
+
+        @Test
+        void shouldReturnReauthLockedOutWhenEmailCountExceeded() {
+            var userContext = createUserContext(0);
+            var counts = Map.of(CountType.ENTER_EMAIL, 6);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(counts, lockedOut.detailedCounts());
+            assertEquals(1, lockedOut.blockedCountTypes().size());
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_EMAIL));
+        }
+
+        @Test
+        void shouldReturnReauthLockedOutWhenMfaCountExceeded() {
+            var userContext = createUserContext(0);
+            var counts = Map.of(CountType.ENTER_MFA_CODE, 6);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(counts, lockedOut.detailedCounts());
+            assertEquals(1, lockedOut.blockedCountTypes().size());
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_MFA_CODE));
+        }
+
+        @Test
+        void shouldUseGetCountsByJourneyWhenInternalSubjectIdIsNull() {
+            var userContext =
+                    new UserPermissionContext(null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
+            when(authenticationAttemptsService.getCountsByJourney(
+                            userContext.rpPairwiseId(), JourneyType.REAUTHENTICATION))
+                    .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(0, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnReauthLockedOutWithMultipleBlockedCountTypes() {
+            var userContext = createUserContext(0);
+            var counts =
+                    Map.of(
+                            CountType.ENTER_PASSWORD, 6,
+                            CountType.ENTER_EMAIL, 6,
+                            CountType.ENTER_MFA_CODE, 3);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(counts, lockedOut.detailedCounts());
+            assertEquals(2, lockedOut.blockedCountTypes().size());
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_PASSWORD));
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_EMAIL));
+        }
+
+        @Test
+        void shouldReturnReauthLockedOutWhenEmailCodeCountExceeded() {
+            var userContext = createUserContext(0);
+            var counts = Map.of(CountType.ENTER_EMAIL_CODE, 6);
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userContext.internalSubjectId(),
+                            userContext.rpPairwiseId(),
+                            JourneyType.REAUTHENTICATION))
+                    .thenReturn(counts);
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+            when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+            when(configurationService.getCodeMaxRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canStartJourney(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(counts, lockedOut.detailedCounts());
+            assertEquals(1, lockedOut.blockedCountTypes().size());
+            assertTrue(lockedOut.blockedCountTypes().contains(CountType.ENTER_EMAIL_CODE));
+        }
+    }
+
+    @Nested
     class SimplePermissionMethods {
 
         @Test
@@ -508,18 +704,6 @@ class PermissionDecisionManagerTest {
 
             var result =
                     permissionDecisionManager.canVerifyMfaOtp(JourneyType.SIGN_IN, userContext);
-
-            assertTrue(result.isSuccess());
-            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
-            assertEquals(0, decision.attemptCount());
-        }
-
-        @Test
-        void canStartJourneyShouldAlwaysReturnPermitted() {
-            var userContext = createUserContext(0);
-
-            var result =
-                    permissionDecisionManager.canStartJourney(JourneyType.SIGN_IN, userContext);
 
             assertTrue(result.isSuccess());
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
