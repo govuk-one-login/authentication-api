@@ -2093,7 +2093,6 @@ Resources:
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-password
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-port
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-tls
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-password-pepper
             - Sid: AllowGetParameters
               Effect: Allow
               Action:
@@ -2104,7 +2103,6 @@ Resources:
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-password-pepper
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
