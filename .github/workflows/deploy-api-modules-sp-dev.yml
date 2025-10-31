@@ -88,8 +88,8 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          # Generate hash of source files before signing
-          SOURCE_HASH=$(find .aws-sam/build -name "*.jar" -o -name "*.zip" -o -name "template.yaml" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+          # Generate hash of only JAR/ZIP artifacts (exclude template.yaml as it's regenerated)
+          SOURCE_HASH=$(find .aws-sam/build -name "*.jar" -o -name "*.zip" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
           echo "source-hash=$SOURCE_HASH" >> $GITHUB_OUTPUT
 
           # Check if this hash was already deployed
