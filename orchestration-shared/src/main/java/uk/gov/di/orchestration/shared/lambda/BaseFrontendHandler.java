@@ -110,7 +110,7 @@ public abstract class BaseFrontendHandler<T>
                 getHeaderValueFromHeadersOpt(
                         input.getHeaders(),
                         SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                        false);
         if (sessionIdOpt.isEmpty()) {
             LOG.warn("Session ID was not found in request headers");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
@@ -120,7 +120,7 @@ public abstract class BaseFrontendHandler<T>
                 getHeaderValueFromHeaders(
                         input.getHeaders(),
                         CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                        false);
         onRequestReceived(clientSessionId);
         var orchClientSession =
                 orchClientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());

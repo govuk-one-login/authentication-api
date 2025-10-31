@@ -143,7 +143,7 @@ public class AuthCodeHandler
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                            false);
             if (sessionId == null) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
@@ -152,7 +152,7 @@ public class AuthCodeHandler
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                            false);
             validateSessions(orchSession, clientSessionId);
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
