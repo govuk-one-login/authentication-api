@@ -32,9 +32,9 @@ import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getProcessingIdentityStatus;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -112,15 +112,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
             var identityCredentials =
                     dynamoIdentityService.getIdentityCredentials(userContext.getClientSessionId());
-            var processingStatus = ProcessingIdentityStatus.PROCESSING;
-            if (identityCredentials.isEmpty()
-                    && userContext.getOrchSession().getProcessingIdentityAttempts() == 1) {
-                processingStatus = ProcessingIdentityStatus.NO_ENTRY;
+            var processingStatus =
+                    getProcessingIdentityStatus(identityCredentials, processingAttempts);
+            if (processingStatus == ProcessingIdentityStatus.NO_ENTRY) {
                 userContext.getOrchSession().resetProcessingIdentityAttempts();
-            } else if (identityCredentials.isEmpty()) {
-                processingStatus = ProcessingIdentityStatus.ERROR;
-            } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
-                processingStatus = ProcessingIdentityStatus.COMPLETED;
             }
             cloudwatchMetricsService.incrementCounter(
                     "ProcessingIdentity",
