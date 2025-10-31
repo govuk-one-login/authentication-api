@@ -81,6 +81,7 @@ Resources:
         - !Ref DynamoCommonPasswordsReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref RedisParametersAccessPolicy
+        - !Ref PepperParametersAccessPolicy
         - !If [
             ProvisionTestClientSecret,
             !Ref TestClientEmailAllowListSecretAccessPolicy,
