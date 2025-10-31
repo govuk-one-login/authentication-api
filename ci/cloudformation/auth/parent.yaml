@@ -286,7 +286,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       frontendApiFMSTagValue: "authfrontenddev"
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      frontendBaseUrl: https://signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
