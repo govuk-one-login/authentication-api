@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AuthInternalApiTxMAAuditQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-account-mgmt-txma-audit-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AuthInternalApiTxMAAuditDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      VisibilityTimeout: 70
+      Tags:
+        - Key: Service
+          Value: account-management-txma-audit
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+
+  AuthInternalApiTxMAAuditQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AuthInternalApiTxMAAuditQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ReceiveMessage
+            Resource:
+              - !GetAtt AuthInternalApiTxMAAuditQueue.Arn
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+
+  AuthInternalApiTxMAAuditDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-account-mgmt-txma-audit-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
+      MessageRetentionPeriod: 604800
+      Tags:
+        - Key: Service
+          Value: account-management-txma-audit
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+
+  AuthInternalApiTxMAAuditQueueEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS signing key for encrypting account-management TxMA audit queue at rest
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowTxmaAccessToKmsAuditEncryptionKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - "{{resolve:secretsmanager:/deploy/${env}/txma_account_id}}"
+                - env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+      Tags:
+        - Key: Service
+          Value: account-management-txma-audit
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+
+  AuthInternalApiTxMAAuditQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-account-mgmt-audit-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref AuthInternalApiTxMAAuditQueueEncryptionKey
+
+  AuthInternalApiTxMAAuditQueueAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM Policy for write access to the account-management TxMA audit queue"
+      Path: !Sub
+        - /${Env}/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToTxmaAuditQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt AuthInternalApiTxMAAuditQueue.Arn
+          - Sid: AllowAccessToKeyForEncryptingPayloads
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              - !GetAtt AuthInternalApiTxMAAuditQueueEncryptionKey.Arn
