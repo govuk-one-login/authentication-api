@@ -108,3 +108,4 @@ performance_tuning = {
 }
 lambda_min_concurrency        = 1
 use_strongly_consistent_reads = true
+support_reauth_signout_enabled = true
