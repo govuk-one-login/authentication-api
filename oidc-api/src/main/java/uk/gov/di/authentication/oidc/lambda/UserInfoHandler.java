@@ -141,7 +141,7 @@ public class UserInfoHandler
         if (!headersContainValidHeader(
                 input.getHeaders(),
                 AUTHORIZATION_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
+                false)) {
             LOG.warn("AccessToken is missing from request");
             return generateApiGatewayProxyResponse(
                     401,
@@ -156,7 +156,7 @@ public class UserInfoHandler
                             getHeaderValueFromHeaders(
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()),
+                                    false),
                             configurationService.isIdentityEnabled());
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {

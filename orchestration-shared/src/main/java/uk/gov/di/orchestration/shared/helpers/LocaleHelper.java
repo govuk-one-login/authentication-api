@@ -74,14 +74,14 @@ public class LocaleHelper {
     public static Optional<String> getUserLanguageFromRequestHeaders(
             Map<String, String> headers, ConfigurationService configurationService) {
         if (!headersContainValidOptionalHeader(
-                headers, USER_LANGUAGE_HEADER, configurationService.getHeadersCaseInsensitive())) {
+                headers, USER_LANGUAGE_HEADER, false)) {
             return Optional.empty();
         }
         String language =
                 getHeaderValueFromHeaders(
                         headers,
                         USER_LANGUAGE_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                        false);
         if (language == null) {
             LOG.warn("Value not found for User-Language header");
             return Optional.empty();

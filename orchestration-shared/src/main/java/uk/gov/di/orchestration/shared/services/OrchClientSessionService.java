@@ -136,14 +136,14 @@ public class OrchClientSessionService extends BaseDynamoService<OrchClientSessio
         if (!headersContainValidHeader(
                 headers,
                 CLIENT_SESSION_ID_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
+                false)) {
             return Optional.empty();
         }
         String clientSessionId =
                 getHeaderValueFromHeaders(
                         headers,
                         CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                        false);
         if (clientSessionId == null) {
             LOG.warn("Value not found for Client-Session-Id header");
             return Optional.empty();
