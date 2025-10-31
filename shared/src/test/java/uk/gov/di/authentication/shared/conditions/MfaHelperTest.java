@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -41,6 +42,10 @@ class MfaHelperTest {
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHelper.class);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension noDefaultMfaMethodLogging =
+            new CaptureLoggingExtension(NoDefaultMfaMethodLogHelper.class);
 
     @Nested
     class GetUserMFADetail {
@@ -240,10 +245,10 @@ class MfaHelperTest {
             assertEquals(expectedResult, result);
 
             assertThat(
-                    logging.events(),
+                    noDefaultMfaMethodLogging.events(),
                     hasItem(
                             withMessageContaining(
-                                    "Unexpected error retrieving default mfa method for migrated user: no default method exists. User MFA method count: 1, MFA method priorities: BACKUP")));
+                                    "No default mfa method found for user. Is user migrated: true, user MFA method count: 1, MFA method priority-type pairs: (BACKUP,AUTH_APP).")));
         }
     }
 
