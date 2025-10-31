@@ -389,6 +389,7 @@ public class TokenHandler
             return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
 
+        LOG.info("Retrieving stored refresh token with jwt id {}", jti);
         String redisKey = REFRESH_TOKEN_PREFIX + jti;
         Optional<String> refreshToken =
                 Optional.ofNullable(redisConnectionService.popValue(redisKey));
@@ -417,6 +418,7 @@ public class TokenHandler
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
                         signingAlgorithm,
                         placeholderForAuthCode);
+        LOG.info("Refresh token with jwt id {} has been used successfully.", jti);
         LOG.info("Generating successful RefreshToken response");
         return ApiResponse.ok(tokenResponse);
     }
