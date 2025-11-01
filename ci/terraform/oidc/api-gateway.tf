@@ -104,8 +104,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.authentication_callback.integration_trigger_value,
       module.authentication_callback.method_trigger_value,
       var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0].response_templates : null,
-      jsonencode(aws_api_gateway_integration.orch_frontend_nlb_integration),
-      jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_openid_configuration_enabled,
       var.orch_doc_app_callback_enabled,
       var.orch_token_enabled,
