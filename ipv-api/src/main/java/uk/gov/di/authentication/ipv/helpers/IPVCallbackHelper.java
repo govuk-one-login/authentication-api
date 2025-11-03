@@ -166,7 +166,32 @@ public class IPVCallbackHelper {
                 () ->
                         saveIdentityClaimsToDynamo(
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+        return generateAuthenticationResponse(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                clientId,
+                clientName,
+                email,
+                subjectId,
+                rpPairwiseSubject.getValue(),
+                internalPairwiseSubjectId);
+    }
 
+    public AuthenticationSuccessResponse generateAuthenticationResponse(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String clientId,
+            String clientName,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId) {
         var authCode =
                 orchAuthCodeService.generateAndSaveAuthorisationCode(
                         clientId,
@@ -192,7 +217,7 @@ public class IPVCallbackHelper {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
         metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
-        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubject.getValue()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubjectId));
         metadataPairs.add(pair("authCode", authCode));
         if (authRequest.getNonce() != null) {
             metadataPairs.add(pair("nonce", authRequest.getNonce().getValue()));
