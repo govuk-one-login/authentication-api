@@ -507,6 +507,8 @@ Mappings:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     auth-token:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
+    check-email-fraud-block:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/NYDnVgE"
     id-reverification-state:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-authorize:

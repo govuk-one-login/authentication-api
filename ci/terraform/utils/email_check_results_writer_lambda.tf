@@ -48,6 +48,7 @@ module "email_check_results_writer_lambda" {
   environment        = var.environment
   lambda_role_arn    = module.email_check_results_writer_role.arn
 
+  runbook_link                           = "https://govukverify.atlassian.net/wiki/x/NYDnVgE"
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = local.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
