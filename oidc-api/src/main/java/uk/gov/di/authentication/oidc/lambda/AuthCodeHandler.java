@@ -260,26 +260,17 @@ public class AuthCodeHandler
             var persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             var ipAddress = IpAddressHelper.extractIpAddress(input);
-            var dimensions =
-                    authCodeResponseService.getDimensions(
-                            orchSession,
-                            orchClientSession.getClientName(),
-                            clientID.getValue(),
-                            isDocAppJourney);
-
             String rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
             if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
                 internalCommonSubjectId = orchClientSession.getDocAppSubjectId();
             } else {
-                authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
                 rpPairwiseId =
                         orchClientSession.getCorrectPairwiseIdGivenSubjectType(
                                 client.getSubjectType());
             }
-
             sendAuditEvent(
                     authenticationRequest,
                     orchSession,
@@ -292,18 +283,8 @@ public class AuthCodeHandler
                     internalCommonSubjectId,
                     authCode);
 
-            cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-
-            cloudwatchMetricsService.incrementSignInByClient(
-                    orchSession.getIsNewAccount(),
-                    clientID.getValue(),
-                    orchClientSession.getClientName());
-            cloudwatchMetricsService.incrementCounter(
-                    "orchIdentityJourneyCompleted",
-                    Map.of(
-                            "clientName", client.getClientName(),
-                            "clientId", clientID.getValue()));
-            authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
+            sendCloudwatchMetrics(
+                    orchSession, orchClientSession, clientID, isDocAppJourney, client);
 
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(
@@ -347,6 +328,36 @@ public class AuthCodeHandler
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
+    }
+
+    private void sendCloudwatchMetrics(
+            OrchSessionItem orchSession,
+            OrchClientSessionItem orchClientSession,
+            ClientID clientID,
+            boolean isDocAppJourney,
+            ClientRegistry client) {
+        var dimensions =
+                authCodeResponseService.getDimensions(
+                        orchSession,
+                        orchClientSession.getClientName(),
+                        clientID.getValue(),
+                        isDocAppJourney);
+        if (!isDocAppJourney) {
+            authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
+        }
+
+        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+
+        cloudwatchMetricsService.incrementSignInByClient(
+                orchSession.getIsNewAccount(),
+                clientID.getValue(),
+                orchClientSession.getClientName());
+        cloudwatchMetricsService.incrementCounter(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", client.getClientName(),
+                        "clientId", clientID.getValue()));
+        authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
     }
 
     private static Optional<UserInfo> getAuthUserInfo(

@@ -199,6 +199,7 @@ class AuthCodeHandlerTest {
                                         .withClientID(CLIENT_ID.getValue())
                                         .withSubjectType("pairwise")
                                         .withClientName(CLIENT_NAME)));
+        when(orchClientSession.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
