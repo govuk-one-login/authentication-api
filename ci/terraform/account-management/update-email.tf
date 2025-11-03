@@ -57,6 +57,7 @@ module "update_email" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_update_email_role.arn
+  runbook_link                           = "https://govukverify.atlassian.net/wiki/x/DgAlWgE"
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
