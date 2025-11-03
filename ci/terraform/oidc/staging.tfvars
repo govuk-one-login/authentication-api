@@ -160,8 +160,8 @@ performance_tuning = {
     scaling_trigger = 0.6
   }
 }
-lambda_max_concurrency        = 10
-lambda_min_concurrency        = 3
+lambda_max_concurrency = 10
+
 use_strongly_consistent_reads = true
 
 ipv_jwks_call_enabled = true
