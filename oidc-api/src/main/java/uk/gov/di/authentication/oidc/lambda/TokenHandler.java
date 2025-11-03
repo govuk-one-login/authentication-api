@@ -9,6 +9,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
@@ -60,13 +61,24 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_GRANT_CODE;
+import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL_TOKEN_ISSUED;
 import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -189,8 +201,7 @@ public class TokenHandler
         LOG.info("Token request received");
         Optional<ErrorObject> invalidRequestParamError =
                 tokenService.validateTokenRequestParams(input.getBody());
-        return invalidRequestResponse(invalidRequestParamError.get());
-        /*if (invalidRequestParamError.isPresent()) {
+        if (invalidRequestParamError.isPresent()) {
             return invalidRequestResponse(invalidRequestParamError.get());
         }
 
@@ -303,7 +314,7 @@ public class TokenHandler
         cloudwatchMetricsService.incrementCounter(SUCCESSFUL_TOKEN_ISSUED.getValue(), dimensions);
 
         LOG.info("Successfully generated tokens");
-        return ApiResponse.ok(tokenResponse);*/
+        return ApiResponse.ok(tokenResponse);
     }
 
     private static boolean isPKCEValid(
