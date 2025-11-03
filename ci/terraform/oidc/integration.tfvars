@@ -144,7 +144,7 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_min_concurrency = 1
+
 
 ipv_jwks_call_enabled = true
 ipv_jwks_url          = "https://api.identity.integration.account.gov.uk/.well-known/jwks.json"
