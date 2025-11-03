@@ -141,6 +141,7 @@ public class UserInfoHandler
     public APIGatewayProxyResponseEvent userInfoRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Request received to the UserInfoHandler");
+        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         if (!headersContainValidHeader(
                 input.getHeaders(),
                 AUTHORIZATION_HEADER,
