@@ -210,7 +210,6 @@ public class IPVCallbackHelper {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-
         sendAuditEvent(
                 authRequest,
                 orchSession,
@@ -222,22 +221,8 @@ public class IPVCallbackHelper {
                 rpPairwiseSubjectId,
                 internalPairwiseSubjectId,
                 authCode);
+        sendCloudwatchMetrics(orchSession, clientSessionId, clientId, clientName);
 
-        var dimensions =
-                authCodeResponseService.getDimensions(
-                        orchSession, clientName, clientSessionId, false);
-
-        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-
-        cloudwatchMetricsService.incrementSignInByClient(
-                orchSession.getIsNewAccount(), clientId, clientName);
-        cloudwatchMetricsService.incrementCounter(
-                "orchIdentityJourneyCompleted",
-                Map.of(
-                        "clientName", clientName,
-                        "clientId", clientId));
-
-        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
     }
 
@@ -272,6 +257,28 @@ public class IPVCallbackHelper {
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
+    }
+
+    private void sendCloudwatchMetrics(
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String clientId,
+            String clientName) {
+        var dimensions =
+                authCodeResponseService.getDimensions(
+                        orchSession, clientName, clientSessionId, false);
+
+        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+
+        cloudwatchMetricsService.incrementSignInByClient(
+                orchSession.getIsNewAccount(), clientId, clientName);
+        cloudwatchMetricsService.incrementCounter(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", clientName,
+                        "clientId", clientId));
+
+        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
     }
 
     public void queueSPOTRequest(
