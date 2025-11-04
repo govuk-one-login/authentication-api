@@ -415,6 +415,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("BACK_CHANNEL_LOGOUT_CALL_TIMEOUT", "15000"));
     }
 
+    public boolean isSyncWaitForSpotEnabled() {
+        return getFlagOrFalse("USE_SYNC_WAIT_FOR_SPOT");
+    }
+
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
