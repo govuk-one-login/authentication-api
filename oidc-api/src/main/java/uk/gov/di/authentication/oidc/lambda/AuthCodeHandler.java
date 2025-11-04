@@ -257,6 +257,9 @@ public class AuthCodeHandler
         LOG.info("Successfully processed request");
 
         try {
+            var persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            var ipAddress = IpAddressHelper.extractIpAddress(input);
             var dimensions =
                     authCodeResponseService.getDimensions(
                             orchSession,
@@ -277,29 +280,17 @@ public class AuthCodeHandler
                                 client.getSubjectType());
             }
 
-            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(
-                    pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
-            metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
-            metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
-            metadataPairs.add(pair("authCode", authCode));
-            if (authenticationRequest.getNonce() != null) {
-                metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
-            }
-
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTH_CODE_ISSUED,
-                    clientID.getValue(),
-                    TxmaAuditUser.user()
-                            .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(sessionId)
-                            .withUserId(internalCommonSubjectId)
-                            .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
-                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
-                            .withPersistentSessionId(
-                                    PersistentIdHelper.extractPersistentIdFromHeaders(
-                                            input.getHeaders())),
-                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
+            sendAuditEvent(
+                    authenticationRequest,
+                    orchSession,
+                    orchClientSession,
+                    ipAddress,
+                    persistentSessionId,
+                    emailOptional,
+                    subjectIdOptional,
+                    rpPairwiseId,
+                    internalCommonSubjectId,
+                    authCode);
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
@@ -322,6 +313,40 @@ public class AuthCodeHandler
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void sendAuditEvent(
+            AuthenticationRequest authenticationRequest,
+            OrchSessionItem orchSession,
+            OrchClientSessionItem orchClientSession,
+            String ipAddress,
+            String persistentSessionId,
+            Optional<String> emailOptional,
+            Optional<String> subjectIdOptional,
+            String rpPairwiseId,
+            String internalPairwiseSubjectId,
+            AuthorizationCode authCode) {
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(
+                pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
+        metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
+        metadataPairs.add(pair("authCode", authCode));
+        if (authenticationRequest.getNonce() != null) {
+            metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
+        }
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTH_CODE_ISSUED,
+                authenticationRequest.getClientID().getValue(),
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(orchClientSession.getClientSessionId())
+                        .withSessionId(orchSession.getSessionId())
+                        .withUserId(internalPairwiseSubjectId)
+                        .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId),
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
