@@ -37,6 +37,7 @@ module "email_check_results_writer_lambda" {
 
   memory_size             = 2048
   provisioned_concurrency = var.email_check_results_writer_provisioned_concurrency
+  snapstart               = true
 
   source_bucket           = aws_s3_object.utils_release_zip.bucket
   lambda_zip_file         = aws_s3_object.utils_release_zip.key
