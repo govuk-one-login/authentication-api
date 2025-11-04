@@ -126,7 +126,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
       authApiId: "6of9f4amvg"
-      authExternalApiId: "fag06zqnve"
+      authExternalApiId: "w3nit2qina"
       authAccountId: "761723964695"
       newauthAccountId: "058264536367"
       authEnvironment: build
@@ -156,7 +156,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
       authApiId: "1rvwudxmbk"
-      authExternalApiId: "rr86yg3r28"
+      authExternalApiId: "8ttd794ay4"
       authAccountId: "758531536632"
       newauthAccountId: "851725205974"
       authEnvironment: staging
@@ -187,7 +187,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       dynatraceLayerArn: arn:aws:lambda:eu-west-2:216552277552:layer:Dynatrace_OneAgent_1_311_51_20250331-143707_with_collector_java:1
       authApiId: "k2skqhxed6"
-      authExternalApiId: "ivaclg7wrf"
+      authExternalApiId: "5wcpjlfg3i"
       authAccountId: "761723964695"
       newauthAccountId: "211125600642"
       authEnvironment: integration
