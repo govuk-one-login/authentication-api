@@ -119,7 +119,7 @@ Mappings:
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
-      aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
+      aisUriSecretId: 6dc37fb8-6333-4376-a451-6c1bef1b544c
       ipvStubDomain: "ipvstub.oidc.authdev3.dev.account.gov.uk"
       authStubEnabled: false
     build:
