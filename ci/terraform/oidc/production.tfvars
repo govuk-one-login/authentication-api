@@ -140,6 +140,21 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # Sizing
 performance_tuning = {
+
+  mfa-reset-jwk = {
+    memory          = 1536
+    concurrency     = 3
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
+
+  mfa-reset-jar-jwk = {
+    memory          = 1536
+    concurrency     = 3
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
+
   register = {
     memory          = 1536
     concurrency     = 0
@@ -156,21 +171,21 @@ performance_tuning = {
 
   reset-password = {
     memory          = 1536
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reset-password-request = {
     memory          = 1536
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reverification-result = {
     memory          = 1536
-    concurrency     = 1
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.6
   }

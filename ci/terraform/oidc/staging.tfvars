@@ -141,21 +141,21 @@ performance_tuning = {
 
   reset-password = {
     memory          = 1024
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reset-password-request = {
     memory          = 1024
-    concurrency     = 2
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reverification-result = {
     memory          = 1536
-    concurrency     = 1
+    concurrency     = 0
     max_concurrency = 10
     scaling_trigger = 0.6
   }
