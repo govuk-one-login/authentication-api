@@ -73,6 +73,9 @@ public class HttpRequestService {
                             "Timeout when calling back channel logout endpoint with timeout of %d",
                             configurationService.getBackChannelLogoutCallTimeout()),
                     e);
+        } catch (PostRequestFailureException e) {
+            // To avoid being caught by the catch below
+            throw e;
         } catch (IOException e) {
             LOG.error("Unable to execute POST request successfully", e);
             if (e.getCause() instanceof LinkageError) {
