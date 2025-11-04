@@ -894,64 +894,38 @@ Resources:
           FromPort: 443
           ToPort: 443
 
-  RedisSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  RedisParametersAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
     Properties:
-      GroupDescription: "Allow ingress to AM session Redis. Use on Elasticache cluster only"
-      VpcId:
-        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
-
-  RedisSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref RedisSecurityGroup
-      Description: "Allow ingress to AM session Redis from same security group"
-      IpProtocol: tcp
-      FromPort: 6379
-      ToPort: 6379
-      SourceSecurityGroupId: !Ref RedisSecurityGroup
-
-  RedisPassword:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Description: "Redis authentication password"
-      GenerateSecretString:
-        SecretStringTemplate: "{}"
-        GenerateStringKey: "password"
-        PasswordLength: 32
-        ExcludeCharacters: '"@/\'
-
-  RedisSubnetGroup:
-    Type: AWS::ElastiCache::SubnetGroup
-    Properties:
-      Description: "Subnet group for Account Management Redis cluster"
-      SubnetIds:
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
-
-  RedisCluster:
-    Type: AWS::ElastiCache::ReplicationGroup
-    Properties:
-      ReplicationGroupId: !Sub
-        - ${Env}-acct-mgmt-session-store
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      ReplicationGroupDescription: "A Redis cluster for storing user session data"
-      CacheNodeType: "cache.t3.micro"
-      Engine: redis
-      EngineVersion: "6.x"
-      Port: 6379
-      CacheParameterGroupName: "default.redis6.x"
-      NumCacheClusters: 3
-      AutomaticFailoverEnabled: true
-      MultiAZEnabled: true
-      AtRestEncryptionEnabled: true
-      TransitEncryptionEnabled: true
-      AuthToken: !Sub "{{resolve:secretsmanager:${RedisPassword}:SecretString:password}}"
-      PreferredMaintenanceWindow: "tue:22:00-tue:23:00"
-      CacheSubnetGroupName: !Ref RedisSubnetGroup
-      SecurityGroupIds:
-        - !Ref RedisSecurityGroup
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - !If
+            - UseSubEnvironment
+            - Sid: AllowGetParameters
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-password
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-port
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-session-redis-tls
+            - Sid: AllowGetParameters
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
 
   ParameterStoreKey:
     Type: AWS::KMS::Key
@@ -975,42 +949,6 @@ Resources:
         - "alias/${Env}-acct-mgmt-lambda-parameter-store-encryption-key"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TargetKeyId: !Ref ParameterStoreKey
-
-  RedisMasterHostParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - "${Env}-account-management-redis-master-host"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: !GetAtt RedisCluster.PrimaryEndPoint.Address
-
-  RedisPasswordParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - "${Env}-account-management-redis-password"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: !Sub "{{resolve:secretsmanager:${RedisPassword}:SecretString:password}}"
-
-  RedisPortParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - "${Env}-account-management-redis-port"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: "6379"
-
-  RedisTlsParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub
-        - "${Env}-account-management-redis-tls"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Type: String
-      Value: "true"
 
   MainKmsKey:
     Type: AWS::KMS::Key
@@ -2574,61 +2512,6 @@ Resources:
                     !Ref Environment,
                     pendingEmailCheckQueueEncryptionKey,
                   ]
-
-  RedisParametersAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - !If
-            - UseSubEnvironment
-            - Sid: AllowGetParameters
-              Effect: Allow
-              Action:
-                - ssm:GetParameter
-                - ssm:GetParameters
-              Resource:
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-master-host
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-replica-host
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-password
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-port
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-account-management-redis-tls
-            - Sid: AllowGetParameters
-              Effect: Allow
-              Action:
-                - ssm:GetParameter
-                - ssm:GetParameters
-              Resource:
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-master-host
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-replica-host
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-password
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-port
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-account-management-redis-tls
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    parameterStoreKmsKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    parameterStoreKmsKey,
-                  ]
-              - !Sub
-                - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-acct-mgmt-lambda-parameter-store-encryption-key"
-                - Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
 
   PepperParametersAccessPolicy:
     Type: AWS::IAM::ManagedPolicy

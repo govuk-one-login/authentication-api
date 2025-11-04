@@ -68,10 +68,6 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
-          - !If
-            - IsProduction
-            - !Ref RedisSecurityGroup
-            - !Ref AWS::NoValue
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB

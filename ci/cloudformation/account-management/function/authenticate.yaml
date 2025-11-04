@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   AuthenticateFunction:
     Type: AWS::Serverless::Function
-    DependsOn:
-      - RedisCluster
-      - RedisMasterHostParameter
-      - RedisPasswordParameter
     Properties:
       FunctionName: !Sub
         - ${Env}-account-management-authenticate-lambda
@@ -22,7 +18,7 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "account-management"
+          REDIS_KEY: "session"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -61,7 +57,6 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
-          - !Ref RedisSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB

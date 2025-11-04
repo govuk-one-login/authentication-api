@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   MfaMethodRetrieveFunction:
     Type: AWS::Serverless::Function
-    DependsOn:
-      - RedisCluster
-      - RedisMasterHostParameter
-      - RedisPasswordParameter
     Properties:
       FunctionName: !Sub
         - ${Env}-account-management-mfa-methods-retrieve-lambda
@@ -22,7 +18,7 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "account-management"
+          REDIS_KEY: "session"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -63,7 +59,6 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
-          - !Ref RedisSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB

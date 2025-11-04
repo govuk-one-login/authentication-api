@@ -2,10 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   MfaMethodDeleteFunction:
     Type: AWS::Serverless::Function
-    DependsOn:
-      - RedisCluster
-      - RedisMasterHostParameter
-      - RedisPasswordParameter
     Properties:
       FunctionName: !Sub
         - ${Env}-account-management-mfa-methods-delete-lambda
