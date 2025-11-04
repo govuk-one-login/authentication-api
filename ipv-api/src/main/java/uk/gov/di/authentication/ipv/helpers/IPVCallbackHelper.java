@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.ipv.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -210,10 +211,47 @@ public class IPVCallbackHelper {
                         null,
                         authRequest.getResponseMode());
 
+        sendAuditEvent(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                email,
+                subjectId,
+                rpPairwiseSubjectId,
+                internalPairwiseSubjectId,
+                authCode);
+
         var dimensions =
                 authCodeResponseService.getDimensions(
                         orchSession, clientName, clientSessionId, false);
 
+        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+
+        cloudwatchMetricsService.incrementSignInByClient(
+                orchSession.getIsNewAccount(), clientId, clientName);
+        cloudwatchMetricsService.incrementCounter(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", clientName,
+                        "clientId", clientId));
+
+        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
+        return authenticationResponse;
+    }
+
+    private void sendAuditEvent(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId,
+            AuthorizationCode authCode) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
         metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
@@ -234,19 +272,6 @@ public class IPVCallbackHelper {
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
-
-        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-
-        cloudwatchMetricsService.incrementSignInByClient(
-                orchSession.getIsNewAccount(), clientId, clientName);
-        cloudwatchMetricsService.incrementCounter(
-                "orchIdentityJourneyCompleted",
-                Map.of(
-                        "clientName", clientName,
-                        "clientId", clientId));
-
-        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
-        return authenticationResponse;
     }
 
     public void queueSPOTRequest(
