@@ -2912,6 +2912,7 @@ Resources:
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          TEST: TEST
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
