@@ -243,32 +243,23 @@ public class IPVCallbackHandler
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             if (errorObject.isPresent()) {
-                var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
-                AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                new AuditContext(
-                                                        clientSessionId,
-                                                        sessionId,
-                                                        clientId,
-                                                        orchSession.getInternalCommonSubjectId(),
-                                                        AuditService.UNKNOWN,
-                                                        ipAddress,
-                                                        AuditService.UNKNOWN,
-                                                        persistentId)));
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (intervention.getBlocked() || intervention.getSuspended())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            destroySessionRequest,
-                            orchSession.getInternalCommonSubjectId(),
-                            input,
-                            clientId,
-                            intervention);
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                sessionId,
+                                clientId,
+                                orchSession.getInternalCommonSubjectId(),
+                                AuditService.UNKNOWN,
+                                ipAddress,
+                                AuditService.UNKNOWN,
+                                persistentId);
+                var aisResponseOpt =
+                        checkForAisIntervention(orchSession, auditContext, input, clientId);
+                if (aisResponseOpt.isPresent()) {
+                    return aisResponseOpt.get();
                 }
 
+                var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
                 if (errorObject.get().isSessionInvalidation()) {
                     return logoutService.handleSessionInvalidationLogout(
                             destroySessionRequest,
@@ -361,21 +352,10 @@ public class IPVCallbackHandler
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
-                AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                auditContext));
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (intervention.getBlocked() || intervention.getSuspended())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            new DestroySessionsRequest(sessionId, orchSession),
-                            orchSession.getInternalCommonSubjectId(),
-                            input,
-                            clientId,
-                            intervention);
+                var aisResponseOpt =
+                        checkForAisIntervention(orchSession, auditContext, input, clientId);
+                if (aisResponseOpt.isPresent()) {
+                    return aisResponseOpt.get();
                 }
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
                 if (returnCodePresentInIPVResponse(returnCode)) {
@@ -479,6 +459,30 @@ public class IPVCallbackHandler
                                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: %s",
                                     e.getMessage())));
         }
+    }
+
+    private Optional<APIGatewayProxyResponseEvent> checkForAisIntervention(
+            OrchSessionItem orchSession,
+            AuditContext auditContext,
+            APIGatewayProxyRequestEvent input,
+            String clientId) {
+        AccountIntervention intervention =
+                segmentedFunctionCall(
+                        "AIS: getAccountIntervention",
+                        () ->
+                                this.accountInterventionService.getAccountIntervention(
+                                        orchSession.getInternalCommonSubjectId(), auditContext));
+        if (configurationService.isAccountInterventionServiceActionEnabled()
+                && (intervention.getBlocked() || intervention.getSuspended())) {
+            return Optional.of(
+                    logoutService.handleAccountInterventionLogout(
+                            new DestroySessionsRequest(orchSession.getSessionId(), orchSession),
+                            orchSession.getInternalCommonSubjectId(),
+                            input,
+                            clientId,
+                            intervention));
+        }
+        return Optional.empty();
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
