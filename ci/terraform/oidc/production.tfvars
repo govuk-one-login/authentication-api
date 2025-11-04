@@ -174,6 +174,20 @@ performance_tuning = {
     max_concurrency = 10
     scaling_trigger = 0.6
   }
+
+  mfa-reset-jwk = {
+    memory          = 1536
+    concurrency     = 1
+    max_concurrency = 10
+    scaling_trigger = 0.5
+  }
+
+  mfa-reset-jar-jwk = {
+    memory          = 1536
+    concurrency     = 1
+    max_concurrency = 10
+    scaling_trigger = 0.5
+  }
 }
 lambda_max_concurrency = 10
 
