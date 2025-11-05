@@ -241,11 +241,6 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       authStubEnabled: false
-  ProvisionedConcurrency:
-    staging:
-      TrustmarkFunction: 1
-    production:
-      TrustmarkFunction: 1
 
 Globals:
   Function:
@@ -1879,19 +1874,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: DocAppCallbackErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - DocAppCallbackFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2128,19 +2121,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: TokenFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - TokenFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2338,19 +2329,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: LogoutFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - LogoutFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2797,19 +2786,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthenticationCallbackFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthenticationCallbackFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3472,19 +3459,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthorisationFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthorisationFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3772,19 +3757,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: UserInfoFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - UserInfoFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3979,19 +3962,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthCodeFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthCodeFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
