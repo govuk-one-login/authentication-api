@@ -8,6 +8,7 @@ import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenItem> {
@@ -40,20 +41,11 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
         return orchAccessToken;
     }
 
-    public List<OrchAccessTokenItem> getAccessTokensForClientAndRpPairwiseId(
-            String clientAndRpPairwiseId) {
-        List<OrchAccessTokenItem> orchAccessTokens = List.of();
-        try {
-            orchAccessTokens = queryTableStream(clientAndRpPairwiseId).toList();
-        } catch (Exception e) {
-            logAndThrowOrchAccessTokenException("Failed to get Orch access tokens from Dynamo", e);
-        }
-        if (orchAccessTokens.isEmpty()) {
-            LOG.info(
-                    "No Orch access token found for clientAndRpPairwiseId {}",
-                    clientAndRpPairwiseId);
-        }
-        return orchAccessTokens;
+    public Optional<OrchAccessTokenItem> getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+            String clientAndRpPairwiseId, String tokenValue) {
+        return getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId).stream()
+                .filter(item -> Objects.equals(item.getToken(), tokenValue))
+                .findFirst();
     }
 
     public Optional<OrchAccessTokenItem> getAccessTokenForAuthCode(String authCode) {
@@ -68,6 +60,22 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
             logAndThrowOrchAccessTokenException("Failed to get Orch access token from Dynamo", e);
             return Optional.empty();
         }
+    }
+
+    private List<OrchAccessTokenItem> getAccessTokensForClientAndRpPairwiseId(
+            String clientAndRpPairwiseId) {
+        List<OrchAccessTokenItem> orchAccessTokens = List.of();
+        try {
+            orchAccessTokens = queryTableStream(clientAndRpPairwiseId).toList();
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException("Failed to get Orch access token from Dynamo", e);
+        }
+        if (orchAccessTokens.isEmpty()) {
+            LOG.info(
+                    "No Orch access token found for clientAndRpPairwiseId {}",
+                    clientAndRpPairwiseId);
+        }
+        return orchAccessTokens;
     }
 
     public void saveAccessToken(

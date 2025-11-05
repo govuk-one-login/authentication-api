@@ -28,7 +28,6 @@ import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.HashMap;
@@ -90,32 +89,6 @@ public class UserInfoHandler
                         new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
-                        new RedisConnectionService(configurationService),
-                        new DynamoClientService(configurationService),
-                        new TokenValidationService(
-                                new JwksService(
-                                        configurationService,
-                                        new KmsConnectionService(configurationService)),
-                                configurationService),
-                        new OrchAccessTokenService(configurationService));
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-    }
-
-    public UserInfoHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.userInfoService =
-                new UserInfoService(
-                        new DynamoIdentityService(configurationService),
-                        new DynamoClientService(configurationService),
-                        new DynamoDocAppCriService(configurationService),
-                        new CloudwatchMetricsService(),
-                        configurationService,
-                        new AuthenticationUserInfoStorageService(configurationService));
-        this.accessTokenService =
-                new AccessTokenService(
-                        redis,
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 new JwksService(
