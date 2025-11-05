@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.ipv.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -166,7 +167,32 @@ public class IPVCallbackHelper {
                 () ->
                         saveIdentityClaimsToDynamo(
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+        return generateAuthenticationResponse(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                clientId,
+                clientName,
+                email,
+                subjectId,
+                rpPairwiseSubject.getValue(),
+                internalPairwiseSubjectId);
+    }
 
+    public AuthenticationSuccessResponse generateAuthenticationResponse(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String clientId,
+            String clientName,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId) {
         var authCode =
                 orchAuthCodeService.generateAndSaveAuthorisationCode(
                         clientId,
@@ -184,15 +210,37 @@ public class IPVCallbackHelper {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
+        sendAuditEvent(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                email,
+                subjectId,
+                rpPairwiseSubjectId,
+                internalPairwiseSubjectId,
+                authCode);
+        sendCloudwatchMetrics(orchSession, clientSessionId, clientId, clientName);
 
-        var dimensions =
-                authCodeResponseService.getDimensions(
-                        orchSession, clientName, clientSessionId, false);
+        return authenticationResponse;
+    }
 
+    private void sendAuditEvent(
+            AuthenticationRequest authRequest,
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String ipAddress,
+            String persistentSessionId,
+            String email,
+            String subjectId,
+            String rpPairwiseSubjectId,
+            String internalPairwiseSubjectId,
+            AuthorizationCode authCode) {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         metadataPairs.add(pair("internalSubjectId", subjectId));
         metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
-        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubject.getValue()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubjectId));
         metadataPairs.add(pair("authCode", authCode));
         if (authRequest.getNonce() != null) {
             metadataPairs.add(pair("nonce", authRequest.getNonce().getValue()));
@@ -209,6 +257,16 @@ public class IPVCallbackHelper {
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
                 metadataPairs.toArray(AuditService.MetadataPair[]::new));
+    }
+
+    private void sendCloudwatchMetrics(
+            OrchSessionItem orchSession,
+            String clientSessionId,
+            String clientId,
+            String clientName) {
+        var dimensions =
+                authCodeResponseService.getDimensions(
+                        orchSession, clientName, clientSessionId, false);
 
         cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
@@ -221,7 +279,6 @@ public class IPVCallbackHelper {
                         "clientId", clientId));
 
         authCodeResponseService.saveSession(false, orchSessionService, orchSession);
-        return authenticationResponse;
     }
 
     public void queueSPOTRequest(

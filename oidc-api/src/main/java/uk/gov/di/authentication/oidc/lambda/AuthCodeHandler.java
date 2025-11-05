@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
@@ -41,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -175,6 +177,8 @@ public class AuthCodeHandler
         ClientRegistry client;
         AuthorizationCode authCode;
         AuthenticationSuccessResponse authenticationResponse;
+        URI redirectUri;
+        State state;
         try {
             orchClientSession = getClientSession(input);
             authenticationRequest =
@@ -189,8 +193,8 @@ public class AuthCodeHandler
                     "client_id",
                     String.valueOf(orchClientSession.getAuthRequestParams().get("client_id")));
 
-            var redirectUri = authenticationRequest.getRedirectionURI();
-            var state = authenticationRequest.getState();
+            redirectUri = authenticationRequest.getRedirectionURI();
+            state = authenticationRequest.getState();
 
             isDocAppJourney = isDocCheckingAppUserWithSubjectId(orchClientSession);
 
@@ -222,18 +226,6 @@ public class AuthCodeHandler
             if (!orchestrationAuthorizationService.isClientRedirectUriValid(client, redirectUri)) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
-
-            authCode =
-                    generateAuthCode(
-                            clientID,
-                            emailOptional,
-                            clientSessionId,
-                            orchSession.getAuthTime(),
-                            internalCommonSubjectIdOptional);
-
-            authenticationResponse =
-                    orchestrationAuthorizationService.generateSuccessfulAuthResponse(
-                            authenticationRequest, authCode, redirectUri, state);
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         } catch (ClientNotFoundException e) {
@@ -242,73 +234,57 @@ public class AuthCodeHandler
             return processUserNotFoundException(authenticationRequest);
         } catch (ParseException e) {
             return processParseException(e);
+        }
+
+        try {
+            authCode =
+                    generateAuthCode(
+                            clientID,
+                            emailOptional,
+                            clientSessionId,
+                            orchSession.getAuthTime(),
+                            internalCommonSubjectIdOptional);
         } catch (OrchAuthCodeException e) {
             LOG.error(
                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: {}",
                     e.getMessage());
             return generateApiGatewayProxyResponse(500, "Internal server error");
         }
+        authenticationResponse =
+                orchestrationAuthorizationService.generateSuccessfulAuthResponse(
+                        authenticationRequest, authCode, redirectUri, state);
 
         LOG.info("Successfully processed request");
 
         try {
-
-            var dimensions =
-                    authCodeResponseService.getDimensions(
-                            orchSession,
-                            orchClientSession.getClientName(),
-                            clientID.getValue(),
-                            isDocAppJourney);
-
+            var persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            var ipAddress = IpAddressHelper.extractIpAddress(input);
             String rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonSubjectId;
             if (isDocAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
                 internalCommonSubjectId = orchClientSession.getDocAppSubjectId();
             } else {
-                authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
                 internalCommonSubjectId = orchSession.getInternalCommonSubjectId();
                 rpPairwiseId =
                         orchClientSession.getCorrectPairwiseIdGivenSubjectType(
                                 client.getSubjectType());
             }
+            sendAuditEvent(
+                    authenticationRequest,
+                    orchSession,
+                    orchClientSession,
+                    ipAddress,
+                    persistentSessionId,
+                    emailOptional,
+                    subjectIdOptional,
+                    rpPairwiseId,
+                    internalCommonSubjectId,
+                    authCode);
 
-            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
-            metadataPairs.add(
-                    pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
-            metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
-            metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
-            metadataPairs.add(pair("authCode", authCode));
-            if (authenticationRequest.getNonce() != null) {
-                metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
-            }
-
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTH_CODE_ISSUED,
-                    clientID.getValue(),
-                    TxmaAuditUser.user()
-                            .withGovukSigninJourneyId(clientSessionId)
-                            .withSessionId(sessionId)
-                            .withUserId(internalCommonSubjectId)
-                            .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
-                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
-                            .withPersistentSessionId(
-                                    PersistentIdHelper.extractPersistentIdFromHeaders(
-                                            input.getHeaders())),
-                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
-
-            cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-
-            cloudwatchMetricsService.incrementSignInByClient(
-                    orchSession.getIsNewAccount(),
-                    clientID.getValue(),
-                    orchClientSession.getClientName());
-            cloudwatchMetricsService.incrementCounter(
-                    "orchIdentityJourneyCompleted",
-                    Map.of(
-                            "clientName", client.getClientName(),
-                            "clientId", clientID.getValue()));
-            authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
+            sendCloudwatchMetrics(
+                    orchSession, orchClientSession, clientID, isDocAppJourney, client);
 
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(
@@ -318,6 +294,70 @@ public class AuthCodeHandler
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void sendAuditEvent(
+            AuthenticationRequest authenticationRequest,
+            OrchSessionItem orchSession,
+            OrchClientSessionItem orchClientSession,
+            String ipAddress,
+            String persistentSessionId,
+            Optional<String> emailOptional,
+            Optional<String> subjectIdOptional,
+            String rpPairwiseId,
+            String internalPairwiseSubjectId,
+            AuthorizationCode authCode) {
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(
+                pair("internalSubjectId", subjectIdOptional.orElse(AuditService.UNKNOWN)));
+        metadataPairs.add(pair("isNewAccount", orchSession.getIsNewAccount()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
+        metadataPairs.add(pair("authCode", authCode));
+        if (authenticationRequest.getNonce() != null) {
+            metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
+        }
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTH_CODE_ISSUED,
+                authenticationRequest.getClientID().getValue(),
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(orchClientSession.getClientSessionId())
+                        .withSessionId(orchSession.getSessionId())
+                        .withUserId(internalPairwiseSubjectId)
+                        .withEmail(emailOptional.orElse(AuditService.UNKNOWN))
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId),
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
+    }
+
+    private void sendCloudwatchMetrics(
+            OrchSessionItem orchSession,
+            OrchClientSessionItem orchClientSession,
+            ClientID clientID,
+            boolean isDocAppJourney,
+            ClientRegistry client) {
+        var dimensions =
+                authCodeResponseService.getDimensions(
+                        orchSession,
+                        orchClientSession.getClientName(),
+                        clientID.getValue(),
+                        isDocAppJourney);
+        if (!isDocAppJourney) {
+            authCodeResponseService.processVectorOfTrust(orchClientSession, dimensions);
+        }
+
+        cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+
+        cloudwatchMetricsService.incrementSignInByClient(
+                orchSession.getIsNewAccount(),
+                clientID.getValue(),
+                orchClientSession.getClientName());
+        cloudwatchMetricsService.incrementCounter(
+                "orchIdentityJourneyCompleted",
+                Map.of(
+                        "clientName", client.getClientName(),
+                        "clientId", clientID.getValue()));
+        authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
