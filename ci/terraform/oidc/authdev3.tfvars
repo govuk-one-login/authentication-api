@@ -61,6 +61,8 @@ reauth_enter_auth_app_code_count_ttl      = 120
 reauth_enter_sms_code_count_ttl           = 120
 
 
+orch_frontend_api_gateway_integration_enabled = false
+
 orch_redirect_uri = "https://oidc.authdev3.dev.account.gov.uk/orchestration-redirect"
 
 authorize_protected_subnet_enabled = true

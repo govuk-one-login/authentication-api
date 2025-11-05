@@ -1,3 +1,21 @@
+data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "apigateway.amazonaws.com"
+      ]
+      type = "Service"
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name           = "${var.environment}-di-authentication-api"
   api_key_source = "HEADER"
@@ -188,6 +206,24 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-waf-logs-subscription-${count.index}"
   log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
+resource "aws_cloudwatch_log_group" "orch_frontend_authorizer_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.orch_frontend_authorizer.function_name}"
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "orch-frontend-authorizer-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.orch_frontend_authorizer_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -715,6 +751,71 @@ EOF
     aws_api_gateway_resource.robots_txt_resource,
     aws_api_gateway_method.robots_txt_method,
   ]
+}
+
+resource "aws_api_gateway_resource" "orch_frontend_resource" {
+  count       = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "orch-frontend"
+}
+
+resource "aws_api_gateway_resource" "orch_frontend_resource_proxy" {
+  count       = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.orch_frontend_resource[0].id
+  path_part   = "{proxy+}"
+}
+
+resource "aws_api_gateway_method" "orch_frontend_proxy_method" {
+  count       = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_frontend_resource_proxy[0].id
+  http_method = "ANY"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_frontend_resource_proxy
+  ]
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.orch_frontend_authorizer.id
+
+  request_parameters = {
+    "method.request.path.proxy" = true
+  }
+}
+
+data "aws_cloudformation_stack" "orch_frontend_stack" {
+  count = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  name  = var.environment == "sandpit" ? "dev-orch-fe-deploy" : "${var.environment}-orch-fe-deploy"
+}
+
+locals {
+  nlb_dns_name = length(data.aws_cloudformation_stack.orch_frontend_stack) > 0 ? data.aws_cloudformation_stack.orch_frontend_stack[0].outputs["OrchFrontendNlbDnsName"] : null
+  nlb_arn      = length(data.aws_cloudformation_stack.orch_frontend_stack) > 0 ? data.aws_cloudformation_stack.orch_frontend_stack[0].outputs["OrchFrontendNlbArn"] : null
+}
+
+resource "aws_api_gateway_vpc_link" "orch_frontend_nlb_vpc_link" {
+  count       = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  name        = "orch-frontend-nlb-vpc-link"
+  target_arns = [local.nlb_arn]
+}
+
+resource "aws_api_gateway_integration" "orch_frontend_nlb_integration" {
+  count       = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_frontend_resource_proxy[0].id
+  http_method = aws_api_gateway_method.orch_frontend_proxy_method[0].http_method
+
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${local.nlb_dns_name}/orch-frontend/{proxy}"
+  integration_http_method = "ANY"
+
+  connection_type = "VPC_LINK"
+  connection_id   = aws_api_gateway_vpc_link.orch_frontend_nlb_vpc_link[0].id
+
+  request_parameters = {
+    "integration.request.path.proxy" = "method.request.path.proxy"
+  }
 }
 
 resource "aws_api_gateway_resource" "orch_openid_configuration_resource" {
