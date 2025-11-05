@@ -475,14 +475,6 @@ variable "orch_client_id" {
   default = "orchestrationAuth"
 }
 
-variable "orch_frontend_api_gateway_integration_enabled" {
-  # When this flag is enabled in a particular environment, the corresponding orchestration-frontend flag
-  # (OidcApiGatewayIntegrationEnabled) should also be enabled for that environment.
-  description = "Flag to enable API Gateway integration with the Orchestration frontend"
-  type        = bool
-  default     = false
-}
-
 variable "orch_openid_configuration_enabled" {
   description = "Flag to enable routing openid configuration traffic to the orchestration account"
   type        = bool
@@ -557,12 +549,6 @@ variable "orch_userinfo_enabled" {
 
 variable "orch_storage_token_jwk_enabled" {
   description = "Flag to enable routing storage token jwk traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
-variable "orch_frontend_enabled" {
-  description = "Flag to enable redirecting to orch frontend instead of auth frontend"
   type        = bool
   default     = false
 }
