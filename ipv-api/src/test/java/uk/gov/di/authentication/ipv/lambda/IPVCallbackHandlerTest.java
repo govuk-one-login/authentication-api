@@ -329,7 +329,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldMakeAISCallAndReturnAccessDeniedErrorToRPWhenP0()
+    void shouldReturnAccessDeniedErrorToRPWhenP0()
             throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
         usingValidSession();
         usingValidClientSession();
@@ -361,9 +361,16 @@ class IPVCallbackHandlerTest {
                         .toString();
         assertThat(response, hasStatus(302));
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
         verify(accountInterventionService)
                 .getAccountIntervention(
                         eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
+
+        verifyNoInteractions(dynamoIdentityService);
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        verifyNoInteractions(awsSqsClient);
     }
 
     @Test
@@ -542,45 +549,6 @@ class IPVCallbackHandlerTest {
                         eq(CLIENT_ID.getValue()),
                         eq(TEST_EMAIL_ADDRESS),
                         eq(TEST_SUBJECT.getValue()));
-    }
-
-    @Test
-    void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var userIdentityUserInfo =
-                new UserInfo(
-                        new JSONObject(
-                                Map.of(
-                                        "sub", "sub-val",
-                                        "vot", "P0",
-                                        "vtm", OIDC_BASE_URL + "/trustmark")));
-        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
-                .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
-
-        var response =
-                makeHandlerRequest(
-                        getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
-
-        var expectedURI =
-                new AuthenticationErrorResponse(
-                                URI.create(REDIRECT_URI.toString()),
-                                OAuth2Error.ACCESS_DENIED,
-                                RP_STATE,
-                                null)
-                        .toURI()
-                        .toString();
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-
-        verifyNoInteractions(dynamoIdentityService);
-        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-        verifyNoInteractions(awsSqsClient);
     }
 
     @ParameterizedTest
