@@ -17,11 +17,13 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
+import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.ipv.services.IdentityProgressService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
@@ -55,6 +57,7 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,6 +94,7 @@ public class IPVCallbackHandler
     private final IPVCallbackHelper ipvCallbackHelper;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CommonFrontend frontend;
+    private final IdentityProgressService identityProgressService;
     protected final Json objectMapper = SerializationService.getInstance();
 
     public IPVCallbackHandler() {
@@ -110,7 +114,8 @@ public class IPVCallbackHandler
             AccountInterventionService accountInterventionService,
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper,
-            CommonFrontend frontend) {
+            CommonFrontend frontend,
+            IdentityProgressService identityProgressService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -124,6 +129,7 @@ public class IPVCallbackHandler
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
         this.frontend = frontend;
+        this.identityProgressService = identityProgressService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -148,6 +154,7 @@ public class IPVCallbackHandler
                 new CrossBrowserOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
         this.frontend = new AuthFrontend(configurationService);
+        this.identityProgressService = new IdentityProgressService(configurationService);
     }
 
     @Override
@@ -434,8 +441,50 @@ public class IPVCallbackHandler
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
                                     clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
-            var redirectURI = frontend.ipvCallbackURI();
-            LOG.info("Successful IPV callback. Redirecting to frontend");
+
+            URI redirectURI = null;
+            if (configurationService.isSyncWaitForSpotEnabled()) {
+                var status = identityProgressService.pollForStatus(clientSessionId, auditContext);
+                if (status == IdentityProgressStatus.NO_ENTRY) {
+                    return RedirectService.redirectToFrontendErrorPage(
+                            frontend.errorURI(), new Error("Identity processing failed"));
+                }
+                if (status == IdentityProgressStatus.ERROR) {
+                    return RedirectService.redirectToFrontendErrorPage(
+                            frontend.errorURI(),
+                            new Error("Identity processing returned NO_ENTRY"));
+                }
+                if (status == IdentityProgressStatus.COMPLETED) {
+                    var aisResponseOpt =
+                            checkForAisIntervention(orchSession, auditContext, input, clientId);
+                    if (aisResponseOpt.isPresent()) {
+                        return aisResponseOpt.get();
+                    }
+                    redirectURI =
+                            ipvCallbackHelper
+                                    .generateAuthenticationResponse(
+                                            authRequest,
+                                            orchSession,
+                                            clientSessionId,
+                                            ipAddress,
+                                            persistentId,
+                                            clientId,
+                                            clientRegistry.getClientName(),
+                                            authUserInfo.getEmailAddress(),
+                                            authUserInfo.getSubject().getValue(),
+                                            rpPairwiseSubject.getValue(),
+                                            orchSession.getInternalCommonSubjectId())
+                                    .toURI();
+                }
+            } else {
+                redirectURI = frontend.ipvCallbackURI();
+                LOG.info("Successful IPV callback. Redirecting to frontend");
+            }
+            if (redirectURI == null) {
+                // Should be impossible, but compiler seems to think otherwise
+                return RedirectService.redirectToFrontendErrorPage(
+                        frontend.errorURI(), new Error("Failed to create redirectURI"));
+            }
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
@@ -457,6 +506,13 @@ public class IPVCallbackHandler
                     new Error(
                             String.format(
                                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: %s",
+                                    e.getMessage())));
+        } catch (InterruptedException e) {
+            return RedirectService.redirectToFrontendErrorPage(
+                    frontend.errorURI(),
+                    new Error(
+                            String.format(
+                                    "Failed to poll for identity progress status. Error: %s",
                                     e.getMessage())));
         }
     }
