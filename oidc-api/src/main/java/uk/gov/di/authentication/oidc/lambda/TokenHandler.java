@@ -27,9 +27,11 @@ import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
@@ -405,6 +407,28 @@ public class TokenHandler
             LOG.warn("Refresh token store does not contain Refresh token in request");
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
+        }
+
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItem;
+        try {
+            orchRefreshTokenItem = orchRefreshTokenService.getRefreshToken(jti);
+            if (orchRefreshTokenItem.isPresent()) {
+                LOG.info(
+                        "Does token value from refresh token in dynamo match redis? {}",
+                        Objects.equals(
+                                orchRefreshTokenItem.get().getToken(),
+                                tokenStore.getRefreshToken()));
+                LOG.info(
+                        "Does internal pairwise subject id from refresh token in dynamo match redis? {}",
+                        Objects.equals(
+                                orchRefreshTokenItem.get().getInternalPairwiseSubjectId(),
+                                tokenStore.getInternalPairwiseSubjectId()));
+                if (orchRefreshTokenItem.get().getAuthCode().equals("placeholder-for-auth-code")) {
+                    LOG.info("The refresh token in dynamo has a placeholder for auth code.");
+                }
+            }
+        } catch (OrchRefreshTokenException e) {
+            LOG.warn("Unable to get refresh token from dynamo");
         }
 
         String placeholderForAuthCode = "placeholder-for-auth-code";
