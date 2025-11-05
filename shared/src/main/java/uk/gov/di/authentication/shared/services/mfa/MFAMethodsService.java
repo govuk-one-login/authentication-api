@@ -254,8 +254,10 @@ public class MFAMethodsService {
 
     public Result<MfaCreateFailureReason, MFAMethod> addBackupMfa(
             String email, MfaMethodCreateRequest.MfaMethod mfaMethod) {
-        UserCredentials userCredentials = persistentService.getUserCredentialsFromEmail(email);
-        var mfaMethods = getMfaMethodsForMigratedUser(userCredentials);
+        var mfaMethods =
+                getMfaMethodsForMigratedUser(
+                        persistentService.getUserCredentialsFromEmailWithStronglyConsistentRead(
+                                email));
 
         if (mfaMethods.size() >= 2) {
             return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);

@@ -10,6 +10,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
@@ -297,6 +298,15 @@ public class DynamoService implements AuthenticationService {
     public UserCredentials getUserCredentialsFromEmail(String email) {
         return dynamoUserCredentialsTable.getItem(
                 Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+    }
+
+    @Override
+    public UserCredentials getUserCredentialsFromEmailWithStronglyConsistentRead(String email) {
+        return dynamoUserCredentialsTable.getItem(
+                GetItemEnhancedRequest.builder()
+                        .consistentRead(true)
+                        .key(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                        .build());
     }
 
     @Override

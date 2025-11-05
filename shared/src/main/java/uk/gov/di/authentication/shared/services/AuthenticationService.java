@@ -64,6 +64,8 @@ public interface AuthenticationService {
 
     UserCredentials getUserCredentialsFromEmail(String email);
 
+    UserCredentials getUserCredentialsFromEmailWithStronglyConsistentRead(String email);
+
     void migrateLegacyPassword(String email, String password);
 
     byte[] getOrGenerateSalt(UserProfile userProfile);
