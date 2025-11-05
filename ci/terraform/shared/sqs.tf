@@ -62,7 +62,7 @@ resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
   period              = "300"
-  statistic           = "Sum"
+  statistic           = "Average"
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
