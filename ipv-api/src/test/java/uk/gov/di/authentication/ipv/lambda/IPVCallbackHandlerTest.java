@@ -42,6 +42,7 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.authentication.ipv.services.IdentityProgressService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
@@ -130,6 +131,8 @@ class IPVCallbackHandlerTest {
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CommonFrontend frontend = mock(CommonFrontend.class);
+    private final IdentityProgressService identityProgressService =
+            mock(IdentityProgressService.class);
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_IPV_CALLBACK_ERROR_URI =
             URI.create("https://example.com/ipv-callback-session-expiry-error");
@@ -237,7 +240,8 @@ class IPVCallbackHandlerTest {
                         accountInterventionService,
                         crossBrowserOrchestrationService,
                         ipvCallbackHelper,
-                        frontend);
+                        frontend,
+                        identityProgressService);
         when(frontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
         when(frontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
