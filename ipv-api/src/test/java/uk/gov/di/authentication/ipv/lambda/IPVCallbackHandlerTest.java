@@ -37,6 +37,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackValidationError;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
@@ -99,6 +100,7 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -160,6 +162,7 @@ class IPVCallbackHandlerTest {
             List.of(
                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
                     new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+    private static final ResponseMode RESPONSE_MODE = ResponseMode.QUERY;
     private IPVCallbackHandler handler;
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private static final URI accessDeniedURI =
@@ -225,7 +228,6 @@ class IPVCallbackHandlerTest {
     @BeforeEach
     void setUp() {
         clearInvocations(ipvCallbackHelper);
-
         handler =
                 new IPVCallbackHandler(
                         configService,
@@ -245,10 +247,10 @@ class IPVCallbackHandlerTest {
         when(frontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
         when(frontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
-        when(frontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+        when(configService.isSyncWaitForSpotEnabled()).thenReturn(false);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(NO_INTERVENTION);
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -1063,6 +1065,184 @@ class IPVCallbackHandlerTest {
         }
     }
 
+    @Nested
+    class SynchronouslyWaitForSpot {
+        Map<String, Object> claims;
+
+        @BeforeEach
+        void setup() throws Exception {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+            when(configService.isSyncWaitForSpotEnabled()).thenReturn(true);
+            when(ipvCallbackHelper.generateAuthenticationResponse(
+                            any(AuthenticationRequest.class),
+                            any(OrchSessionItem.class),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString(),
+                            anyString()))
+                    .thenReturn(
+                            new AuthenticationSuccessResponse(
+                                    REDIRECT_URI,
+                                    AUTH_CODE,
+                                    null,
+                                    null,
+                                    RP_STATE,
+                                    null,
+                                    RESPONSE_MODE));
+            claims =
+                    new HashMap<>(
+                            Map.of(
+                                    "sub",
+                                    "sub-val",
+                                    "vot",
+                                    "P2",
+                                    "vtm",
+                                    OIDC_BASE_URL + "/trustmark",
+                                    IdentityClaims.CORE_IDENTITY.getValue(),
+                                    CORE_IDENTITY_CLAIM,
+                                    IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                    CREDENTIAL_JWT_CLAIM));
+        }
+
+        @Test
+        void shouldRedirectBackToClientIfSPOTChecksCompleted() throws Exception {
+            when(identityProgressService.pollForStatus(
+                            eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(IdentityProgressStatus.COMPLETED);
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    REDIRECT_URI + "?code=" + AUTH_CODE + "&state=" + RP_STATE,
+                    response.getHeaders().get("Location"));
+
+            verifySPOTRequestQueued();
+            verify(identityProgressService, times(1))
+                    .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
+
+            verifyAllAuditEventsSubmitted();
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageIfSPOTChecksReturnError() throws Exception {
+            when(identityProgressService.pollForStatus(
+                            eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(IdentityProgressStatus.ERROR);
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifySPOTRequestQueued();
+            verify(identityProgressService, times(1))
+                    .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
+
+            verifyAllAuditEventsSubmitted();
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageIfSPOTChecksReturnNoEntry() throws Exception {
+            when(identityProgressService.pollForStatus(
+                            eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(IdentityProgressStatus.NO_ENTRY);
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifySPOTRequestQueued();
+            verify(identityProgressService, times(1))
+                    .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
+
+            verifyAllAuditEventsSubmitted();
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageIfWaitingForSPOTThrowsException() throws Exception {
+            when(identityProgressService.pollForStatus(
+                            eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenThrow(new InterruptedException("test"));
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifySPOTRequestQueued();
+            verify(identityProgressService, times(1))
+                    .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
+
+            verifyAllAuditEventsSubmitted();
+        }
+
+        @Test
+        void shouldLogoutUserWhenAISReturnsBlockedAccountInSPOTResponseStep() throws Exception {
+            when(identityProgressService.pollForStatus(
+                            eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(IdentityProgressStatus.COMPLETED);
+            var intervention =
+                    new AccountIntervention(
+                            new AccountInterventionState(true, false, false, false));
+            when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                    .thenReturn(intervention);
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertThat(response, hasStatus(302));
+            assertEquals(FRONT_END_AIS_LOGOUT_URL, response.getHeaders().get("Location"));
+
+            verifySPOTRequestQueued();
+            verify(identityProgressService, times(1))
+                    .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
+
+            verifyAllAuditEventsSubmitted();
+        }
+
+        void verifyAllAuditEventsSubmitted() {
+            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
+            verifyNoMoreInteractions(auditService);
+        }
+
+        void verifySPOTRequestQueued() throws Exception {
+            verify(ipvCallbackHelper)
+                    .queueSPOTRequest(
+                            any(),
+                            anyString(),
+                            eq(authUserInfo),
+                            eq(new Subject(TEST_RP_PAIRWISE_ID)),
+                            any(UserInfo.class),
+                            eq(CLIENT_ID.getValue()));
+            verify(ipvCallbackHelper)
+                    .saveIdentityClaimsToDynamo(
+                            any(String.class), any(Subject.class), any(UserInfo.class));
+        }
+    }
+
     @Test
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
             throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
@@ -1283,6 +1463,7 @@ class IPVCallbackHandlerTest {
                 .state(RP_STATE)
                 .nonce(nonce)
                 .claims(oidcClaimsRequest)
+                .responseMode(RESPONSE_MODE)
                 .build();
     }
 
