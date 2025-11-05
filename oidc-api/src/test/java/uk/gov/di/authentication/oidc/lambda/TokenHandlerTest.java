@@ -54,6 +54,7 @@ import uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
@@ -151,6 +152,7 @@ public class TokenHandlerTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final String AUTH_CODE = "test-auth-code";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
     private final BearerAccessToken accessToken = new BearerAccessToken();
     private final RefreshToken refreshToken = new RefreshToken();
@@ -429,6 +431,7 @@ public class TokenHandlerTest {
                         new OIDCTokens("test-id-token-string", accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -449,8 +452,12 @@ public class TokenHandlerTest {
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(null);
-        String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
+        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+        OrchRefreshTokenItem orchRefreshTokenItem =
+                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+        when(orchRefreshTokenService.getRefreshToken(jwtId))
+                .thenReturn(Optional.of(orchRefreshTokenItem));
 
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
@@ -458,8 +465,7 @@ public class TokenHandlerTest {
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.ES256),
-                        eq("placeholder-for-auth-code")))
-                // TO DO: replace placeholder with the authCode from refresh token (ATO-2016)
+                        eq(AUTH_CODE)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -492,6 +498,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
         ClientRegistry clientRegistry =
                 generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
 
@@ -514,8 +521,12 @@ public class TokenHandlerTest {
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(null);
-        String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
+        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+        OrchRefreshTokenItem orchRefreshTokenItem =
+                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+        when(orchRefreshTokenService.getRefreshToken(jwtId))
+                .thenReturn(Optional.of(orchRefreshTokenItem));
 
         when(tokenService.generateRefreshTokenResponse(
                         eq(CLIENT_ID),
@@ -523,8 +534,7 @@ public class TokenHandlerTest {
                         eq(RP_PAIRWISE_SUBJECT),
                         eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.RS256),
-                        eq("placeholder-for-auth-code")))
-                // TO DO: replace placeholder with the authCode from refresh token (ATO-2016)
+                        eq(AUTH_CODE)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
