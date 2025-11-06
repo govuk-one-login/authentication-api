@@ -41,6 +41,15 @@ Resources:
                 StringNotEquals:
                   aws:SourceVpce:
                     - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - !If
+                      - AddEvcsApiVpcEndpointId
+                      - !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          EvcsApiVpcEndpointId,
+                          DefaultValue: "",
+                        ]
+                      - !Ref AWS::NoValue
       DefinitionBody:
         openapi: "3.0.1" # workaround to get `sam validate` to work
         Fn::Transform:
