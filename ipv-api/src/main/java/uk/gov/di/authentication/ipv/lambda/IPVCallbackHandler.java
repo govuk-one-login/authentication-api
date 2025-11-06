@@ -147,11 +147,7 @@ public class IPVCallbackHandler
         this.crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
-        this.frontend = getFrontend(configurationService);
-    }
-
-    public static CommonFrontend getFrontend(ConfigurationService configurationService) {
-        return new AuthFrontend(configurationService);
+        this.frontend = new AuthFrontend(configurationService);
     }
 
     @Override
