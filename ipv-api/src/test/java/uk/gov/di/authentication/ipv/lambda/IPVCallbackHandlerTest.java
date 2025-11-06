@@ -1296,7 +1296,6 @@ class IPVCallbackHandlerTest {
     private void assertDoesRedirectToFrontendPage(
             APIGatewayProxyResponseEvent response, URI frontEndPage) {
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = frontEndPage;
-        assertEquals(expectedRedirectURI.toString(), response.getHeaders().get("Location"));
+        assertEquals(frontEndPage.toString(), response.getHeaders().get("Location"));
     }
 }
