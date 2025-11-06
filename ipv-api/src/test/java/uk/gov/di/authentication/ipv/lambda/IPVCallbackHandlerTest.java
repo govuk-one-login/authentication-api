@@ -779,37 +779,123 @@ class IPVCallbackHandlerTest {
         }
     }
 
-    @Test
-    void shouldCallAisAndLogoutServiceIfSessionInvalidatedError() throws ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
+    @Nested
+    class RedirectToFrontendAndLogout {
+        @Test
+        void shouldCallAisAndLogoutServiceIfSessionInvalidatedError() throws ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(generateClientRegistryNoClaims()));
 
-        when(responseService.validateResponse(anyMap(), anyString()))
-                .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError("session_invalidated", null, true)));
+            when(responseService.validateResponse(anyMap(), anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new IpvCallbackValidationError(
+                                            "session_invalidated", null, true)));
 
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("state", STATE.getValue());
-        responseHeaders.put("error", "session_invalidated");
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("state", STATE.getValue());
+            responseHeaders.put("error", "session_invalidated");
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(responseHeaders);
-        handler.handleRequest(event, context);
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(Map.of(COOKIE, buildCookieString()));
+            event.setQueryStringParameters(responseHeaders);
+            handler.handleRequest(event, context);
 
-        verify(accountInterventionService)
-                .getAccountIntervention(
+            verify(accountInterventionService)
+            .getAccountIntervention(
                         eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
-        verify(logoutService)
-                .handleSessionInvalidationLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of()),
-                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
-                        event,
-                        CLIENT_ID.getValue());
+            verify(logoutService)
+                    .handleSessionInvalidationLogout(
+                            new DestroySessionsRequest(SESSION_ID, List.of()),
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                            event,
+                            CLIENT_ID.getValue());
+        }
+
+        @Test
+        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedAccountInAuthStep()
+                throws ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            var errorObject =
+                    new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("code", AUTH_CODE.getValue());
+            responseHeaders.put("state", STATE.getValue());
+            responseHeaders.put("error", errorObject.toString());
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(generateClientRegistryNoClaims()));
+            when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new IpvCallbackValidationError(
+                                            errorObject.getCode(), redirectUriErrorMessage)));
+            var intervention =
+                    new AccountIntervention(
+                            new AccountInterventionState(true, false, false, false));
+            when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                    .thenReturn(intervention);
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHeaders(Map.of(COOKIE, buildCookieString()));
+            event.setQueryStringParameters(responseHeaders);
+            handler.handleRequest(event, context);
+
+            verify(logoutService)
+                    .handleAccountInterventionLogout(
+                            new DestroySessionsRequest(SESSION_ID, List.of()),
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                            event,
+                            CLIENT_ID.getValue(),
+                            intervention);
+        }
+
+        @Test
+        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedAccountInTokenStep()
+                throws IpvCallbackException, ParseException {
+            var clientRegistry = generateClientRegistryNoClaims();
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            when(ipvCallbackHelper.validateUserIdentityResponse(any(), eq(VTR_LIST)))
+                    .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("code", AUTH_CODE.getValue());
+            responseHeaders.put("state", STATE.getValue());
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+            when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                    .thenReturn(Optional.empty());
+            var successfulTokenResponse =
+                    new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+            when(ipvTokenService.getToken(AUTH_CODE.getValue()))
+                    .thenReturn(successfulTokenResponse);
+            var intervention =
+                    new AccountIntervention(
+                            new AccountInterventionState(true, false, false, false));
+            when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                    .thenReturn(intervention);
+
+            var request = new APIGatewayProxyRequestEvent();
+            request.setQueryStringParameters(responseHeaders);
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+            handler.handleRequest(request, context);
+
+            verify(logoutService)
+                    .handleAccountInterventionLogout(
+                            new DestroySessionsRequest(SESSION_ID, List.of()),
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                            request,
+                            CLIENT_ID.getValue(),
+                            intervention);
+        }
     }
 
     @Test
@@ -959,83 +1045,6 @@ class IPVCallbackHandlerTest {
         var configurationService = mock(ConfigurationService.class);
         var actualFrontendClass = IPVCallbackHandler.getFrontend(configurationService).getClass();
         assertThat(actualFrontendClass, is(equalTo(AuthFrontend.class)));
-    }
-
-    @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInAuthStep() throws ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var errorObject = new ErrorObject("invalid_request_redirect_uri", redirectUriErrorMessage);
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        responseHeaders.put("error", errorObject.toString());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(
-                        Optional.of(
-                                new IpvCallbackValidationError(
-                                        errorObject.getCode(), redirectUriErrorMessage)));
-        var intervention =
-                new AccountIntervention(new AccountInterventionState(true, false, false, false));
-        when(accountInterventionService.getAccountIntervention(anyString(), any()))
-                .thenReturn(intervention);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(responseHeaders);
-        handler.handleRequest(event, context);
-
-        verify(logoutService)
-                .handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of()),
-                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
-                        event,
-                        CLIENT_ID.getValue(),
-                        intervention);
-    }
-
-    @Test
-    void shouldLogoutUserWhenAISReturnsBlockedAccountInTokenStep()
-            throws IpvCallbackException, ParseException {
-        var clientRegistry = generateClientRegistryNoClaims();
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        when(ipvCallbackHelper.validateUserIdentityResponse(any(), eq(VTR_LIST)))
-                .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
-        var successfulTokenResponse =
-                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(successfulTokenResponse);
-        var intervention =
-                new AccountIntervention(new AccountInterventionState(true, false, false, false));
-        when(accountInterventionService.getAccountIntervention(anyString(), any()))
-                .thenReturn(intervention);
-
-        var request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(responseHeaders);
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        handler.handleRequest(request, context);
-
-        verify(logoutService)
-                .handleAccountInterventionLogout(
-                        new DestroySessionsRequest(SESSION_ID, List.of()),
-                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
-                        request,
-                        CLIENT_ID.getValue(),
-                        intervention);
     }
 
     @Nested
