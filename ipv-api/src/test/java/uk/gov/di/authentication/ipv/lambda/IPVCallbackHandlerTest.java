@@ -175,7 +175,7 @@ class IPVCallbackHandlerTest {
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
-    private final URI accessDeniedURI =
+    private static final URI accessDeniedURI =
             new AuthenticationErrorResponse(
                             URI.create(REDIRECT_URI.toString()),
                             OAuth2Error.ACCESS_DENIED,
@@ -225,15 +225,23 @@ class IPVCallbackHandlerTest {
 
     private static Stream<Arguments> additionalClaims() {
         return Stream.of(
-                Arguments.of(Map.of(ValidClaims.ADDRESS.getValue(), ADDRESS_CLAIM)),
-                Arguments.of(Map.of(ValidClaims.PASSPORT.getValue(), PASSPORT_CLAIM)),
-                Arguments.of(emptyMap()),
                 Arguments.of(
-                        Map.of(
-                                ValidClaims.ADDRESS.getValue(),
-                                ADDRESS_CLAIM,
-                                ValidClaims.PASSPORT.getValue(),
-                                PASSPORT_CLAIM)));
+                        Named.of(
+                                "Address claim",
+                                Map.of(ValidClaims.ADDRESS.getValue(), ADDRESS_CLAIM))),
+                Arguments.of(
+                        Named.of(
+                                "Passport claim",
+                                Map.of(ValidClaims.PASSPORT.getValue(), PASSPORT_CLAIM))),
+                Arguments.of(Named.of("No additional claims", emptyMap())),
+                Arguments.of(
+                        Named.of(
+                                "Address + Passport claim",
+                                Map.of(
+                                        ValidClaims.ADDRESS.getValue(),
+                                        ADDRESS_CLAIM,
+                                        ValidClaims.PASSPORT.getValue(),
+                                        PASSPORT_CLAIM))));
     }
 
     @BeforeEach
@@ -696,31 +704,39 @@ class IPVCallbackHandlerTest {
                             .withUserInfoClaimsRequest(
                                     claimsSetRequest.add(ValidClaims.RETURN_CODE.getValue()));
 
-            var expectedURI =
-                    new AuthenticationErrorResponse(
-                                    URI.create(REDIRECT_URI.toString()),
-                                    OAuth2Error.ACCESS_DENIED,
-                                    RP_STATE,
-                                    null)
-                            .toURI();
-
             return Stream.of(
                     Arguments.of(
-                            generateClientRegistryNoClaims(),
-                            oidcValidClaimsRequestWithoutReturnCode,
-                            expectedURI),
+                            Named.of(
+                                    "Client with no return code claim",
+                                    generateClientRegistryNoClaims()),
+                            Named.of(
+                                    "Request with no return code claim",
+                                    oidcValidClaimsRequestWithoutReturnCode),
+                            Named.of("Redirect to RP with access denied", accessDeniedURI)),
                     Arguments.of(
-                            generateClientRegistryNoClaims(),
-                            oidcValidClaimsRequestWithReturnCode,
-                            expectedURI),
+                            Named.of(
+                                    "Client with no return code claim",
+                                    generateClientRegistryNoClaims()),
+                            Named.of(
+                                    "Request with return code claim",
+                                    oidcValidClaimsRequestWithReturnCode),
+                            Named.of("Redirect to RP with access denied", accessDeniedURI)),
                     Arguments.of(
-                            generateClientWithReturnCodes(),
-                            oidcValidClaimsRequestWithoutReturnCode,
-                            expectedURI),
+                            Named.of(
+                                    "Client with return code claim",
+                                    generateClientWithReturnCodes()),
+                            Named.of(
+                                    "Request without return code claim",
+                                    oidcValidClaimsRequestWithoutReturnCode),
+                            Named.of("Redirect to RP with access denied", accessDeniedURI)),
                     Arguments.of(
-                            generateClientWithReturnCodes(),
-                            oidcValidClaimsRequestWithReturnCode,
-                            REDIRECT_URI));
+                            Named.of(
+                                    "Client with return code claim",
+                                    generateClientWithReturnCodes()),
+                            Named.of(
+                                    "Request with return code claim",
+                                    oidcValidClaimsRequestWithReturnCode),
+                            Named.of("Redirect to RP with return code", REDIRECT_URI)));
         }
 
         @Test
