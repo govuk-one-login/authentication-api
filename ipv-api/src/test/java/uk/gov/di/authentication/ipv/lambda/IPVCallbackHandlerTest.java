@@ -313,19 +313,243 @@ class IPVCallbackHandlerTest {
                                 null));
     }
 
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
-            throws UnsuccessfulCredentialResponseException, ParseException {
-        when(configService.isIdentityEnabled()).thenReturn(false);
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
+    @Nested
+    class RedirectToFrontendWithError {
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
+                throws UnsuccessfulCredentialResponseException, ParseException {
+            when(configService.isIdentityEnabled()).thenReturn(false);
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
 
-        var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+            var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
-        verifyNoInteractions(auditService);
+            verifyNoInteractions(auditService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenAuthUserInfoNotFound() throws ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("code", AUTH_CODE.getValue());
+            responseHeaders.put("state", STATE.getValue());
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(generateClientRegistryNoClaims()));
+            when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                    .thenReturn(Optional.empty());
+
+            APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+            request.setQueryStringParameters(responseHeaders);
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+            when(authUserInfoStorageService.getAuthenticationUserInfo(
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                    .thenReturn(Optional.empty());
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(dynamoIdentityService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
+                throws UnsuccessfulCredentialResponseException, ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
+
+            when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifyNoInteractions(ipvTokenService);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(dynamoIdentityService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
+                throws ParseException {
+            var clientRegistry = generateClientRegistryNoClaims();
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            var unsuccessfulTokenResponse =
+                    new TokenErrorResponse(new ErrorObject("Test error response"));
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("code", AUTH_CODE.getValue());
+            responseHeaders.put("state", STATE.getValue());
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+            when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                    .thenReturn(Optional.empty());
+            when(ipvTokenService.getToken(AUTH_CODE.getValue()))
+                    .thenReturn(unsuccessfulTokenResponse);
+            when(authUserInfoStorageService.getAuthenticationUserInfo(
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                    .thenReturn(Optional.of(authUserInfo));
+
+            var request = new APIGatewayProxyRequestEvent();
+            request.setQueryStringParameters(responseHeaders);
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+
+            verifyNoMoreInteractions(auditService);
+            verifyNoInteractions(dynamoIdentityService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
+                throws UnsuccessfulCredentialResponseException, ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            var claims =
+                    new HashMap<String, Object>(
+                            Map.of(
+                                    "sub",
+                                    "sub-val",
+                                    "vot",
+                                    "P2",
+                                    "vtm",
+                                    OIDC_BASE_URL + "/trustmark",
+                                    IdentityClaims.CORE_IDENTITY.getValue(),
+                                    CORE_IDENTITY_CLAIM,
+                                    IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                    CREDENTIAL_JWT_CLAIM));
+
+            var request =
+                    getApiGatewayProxyRequestEvent(
+                            new UserInfo(new JSONObject(claims)), clientRegistry);
+
+            doThrow(
+                            new UnsuccessfulCredentialResponseException(
+                                    "Error when attempting to parse http response to UserInfoResponse"))
+                    .when(ipvTokenService)
+                    .sendIpvUserIdentityRequest(any(UserInfoRequest.class));
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+        }
+
+        @Test
+        void shouldNotInvokeSPOTAndRedirectToFrontendErrorPageWhenVTMMismatch()
+                throws UnsuccessfulCredentialResponseException,
+                        IpvCallbackException,
+                        ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            var userIdentityUserInfo =
+                    new UserInfo(
+                            new JSONObject(
+                                    Map.of(
+                                            "sub", "sub-val",
+                                            "vot", "P2",
+                                            "vtm", OIDC_BASE_URL + "/invalid-trustmark")));
+            doThrow(new IpvCallbackException("IPV trustmark is invalid"))
+                    .when(ipvCallbackHelper)
+                    .validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST);
+
+            var request = getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry);
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
+
+            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+            verifyNoMoreInteractions(auditService);
+            verifyNoInteractions(awsSqsClient);
+            verifyNoInteractions(dynamoIdentityService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws ParseException {
+            usingValidSession();
+            usingValidAuthUserInfo();
+
+            Map<String, String> responseHeaders = new HashMap<>();
+            responseHeaders.put("code", AUTH_CODE.getValue());
+            responseHeaders.put("state", STATE.getValue());
+            when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+
+            APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+            request.setQueryStringParameters(responseHeaders);
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
+
+            verifyNoInteractions(ipvTokenService);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(dynamoIdentityService);
+        }
+
+        @Test
+        void shouldRedirectToFrontendErrorPageWhenOrchSessionIsNotFound() {
+            var request = new APIGatewayProxyRequestEvent();
+            request.setQueryStringParameters(Collections.emptyMap());
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+            when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+
+            var response = handler.handleRequest(request, context);
+            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
+            verifyNoInteractions(auditService);
+        }
+
+        @Test
+        void
+                shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
+                        throws NoSessionException, ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            Map<String, String> queryParameters = new HashMap<>();
+            queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+            queryParameters.put("state", STATE.getValue());
+
+            doThrow(
+                            new NoSessionException(
+                                    "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
+                    .when(crossBrowserOrchestrationService)
+                    .generateNoSessionOrchestrationEntity(queryParameters);
+
+            var response =
+                    handler.handleRequest(
+                            new APIGatewayProxyRequestEvent()
+                                    .withQueryStringParameters(queryParameters),
+                            context);
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
+            assertThat(
+                    redirectLogging.events(),
+                    hasItem(
+                            withThrownMessageContaining(
+                                    "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false")));
+
+            verifyNoInteractions(ipvTokenService);
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(dynamoIdentityService);
+        }
     }
 
     @Test
@@ -608,111 +832,6 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
-            throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var userIdentityUserInfo =
-                new UserInfo(
-                        new JSONObject(
-                                Map.of(
-                                        "sub", "sub-val",
-                                        "vot", "P2",
-                                        "vtm", OIDC_BASE_URL + "/invalid-trustmark")));
-        doThrow(new IpvCallbackException("IPV trustmark is invalid"))
-                .when(ipvCallbackHelper)
-                .validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST);
-
-        var request = getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry);
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
-
-        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-        verifyNoMoreInteractions(auditService);
-        verifyNoInteractions(awsSqsClient);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenOrchSessionIsNotFound() {
-        var request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(Collections.emptyMap());
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenAuthUserInfoNotFound() throws ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
-
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(responseHeaders);
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-        when(authUserInfoStorageService.getAuthenticationUserInfo(
-                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
-                .thenReturn(Optional.empty());
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
-
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
-            throws UnsuccessfulCredentialResponseException, ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var claims =
-                new HashMap<String, Object>(
-                        Map.of(
-                                "sub",
-                                "sub-val",
-                                "vot",
-                                "P2",
-                                "vtm",
-                                OIDC_BASE_URL + "/trustmark",
-                                IdentityClaims.CORE_IDENTITY.getValue(),
-                                CORE_IDENTITY_CLAIM,
-                                IdentityClaims.CREDENTIAL_JWT.getValue(),
-                                CREDENTIAL_JWT_CLAIM));
-
-        var request =
-                getApiGatewayProxyRequestEvent(
-                        new UserInfo(new JSONObject(claims)), clientRegistry);
-
-        doThrow(
-                        new UnsuccessfulCredentialResponseException(
-                                "Error when attempting to parse http response to UserInfoResponse"))
-                .when(ipvTokenService)
-                .sendIpvUserIdentityRequest(any(UserInfoRequest.class));
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
-    }
-
-    @Test
     void shouldMakeAISCallBeforeRedirectingToRpWhenAuthResponseContainsError()
             throws ParseException {
         usingValidSession();
@@ -786,82 +905,6 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws ParseException {
-        usingValidSession();
-        usingValidAuthUserInfo();
-
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-        request.setQueryStringParameters(responseHeaders);
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
-
-        verifyNoInteractions(ipvTokenService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
-            throws UnsuccessfulCredentialResponseException, ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
-
-        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
-
-        verifyNoInteractions(ipvTokenService);
-        verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() throws ParseException {
-        var clientRegistry = generateClientRegistryNoClaims();
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        var unsuccessfulTokenResponse =
-                new TokenErrorResponse(new ErrorObject("Test error response"));
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
-        when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
-        when(authUserInfoStorageService.getAuthenticationUserInfo(
-                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(authUserInfo));
-
-        var request = new APIGatewayProxyRequestEvent();
-        request.setQueryStringParameters(responseHeaders);
-        request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-        var response = handler.handleRequest(request, context);
-        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
-
-        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyAuditEvent(IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-
-        verifyNoMoreInteractions(auditService);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
                     throws NoSessionException, ParseException {
@@ -898,42 +941,6 @@ class IPVCallbackHandlerTest {
                 .generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString());
         verifyNoInteractions(ipvTokenService);
-        verifyNoInteractions(dynamoIdentityService);
-    }
-
-    @Test
-    void
-            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
-                    throws NoSessionException, ParseException {
-        usingValidSession();
-        usingValidClientSession();
-        usingValidAuthUserInfo();
-
-        Map<String, String> queryParameters = new HashMap<>();
-        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
-        queryParameters.put("state", STATE.getValue());
-
-        doThrow(
-                        new NoSessionException(
-                                "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
-                .when(crossBrowserOrchestrationService)
-                .generateNoSessionOrchestrationEntity(queryParameters);
-
-        var response =
-                handler.handleRequest(
-                        new APIGatewayProxyRequestEvent()
-                                .withQueryStringParameters(queryParameters),
-                        context);
-
-        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
-        assertThat(
-                redirectLogging.events(),
-                hasItem(
-                        withThrownMessageContaining(
-                                "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false")));
-
-        verifyNoInteractions(ipvTokenService);
-        verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
     }
 
