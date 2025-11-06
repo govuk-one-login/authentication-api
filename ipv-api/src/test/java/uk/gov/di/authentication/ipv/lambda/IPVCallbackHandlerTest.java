@@ -64,7 +64,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -131,7 +130,6 @@ class IPVCallbackHandlerTest {
             mock(AccountInterventionService.class);
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final CommonFrontend frontend = mock(CommonFrontend.class);
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_IPV_CALLBACK_ERROR_URI =
@@ -146,7 +144,6 @@ class IPVCallbackHandlerTest {
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    private static final String RP_SECTOR_URI = "https://test.com";
     private static final String RP_SECTOR_HOST = "test.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -262,10 +259,8 @@ class IPVCallbackHandlerTest {
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(frontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
-        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
                 .thenReturn(NO_INTERVENTION);
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -457,7 +452,6 @@ class IPVCallbackHandlerTest {
             verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
             verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
             verifyNoMoreInteractions(auditService);
-            verifyNoInteractions(awsSqsClient);
             verifyNoInteractions(dynamoIdentityService);
         }
 
@@ -579,7 +573,6 @@ class IPVCallbackHandlerTest {
             verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
             verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
             verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-            verifyNoInteractions(awsSqsClient);
         }
 
         @ParameterizedTest
@@ -1277,7 +1270,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri(RP_SECTOR_URI)
+                .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
     }
 
@@ -1286,7 +1279,7 @@ class IPVCallbackHandlerTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri(RP_SECTOR_URI)
+                .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise")
                 .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
