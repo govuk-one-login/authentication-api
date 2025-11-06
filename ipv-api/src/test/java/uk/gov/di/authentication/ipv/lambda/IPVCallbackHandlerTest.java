@@ -29,6 +29,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -139,6 +140,11 @@ class IPVCallbackHandlerTest {
             URI.create("https://example.com/ipv-callback-session-expiry-error");
     private static final URI FRONT_END_IPV_CALLBACK_URI =
             URI.create("https://example.com/ipv-callback");
+    private static final URI FRONT_END_BASE_URI = URI.create("https://example.com");
+    private static final String FRONT_END_AIS_LOGOUT_URL =
+            FRONT_END_BASE_URI + "/unavailable-permanent";
+    private static final String FRONT_END_SESSION_INVALID_LOGOUT_URL =
+            FRONT_END_BASE_URI + "/signed-out";
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
@@ -189,6 +195,8 @@ class IPVCallbackHandlerTest {
                     ClientSubjectHelper.getSectorIdentifierForClient(
                             clientRegistry, RP_SECTOR_HOST),
                     salt);
+    private static final AccountIntervention NO_INTERVENTION =
+            new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -250,15 +258,14 @@ class IPVCallbackHandlerTest {
         when(frontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
         when(frontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
+        when(frontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(accountInterventionService.getAccountIntervention(anyString(), any()))
-                .thenReturn(
-                        new AccountIntervention(
-                                new AccountInterventionState(false, false, false, false)));
+                .thenReturn(NO_INTERVENTION);
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
                 .thenReturn(
@@ -266,6 +273,22 @@ class IPVCallbackHandlerTest {
                                 302,
                                 "",
                                 Map.of(ResponseHeaders.LOCATION, accessDeniedURI.toString()),
+                                null));
+        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any(), any()))
+                .thenReturn(
+                        generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, FRONT_END_AIS_LOGOUT_URL),
+                                null));
+        when(logoutService.handleSessionInvalidationLogout(any(), any(), any(), any()))
+                .thenReturn(
+                        generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(
+                                        ResponseHeaders.LOCATION,
+                                        FRONT_END_SESSION_INVALID_LOGOUT_URL),
                                 null));
     }
 
@@ -778,6 +801,11 @@ class IPVCallbackHandlerTest {
 
     @Nested
     class RedirectToFrontendAndLogout {
+        static final AccountIntervention BLOCKED_INTERVENTION =
+                new AccountIntervention(new AccountInterventionState(true, false, false, false));
+        static final AccountIntervention SUSPENDED_INTERVENTION =
+                new AccountIntervention(new AccountInterventionState(false, true, false, false));
+
         @Test
         void shouldCallAisAndLogoutServiceIfSessionInvalidatedError() throws ParseException {
             usingValidSession();
@@ -799,11 +827,14 @@ class IPVCallbackHandlerTest {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHeaders(Map.of(COOKIE, buildCookieString()));
             event.setQueryStringParameters(responseHeaders);
-            handler.handleRequest(event, context);
-
+            var response = handler.handleRequest(event, context);
+            assertEquals(302, response.getStatusCode());
+            assertEquals(
+                    FRONT_END_SESSION_INVALID_LOGOUT_URL,
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
             verify(accountInterventionService)
-            .getAccountIntervention(
-                        eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
+                    .getAccountIntervention(
+                            eq(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER), any(AuditContext.class));
             verify(logoutService)
                     .handleSessionInvalidationLogout(
                             new DestroySessionsRequest(SESSION_ID, List.of()),
@@ -812,9 +843,10 @@ class IPVCallbackHandlerTest {
                             CLIENT_ID.getValue());
         }
 
-        @Test
-        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedAccountInAuthStep()
-                throws ParseException {
+        @ParameterizedTest
+        @MethodSource("blockedOrSuspended")
+        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedOrSuspendedAccountInAuthStep(
+                AccountIntervention intervention) throws ParseException {
             usingValidSession();
             usingValidClientSession();
             usingValidAuthUserInfo();
@@ -832,17 +864,17 @@ class IPVCallbackHandlerTest {
                             Optional.of(
                                     new IpvCallbackValidationError(
                                             errorObject.getCode(), redirectUriErrorMessage)));
-            var intervention =
-                    new AccountIntervention(
-                            new AccountInterventionState(true, false, false, false));
             when(accountInterventionService.getAccountIntervention(anyString(), any()))
                     .thenReturn(intervention);
 
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHeaders(Map.of(COOKIE, buildCookieString()));
             event.setQueryStringParameters(responseHeaders);
-            handler.handleRequest(event, context);
+            var response = handler.handleRequest(event, context);
 
+            assertEquals(302, response.getStatusCode());
+            assertEquals(
+                    FRONT_END_AIS_LOGOUT_URL, response.getHeaders().get(ResponseHeaders.LOCATION));
             verify(logoutService)
                     .handleAccountInterventionLogout(
                             new DestroySessionsRequest(SESSION_ID, List.of()),
@@ -852,9 +884,10 @@ class IPVCallbackHandlerTest {
                             intervention);
         }
 
-        @Test
-        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedAccountInTokenStep()
-                throws IpvCallbackException, ParseException {
+        @ParameterizedTest
+        @MethodSource("blockedOrSuspended")
+        void shouldRedirectToFrontendAndLogoutWhenAISReturnsBlockedOrSuspendedAccountInTokenStep(
+                AccountIntervention intervention) throws IpvCallbackException, ParseException {
             var clientRegistry = generateClientRegistryNoClaims();
             usingValidSession();
             usingValidClientSession();
@@ -873,9 +906,6 @@ class IPVCallbackHandlerTest {
                     new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
             when(ipvTokenService.getToken(AUTH_CODE.getValue()))
                     .thenReturn(successfulTokenResponse);
-            var intervention =
-                    new AccountIntervention(
-                            new AccountInterventionState(true, false, false, false));
             when(accountInterventionService.getAccountIntervention(anyString(), any()))
                     .thenReturn(intervention);
 
@@ -883,8 +913,10 @@ class IPVCallbackHandlerTest {
             request.setQueryStringParameters(responseHeaders);
             request.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-            handler.handleRequest(request, context);
+            var response = handler.handleRequest(request, context);
 
+            assertEquals(302, response.getStatusCode());
+            assertEquals(FRONT_END_AIS_LOGOUT_URL, response.getHeaders().get("Location"));
             verify(logoutService)
                     .handleAccountInterventionLogout(
                             new DestroySessionsRequest(SESSION_ID, List.of()),
@@ -892,6 +924,12 @@ class IPVCallbackHandlerTest {
                             request,
                             CLIENT_ID.getValue(),
                             intervention);
+        }
+
+        private static Stream<Named<AccountIntervention>> blockedOrSuspended() {
+            return Stream.of(
+                    Named.of("Blocked", BLOCKED_INTERVENTION),
+                    Named.of("Suspended", SUSPENDED_INTERVENTION));
         }
     }
 
