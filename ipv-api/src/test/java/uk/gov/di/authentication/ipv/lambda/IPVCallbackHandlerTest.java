@@ -898,6 +898,145 @@ class IPVCallbackHandlerTest {
         }
     }
 
+    @Nested
+    class EnhancedCrossBrowserHandling {
+
+        private final String clientSessionIdFromState = "state-client-session-id";
+        private final OrchClientSessionItem clientSessionFromState =
+                new OrchClientSessionItem(
+                                clientSessionIdFromState,
+                                authRequestParams,
+                                null,
+                                List.of(VectorOfTrust.getDefaults()),
+                                CLIENT_NAME)
+                        .withRpPairwiseId(TEST_RP_PAIRWISE_ID);
+        private final ErrorObject errorObject =
+                new ErrorObject(
+                        OAuth2Error.ACCESS_DENIED_CODE,
+                        "Access denied for security reasons, a new authentication request may be successful");
+
+        private final URI errorUri =
+                new AuthenticationErrorResponse(
+                                REDIRECT_URI, errorObject, STATE, ResponseMode.QUERY)
+                        .toURI();
+
+        @BeforeEach
+        void setup() throws ParseException {
+            usingValidSession();
+            usingValidClientSession();
+            usingValidAuthUserInfo();
+
+            when(ipvCallbackHelper.generateAuthenticationErrorResponse(
+                            any(), any(), anyBoolean(), anyString(), anyString()))
+                    .thenReturn(
+                            generateApiGatewayProxyResponse(
+                                    302,
+                                    "",
+                                    Map.of(ResponseHeaders.LOCATION, errorUri.toString()),
+                                    null));
+        }
+
+        @Test
+        void itDoesNotReturnToTheRpIfCrossBrowserServiceReturnsEmptyForMismatchInClientSessionIDs()
+                throws NoSessionException,
+                        UnsuccessfulCredentialResponseException,
+                        Json.JsonException {
+
+            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            anyMap(), anyString(), any()))
+                    .thenReturn(Optional.empty());
+
+            Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
+
+            var additionalClaims =
+                    Map.of(
+                            ValidClaims.ADDRESS.getValue(),
+                            ADDRESS_CLAIM,
+                            ValidClaims.PASSPORT.getValue(),
+                            PASSPORT_CLAIM);
+
+            for (var entry : additionalClaims.entrySet()) {
+                userIdentityAdditionalClaims.put(
+                        entry.getKey(), objectMapper.readValue(entry.getValue(), JSONArray.class));
+            }
+
+            var claims =
+                    new HashMap<String, Object>(
+                            Map.of(
+                                    "sub",
+                                    "sub-val",
+                                    "vot",
+                                    "P2",
+                                    "vtm",
+                                    OIDC_BASE_URL + "/trustmark",
+                                    IdentityClaims.CORE_IDENTITY.getValue(),
+                                    CORE_IDENTITY_CLAIM,
+                                    IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                    CREDENTIAL_JWT_CLAIM));
+            claims.putAll(userIdentityAdditionalClaims);
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
+            verify(ipvCallbackHelper)
+                    .queueSPOTRequest(
+                            any(),
+                            anyString(),
+                            eq(authUserInfo),
+                            eq(new Subject(TEST_RP_PAIRWISE_ID)),
+                            any(UserInfo.class),
+                            eq(CLIENT_ID.getValue()));
+            verify(ipvCallbackHelper)
+                    .saveIdentityClaimsToDynamo(
+                            any(String.class), any(Subject.class), any(UserInfo.class));
+
+            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+            verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
+        }
+
+        @Test
+        void itReturnsToRpIfTheCrossBrowserServiceReturnsAMismatchEntity()
+                throws NoSessionException, Json.JsonException {
+
+            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            anyMap(), anyString(), any()))
+                    .thenReturn(
+                            Optional.of(
+                                    new CrossBrowserEntity(
+                                            clientSessionIdFromState,
+                                            errorObject,
+                                            clientSessionFromState)));
+
+            Map<String, String> queryParams = new HashMap<>();
+            queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+            queryParams.put("error_description", "Cross browser error from IPV");
+
+            var request = new APIGatewayProxyRequestEvent();
+            request.setQueryStringParameters(queryParams);
+            request.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+            var response = handler.handleRequest(request, context);
+
+            assertThat(response, hasStatus(302));
+
+            assertEquals(errorUri.toString(), response.getHeaders().get("Location"));
+
+            verify(responseService, never()).validateResponse(anyMap(), anyString());
+
+            verify(ipvCallbackHelper, never())
+                    .queueSPOTRequest(
+                            any(), anyString(), any(), any(), any(UserInfo.class), anyString());
+            verify(ipvCallbackHelper, never())
+                    .saveIdentityClaimsToDynamo(
+                            any(String.class), any(Subject.class), any(UserInfo.class));
+        }
+    }
+
     @Test
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
             throws UnsuccessfulCredentialResponseException, IpvCallbackException, ParseException {
@@ -1045,145 +1184,6 @@ class IPVCallbackHandlerTest {
         var configurationService = mock(ConfigurationService.class);
         var actualFrontendClass = IPVCallbackHandler.getFrontend(configurationService).getClass();
         assertThat(actualFrontendClass, is(equalTo(AuthFrontend.class)));
-    }
-
-    @Nested
-    class EnhancedCrossBrowserHandling {
-
-        private final String clientSessionIdFromState = "state-client-session-id";
-        private final OrchClientSessionItem clientSessionFromState =
-                new OrchClientSessionItem(
-                                clientSessionIdFromState,
-                                authRequestParams,
-                                null,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(TEST_RP_PAIRWISE_ID);
-        private final ErrorObject errorObject =
-                new ErrorObject(
-                        OAuth2Error.ACCESS_DENIED_CODE,
-                        "Access denied for security reasons, a new authentication request may be successful");
-
-        private final URI errorUri =
-                new AuthenticationErrorResponse(
-                                REDIRECT_URI, errorObject, STATE, ResponseMode.QUERY)
-                        .toURI();
-
-        @BeforeEach
-        void setup() throws ParseException {
-            usingValidSession();
-            usingValidClientSession();
-            usingValidAuthUserInfo();
-
-            when(ipvCallbackHelper.generateAuthenticationErrorResponse(
-                            any(), any(), anyBoolean(), anyString(), anyString()))
-                    .thenReturn(
-                            generateApiGatewayProxyResponse(
-                                    302,
-                                    "",
-                                    Map.of(ResponseHeaders.LOCATION, errorUri.toString()),
-                                    null));
-        }
-
-        @Test
-        void itDoesNotReturnToTheRpIfCrossBrowserServiceReturnsEmptyForMismatchInClientSessionIDs()
-                throws NoSessionException,
-                        UnsuccessfulCredentialResponseException,
-                        Json.JsonException {
-
-            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString(), any()))
-                    .thenReturn(Optional.empty());
-
-            Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
-
-            var additionalClaims =
-                    Map.of(
-                            ValidClaims.ADDRESS.getValue(),
-                            ADDRESS_CLAIM,
-                            ValidClaims.PASSPORT.getValue(),
-                            PASSPORT_CLAIM);
-
-            for (var entry : additionalClaims.entrySet()) {
-                userIdentityAdditionalClaims.put(
-                        entry.getKey(), objectMapper.readValue(entry.getValue(), JSONArray.class));
-            }
-
-            var claims =
-                    new HashMap<String, Object>(
-                            Map.of(
-                                    "sub",
-                                    "sub-val",
-                                    "vot",
-                                    "P2",
-                                    "vtm",
-                                    OIDC_BASE_URL + "/trustmark",
-                                    IdentityClaims.CORE_IDENTITY.getValue(),
-                                    CORE_IDENTITY_CLAIM,
-                                    IdentityClaims.CREDENTIAL_JWT.getValue(),
-                                    CREDENTIAL_JWT_CLAIM));
-            claims.putAll(userIdentityAdditionalClaims);
-
-            var response =
-                    makeHandlerRequest(
-                            getApiGatewayProxyRequestEvent(
-                                    new UserInfo(new JSONObject(claims)), clientRegistry));
-
-            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
-            verify(ipvCallbackHelper)
-                    .queueSPOTRequest(
-                            any(),
-                            anyString(),
-                            eq(authUserInfo),
-                            eq(new Subject(TEST_RP_PAIRWISE_ID)),
-                            any(UserInfo.class),
-                            eq(CLIENT_ID.getValue()));
-            verify(ipvCallbackHelper)
-                    .saveIdentityClaimsToDynamo(
-                            any(String.class), any(Subject.class), any(UserInfo.class));
-
-            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
-        }
-
-        @Test
-        void itReturnsToRpIfTheCrossBrowserServiceReturnsAMismatchEntity()
-                throws NoSessionException, Json.JsonException {
-
-            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString(), any()))
-                    .thenReturn(
-                            Optional.of(
-                                    new CrossBrowserEntity(
-                                            clientSessionIdFromState,
-                                            errorObject,
-                                            clientSessionFromState)));
-
-            Map<String, String> queryParams = new HashMap<>();
-            queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
-            queryParams.put("error_description", "Cross browser error from IPV");
-
-            var request = new APIGatewayProxyRequestEvent();
-            request.setQueryStringParameters(queryParams);
-            request.setHeaders(Map.of(COOKIE, buildCookieString()));
-
-            var response = handler.handleRequest(request, context);
-
-            assertThat(response, hasStatus(302));
-
-            assertEquals(errorUri.toString(), response.getHeaders().get("Location"));
-
-            verify(responseService, never()).validateResponse(anyMap(), anyString());
-
-            verify(ipvCallbackHelper, never())
-                    .queueSPOTRequest(
-                            any(), anyString(), any(), any(), any(UserInfo.class), anyString());
-            verify(ipvCallbackHelper, never())
-                    .saveIdentityClaimsToDynamo(
-                            any(String.class), any(Subject.class), any(UserInfo.class));
-        }
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
