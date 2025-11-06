@@ -409,20 +409,10 @@ public class TokenHandler
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
 
-        Optional<OrchRefreshTokenItem> orchRefreshTokenItem;
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItem = Optional.empty();
         try {
             orchRefreshTokenItem = orchRefreshTokenService.getRefreshToken(jti);
             if (orchRefreshTokenItem.isPresent()) {
-                LOG.info(
-                        "Does token value from refresh token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchRefreshTokenItem.get().getToken(),
-                                tokenStore.getRefreshToken()));
-                LOG.info(
-                        "Does internal pairwise subject id from refresh token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchRefreshTokenItem.get().getInternalPairwiseSubjectId(),
-                                tokenStore.getInternalPairwiseSubjectId()));
                 if (orchRefreshTokenItem.get().getAuthCode().equals("placeholder-for-auth-code")) {
                     LOG.info("The refresh token in dynamo has a placeholder for auth code.");
                 }
@@ -431,8 +421,16 @@ public class TokenHandler
             LOG.warn("Unable to get refresh token from dynamo");
         }
 
-        String placeholderForAuthCode = "placeholder-for-auth-code";
-        // TO DO: auth code to be extracted from refresh token when made available in ATO-2016
+        // Getting auth code from dynamo,
+        // but ensuring any problem with dynamo doesn't break the journey
+        // This will be redundant when we transfer reads from Redis to Dynamo
+        String authCode;
+        if (orchRefreshTokenItem.isEmpty()) {
+            LOG.warn("No auth code available, assigning placeholder value");
+            authCode = "placeholder-for-auth-code";
+        } else {
+            authCode = orchRefreshTokenItem.get().getAuthCode();
+        }
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
@@ -441,7 +439,7 @@ public class TokenHandler
                         rpPairwiseSubject,
                         new Subject(tokenStore.getInternalPairwiseSubjectId()),
                         signingAlgorithm,
-                        placeholderForAuthCode);
+                        authCode);
         LOG.info("Refresh token with jwt id {} has been used successfully.", jti);
         LOG.info("Generating successful RefreshToken response");
         return ApiResponse.ok(tokenResponse);
