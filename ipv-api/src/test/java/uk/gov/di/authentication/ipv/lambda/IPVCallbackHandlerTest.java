@@ -59,7 +59,6 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -79,7 +78,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -173,7 +171,8 @@ class IPVCallbackHandlerTest {
     private IPVCallbackHandler handler;
     private static final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
-    private static final String BASE_64_ENCODED_SALT = Base64.getEncoder().encodeToString(salt);
+    private static final String BASE_64_ENCODED_SALT =
+            "TW1jNDhpbUV1TzVra1ZXN050WFZ0eDVoMG1iQ1RmWHNxWGRXdmJSTXpkdz0=";
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private static final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -187,14 +186,9 @@ class IPVCallbackHandlerTest {
 
     private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+            "urn:fdc:gov.uk:2022:0VzHWj9aaJpyHXJX8B5QJ-UOUibweHmkSg1GjF6w9yM";
     private static final String TEST_RP_PAIRWISE_ID =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    TEST_SUBJECT.getValue(),
-                    ClientSubjectHelper.getSectorIdentifierForClient(
-                            clientRegistry, RP_SECTOR_HOST),
-                    salt);
+            "urn:fdc:gov.uk:2022:_WJvfEzqmWo6vnDwSqgMPTC-aK8n_fkgZsNF-a4OxxU";
     private static final AccountIntervention NO_INTERVENTION =
             new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
