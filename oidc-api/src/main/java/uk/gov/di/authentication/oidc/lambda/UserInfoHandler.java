@@ -146,7 +146,7 @@ public class UserInfoHandler
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
-        String journeyId = accessTokenInfo.getAccessTokenStore().getJourneyId();
+        String journeyId = accessTokenInfo.journeyId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, journeyId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, journeyId);
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
@@ -162,7 +162,7 @@ public class UserInfoHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
-                accessTokenInfo.getClientID(),
+                accessTokenInfo.clientID(),
                 TxmaAuditUser.user()
                         .withUserId(subjectForAudit)
                         .withGovukSigninJourneyId(journeyId),
@@ -172,7 +172,7 @@ public class UserInfoHandler
                 new HashMap<>(
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
-                                CLIENT.getValue(), accessTokenInfo.getClientID()));
+                                CLIENT.getValue(), accessTokenInfo.clientID()));
         cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());

@@ -1,15 +1,8 @@
 package uk.gov.di.authentication.oidc.services;
 
 import com.google.gson.internal.LinkedTreeMap;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -23,7 +16,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppCriService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
@@ -31,17 +23,14 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
-import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -87,8 +76,6 @@ class UserInfoServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567891";
-    private static final String BASE_URL = "https://example.com";
-    private static final String KEY_ID = "14342354354353";
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest()
                     .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
@@ -101,7 +88,6 @@ class UserInfoServiceTest {
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
     private final String docAppCredentialJWT =
             SignedCredentialHelper.generateCredential().serialize();
-    private AccessToken accessToken;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -130,14 +116,16 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateUserInfoWhenIdentityNotEnabled()
-            throws JOSEException, AccessTokenException, ClientNotFoundException, ParseException {
+            throws AccessTokenException, ClientNotFoundException, ParseException {
         when(configurationService.isIdentityEnabled()).thenReturn(false);
-        accessToken = createSignedAccessToken(null);
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                new AccessTokenInfo(
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID,
+                        SUBJECT.getValue(),
+                        SCOPES,
+                        null,
+                        CLIENT_ID);
         givenThereIsUserInfo();
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -155,7 +143,7 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresent()
-            throws JOSEException, AccessTokenException, ClientNotFoundException, ParseException {
+            throws AccessTokenException, ClientNotFoundException, ParseException {
         givenThereIsUserInfo();
         when(dynamoClientService.getClient(any()))
                 .thenReturn(
@@ -166,17 +154,19 @@ class UserInfoServiceTest {
         var walletSubjectId =
                 ClientSubjectHelper.calculateWalletSubjectIdentifier(
                         "test.com", INTERNAL_PAIRWISE_SUBJECT.getValue());
-        accessToken = createSignedAccessToken(null);
         var scopes =
                 List.of(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.WALLET_SUBJECT_ID.getValue());
 
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+                new AccessTokenInfo(
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID,
+                        SUBJECT.getValue(),
+                        scopes,
+                        null,
+                        CLIENT_ID);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -197,20 +187,16 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresent()
-                throws JOSEException,
-                        AccessTokenException,
-                        ClientNotFoundException,
-                        ParseException {
+                throws AccessTokenException, ClientNotFoundException, ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
-            accessToken = createSignedAccessToken(null);
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            SCOPES,
+                            null,
+                            CLIENT_ID);
             givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -228,10 +214,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
-                throws JOSEException,
-                        AccessTokenException,
-                        ClientNotFoundException,
-                        ParseException {
+                throws AccessTokenException, ClientNotFoundException, ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new OrchIdentityCredentials()
@@ -248,19 +231,14 @@ class UserInfoServiceTest {
                                             DRIVING_PERMIT,
                                             ValidClaims.RETURN_CODE.getValue(),
                                             RETURN_CODE));
-            accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
             when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore,
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
                             SUBJECT.getValue(),
                             SCOPES,
                             oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
@@ -297,23 +275,19 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabled()
-                throws JOSEException,
-                        AccessTokenException,
-                        ClientNotFoundException,
-                        ParseException {
+                throws AccessTokenException, ClientNotFoundException, ParseException {
             givenThereIsUserInfo();
             when(configurationService.isIdentityEnabled()).thenReturn(false);
-            accessToken = createSignedAccessToken(null);
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
 
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            scopes,
+                            null,
+                            CLIENT_ID);
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -330,22 +304,18 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentity()
-                throws JOSEException,
-                        AccessTokenException,
-                        ClientNotFoundException,
-                        ParseException {
+                throws AccessTokenException, ClientNotFoundException, ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
-            accessToken = createSignedAccessToken(null);
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
 
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            scopes,
+                            null,
+                            CLIENT_ID);
             givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -363,29 +333,21 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
-                throws JOSEException,
-                        AccessTokenException,
-                        ClientNotFoundException,
-                        ParseException {
+                throws AccessTokenException, ClientNotFoundException, ParseException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new OrchIdentityCredentials()
                             .withClientSessionId(JOURNEY_ID)
                             .withSubjectID(SUBJECT.getValue())
                             .withCoreIdentityJWT(coreIdentityJWT);
-            accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
             when(identityService.getIdentityCredentials(JOURNEY_ID))
                     .thenReturn(Optional.of(identityCredentials));
 
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore,
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
                             SUBJECT.getValue(),
                             SCOPES,
                             oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
@@ -417,12 +379,11 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateUserInfoWithDocAppCredentialWhenDocAppScopeIsPresent()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
+                throws AccessTokenException, ClientNotFoundException {
             var docAppScope =
                     List.of(
                             OIDCScopeValue.OPENID.getValue(),
                             CustomScopeValue.DOC_CHECKING_APP.getValue());
-            var accessToken = createSignedAccessToken(null, docAppScope);
             var docAppCredential =
                     new DocAppCredential()
                             .withSubjectID(SUBJECT.getValue())
@@ -430,14 +391,14 @@ class UserInfoServiceTest {
             when(dynamoDocAppCriService.getDocAppCredential(SUBJECT.getValue()))
                     .thenReturn(Optional.of(docAppCredential));
 
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            docAppScope,
+                            null,
+                            CLIENT_ID);
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -447,18 +408,15 @@ class UserInfoServiceTest {
         }
 
         @Test
-        void shouldReturnDocAppSubjectIdWhenDocAppScopeIsPresent() throws JOSEException {
-            accessToken = createSignedAccessToken(null);
+        void shouldReturnDocAppSubjectIdWhenDocAppScopeIsPresent() {
             var docAppScope =
                     List.of(
                             OIDCScopeValue.OPENID.getValue(),
                             CustomScopeValue.DOC_CHECKING_APP.getValue());
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(), DOC_APP_SUBJECT.getValue(), JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore,
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
                             DOC_APP_SUBJECT.getValue(),
                             docAppScope,
                             null,
@@ -470,49 +428,20 @@ class UserInfoServiceTest {
         }
 
         @Test
-        void shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresent()
-                throws JOSEException {
-            accessToken = createSignedAccessToken(null);
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                            JOURNEY_ID);
+        void shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresent() {
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID,
+                            SUBJECT.getValue(),
+                            SCOPES,
+                            null,
+                            CLIENT_ID);
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
             assertThat(subjectForAudit, equalTo(INTERNAL_PAIRWISE_SUBJECT.getValue()));
         }
-    }
-
-    private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
-            throws JOSEException {
-        return createSignedAccessToken(identityClaims, SCOPES);
-    }
-
-    private AccessToken createSignedAccessToken(
-            OIDCClaimsRequest identityClaims, List<String> scopes) throws JOSEException {
-        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        var signer = new ECDSASigner(ecSigningKey);
-        var signedJWT =
-                TokenGeneratorHelper.generateSignedToken(
-                        CLIENT_ID,
-                        BASE_URL,
-                        scopes,
-                        signer,
-                        SUBJECT,
-                        ecSigningKey.getKeyID(),
-                        expiryDate,
-                        identityClaims);
-        return new BearerAccessToken(signedJWT.serialize());
     }
 
     private UserInfo generateUserInfo() {

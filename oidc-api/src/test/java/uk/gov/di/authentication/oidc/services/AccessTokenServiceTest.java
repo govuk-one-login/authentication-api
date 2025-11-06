@@ -126,12 +126,10 @@ class AccessTokenServiceTest {
         var accessTokenInfo =
                 accessTokenService.parse(accessToken.toAuthorizationHeader(), identityEnabled);
 
-        assertThat(
-                accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
-        assertThat(accessTokenInfo.getAccessTokenStore().getJourneyId(), equalTo(JOURNEY_ID));
-        assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
-        assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
-        assertThat(accessTokenInfo.getIdentityClaims(), equalTo(expectedIdentityClaims));
+        assertThat(accessTokenInfo.journeyId(), equalTo(JOURNEY_ID));
+        assertThat(accessTokenInfo.subject(), equalTo(SUBJECT.getValue()));
+        assertThat(accessTokenInfo.scopes(), equalTo(SCOPES));
+        assertThat(accessTokenInfo.identityClaims(), equalTo(expectedIdentityClaims));
     }
 
     @Test
@@ -155,12 +153,10 @@ class AccessTokenServiceTest {
 
         var accessTokenInfo = accessTokenService.parse(accessToken.toAuthorizationHeader(), true);
 
-        assertThat(
-                accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
-        assertThat(accessTokenInfo.getAccessTokenStore().getJourneyId(), equalTo(JOURNEY_ID));
-        assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
-        assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
-        assertThat(accessTokenInfo.getIdentityClaims(), equalTo(null));
+        assertThat(accessTokenInfo.journeyId(), equalTo(JOURNEY_ID));
+        assertThat(accessTokenInfo.subject(), equalTo(SUBJECT.getValue()));
+        assertThat(accessTokenInfo.scopes(), equalTo(SCOPES));
+        assertThat(accessTokenInfo.identityClaims(), equalTo(null));
     }
 
     @ParameterizedTest

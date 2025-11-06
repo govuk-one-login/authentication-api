@@ -12,7 +12,6 @@ import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -136,14 +135,14 @@ public class AccessTokenService {
             LOG.info("The access token in dynamo has a placeholder for auth code.");
         }
 
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        orchAccessTokenItem.getToken(),
-                        orchAccessTokenItem.getInternalPairwiseSubjectId(),
-                        orchAccessTokenItem.getClientSessionId());
-
         return new AccessTokenInfo(
-                accessTokenStore, subject, scopes, identityClaims, client.getClientID());
+                Objects.requireNonNullElse(
+                        orchAccessTokenItem.getInternalPairwiseSubjectId(), "missing"),
+                Objects.requireNonNullElse(orchAccessTokenItem.getClientSessionId(), "missing"),
+                subject,
+                scopes,
+                identityClaims,
+                client.getClientID());
     }
 
     private boolean hasAccessTokenExpired(Date expirationTime) {

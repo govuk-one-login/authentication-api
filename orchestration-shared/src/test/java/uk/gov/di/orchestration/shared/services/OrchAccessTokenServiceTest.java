@@ -218,7 +218,6 @@ class OrchAccessTokenServiceTest {
                             .withToken("different-token-value")
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
                             .withClientSessionId(CLIENT_SESSION_ID);
-            ;
 
             var spyService = spy(orchAccessTokenService);
             doReturn(Stream.of(orchAccessTokenItem))
