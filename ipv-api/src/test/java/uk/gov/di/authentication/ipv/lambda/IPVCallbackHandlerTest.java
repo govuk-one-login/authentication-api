@@ -76,7 +76,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -142,19 +141,12 @@ class IPVCallbackHandlerTest {
     private static final String FRONT_END_SESSION_INVALID_LOGOUT_URL =
             FRONT_END_BASE_URI + "/signed-out";
     private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
-    private static final String RP_SECTOR_HOST = "test.com";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String REQUEST_ID = "a-request-id";
-    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
-    private static final String PERSISTENT_SESSION_ID =
-            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
+    private static final String PERSISTENT_SESSION_ID = IdGenerator.generate() + "--1700558480962";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    private static final String TEST_PHONE_NUMBER = "012345678902";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
@@ -166,10 +158,6 @@ class IPVCallbackHandlerTest {
                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
                     new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
-    private static final byte[] salt =
-            "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
-    private static final String BASE_64_ENCODED_SALT =
-            "TW1jNDhpbUV1TzVra1ZXN050WFZ0eDVoMG1iQ1RmWHNxWGRXdmJSTXpkdz0=";
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private static final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -188,10 +176,6 @@ class IPVCallbackHandlerTest {
             "urn:fdc:gov.uk:2022:_WJvfEzqmWo6vnDwSqgMPTC-aK8n_fkgZsNF-a4OxxU";
     private static final AccountIntervention NO_INTERVENTION =
             new AccountIntervention(new AccountInterventionState(false, false, false, false));
-
-    @RegisterExtension
-    private final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(IPVCallbackHandler.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension redirectLogging =
@@ -1258,9 +1242,9 @@ class IPVCallbackHandlerTest {
                                 "email",
                                 TEST_EMAIL_ADDRESS,
                                 "phone_number",
-                                TEST_PHONE_NUMBER,
+                                "012345678902",
                                 "salt",
-                                BASE_64_ENCODED_SALT,
+                                "TW1jNDhpbUV1TzVra1ZXN050WFZ0eDVoMG1iQ1RmWHNxWGRXdmJSTXpkdz0=",
                                 "local_account_id",
                                 TEST_SUBJECT.getValue())));
     }
