@@ -1,9 +1,12 @@
 name: "SP - Build and deploy API Account Management Dev"
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run against"
+        type: environment
+        required: true
 
 env:
   AWS_REGION: eu-west-2
@@ -16,6 +19,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    environment: ${{ inputs.environment }}
     permissions:
       id-token: write
       contents: read
