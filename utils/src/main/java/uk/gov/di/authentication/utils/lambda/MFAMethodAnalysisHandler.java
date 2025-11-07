@@ -365,7 +365,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         }
 
         MFAMethodAnalysis mfaMethodAnalysis = new MFAMethodAnalysis();
-        mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(batch.size());
+        mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
+                batch.stream().filter(UserCredentialsProfileJoin::hasActiveAuthApp).count());
         mfaMethodAnalysis
                 .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                         batch.stream()
@@ -522,6 +523,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     phoneNumberVerified.map(String::valueOf).orElse(EMPTY));
         }
 
+        public boolean hasActiveAuthApp() {
+            return authAppEnabled.orElse(false)
+                    && authAppMethodVerified.orElse(false)
+                    && hasAuthAppCredential.orElse(false);
+        }
+
         public boolean hasNoMfaMethods() {
             // If MFA methods have been migrated, check the new MfaMethods attribute
             if (mfaMethodsMigrated.orElse(false)) {
@@ -529,10 +536,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             }
 
             // If not migrated, check both old auth app attributes and phone number verification
-            boolean hasAuthApp =
-                    authAppEnabled.orElse(false)
-                            && authAppMethodVerified.orElse(false)
-                            && hasAuthAppCredential.orElse(false);
+            boolean hasAuthApp = hasActiveAuthApp();
             boolean hasSms = hasPhoneNumber && phoneNumberVerified.orElse(false);
 
             return !hasAuthApp && !hasSms;
