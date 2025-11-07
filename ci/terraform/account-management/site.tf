@@ -42,7 +42,7 @@ provider "aws" {
   }
 }
 locals {
-  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
+  request_tracing_allowed = contains(["build"], var.environment)
 
   access_logging_template = jsonencode({
     requestId                    = "$context.requestId"
