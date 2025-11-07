@@ -11,10 +11,8 @@ import static java.util.Objects.nonNull;
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
-    private static final boolean TRACING_ENABLED = false;
-
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
-        if (TRACING_ENABLED) {
+        if (false) {
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
                 return callable.call();
@@ -39,7 +37,7 @@ public class InstrumentationHelper {
     }
 
     public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
-        if (TRACING_ENABLED) {
+        if (false) {
             var subSegment = AWSXRay.beginSubsegment(segmentName);
             try {
                 runnable.run();
@@ -58,7 +56,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final String value) {
-        if (TRACING_ENABLED && nonNull(value)) {
+        if (false && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
@@ -67,7 +65,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final Number value) {
-        if (TRACING_ENABLED && nonNull(value)) {
+        if (false && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
@@ -76,7 +74,7 @@ public class InstrumentationHelper {
     }
 
     public static void addAnnotation(final String key, final Boolean value) {
-        if (TRACING_ENABLED && nonNull(value)) {
+        if (false && nonNull(value)) {
             AWSXRay.getCurrentSubsegmentOptional()
                     .ifPresentOrElse(
                             s -> s.putAnnotation(key, value),
