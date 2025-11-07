@@ -17,8 +17,4 @@ public class InstrumentationHelper {
             throw new RuntimeException(e);
         }
     }
-
-    public static void segmentedFunctionCall(Runnable runnable) {
-        runnable.run();
-    }
 }

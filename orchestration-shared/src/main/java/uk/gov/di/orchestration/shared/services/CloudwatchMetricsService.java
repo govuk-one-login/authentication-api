@@ -18,7 +18,6 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.E
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
 
@@ -35,22 +34,19 @@ public class CloudwatchMetricsService {
     }
 
     public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
-        segmentedFunctionCall(
-                () -> {
-                    try {
-                        var metrics = new MetricsLogger();
-                        var dimensionsSet = new DimensionSet();
+        try {
+            var metrics = new MetricsLogger();
+            var dimensionsSet = new DimensionSet();
 
-                        dimensions.forEach(dimensionsSet::addDimension);
+            dimensions.forEach(dimensionsSet::addDimension);
 
-                        metrics.setNamespace("Authentication");
-                        metrics.putDimensions(dimensionsSet);
-                        metrics.putMetric(name, value, Unit.NONE);
-                        metrics.flush();
-                    } catch (IllegalArgumentException e) {
-                        LOG.error("Error emitting metric: {} ({})", e.getMessage(), e.getClass());
-                    }
-                });
+            metrics.setNamespace("Authentication");
+            metrics.putDimensions(dimensionsSet);
+            metrics.putMetric(name, value, Unit.NONE);
+            metrics.flush();
+        } catch (IllegalArgumentException e) {
+            LOG.error("Error emitting metric: {} ({})", e.getMessage(), e.getClass());
+        }
     }
 
     public void incrementCounter(String name, Map<String, String> dimensions) {

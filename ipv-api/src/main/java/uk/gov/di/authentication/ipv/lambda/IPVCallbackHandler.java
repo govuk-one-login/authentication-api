@@ -445,10 +445,8 @@ public class IPVCallbackHandler
                     clientId);
 
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
-            segmentedFunctionCall(
-                    () ->
-                            ipvCallbackHelper.saveIdentityClaimsToDynamo(
-                                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+            ipvCallbackHelper.saveIdentityClaimsToDynamo(
+                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo);
             var redirectURI = frontend.ipvCallbackURI();
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
