@@ -22,7 +22,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.SessionCookieIds;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -86,9 +85,7 @@ public class LogoutRequest {
         }
 
         LOG.info("ID token hint is present");
-        isTokenSignatureValid =
-                segmentedFunctionCall(
-                        () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
+        isTokenSignatureValid = tokenValidationService.isTokenSignatureValid(idTokenHint.get());
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");
             errorObject =

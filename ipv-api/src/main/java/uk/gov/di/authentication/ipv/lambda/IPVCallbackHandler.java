@@ -65,7 +65,6 @@ import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -234,29 +233,25 @@ public class IPVCallbackHandler
                                                     "Client registry not found with given clientId"));
 
             var errorObject =
-                    segmentedFunctionCall(
-                            () ->
-                                    ipvAuthorisationService.validateResponse(
-                                            input.getQueryStringParameters(), sessionId));
+                    ipvAuthorisationService.validateResponse(
+                            input.getQueryStringParameters(), sessionId);
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
             if (errorObject.isPresent()) {
                 var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
                 AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                new AuditContext(
-                                                        clientSessionId,
-                                                        sessionId,
-                                                        clientId,
-                                                        orchSession.getInternalCommonSubjectId(),
-                                                        AuditService.UNKNOWN,
-                                                        ipAddress,
-                                                        AuditService.UNKNOWN,
-                                                        persistentId)));
+                        this.accountInterventionService.getAccountIntervention(
+                                orchSession.getInternalCommonSubjectId(),
+                                new AuditContext(
+                                        clientSessionId,
+                                        sessionId,
+                                        clientId,
+                                        orchSession.getInternalCommonSubjectId(),
+                                        AuditService.UNKNOWN,
+                                        ipAddress,
+                                        AuditService.UNKNOWN,
+                                        persistentId));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
@@ -324,10 +319,7 @@ public class IPVCallbackHandler
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenResponse =
-                    segmentedFunctionCall(
-                            () ->
-                                    ipvTokenService.getToken(
-                                            input.getQueryStringParameters().get("code")));
+                    ipvTokenService.getToken(input.getQueryStringParameters().get("code"));
             if (!tokenResponse.indicatesSuccess()) {
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
@@ -359,11 +351,8 @@ public class IPVCallbackHandler
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
-                        segmentedFunctionCall(
-                                () ->
-                                        this.accountInterventionService.getAccountIntervention(
-                                                orchSession.getInternalCommonSubjectId(),
-                                                auditContext));
+                        this.accountInterventionService.getAccountIntervention(
+                                orchSession.getInternalCommonSubjectId(), auditContext);
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(

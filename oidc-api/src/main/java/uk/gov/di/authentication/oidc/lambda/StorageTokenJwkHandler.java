@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
@@ -49,7 +48,7 @@ public class StorageTokenJwkHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(this::storageTokenJwkRequestHandler);
+        return storageTokenJwkRequestHandler();
     }
 
     public APIGatewayProxyResponseEvent storageTokenJwkRequestHandler() {
@@ -65,10 +64,7 @@ public class StorageTokenJwkHandler
             LOG.info("Generating StorageTokenJwk successful response");
 
             return generateApiGatewayProxyResponse(
-                    200,
-                    segmentedFunctionCall(() -> jwkSet.toString(true)),
-                    Map.of("Cache-Control", "max-age=86400"),
-                    null);
+                    200, jwkSet.toString(true), Map.of("Cache-Control", "max-age=86400"), null);
         } catch (Exception e) {
             LOG.error("Error in StorageTokenJwk lambda", e);
             return generateApiGatewayProxyResponse(500, "Error providing StorageTokenJwk data");

@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static uk.gov.di.authentication.oidc.validators.GlobalLogoutValidator.validate;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
@@ -43,7 +42,7 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(() -> processEvents(sqsEvent));
+        return processEvents(sqsEvent);
     }
 
     private Object processEvents(SQSEvent sqsEvent) {
