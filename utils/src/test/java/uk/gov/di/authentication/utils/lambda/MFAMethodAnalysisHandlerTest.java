@@ -83,7 +83,7 @@ class MFAMethodAnalysisHandlerTest {
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=]=%s}, mfaMethodDetailsCombinations={[]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=0, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=empty, authAppMethodVerified=empty, phoneNumberVerified=empty]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=]=%s}, mfaMethodDetailsCombinations={MfaMethodDetailsCombinationKey[methods=[], areMfaMethodsMigrated=false]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
                         .formatted(size, size, size, size, size, size),
                 handler.handleRequest("", mock(Context.class)));
     }
@@ -148,7 +148,7 @@ class MFAMethodAnalysisHandlerTest {
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         int expectedCount = (int) Math.floor((float) size / denominator);
         assertEquals(
-                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=DEFAULT]=%s}, mfaMethodDetailsCombinations={[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
+                "MFAMethodAnalysis{countOfAuthAppUsersAssessed=%s, countOfPhoneNumberUsersAssessed=0, countOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods=%s, countOfUsersWithVerifiedPhoneNumber=0, phoneDestinationCounts={}, attributeCombinationsForAuthAppUsersCount={AttributeCombinations[authAppEnabled=false, authAppMethodVerified=true, phoneNumberVerified=true]=%s, AttributeCombinations[authAppEnabled=true, authAppMethodVerified=false, phoneNumberVerified=false]=%s}, countOfAccountsWithoutAnyMfaMethods=%s, countOfUsersWithMfaMethodsMigrated=0, countOfUsersWithoutMfaMethodsMigrated=%s, missingUserProfileCount=0, mfaMethodPriorityIdentifierCombinations={MfaMethodPriorityCombination[methods=DEFAULT]=%s}, mfaMethodDetailsCombinations={MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]], areMfaMethodsMigrated=false]=%s}} User profile retrieval failures: userProfile items could not be retrieved for 0 accounts."
                         .formatted(
                                 size,
                                 expectedCount,
@@ -371,19 +371,19 @@ class MFAMethodAnalysisHandlerTest {
 
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]]=2"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP]], areMfaMethodsMigrated=true]=2"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]], areMfaMethodsMigrated=true]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]], areMfaMethodsMigrated=true]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=absent_attribute]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=absent_attribute]], areMfaMethodsMigrated=true]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=null, mfaMethodType=AUTH_APP]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=null, mfaMethodType=AUTH_APP]], areMfaMethodsMigrated=true]=1"));
     }
 
     @Test
@@ -420,10 +420,10 @@ class MFAMethodAnalysisHandlerTest {
 
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP], MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=DEFAULT, mfaMethodType=AUTH_APP], MfaMethodOutput[priorityIdentifier=BACKUP, mfaMethodType=SMS]], areMfaMethodsMigrated=true]=1"));
         assertTrue(
                 result.contains(
-                        "[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]]=1"));
+                        "MfaMethodDetailsCombinationKey[methods=[MfaMethodOutput[priorityIdentifier=absent_attribute, mfaMethodType=AUTH_APP]], areMfaMethodsMigrated=true]=1"));
     }
 
     private Map<String, AttributeValue> createUserWithMfaMethodDetails(
