@@ -1,6 +1,8 @@
 package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfo;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
@@ -9,6 +11,8 @@ import java.util.Optional;
 
 public class AuthenticationUserInfoStorageService extends BaseDynamoService<AuthUserInfo> {
 
+    private static final Logger LOG =
+            LogManager.getLogger(AuthenticationUserInfoStorageService.class);
     private final long timeToExist;
 
     public AuthenticationUserInfoStorageService(ConfigurationService configurationService) {
@@ -42,7 +46,14 @@ public class AuthenticationUserInfoStorageService extends BaseDynamoService<Auth
     }
 
     private Optional<AuthUserInfo> getAuthUserInfoData(String subjectID, String clientSessionId) {
-        return get(subjectID, clientSessionId)
-                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
+        Optional<AuthUserInfo> authUserInfo = get(subjectID, clientSessionId);
+        if (authUserInfo.isEmpty()) {
+            LOG.info(
+                    "no auth user for subject Id {} and client Session id {}",
+                    subjectID,
+                    clientSessionId);
+        }
+        return authUserInfo.filter(
+                t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }

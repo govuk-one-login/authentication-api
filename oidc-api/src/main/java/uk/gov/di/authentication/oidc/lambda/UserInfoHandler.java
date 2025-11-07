@@ -161,6 +161,15 @@ public class UserInfoHandler
                                     AUTHORIZATION_HEADER,
                                     configurationService.getHeadersCaseInsensitive()),
                             configurationService.isIdentityEnabled());
+
+            // ATO-1966: temporary logging for investigation
+            LOG.info(
+                    "Internal pairwise subject id from access token info: {}",
+                    accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId());
+            LOG.info(
+                    "Client session id from access token info: {}",
+                    accessTokenInfo.getAccessTokenStore().getJourneyId());
+
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
             LOG.warn(

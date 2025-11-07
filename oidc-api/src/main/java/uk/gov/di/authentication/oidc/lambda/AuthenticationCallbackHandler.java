@@ -356,6 +356,11 @@ public class AuthenticationCallbackHandler
 
                 String internalCommonSubjectId = userInfo.getSubject().getValue();
 
+                LOG.info(
+                        "adding auth userinfo with client session Id {} and internal common subject id {}",
+                        clientSessionId,
+                        internalCommonSubjectId);
+
                 userInfoStorageService.addAuthenticationUserInfoData(
                         internalCommonSubjectId, clientSessionId, userInfo);
                 addClaimsToOrchSession(orchSession, userInfo);
