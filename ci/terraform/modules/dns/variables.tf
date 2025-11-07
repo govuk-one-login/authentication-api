@@ -14,8 +14,3 @@ variable "dns_state_key" {
 variable "environment" {
   type = string
 }
-
-variable "is_sandpit" {
-  type    = bool
-  default = false
-}

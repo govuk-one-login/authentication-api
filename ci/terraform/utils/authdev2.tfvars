@@ -1,7 +1,7 @@
 shared_state_bucket = "di-auth-development-tfstate"
 
 # App-specific
-internal_sector_uri   = "https://identity.authdev2.sandpit.account.gov.uk"
+internal_sector_uri   = "https://identity.authdev2.dev.account.gov.uk"
 allow_bulk_test_users = true
 
 bulk_user_email_audience_loader_schedule_enabled  = false
