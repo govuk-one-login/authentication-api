@@ -58,14 +58,8 @@ public class SerializationService implements Json {
     public <T> T readValue(String jsonString, Class<T> clazz, Validator validator)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, clazz));
-            var violations =
-                    segmentedFunctionCall(
-                            "SerializationService::validator::validate",
-                            () -> validator.validate(value));
+            T value = segmentedFunctionCall(() -> gson.fromJson(jsonString, clazz));
+            var violations = segmentedFunctionCall(() -> validator.validate(value));
             if (violations.isEmpty()) {
                 return value;
             }
@@ -81,8 +75,7 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gson.toJson(object));
+        return segmentedFunctionCall(() -> gson.toJson(object));
     }
 
     public static SerializationService getInstance() {

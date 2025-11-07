@@ -43,8 +43,7 @@ public class GlobalLogoutHandler implements RequestHandler<SQSEvent, Object> {
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), () -> processEvents(sqsEvent));
+        return segmentedFunctionCall(() -> processEvents(sqsEvent));
     }
 
     private Object processEvents(SQSEvent sqsEvent) {

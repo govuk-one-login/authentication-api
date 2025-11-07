@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
-    public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
+    public static <T> T segmentedFunctionCall(Callable<T> callable) {
         try {
             return callable.call();
         } catch (RuntimeException e) {
@@ -18,7 +18,7 @@ public class InstrumentationHelper {
         }
     }
 
-    public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
+    public static void segmentedFunctionCall(Runnable runnable) {
         runnable.run();
     }
 }

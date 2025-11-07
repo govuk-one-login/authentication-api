@@ -71,12 +71,9 @@ public class JwksService {
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {
-        var jwk =
-                segmentedFunctionCall(
-                        "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
+        var jwk = segmentedFunctionCall(() -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
 
         return segmentedFunctionCall(
-                "parseJwk",
                 () -> {
                     try {
                         return JWK.parse(jwk.toString());

@@ -138,9 +138,7 @@ public class DocAppCallbackHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
-        return segmentedFunctionCall(
-                "doc-app-api::" + getClass().getSimpleName(),
-                () -> docAppCallbackRequestHandler(input, context));
+        return segmentedFunctionCall(() -> docAppCallbackRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(

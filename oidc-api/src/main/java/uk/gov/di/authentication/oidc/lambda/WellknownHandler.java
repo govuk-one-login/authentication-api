@@ -67,9 +67,7 @@ public class WellknownHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> wellknownRequestHandler(input, context));
+        return segmentedFunctionCall(() -> wellknownRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent wellknownRequestHandler(

@@ -86,9 +86,7 @@ public abstract class BaseFrontendHandler<T>
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(),
-                () -> validateAndHandleRequest(input, context));
+        return segmentedFunctionCall(() -> validateAndHandleRequest(input, context));
     }
 
     public void onRequestReceived(String clientSessionId) {}

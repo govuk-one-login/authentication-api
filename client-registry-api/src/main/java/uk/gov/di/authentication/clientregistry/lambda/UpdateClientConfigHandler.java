@@ -64,9 +64,7 @@ public class UpdateClientConfigHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "client-registry-api::" + getClass().getSimpleName(),
-                () -> updateClientRequestHandler(input, context));
+        return segmentedFunctionCall(() -> updateClientRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent updateClientRequestHandler(

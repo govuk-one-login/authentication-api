@@ -133,9 +133,7 @@ public class UserInfoHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> userInfoRequestHandler(input, context));
+        return segmentedFunctionCall(() -> userInfoRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(

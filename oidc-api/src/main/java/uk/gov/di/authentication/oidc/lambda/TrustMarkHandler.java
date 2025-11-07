@@ -44,8 +44,7 @@ public class TrustMarkHandler
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
 
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), this::trustmarkRequestHandler);
+        return segmentedFunctionCall(this::trustmarkRequestHandler);
     }
 
     public APIGatewayProxyResponseEvent trustmarkRequestHandler() {

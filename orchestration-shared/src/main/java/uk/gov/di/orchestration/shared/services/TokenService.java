@@ -103,7 +103,6 @@ public class TokenService {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
-                        "generateAndStoreAccessToken",
                         () ->
                                 generateAndStoreAccessToken(
                                         clientID,
@@ -116,12 +115,10 @@ public class TokenService {
                                         authCode));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
-                        "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
 
         SignedJWT idToken =
                 segmentedFunctionCall(
-                        "generateIDToken",
                         () ->
                                 generateIDToken(
                                         clientID,
@@ -136,7 +133,6 @@ public class TokenService {
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
-                            "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(
                                             clientID,

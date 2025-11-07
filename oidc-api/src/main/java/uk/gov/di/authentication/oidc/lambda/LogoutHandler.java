@@ -72,8 +72,7 @@ public class LogoutHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), () -> logoutRequestHandler(input));
+        return segmentedFunctionCall(() -> logoutRequestHandler(input));
     }
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {

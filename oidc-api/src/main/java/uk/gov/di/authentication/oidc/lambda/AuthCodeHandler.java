@@ -129,9 +129,7 @@ public class AuthCodeHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authCodeRequestHandler(input, context));
+        return segmentedFunctionCall(() -> authCodeRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(

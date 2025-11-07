@@ -49,8 +49,7 @@ public class StorageTokenJwkHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), this::storageTokenJwkRequestHandler);
+        return segmentedFunctionCall(this::storageTokenJwkRequestHandler);
     }
 
     public APIGatewayProxyResponseEvent storageTokenJwkRequestHandler() {
@@ -67,7 +66,7 @@ public class StorageTokenJwkHandler
 
             return generateApiGatewayProxyResponse(
                     200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
+                    segmentedFunctionCall(() -> jwkSet.toString(true)),
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {

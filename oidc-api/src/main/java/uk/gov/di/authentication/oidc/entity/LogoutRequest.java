@@ -88,7 +88,6 @@ public class LogoutRequest {
         LOG.info("ID token hint is present");
         isTokenSignatureValid =
                 segmentedFunctionCall(
-                        "isTokenSignatureValid",
                         () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
         if (!isTokenSignatureValid) {
             LOG.warn("Unable to validate ID token signature");

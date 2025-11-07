@@ -163,7 +163,6 @@ public class IPVCallbackHelper {
         var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
         var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
         segmentedFunctionCall(
-                "saveIdentityClaims",
                 () ->
                         saveIdentityClaimsToDynamo(
                                 clientSessionId, rpPairwiseSubject, userIdentityUserInfo));

@@ -194,8 +194,7 @@ public class TokenHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
+        return segmentedFunctionCall(() -> tokenRequestHandler(input));
     }
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
@@ -227,7 +226,6 @@ public class TokenHandler
         if (refreshTokenRequest(requestBody)) {
             LOG.info("Processing refresh token request");
             return segmentedFunctionCall(
-                    "processRefreshTokenRequest",
                     () ->
                             processRefreshTokenRequest(
                                     clientRegistry.getScopes(),
@@ -523,7 +521,6 @@ public class TokenHandler
             var clientDocAppSubjectId = new Subject(userId);
             tokenResponse =
                     segmentedFunctionCall(
-                            "generateTokenResponse",
                             () -> {
                                 String clientID = clientRegistry.getClientID();
                                 Scope authRequestScopes = authRequest.getScope();
@@ -552,7 +549,6 @@ public class TokenHandler
 
             tokenResponse =
                     segmentedFunctionCall(
-                            "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
                                             clientRegistry.getClientID(),

@@ -150,7 +150,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
                 AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
                                 () ->
                                         accountInterventionService.getAccountIntervention(
                                                 userContext

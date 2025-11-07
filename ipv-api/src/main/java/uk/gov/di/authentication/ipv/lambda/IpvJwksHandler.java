@@ -43,8 +43,7 @@ public class IpvJwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), this::ipvJwksRequestHandler);
+        return segmentedFunctionCall(this::ipvJwksRequestHandler);
     }
 
     public APIGatewayProxyResponseEvent ipvJwksRequestHandler() {
@@ -62,7 +61,7 @@ public class IpvJwksHandler
 
             return generateApiGatewayProxyResponse(
                     200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
+                    segmentedFunctionCall(() -> jwkSet.toString(true)),
                     Map.of("Cache-Control", "max-age=86400"),
                     null);
         } catch (Exception e) {

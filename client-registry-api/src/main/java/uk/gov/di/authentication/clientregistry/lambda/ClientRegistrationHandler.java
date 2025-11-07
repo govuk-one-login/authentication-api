@@ -62,9 +62,7 @@ public class ClientRegistrationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "client-registry-api::" + getClass().getSimpleName(),
-                () -> clientRegistrationRequestHandler(input, context));
+        return segmentedFunctionCall(() -> clientRegistrationRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent clientRegistrationRequestHandler(

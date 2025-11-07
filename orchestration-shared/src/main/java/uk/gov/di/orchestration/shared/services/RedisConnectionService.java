@@ -51,7 +51,7 @@ public class RedisConnectionService implements AutoCloseable {
 
     private <T> T executeCommand(RedisFunction<T> callable) {
         try (StatefulRedisConnection<String, String> connection =
-                segmentedFunctionCall("Redis: getConnection", () -> pool.borrowObject())) {
+                segmentedFunctionCall(() -> pool.borrowObject())) {
             return callable.getResult(connection.sync());
         } catch (Exception e) {
             throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
@@ -59,29 +59,23 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     public void saveWithExpiry(final String key, final String value, final long expiry) {
-        segmentedFunctionCall(
-                "Redis: saveWithExpiry",
-                () -> executeCommand(commands -> commands.setex(key, expiry, value)));
+        segmentedFunctionCall(() -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
     public boolean keyExists(final String key) {
-        return segmentedFunctionCall(
-                "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
+        return segmentedFunctionCall(() -> executeCommand(commands -> commands.exists(key) == 1));
     }
 
     public String getValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
+        return segmentedFunctionCall(() -> executeCommand(commands -> commands.get(key)));
     }
 
     public long deleteValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: deleteValue", () -> executeCommand(commands -> commands.del(key)));
+        return segmentedFunctionCall(() -> executeCommand(commands -> commands.del(key)));
     }
 
     public String popValue(final String key) {
         return segmentedFunctionCall(
-                "Redis: popValue",
                 () ->
                         executeCommand(
                                 commands -> {
@@ -94,8 +88,7 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     private void warmUp() {
-        segmentedFunctionCall(
-                "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
+        segmentedFunctionCall(() -> executeCommand(RedisServerCommands::clientGetname));
     }
 
     @Override

@@ -78,9 +78,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> backChannelLogoutRequestHandler(event, context));
+        return segmentedFunctionCall(() -> backChannelLogoutRequestHandler(event, context));
     }
 
     public Object backChannelLogoutRequestHandler(SQSEvent event, Context context) {

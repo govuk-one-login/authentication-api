@@ -235,7 +235,6 @@ public class IPVCallbackHandler
 
             var errorObject =
                     segmentedFunctionCall(
-                            "validateIpvAuthResponse",
                             () ->
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(), sessionId));
@@ -246,7 +245,6 @@ public class IPVCallbackHandler
                 var destroySessionRequest = new DestroySessionsRequest(sessionId, orchSession);
                 AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
                                                 orchSession.getInternalCommonSubjectId(),
@@ -327,7 +325,6 @@ public class IPVCallbackHandler
 
             var tokenResponse =
                     segmentedFunctionCall(
-                            "getIpvToken",
                             () ->
                                     ipvTokenService.getToken(
                                             input.getQueryStringParameters().get("code")));
@@ -363,7 +360,6 @@ public class IPVCallbackHandler
             if (userIdentityError.isPresent()) {
                 AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountIntervention",
                                 () ->
                                         this.accountInterventionService.getAccountIntervention(
                                                 orchSession.getInternalCommonSubjectId(),
@@ -450,7 +446,6 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
             segmentedFunctionCall(
-                    "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
                                     clientSessionId, rpPairwiseSubject, userIdentityUserInfo));

@@ -228,9 +228,7 @@ public class AuthorisationHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authoriseRequestHandler(input, context));
+        return segmentedFunctionCall(() -> authoriseRequestHandler(input, context));
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
@@ -1179,7 +1177,6 @@ public class AuthorisationHandler
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
         boolean isTokenSignatureValid =
                 segmentedFunctionCall(
-                        "isTokenSignatureValid",
                         () ->
                                 tokenValidationService.isTokenSignatureValid(
                                         authenticationRequest
