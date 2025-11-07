@@ -1,0 +1,84 @@
+name: "SP - Build and deploy API Account Management Dev"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run against"
+        type: environment
+        required: true
+
+env:
+  AWS_REGION: eu-west-2
+  JAVA_VERSION: 17
+  JAVA_DISTRIBUTION: corretto
+  RAIN_VERSION: v1.23.0
+  RAIN_ARCH: linux-amd64
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up SAM cli
+        uses: aws-actions/setup-sam@f664fad9e12492edfc187a31f575537dfbb0ff63 # v2
+        with:
+          use-installer: true
+
+      - name: Set up AWS creds
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.GH_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 #v5.0.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+
+      - name: Gradle build
+        run: |
+          ./gradlew --no-daemon --parallel :account-management-api:buildZip
+
+      - name: Install Rain
+        env:
+          VERSION: ${{ env.RAIN_VERSION }}
+          ARCH: ${{ env.RAIN_ARCH }}
+        run: |
+          wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
+          unzip "rain-${VERSION}_${ARCH}.zip"
+          chmod +x "rain-${VERSION}_${ARCH}/rain"
+          mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
+
+      - name: Generate am template
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/account-management
+          TEMPLATE_FILE: am-template.yaml
+
+      - name: SAM build
+        run: |
+          sam validate --lint -t am-template.yaml
+          sam build --parallel -t am-template.yaml
+
+      - name: Deploy SAM app
+        uses: govuk-one-login/devplatform-upload-action@fda75612a1b0e5a8c84ae7c44a23340e50e5bbde # v3.11.0
+        with:
+          artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_AM_BUCKET_NAME }}
+          signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
+          working-directory: .aws-sam/build

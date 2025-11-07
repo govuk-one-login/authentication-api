@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DeleteAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-account-management-delete-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      MemorySize:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          deleteAccountMemorySize,
+          DefaultValue: 1536,
+        ]
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest
+      Environment:
+        Variables:
+          REDIS_KEY: "session"
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAL_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://identity.${Environment}.account.gov.uk/"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref DeleteAccountFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref DynamoAuthSessionStoreReadAccessPolicy
+        - !Ref DynamoClientRegistryReadAccessPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserDeleteAccessPolicy
+        - !Ref DynamoAccountModifiersReadAccessPolicy
+        - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref AccountModifiersTableKmsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref ClientRegistryTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref UserProfileTableKmsPolicy
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  DeleteAccountFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt DeleteAccountFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  DeleteAccountFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DeleteAccountFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  DeleteAccountFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-account-management-delete-account-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-DeleteAccountFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/delete-account.yaml
+
+  DeleteAccountFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-account-management-delete-account-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref DeleteAccountFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-account-management-delete-account-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  DeleteAccountFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-delete-account-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "delete-account",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-management-delete-account-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-account-management-delete-account-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  DeleteAccountFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-management-delete-account-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "delete-account",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-management-delete-account-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-delete-account-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-delete-account-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  DeleteAccountFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref DeleteAccountFunctionLogGroup

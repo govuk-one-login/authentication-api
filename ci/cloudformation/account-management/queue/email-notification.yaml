@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  EmailNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-account-management-notification-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      MaximumMessageSize: 2048
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EmailNotificationDeadLetterQueue.Arn
+        maxReceiveCount: 1
+      VisibilityTimeout: 180
+      Tags:
+        - Key: Service
+          Value: account-management-notification
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/email-notification.yaml
+
+  EmailNotificationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EmailNotificationQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: SendSQS
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource:
+              - !GetAtt EmailNotificationQueue.Arn
+            Principal:
+              AWS:
+                - !GetAtt MfaMethodCreateFunctionRole.Arn
+                - !GetAtt MfaMethodDeleteFunctionRole.Arn
+                - !GetAtt MfaMethodUpdateFunctionRole.Arn
+
+  EmailNotificationDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-account-management-notification-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 21600 # 6 hours
+      Tags:
+        - Key: Service
+          Value: account-management-notification
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/email-notification.yaml
+
+  EmailNotificationDeadLetterQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EmailNotificationDeadLetterQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: SendAndReceive
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ReceiveMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource:
+              - !GetAtt EmailNotificationDeadLetterQueue.Arn
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root

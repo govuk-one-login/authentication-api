@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "SNS Topics and CloudWatch Alarms for Account Management"
+
+Resources:
+  SqsDeadletterCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-account-managament-dlq-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: !Sub
+        - ${DlqAlarmThreshold} or more messages have appeared on the ${Env}-account-management-notification-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Period: 300
+      Statistic: Sum
+      Threshold: !Ref DlqAlarmThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !Sub
+            - ${Env}-account-management-notification-dlq
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+
+Outputs:
+  SqsDeadletterAlarmArn:
+    Description: "ARN of the SQS Dead Letter Queue CloudWatch Alarm"
+    Value: !Ref SqsDeadletterCloudwatchAlarm

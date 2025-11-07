@@ -1,0 +1,255 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  UpdateEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-account-management-update-email-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      MemorySize:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          updateEmailMemorySize,
+          DefaultValue: 1536,
+        ]
+      ProvisionedConcurrencyConfig:
+        ProvisionedConcurrentExecutions:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            updateEmailProvisionedConcurrency,
+            DefaultValue: 1,
+          ]
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest
+      Environment:
+        Variables:
+          REDIS_KEY: "session"
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAL_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
+              - !Sub "https://identity.${Environment}.account.gov.uk/"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+      LoggingConfig:
+        LogGroup: !Ref UpdateEmailFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoUserDeleteAccessPolicy
+        - !Ref DynamoEmailCheckResultReadAccessPolicy
+        - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref EmailCheckResultsTableKmsPolicy
+      SnapStart:
+        ApplyOn: None
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  UpdateEmailFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt UpdateEmailFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  UpdateEmailFunctionAliasPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref UpdateEmailFunction.Alias
+      Principal: apigateway.amazonaws.com
+
+  UpdateEmailFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-update-email-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-UpdateEmailFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/update-email.yaml
+
+  UpdateEmailFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-account-management-update-email-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref UpdateEmailFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-account-management-update-email-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UpdateEmailFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-update-email-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "update-email",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-management-update-email-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-account-management-update-email-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  UpdateEmailFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-management-update-email-lambda. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ErrorRateThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmErrorRateThreshold,
+              DefaultValue: 10,
+            ]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "update-email",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-account-management-update-email-error-rate-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      DatapointsToAlarm: 1
+      EvaluationPeriods: 1
+      Metrics:
+        - Id: e1
+          Label: "Error Rate"
+          ReturnData: true
+          Expression: (m2/m1)*100
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-update-email-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub
+                    - ${Env}-account-management-update-email-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+            Period: 60
+            Stat: Sum
+            Unit: Count
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmErrorRateThreshold,
+          DefaultValue: 10,
+        ]
+
+  UpdateEmailFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UpdateEmailFunctionLogGroup
