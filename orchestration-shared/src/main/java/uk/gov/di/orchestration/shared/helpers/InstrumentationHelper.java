@@ -27,8 +27,4 @@ public class InstrumentationHelper {
     public static void addAnnotation(final String key, final Number value) {}
 
     public static void addAnnotation(final String key, final Boolean value) {}
-
-    private static void noSubSegmentPresent() {
-        LOG.warn("Could not add annotations to trace as no subsegment present");
-    }
 }
