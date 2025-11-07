@@ -21,10 +21,4 @@ public class InstrumentationHelper {
     public static void segmentedFunctionCall(String segmentName, Runnable runnable) {
         runnable.run();
     }
-
-    public static void addAnnotation(final String key, final String value) {}
-
-    public static void addAnnotation(final String key, final Number value) {}
-
-    public static void addAnnotation(final String key, final Boolean value) {}
 }

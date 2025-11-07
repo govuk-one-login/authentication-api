@@ -72,7 +72,6 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL
 import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -208,7 +207,6 @@ public class TokenHandler
         }
 
         Map<String, String> requestBody = parseRequestBody(input.getBody());
-        addAnnotation("grant_type", requestBody.get("grant_type"));
 
         TokenClientAuthValidator tokenAuthenticationValidator;
         try {
