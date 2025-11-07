@@ -1655,6 +1655,8 @@ Resources:
             Queue: !GetAtt BackChannelLogoutQueue.Arn
             FunctionResponseTypes:
               - ReportBatchItemFailures
+      SnapStart:
+        ApplyOn: PublishedVersions
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
