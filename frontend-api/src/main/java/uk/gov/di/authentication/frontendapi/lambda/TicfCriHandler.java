@@ -78,6 +78,13 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
             LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         } catch (IOException e) {
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making TICF request, exiting with fault");
+                System.exit(1);
+            }
             LOG.error(format("Error occurred in the TICF CRI Handler: %s", e.getMessage()), e);
             sendMetricsForInterventionsError("TicfCriServiceError");
         }

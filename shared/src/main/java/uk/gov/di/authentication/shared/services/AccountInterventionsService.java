@@ -76,6 +76,13 @@ public class AccountInterventionsService {
             throw timeoutException(
                     configurationService.getAccountInterventionServiceCallTimeout(), e);
         } catch (IOException e) {
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making AIS request, exiting with fault");
+                System.exit(1);
+            }
             throw ioException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

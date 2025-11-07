@@ -82,7 +82,7 @@ public class HttpRequestService {
                 // In rare cases we see a linkage error within the HTTP Client
                 // which fails all future requests made by the lambda
                 // As a temporary measure we crash the lambda to force a restart
-                LOG.error("Linkage error making AIS request, exiting with fault");
+                LOG.error("Linkage error making POST request, exiting with fault");
                 System.exit(1);
             }
             throw e;
