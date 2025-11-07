@@ -7220,8 +7220,8 @@ Resources:
   #region access token data table
   AccessTokenTableEncryptionKey:
     Type: AWS::KMS::Key
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Access Token DynamoDB table
       EnableKeyRotation: true
@@ -7250,8 +7250,8 @@ Resources:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
   AccessTokenTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Access-Token
       AttributeDefinitions:
@@ -7339,8 +7339,8 @@ Resources:
   #region refresh token data table
   RefreshTokenTableEncryptionKey:
     Type: AWS::KMS::Key
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Refresh Token DynamoDB table
       EnableKeyRotation: true
@@ -7369,8 +7369,8 @@ Resources:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
   RefreshTokenTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Refresh-Token
       AttributeDefinitions:
