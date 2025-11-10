@@ -406,13 +406,8 @@ public class TokenService {
             throw new RuntimeException("Error serializing refresh token store", e);
         }
 
-        try {
-            orchRefreshTokenService.saveRefreshToken(
-                    jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);
-        } catch (Exception e) {
-            LOG.warn("Unable to save refresh token to DynamoDB");
-            // Not throwing exceptions here until we transfer reads from redis to dynamo
-        }
+        orchRefreshTokenService.saveRefreshToken(
+                jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);
 
         return refreshToken;
     }

@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
@@ -70,7 +69,6 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -152,7 +150,6 @@ public class TokenHandlerTest {
     private static final String TOKEN_URI = "http://localhost/token";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final Nonce NONCE = new Nonce();
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String AUTH_CODE = "test-auth-code";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
     private final BearerAccessToken accessToken = new BearerAccessToken();
@@ -178,7 +175,6 @@ public class TokenHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private TokenHandler handler;
-    private final Json objectMapper = SerializationService.getInstance();
     private final LocalDateTime clientSessionCreationTime = LocalDateTime.now();
     private final AuditService auditService = mock(AuditService.class);
 
@@ -446,17 +442,12 @@ public class TokenHandlerTest {
         when(tokenValidationService.validateRefreshTokenScopes(
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
-        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
-        when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
-                .thenReturn(null);
-        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+                new OrchRefreshTokenItem()
+                        .withJwtId(jwtId)
+                        .withAuthCode(AUTH_CODE)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                        .withToken(refreshToken.getValue());
         when(orchRefreshTokenService.getRefreshToken(jwtId))
                 .thenReturn(Optional.of(orchRefreshTokenItem));
 
@@ -515,17 +506,12 @@ public class TokenHandlerTest {
         when(tokenValidationService.validateRefreshTokenScopes(
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
-        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
-        when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
-                .thenReturn(null);
-        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+                new OrchRefreshTokenItem()
+                        .withJwtId(jwtId)
+                        .withAuthCode(AUTH_CODE)
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                        .withToken(refreshToken.getValue());
         when(orchRefreshTokenService.getRefreshToken(jwtId))
                 .thenReturn(Optional.of(orchRefreshTokenItem));
 
@@ -1521,17 +1507,12 @@ public class TokenHandlerTest {
         when(tokenValidationService.validateRefreshTokenScopes(
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(
-                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
-        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
-        when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
-                .thenReturn(null);
-        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
         OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+                new OrchRefreshTokenItem()
+                        .withJwtId(jwtId)
+                        .withAuthCode(AUTH_CODE)
+                        .withToken(refreshToken.getValue())
+                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
         when(orchRefreshTokenService.getRefreshToken(jwtId))
                 .thenReturn(Optional.of(orchRefreshTokenItem));
 
