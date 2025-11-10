@@ -22,11 +22,8 @@ case "${ENVIRONMENT}" in
   authdev* | dev)
     export AWS_PROFILE="di-auth-development-admin"
     ;;
-  sandpit)
-    export AWS_PROFILE="gds-di-development-admin"
-    ;;
   *)
-    echo "Invalid environment: ${ENVIRONMENT}. Valid environments are: authdev1, authdev2, sandpit, dev"
+    echo "Invalid environment: ${ENVIRONMENT}. Valid environments are: authdev1, authdev2, dev"
     exit 1
     ;;
 esac
