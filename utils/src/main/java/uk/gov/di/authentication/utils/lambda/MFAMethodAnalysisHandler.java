@@ -365,7 +365,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         }
 
         MFAMethodAnalysis mfaMethodAnalysis = new MFAMethodAnalysis();
-        mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(batch.size());
+        mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
+                batch.stream().filter(UserCredentialsProfileJoin::hasActiveAuthApp).count());
         mfaMethodAnalysis
                 .incrementCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(
                         batch.stream()
@@ -382,7 +383,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         mfaMethodAnalysis.mergeAttributeCombinationsForAuthAppUsersCount(
                 attributeCombinationsCount);
 
-        Map<List<MfaMethodOutput>, Long> mfaMethodDetailsCombinations = new HashMap<>();
+        Map<MfaMethodDetailsCombinationKey, Long> mfaMethodDetailsCombinations = new HashMap<>();
         long accountsWithoutAnyMfaMethods = 0;
         long usersWithMfaMethodsMigrated = 0;
         long usersWithoutMfaMethodsMigrated = 0;
@@ -398,7 +399,10 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
 
             List<MfaMethodOutput> outputMethods =
                     item.getMfaMethodDetails().stream().map(MfaMethodDetails::toOutput).toList();
-            mfaMethodDetailsCombinations.merge(outputMethods, 1L, Long::sum);
+            boolean areMfaMethodsMigrated = item.getMfaMethodsMigrated().orElse(false);
+            MfaMethodDetailsCombinationKey key =
+                    new MfaMethodDetailsCombinationKey(outputMethods, areMfaMethodsMigrated);
+            mfaMethodDetailsCombinations.merge(key, 1L, Long::sum);
         }
         mfaMethodAnalysis.incrementCountOfAccountsWithoutAnyMfaMethods(
                 accountsWithoutAnyMfaMethods);
@@ -424,6 +428,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private record MfaMethodOutput(String priorityIdentifier, String mfaMethodType) {}
+
+    private record MfaMethodDetailsCombinationKey(
+            List<MfaMethodOutput> methods, boolean areMfaMethodsMigrated) {}
 
     private static class Pool {
         private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
@@ -516,6 +523,12 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     phoneNumberVerified.map(String::valueOf).orElse(EMPTY));
         }
 
+        public boolean hasActiveAuthApp() {
+            return authAppEnabled.orElse(false)
+                    && authAppMethodVerified.orElse(false)
+                    && hasAuthAppCredential.orElse(false);
+        }
+
         public boolean hasNoMfaMethods() {
             // If MFA methods have been migrated, check the new MfaMethods attribute
             if (mfaMethodsMigrated.orElse(false)) {
@@ -523,10 +536,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             }
 
             // If not migrated, check both old auth app attributes and phone number verification
-            boolean hasAuthApp =
-                    authAppEnabled.orElse(false)
-                            && authAppMethodVerified.orElse(false)
-                            && hasAuthAppCredential.orElse(false);
+            boolean hasAuthApp = hasActiveAuthApp();
             boolean hasSms = hasPhoneNumber && phoneNumberVerified.orElse(false);
 
             return !hasAuthApp && !hasSms;
@@ -554,7 +564,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         private final Map<String, Long> phoneDestinationCounts = new HashMap<>();
         private final Map<UserCredentialsProfileJoin.AttributeCombinations, Long>
                 attributeCombinationsForAuthAppUsersCount = new HashMap<>();
-        private final Map<List<MfaMethodOutput>, Long> mfaMethodDetailsCombinations =
+        private final Map<MfaMethodDetailsCombinationKey, Long> mfaMethodDetailsCombinations =
                 new HashMap<>();
 
         public long getCountOfAuthAppUsersAssessed() {
@@ -647,7 +657,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
             }
         }
 
-        public Map<List<MfaMethodOutput>, Long> getMfaMethodDetailsCombinations() {
+        public Map<MfaMethodDetailsCombinationKey, Long> getMfaMethodDetailsCombinations() {
             return mfaMethodDetailsCombinations;
         }
 
@@ -659,7 +669,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                     entry ->
                                             new UserCredentialsProfileJoin
                                                     .MfaMethodPriorityCombination(
-                                                    entry.getKey().stream()
+                                                    entry.getKey().methods().stream()
                                                             .map(
                                                                     MfaMethodOutput
                                                                             ::priorityIdentifier)
@@ -669,8 +679,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
         }
 
         public void mergeMfaMethodDetailsCombinations(
-                Map<List<MfaMethodOutput>, Long> combinations) {
-            for (Map.Entry<List<MfaMethodOutput>, Long> entry : combinations.entrySet()) {
+                Map<MfaMethodDetailsCombinationKey, Long> combinations) {
+            for (Map.Entry<MfaMethodDetailsCombinationKey, Long> entry : combinations.entrySet()) {
                 this.mfaMethodDetailsCombinations.merge(
                         entry.getKey(), entry.getValue(), Long::sum);
             }
