@@ -95,6 +95,18 @@ class IdentityProgressServiceTest {
         verifyAuditEventSubmitted();
     }
 
+    @Test
+    void shouldReturnErrorStatusWhenMaxRetriesHasBeenReached() throws Exception {
+        when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
+                .thenReturn(credentialsProcessing());
+
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
+
+        assertEquals(IdentityProgressStatus.ERROR, status);
+        verifyCloudwatchMetricIncrements(status);
+        verifyAuditEventSubmitted();
+    }
+
     private static Optional<OrchIdentityCredentials> credentialsNotFound() {
         return Optional.empty();
     }

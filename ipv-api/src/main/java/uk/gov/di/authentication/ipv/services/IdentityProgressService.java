@@ -18,6 +18,7 @@ public class IdentityProgressService {
 
     private static final Logger LOG = LogManager.getLogger(IdentityProgressService.class);
     private static final int DELAY_IN_MS = 500;
+    private static final int MAX_RETRIES = 10;
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
@@ -55,8 +56,13 @@ public class IdentityProgressService {
             var identityCredentials = dynamoIdentityService.getIdentityCredentials(clientSessionId);
             status = getIdentityProgressStatus(identityCredentials, attempts);
             if (status == IdentityProgressStatus.PROCESSING) {
-                sleeper.sleep(DELAY_IN_MS);
-                attempts++;
+                if (attempts >= MAX_RETRIES) {
+                    LOG.info("Max retries of {} reached. Returning ERROR", MAX_RETRIES);
+                    status = IdentityProgressStatus.ERROR;
+                } else {
+                    sleeper.sleep(DELAY_IN_MS);
+                    attempts++;
+                }
             }
         }
         LOG.info("Client session ID {} identity progress status: {}", clientSessionId, status);
