@@ -327,16 +327,48 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                 "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
                         .build());
 
-        BatchGetItemRequest batchGetItemRequest =
-                BatchGetItemRequest.builder().requestItems(requestItems).build();
+        List<Map<String, AttributeValue>> allResults = new ArrayList<>();
+        int retryCount = 0;
+        int maxRetries = 2;
 
-        BatchGetItemResponse batchGetItemResponse = client.batchGetItem(batchGetItemRequest);
-        List<Map<String, AttributeValue>> results =
-                batchGetItemResponse.responses().get(userProfileTableName);
+        while (!requestItems.isEmpty() && retryCount <= maxRetries) {
+            BatchGetItemRequest batchGetItemRequest =
+                    BatchGetItemRequest.builder().requestItems(requestItems).build();
 
-        int missingCount = batch.size() - results.size();
+            BatchGetItemResponse batchGetItemResponse = client.batchGetItem(batchGetItemRequest);
+            List<Map<String, AttributeValue>> results =
+                    batchGetItemResponse.responses().get(userProfileTableName);
 
-        for (Map<String, AttributeValue> item : results) {
+            if (results != null) {
+                allResults.addAll(results);
+            }
+
+            requestItems = batchGetItemResponse.unprocessedKeys();
+
+            if (!requestItems.isEmpty()) {
+                retryCount++;
+                int unprocessedCount = requestItems.get(userProfileTableName).keys().size();
+                LOG.warn(
+                        "Retrying {} unprocessed keys in batch {} (attempt {}/{})",
+                        unprocessedCount,
+                        batchNumber,
+                        retryCount,
+                        maxRetries);
+            }
+        }
+
+        if (!requestItems.isEmpty()) {
+            int finalUnprocessedCount = requestItems.get(userProfileTableName).keys().size();
+            LOG.error(
+                    "Failed to process {} keys in batch {} after {} retries",
+                    finalUnprocessedCount,
+                    batchNumber,
+                    maxRetries);
+        }
+
+        int missingCount = batch.size() - allResults.size();
+
+        for (Map<String, AttributeValue> item : allResults) {
             String email =
                     Optional.ofNullable(item.get("Email")).map(AttributeValue::s).orElse(null);
 

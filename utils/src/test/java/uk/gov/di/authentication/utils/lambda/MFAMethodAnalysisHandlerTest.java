@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MFAMethodAnalysisHandlerTest {
@@ -673,5 +675,99 @@ class MFAMethodAnalysisHandlerTest {
 
         // Only users 1 and 4 are counted (enabled=true, verified=true, has credential)
         assertTrue(result.contains("countOfAuthAppUsersAssessed=2"));
+    }
+
+    @Test
+    void shouldRetryUnprocessedKeysAndCountMissingCorrectly() {
+        when(configurationService.getEnvironment()).thenReturn("test");
+        mockPhoneNumberIndexScan(0, 0);
+
+        List<Map<String, AttributeValue>> credentialItems = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            credentialItems.add(
+                    Map.of("Email", AttributeValue.builder().s(getTestEmail(i)).build()));
+        }
+        mockCredentialsScan(credentialItems, credentialItems.size());
+
+        List<Map<String, AttributeValue>> requestKeys = createKeysFromCredentials(credentialItems);
+        Map<String, KeysAndAttributes> requestItems =
+                Map.of(
+                        "test-user-profile",
+                        KeysAndAttributes.builder()
+                                .keys(requestKeys)
+                                .projectionExpression(
+                                        "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
+                                .build());
+
+        // First call: return items 1-2, unprocessed keys 3-5
+        Map<String, List<Map<String, AttributeValue>>> firstResponse = new HashMap<>();
+        firstResponse.put(
+                "test-user-profile",
+                List.of(
+                        Map.of("Email", AttributeValue.builder().s(getTestEmail(1)).build()),
+                        Map.of("Email", AttributeValue.builder().s(getTestEmail(2)).build())));
+
+        Map<String, KeysAndAttributes> unprocessedKeys1 =
+                Map.of(
+                        "test-user-profile",
+                        KeysAndAttributes.builder()
+                                .keys(
+                                        List.of(
+                                                requestKeys.get(2),
+                                                requestKeys.get(3),
+                                                requestKeys.get(4)))
+                                .build());
+
+        // Second call (retry 1): return item 3, unprocessed keys 4-5
+        Map<String, List<Map<String, AttributeValue>>> secondResponse = new HashMap<>();
+        secondResponse.put(
+                "test-user-profile",
+                List.of(Map.of("Email", AttributeValue.builder().s(getTestEmail(3)).build())));
+
+        Map<String, KeysAndAttributes> unprocessedKeys2 =
+                Map.of(
+                        "test-user-profile",
+                        KeysAndAttributes.builder()
+                                .keys(List.of(requestKeys.get(3), requestKeys.get(4)))
+                                .build());
+
+        // Third call (retry 2): return item 4, unprocessed key 5 (still failing after max retries)
+        Map<String, List<Map<String, AttributeValue>>> thirdResponse = new HashMap<>();
+        thirdResponse.put(
+                "test-user-profile",
+                List.of(Map.of("Email", AttributeValue.builder().s(getTestEmail(4)).build())));
+
+        Map<String, KeysAndAttributes> unprocessedKeys3 =
+                Map.of(
+                        "test-user-profile",
+                        KeysAndAttributes.builder().keys(List.of(requestKeys.get(4))).build());
+
+        when(client.batchGetItem(any(BatchGetItemRequest.class)))
+                .thenReturn(
+                        BatchGetItemResponse.builder()
+                                .responses(firstResponse)
+                                .unprocessedKeys(unprocessedKeys1)
+                                .build(),
+                        BatchGetItemResponse.builder()
+                                .responses(secondResponse)
+                                .unprocessedKeys(unprocessedKeys2)
+                                .build(),
+                        BatchGetItemResponse.builder()
+                                .responses(thirdResponse)
+                                .unprocessedKeys(unprocessedKeys3)
+                                .build());
+
+        var handler = new MFAMethodAnalysisHandler(configurationService, client);
+        String result = handler.handleRequest("", mock(Context.class));
+
+        // Verify 3 calls were made (initial + 2 retries)
+        verify(client, times(3)).batchGetItem(any(BatchGetItemRequest.class));
+
+        // Should have retrieved 4 items (items 1-4) and counted 1 as missing (item 5 failed after 2
+        // retries)
+        assertTrue(result.contains("missingUserProfileCount=1"));
+        assertTrue(
+                result.contains(
+                        "User profile retrieval failures: userProfile items could not be retrieved for 1 accounts."));
     }
 }
