@@ -141,7 +141,6 @@ class LocaleHelperTest {
     @MethodSource("shouldGetUserLanguageFromRequestHeadersSource")
     void shouldGetUserLanguageFromRequestHeaders(
             Map<String, String> headers, Optional<String> result) {
-        when(configurationService.getHeadersCaseInsensitive()).thenReturn(false);
         assertThat(
                 LocaleHelper.getUserLanguageFromRequestHeaders(headers, configurationService),
                 equalTo(result));

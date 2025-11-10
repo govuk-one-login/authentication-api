@@ -140,7 +140,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
 
     public Optional<OrchSessionItem> getSessionFromRequestHeaders(Map<String, String> headers) {
         if (!headersContainValidHeader(
-                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
+                headers, SESSION_ID_HEADER, false)) {
             LOG.warn("Session-Id header is missing from request headers");
             return Optional.empty();
         }
@@ -148,7 +148,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
                 getHeaderValueFromHeaders(
                         headers,
                         SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                        false);
         if (sessionId == null) {
             LOG.warn("Session-Id header value is null");
             return Optional.empty();
