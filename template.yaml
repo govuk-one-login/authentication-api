@@ -1326,19 +1326,6 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: OpenIdConfigurationErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - OpenIdConfigurationFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -1346,6 +1333,8 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
