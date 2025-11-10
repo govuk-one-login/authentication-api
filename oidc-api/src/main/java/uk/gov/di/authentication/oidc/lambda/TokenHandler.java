@@ -31,6 +31,7 @@ import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
+import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
@@ -294,14 +295,20 @@ public class TokenHandler
                     new ErrorObject(INVALID_GRANT_CODE, "PKCE code verification failed"));
         }
 
-        var tokenResponse =
-                getTokenResponse(
-                        orchClientSession,
-                        clientRegistry,
-                        authRequest,
-                        getSigningAlgorithm(clientRegistry),
-                        authCodeExchangeData,
-                        authCode);
+        OIDCTokenResponse tokenResponse;
+        try {
+            tokenResponse =
+                    getTokenResponse(
+                            orchClientSession,
+                            clientRegistry,
+                            authRequest,
+                            getSigningAlgorithm(clientRegistry),
+                            authCodeExchangeData,
+                            authCode);
+        } catch (OrchAccessTokenException e) {
+            LOG.error("Failed to process token request", e);
+            return generateApiGatewayProxyResponse(500, "Internal server error");
+        }
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
         orchClientSessionService.updateStoredClientSession(
@@ -432,14 +439,21 @@ public class TokenHandler
             authCode = orchRefreshTokenItem.get().getAuthCode();
         }
 
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateRefreshTokenResponse(
-                        clientId,
-                        scopes,
-                        rpPairwiseSubject,
-                        new Subject(tokenStore.getInternalPairwiseSubjectId()),
-                        signingAlgorithm,
-                        authCode);
+        OIDCTokenResponse tokenResponse;
+        try {
+            tokenResponse =
+                    tokenService.generateRefreshTokenResponse(
+                            clientId,
+                            scopes,
+                            rpPairwiseSubject,
+                            new Subject(tokenStore.getInternalPairwiseSubjectId()),
+                            signingAlgorithm,
+                            authCode);
+        } catch (OrchAccessTokenException e) {
+            LOG.error("Failed to process refresh token", e);
+            return generateApiGatewayProxyResponse(500, "Internal server error");
+        }
+
         LOG.info("Refresh token with jwt id {} has been used successfully.", jti);
         LOG.info("Generating successful RefreshToken response");
         return ApiResponse.ok(tokenResponse);

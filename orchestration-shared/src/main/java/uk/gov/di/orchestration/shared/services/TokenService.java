@@ -358,17 +358,13 @@ public class TokenService {
         }
 
         String clientAndRpPairwiseId = clientId + "." + rpPairwiseSubject.getValue();
-        try {
-            orchAccessTokenService.saveAccessToken(
-                    clientAndRpPairwiseId,
-                    authCode,
-                    accessToken.getValue(),
-                    internalPairwiseSubject.getValue(),
-                    journeyId);
-        } catch (Exception e) {
-            LOG.warn("Unable to save access token to DynamoDB");
-            // Not throwing exceptions here until we transfer reads from redis to dynamo
-        }
+
+        orchAccessTokenService.saveAccessToken(
+                clientAndRpPairwiseId,
+                authCode,
+                accessToken.getValue(),
+                internalPairwiseSubject.getValue(),
+                journeyId);
 
         return accessToken;
     }
