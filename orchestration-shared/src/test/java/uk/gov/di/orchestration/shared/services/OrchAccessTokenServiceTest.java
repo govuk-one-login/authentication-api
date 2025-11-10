@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -12,6 +13,7 @@ import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,135 +42,211 @@ class OrchAccessTokenServiceTest {
         orchAccessTokenService = new OrchAccessTokenService(dynamoDbClient, table);
     }
 
-    @Test
-    void shouldStoreOrchAccessTokenItem() {
-        orchAccessTokenService.saveAccessToken(
-                CLIENT_AND_RP_PAIRWISE_ID,
-                AUTH_CODE,
-                TOKEN,
-                INTERNAL_PAIRWISE_SUBJECT_ID,
-                CLIENT_SESSION_ID);
+    @Nested
+    class StoreOrchAccessToken {
+        @Test
+        void shouldStoreAccessTokenSuccessfully() {
+            orchAccessTokenService.saveAccessToken(
+                    CLIENT_AND_RP_PAIRWISE_ID,
+                    AUTH_CODE,
+                    TOKEN,
+                    INTERNAL_PAIRWISE_SUBJECT_ID,
+                    CLIENT_SESSION_ID);
 
-        var orchAccessTokenItemCaptor = ArgumentCaptor.forClass(OrchAccessTokenItem.class);
-        verify(table).putItem(orchAccessTokenItemCaptor.capture());
-        var capturedRequest = orchAccessTokenItemCaptor.getValue();
+            var orchAccessTokenItemCaptor = ArgumentCaptor.forClass(OrchAccessTokenItem.class);
+            verify(table).putItem(orchAccessTokenItemCaptor.capture());
+            var capturedRequest = orchAccessTokenItemCaptor.getValue();
 
-        assertOrchAccessTokenItemMatchesExpected(capturedRequest);
+            assertOrchAccessTokenItemMatchesExpected(capturedRequest);
+        }
+
+        @Test
+        void shouldThrowWhenDynamoThrowsException() {
+            doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
+                    .when(table)
+                    .putItem(any(OrchAccessTokenItem.class));
+
+            var exception =
+                    assertThrows(
+                            OrchAccessTokenException.class,
+                            () ->
+                                    orchAccessTokenService.saveAccessToken(
+                                            CLIENT_AND_RP_PAIRWISE_ID,
+                                            TOKEN,
+                                            INTERNAL_PAIRWISE_SUBJECT_ID,
+                                            CLIENT_SESSION_ID,
+                                            AUTH_CODE));
+            assertEquals("Failed to save Orch access token item to Dynamo", exception.getMessage());
+        }
     }
 
-    @Test
-    void shouldThrowWhenFailsToStoreOrchAccessToken() {
-        doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
-                .when(table)
-                .putItem(any(OrchAccessTokenItem.class));
+    @Nested
+    class GetOrchAccessTokenByClientAndRpPairwiseIdAndAuthCode {
+        @Test
+        void shouldGetAccessTokenSuccessfully() {
+            var orchAccessTokenItem =
+                    new OrchAccessTokenItem()
+                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
+                            .withToken(TOKEN)
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                            .withClientSessionId(CLIENT_SESSION_ID)
+                            .withAuthCode(AUTH_CODE);
 
-        var exception =
-                assertThrows(
-                        OrchAccessTokenException.class,
-                        () ->
-                                orchAccessTokenService.saveAccessToken(
-                                        CLIENT_AND_RP_PAIRWISE_ID,
-                                        TOKEN,
-                                        INTERNAL_PAIRWISE_SUBJECT_ID,
-                                        CLIENT_SESSION_ID,
-                                        AUTH_CODE));
-        assertEquals("Failed to save Orch access token item to Dynamo", exception.getMessage());
+            GetItemEnhancedRequest orchAccessTokenGetRequest =
+                    GetItemEnhancedRequest.builder()
+                            .key(
+                                    Key.builder()
+                                            .partitionValue(CLIENT_AND_RP_PAIRWISE_ID)
+                                            .sortValue(AUTH_CODE)
+                                            .build())
+                            .consistentRead(true)
+                            .build();
+            when(table.getItem(orchAccessTokenGetRequest)).thenReturn(orchAccessTokenItem);
+
+            var actualOrchAccessToken =
+                    orchAccessTokenService.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+
+            assertTrue(actualOrchAccessToken.isPresent());
+            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
+        }
+
+        @Test
+        void shouldReturnEmptyWhenNoAccessTokenForClientIdAndRpPairwiseId() {
+            when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
+
+            var actualOrchAccessToken =
+                    orchAccessTokenService.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+
+            assertTrue(actualOrchAccessToken.isEmpty());
+        }
+
+        @Test
+        void shouldThrowWhenDynamoThrowsException() {
+            doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
+                    .when(table)
+                    .getItem(any(GetItemEnhancedRequest.class));
+
+            var exception =
+                    assertThrows(
+                            OrchAccessTokenException.class,
+                            () ->
+                                    orchAccessTokenService.getAccessToken(
+                                            CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE));
+            assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
+        }
     }
 
-    @Test
-    void shouldGetOrchAccessTokenForClientAndRpPairwiseIdAndAuthCode() {
-        var orchAccessTokenItem =
-                new OrchAccessTokenItem()
-                        .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                        .withToken(TOKEN)
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                        .withClientSessionId(CLIENT_SESSION_ID)
-                        .withAuthCode(AUTH_CODE);
+    @Nested
+    class GetOrchAccessTokenByAuthCode {
+        @Test
+        void shouldGetAccessTokenSuccessfully() {
+            var orchAccessTokenItem =
+                    new OrchAccessTokenItem()
+                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
+                            .withAuthCode(AUTH_CODE)
+                            .withToken(TOKEN)
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                            .withClientSessionId(CLIENT_SESSION_ID);
 
-        GetItemEnhancedRequest orchAccessTokenGetRequest =
-                GetItemEnhancedRequest.builder()
-                        .key(
-                                Key.builder()
-                                        .partitionValue(CLIENT_AND_RP_PAIRWISE_ID)
-                                        .sortValue(AUTH_CODE)
-                                        .build())
-                        .consistentRead(true)
-                        .build();
-        when(table.getItem(orchAccessTokenGetRequest)).thenReturn(orchAccessTokenItem);
+            var spyService = spy(orchAccessTokenService);
+            doReturn(List.of(orchAccessTokenItem))
+                    .when(spyService)
+                    .queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
 
-        var actualOrchAccessToken =
-                orchAccessTokenService.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+            var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
 
-        assertTrue(actualOrchAccessToken.isPresent());
-        assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
+            assertTrue(actualOrchAccessToken.isPresent());
+            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
+        }
+
+        @Test
+        void shouldReturnEmptyWhenNoAccessTokenForAuthCode() {
+            var spyService = spy(orchAccessTokenService);
+            doReturn(List.of()).when(spyService).queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+
+            var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
+
+            assertTrue(actualOrchAccessToken.isEmpty());
+        }
+
+        @Test
+        void shouldThrowWhenDynamoThrowsException() {
+            var spyService = spy(orchAccessTokenService);
+            doThrow(DynamoDbException.class)
+                    .when(spyService)
+                    .queryIndex("authCode-index", AUTH_CODE);
+
+            var exception =
+                    assertThrows(
+                            OrchAccessTokenException.class,
+                            () -> orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE));
+            assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
+        }
     }
 
-    @Test
-    void shouldReturnEmptyWhenNoAccessTokenForClientIdAndRpPairwiseId() {
-        when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
+    @Nested
+    class GetOrchAccessTokenByClientAndRpPairwiseIdAndTokenValue {
+        @Test
+        void shouldGetAccessTokenSuccessfully() {
+            var orchAccessTokenItem =
+                    new OrchAccessTokenItem()
+                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
+                            .withAuthCode(AUTH_CODE)
+                            .withToken(TOKEN)
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                            .withClientSessionId(CLIENT_SESSION_ID);
 
-        var actualOrchAccessToken =
-                orchAccessTokenService.getAccessToken(CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE);
+            var spyService = spy(orchAccessTokenService);
+            doReturn(Stream.of(orchAccessTokenItem))
+                    .when(spyService)
+                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
 
-        assertTrue(actualOrchAccessToken.isEmpty());
-    }
+            var actualOrchAccessToken =
+                    spyService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                            CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
 
-    @Test
-    void shouldThrowWhenFailsToGetOrchAccessToken() {
-        doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
-                .when(table)
-                .getItem(any(GetItemEnhancedRequest.class));
+            assertTrue(actualOrchAccessToken.isPresent());
+            assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
+        }
 
-        var exception =
-                assertThrows(
-                        OrchAccessTokenException.class,
-                        () ->
-                                orchAccessTokenService.getAccessToken(
-                                        CLIENT_AND_RP_PAIRWISE_ID, AUTH_CODE));
-        assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
-    }
+        @Test
+        void shouldReturnEmptyWhenNoMatchForTokenValue() {
+            var orchAccessTokenItem =
+                    new OrchAccessTokenItem()
+                            .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
+                            .withAuthCode(AUTH_CODE)
+                            .withToken("different-token-value")
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
+                            .withClientSessionId(CLIENT_SESSION_ID);
 
-    @Test
-    void shouldGetOrchAccessTokenForAuthCode() {
-        var orchAccessTokenItem =
-                new OrchAccessTokenItem()
-                        .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                        .withAuthCode(AUTH_CODE)
-                        .withToken(TOKEN)
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT_ID)
-                        .withClientSessionId(CLIENT_SESSION_ID);
+            var spyService = spy(orchAccessTokenService);
+            doReturn(Stream.of(orchAccessTokenItem))
+                    .when(spyService)
+                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
 
-        var spyService = spy(orchAccessTokenService);
-        doReturn(List.of(orchAccessTokenItem))
-                .when(spyService)
-                .queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
+            var actualOrchAccessToken =
+                    spyService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                            CLIENT_AND_RP_PAIRWISE_ID, TOKEN);
 
-        var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
+            assertTrue(actualOrchAccessToken.isEmpty());
+        }
 
-        assertTrue(actualOrchAccessToken.isPresent());
-        assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
-    }
+        @Test
+        void shouldThrowWhenDynamoThrowsException() {
+            var spyService = spy(orchAccessTokenService);
+            doThrow(DynamoDbException.class)
+                    .when(spyService)
+                    .queryTableStream(CLIENT_AND_RP_PAIRWISE_ID);
 
-    @Test
-    void shouldReturnEmptyWhenNoAccessTokenForAuthCode() {
-        var spyService = spy(orchAccessTokenService);
-        doReturn(List.of()).when(spyService).queryIndex(AUTH_CODE_INDEX, AUTH_CODE);
-
-        var actualOrchAccessToken = spyService.getAccessTokenForAuthCode(AUTH_CODE);
-
-        assertTrue(actualOrchAccessToken.isEmpty());
-    }
-
-    @Test
-    void shouldThrowWhenFailsToGetOrchAccessTokenForAuthCode() {
-        var spyService = spy(orchAccessTokenService);
-        doThrow(RuntimeException.class).when(spyService).queryIndex("authCode-index", AUTH_CODE);
-
-        var exception =
-                assertThrows(
-                        OrchAccessTokenException.class,
-                        () -> orchAccessTokenService.getAccessTokenForAuthCode(AUTH_CODE));
-        assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
+            var exception =
+                    assertThrows(
+                            OrchAccessTokenException.class,
+                            () ->
+                                    orchAccessTokenService
+                                            .getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                                                    CLIENT_AND_RP_PAIRWISE_ID, TOKEN));
+            assertEquals("Failed to get Orch access token from Dynamo", exception.getMessage());
+        }
     }
 
     private void assertOrchAccessTokenItemMatchesExpected(OrchAccessTokenItem orchAccessTokenItem) {

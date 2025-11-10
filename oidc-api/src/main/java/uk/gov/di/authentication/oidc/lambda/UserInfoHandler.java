@@ -28,7 +28,6 @@ import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.util.HashMap;
@@ -90,32 +89,6 @@ public class UserInfoHandler
                         new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
-                        new RedisConnectionService(configurationService),
-                        new DynamoClientService(configurationService),
-                        new TokenValidationService(
-                                new JwksService(
-                                        configurationService,
-                                        new KmsConnectionService(configurationService)),
-                                configurationService),
-                        new OrchAccessTokenService(configurationService));
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-    }
-
-    public UserInfoHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        this.configurationService = configurationService;
-        this.userInfoService =
-                new UserInfoService(
-                        new DynamoIdentityService(configurationService),
-                        new DynamoClientService(configurationService),
-                        new DynamoDocAppCriService(configurationService),
-                        new CloudwatchMetricsService(),
-                        configurationService,
-                        new AuthenticationUserInfoStorageService(configurationService));
-        this.accessTokenService =
-                new AccessTokenService(
-                        redis,
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 new JwksService(
@@ -173,7 +146,7 @@ public class UserInfoHandler
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
-        String journeyId = accessTokenInfo.getAccessTokenStore().getJourneyId();
+        String journeyId = accessTokenInfo.journeyId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, journeyId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, journeyId);
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
@@ -189,7 +162,7 @@ public class UserInfoHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
-                accessTokenInfo.getClientID(),
+                accessTokenInfo.clientID(),
                 TxmaAuditUser.user()
                         .withUserId(subjectForAudit)
                         .withGovukSigninJourneyId(journeyId),
@@ -199,7 +172,7 @@ public class UserInfoHandler
                 new HashMap<>(
                         Map.of(
                                 ENVIRONMENT.getValue(), configurationService.getEnvironment(),
-                                CLIENT.getValue(), accessTokenInfo.getClientID()));
+                                CLIENT.getValue(), accessTokenInfo.clientID()));
         cloudwatchMetricsService.incrementCounter(USER_INFO_RETURNED.getValue(), dimensions);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());

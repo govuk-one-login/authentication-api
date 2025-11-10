@@ -22,12 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
@@ -71,10 +69,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String CLIENT_ID = "client-id-one";
     private static final String APP_CLIENT_ID = "app-client-id-one";
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final String JOURNEY_ID = "client-session-id";
+    private static final String AUTH_CODE = "test-auth-code";
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
@@ -125,7 +123,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {
 
-        handler = new UserInfoHandler(configuration, redisConnectionService);
+        handler = new UserInfoHandler(configuration);
         DOC_APP_CREDENTIAL = generateSignedJWT(new JWTClaimsSet.Builder().build()).serialize();
 
         userInfoStorageExtension.addAuthenticationUserInfoData(
@@ -133,7 +131,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallUserInfoWithAccessTokenAndReturn200() throws Json.JsonException, ParseException {
+    void shouldCallUserInfoWithAccessTokenAndReturn200() throws ParseException {
         var claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", SCOPES)
@@ -146,14 +144,12 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
-        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
-        redis.addToRedis(
-                ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
-                accessTokenStoreString,
-                300L);
+        orchAccessTokenExtension.saveAccessToken(
+                CLIENT_ID + "." + PUBLIC_SUBJECT,
+                AUTH_CODE,
+                accessToken.getValue(),
+                INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                JOURNEY_ID);
         setUpDynamo(null, null, 0, false);
 
         var response =
@@ -201,8 +197,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn200WhenIdentityIsEnabledAndIdentityClaimsArePresent()
-            throws Json.JsonException, ParseException {
+    void shouldReturn200WhenIdentityIsEnabledAndIdentityClaimsArePresent() throws ParseException {
         var signedCredential = SignedCredentialHelper.generateCredential();
         setUpDynamo(
                 signedCredential.serialize(),
@@ -248,8 +243,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldNotReturnIdentityCredentialsWhenTTLHasExpired()
-            throws Json.JsonException, ParseException {
+    void shouldNotReturnIdentityCredentialsWhenTTLHasExpired() throws ParseException {
         setUpDynamo(
                 SignedCredentialHelper.generateCredential().serialize(),
                 Map.of(
@@ -277,8 +271,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldNotReturnIdentityCredentialsWhenNoneArePresentInDB()
-            throws Json.JsonException, ParseException {
+    void shouldNotReturnIdentityCredentialsWhenNoneArePresentInDB() throws ParseException {
         setUpDynamo(null, null, 0, true);
 
         var response = makeIdentityUserinfoRequest();
@@ -298,8 +291,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
-            throws Json.JsonException, ParseException {
+    void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser() throws ParseException {
         var documentAppCredentialStore = new DocumentAppCredentialStoreExtension(180);
         documentAppCredentialStore.addCredential(
                 DOC_APP_PUBLIC_SUBJECT.getValue(), List.of(DOC_APP_CREDENTIAL));
@@ -359,7 +351,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return signedJWT;
     }
 
-    private APIGatewayProxyResponseEvent makeIdentityUserinfoRequest() throws Json.JsonException {
+    private APIGatewayProxyResponseEvent makeIdentityUserinfoRequest() {
         var configurationService = new UserInfoConfigurationService();
         handler = new UserInfoHandler(configurationService);
         var claimsSetRequest =
@@ -391,13 +383,12 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
-        redis.addToRedis(
-                ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
-                objectMapper.writeValueAsString(accessTokenStore),
-                300L);
+        orchAccessTokenExtension.saveAccessToken(
+                CLIENT_ID + "." + PUBLIC_SUBJECT.getValue(),
+                AUTH_CODE,
+                accessToken.getValue(),
+                INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                JOURNEY_ID);
 
         return makeRequest(
                 Optional.empty(),
@@ -407,27 +398,26 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Map.of());
     }
 
-    private APIGatewayProxyResponseEvent makeDocAppUserinfoRequest() throws Json.JsonException {
+    private APIGatewayProxyResponseEvent makeDocAppUserinfoRequest() {
         var claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", DOC_APP_SCOPES.toStringList())
                         .issuer("issuer-id")
                         .expirationTime(EXPIRY_DATE)
                         .issueTime(NowHelper.now())
-                        .claim("client_id", "app-client-id-one")
+                        .claim("client_id", APP_CLIENT_ID)
                         .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
         var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue(), JOURNEY_ID);
-        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
-        redis.addToRedis(
-                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
-                accessTokenStoreString,
-                300L);
+        orchAccessTokenExtension.saveAccessToken(
+                APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
+                AUTH_CODE,
+                accessToken.getValue(),
+                DOC_APP_PUBLIC_SUBJECT.getValue(),
+                JOURNEY_ID);
+
         return makeRequest(
                 Optional.empty(),
                 Map.ofEntries(

@@ -12,20 +12,14 @@ import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
-import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.text.ParseException;
@@ -40,20 +34,15 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 public class AccessTokenService {
 
     private static final Logger LOG = LogManager.getLogger(AccessTokenService.class);
-    private final RedisConnectionService redisConnectionService;
     private final DynamoClientService clientService;
     private final TokenValidationService tokenValidationService;
     private final OrchAccessTokenService orchAccessTokenService;
-    private final Json objectMapper = SerializationService.getInstance();
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String INVALID_ACCESS_TOKEN = "Invalid Access Token";
 
     public AccessTokenService(
-            RedisConnectionService redisConnectionService,
             DynamoClientService clientService,
             TokenValidationService tokenValidationService,
             OrchAccessTokenService orchAccessTokenService) {
-        this.redisConnectionService = redisConnectionService;
         this.clientService = clientService;
         this.tokenValidationService = tokenValidationService;
         this.orchAccessTokenService = orchAccessTokenService;
@@ -127,68 +116,33 @@ public class AccessTokenService {
         }
 
         var subject = claimsSet.getSubject();
-        var accessTokenStore = getAccessTokenStore(client.getClientID(), subject);
-        if (accessTokenStore.isEmpty()) {
+        String clientAndRpPairwiseId = client.getClientID() + "." + subject;
+        Optional<OrchAccessTokenItem> orchAccessTokenItemMaybe =
+                orchAccessTokenService.getAccessTokenForClientAndRpPairwiseIdAndTokenValue(
+                        clientAndRpPairwiseId, accessToken.getValue());
+
+        if (orchAccessTokenItemMaybe.isEmpty()) {
             LOG.warn(
-                    "Access Token Store is empty. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
+                    "There is no access token in dynamo matching the token in the request. Access Token expires at: {}. CurrentDateTime is: {}. JWTID in Access Token sent in request: {}",
                     claimsSet.getExpirationTime(),
                     NowHelper.now(),
                     claimsSet.getJWTID());
             throw new AccessTokenException(INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
         }
-        if (!accessTokenStore.get().getToken().equals(accessToken.getValue())) {
-            String storeJwtId;
-            try {
-                storeJwtId =
-                        SignedJWT.parse(accessTokenStore.get().getToken())
-                                .getJWTClaimsSet()
-                                .getJWTID();
-            } catch (ParseException e) {
-                throw new AccessTokenException(
-                        "Unable to parse Access Token from store", BearerTokenError.INVALID_TOKEN);
-            }
-            LOG.warn(
-                    "Access Token in Access Token Store (JWTID: {}), is different to Access Token sent in request (JWTID: {})",
-                    storeJwtId,
-                    claimsSet.getJWTID());
-            throw new AccessTokenException(INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
-        }
+        OrchAccessTokenItem orchAccessTokenItem = orchAccessTokenItemMaybe.get();
 
-        String clientAndRpPairwiseId = client.getClientID() + "." + subject;
-        Optional<OrchAccessTokenItem> orchAccessTokenItem;
-        try {
-            orchAccessTokenItem =
-                    orchAccessTokenService
-                            .getAccessTokensForClientAndRpPairwiseId(clientAndRpPairwiseId)
-                            .stream()
-                            .filter(item -> Objects.equals(item.getToken(), accessToken.getValue()))
-                            .findFirst();
-
-            if (orchAccessTokenItem.isEmpty()) {
-                LOG.warn("There is no access token in dynamo matching the token in the request");
-            } else {
-                LOG.info(
-                        "Token value from access token in dynamo matches the token value in redis");
-                LOG.info(
-                        "Does internal pairwise subject id from access token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchAccessTokenItem.get().getInternalPairwiseSubjectId(),
-                                accessTokenStore.get().getInternalPairwiseSubjectId()));
-                LOG.info(
-                        "Does client session id from access token in dynamo match redis? {}",
-                        Objects.equals(
-                                orchAccessTokenItem.get().getClientSessionId(),
-                                accessTokenStore.get().getJourneyId()));
-                if (orchAccessTokenItem.get().getAuthCode().equals("placeholder-for-auth-code")) {
-                    LOG.info("The access token in dynamo has a placeholder for auth code.");
-                }
-            }
-        } catch (OrchAccessTokenException e) {
-            LOG.warn("Unable to get Orch Access Token from Dynamo");
+        if (orchAccessTokenItem.getAuthCode().equals("placeholder-for-auth-code")) {
+            LOG.info("The access token in dynamo has a placeholder for auth code.");
         }
 
         return new AccessTokenInfo(
-                accessTokenStore.get(), subject, scopes, identityClaims, client.getClientID());
+                Objects.requireNonNullElse(
+                        orchAccessTokenItem.getInternalPairwiseSubjectId(), "missing"),
+                Objects.requireNonNullElse(orchAccessTokenItem.getClientSessionId(), "missing"),
+                subject,
+                scopes,
+                identityClaims,
+                client.getClientID());
     }
 
     private boolean hasAccessTokenExpired(Date expirationTime) {
@@ -201,17 +155,6 @@ public class AccessTokenService {
             return true;
         }
         return false;
-    }
-
-    private Optional<AccessTokenStore> getAccessTokenStore(String clientId, String subjectId) {
-        String result =
-                redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + clientId + "." + subjectId);
-        try {
-            return Optional.ofNullable(objectMapper.readValue(result, AccessTokenStore.class));
-        } catch (JsonException | IllegalArgumentException e) {
-            LOG.error("Error getting AccessToken from Redis", e);
-            return Optional.empty();
-        }
     }
 
     private List<String> getIdentityClaims(JWTClaimsSet claimsSet)
