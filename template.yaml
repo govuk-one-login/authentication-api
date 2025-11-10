@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform:
-  - AWS::LanguageExtensions
   - AWS::Serverless-2016-10-31
 
 Metadata:
@@ -241,11 +240,6 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
       authStubEnabled: false
-  ProvisionedConcurrency:
-    staging:
-      TrustmarkFunction: 1
-    production:
-      TrustmarkFunction: 1
 
 Globals:
   Function:
@@ -595,6 +589,26 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        Fn::If:
+          - IsNotDevEnvironment
+          - PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: AuthUserInfoTable
@@ -954,6 +968,61 @@ Resources:
                           !Ref Environment,
                           newauthAccountId,
                         ]
+            - Fn::If:
+                - IsNotDevEnvironment
+                - Sid: DenyNonAdminTeamRolesAccess
+                  Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+                - !Ref AWS::NoValue
+            - Fn::If:
+                - IsNotDevEnvironment
+                - Sid: DenyAuthAccountNonAdminTeamRolesAccess
+                  Effect: Deny
+                  Principal:
+                    AWS: !Sub
+                      - arn:aws:iam::${AuthAccountId}:root
+                      - AuthAccountId:
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ]
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub
+                        - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                        - AuthAccountId:
+                            !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              authAccountId,
+                            ]
+                    StringLike:
+                      aws:PrincipalARN: !Sub
+                        - arn:aws:iam::${AuthAccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+                        - AuthAccountId:
+                            !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              authAccountId,
+                            ]
+                - !Ref AWS::NoValue
   #endregion
 
   #region RP Public Key DynamoDB Table
@@ -1129,6 +1198,26 @@ Resources:
         Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      ResourcePolicy:
+        Fn::If:
+          - IsNotDevEnvironment
+          - PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Deny
+                  Principal:
+                    AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                  NotAction:
+                    - dynamodb:DescribeTable
+                    - dynamodb:DescribeTimeToLive
+                    - dynamodb:ListTagsOfResource
+                  Resource: "*"
+                  Condition:
+                    StringNotLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_ApprovedAdministrator*
+                    StringLike:
+                      aws:PrincipalARN: !Sub arn:aws:iam::${AWS::AccountId}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*
+          - !Ref AWS::NoValue
       Tags:
         - Key: Name
           Value: DocAppCredentialTable
@@ -1326,19 +1415,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: OpenIdConfigurationErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - OpenIdConfigurationFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -1795,19 +1882,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: DocAppCallbackErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - DocAppCallbackFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2044,19 +2129,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: TokenFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - TokenFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2254,19 +2337,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: LogoutFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - LogoutFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2713,19 +2794,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthenticationCallbackFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthenticationCallbackFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3388,19 +3467,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthorisationFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthorisationFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3688,19 +3765,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: UserInfoFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - UserInfoFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -3895,19 +3970,17 @@ Resources:
       DeploymentPreference:
         Alarms:
           - Ref: AuthCodeFunctionErrorAnomalyAlarm
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - AuthCodeFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      ProvisionedConcurrencyConfig:
+        !If [
+          EnableProvisionedConcurrency,
+          ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              defaultProvisionedConcurrency,
+            ],
+          !Ref AWS::NoValue,
+        ]
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -7147,8 +7220,8 @@ Resources:
   #region access token data table
   AccessTokenTableEncryptionKey:
     Type: AWS::KMS::Key
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Access Token DynamoDB table
       EnableKeyRotation: true
@@ -7177,8 +7250,8 @@ Resources:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
   AccessTokenTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Access-Token
       AttributeDefinitions:
@@ -7266,8 +7339,8 @@ Resources:
   #region refresh token data table
   RefreshTokenTableEncryptionKey:
     Type: AWS::KMS::Key
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for Refresh Token DynamoDB table
       EnableKeyRotation: true
@@ -7296,8 +7369,8 @@ Resources:
                 kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
   RefreshTokenTable:
     Type: AWS::DynamoDB::Table
-    DeletionPolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
-    UpdateReplacePolicy: !If [IsNotDevEnvironment, Retain, !Ref AWS::NoValue]
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub ${Environment}-Refresh-Token
       AttributeDefinitions:
