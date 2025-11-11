@@ -55,6 +55,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchAccessTokenExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
@@ -131,6 +132,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final OrchAuthCodeExtension orchAuthCodeExtension = new OrchAuthCodeExtension();
+
+    @RegisterExtension
+    public static final OrchAccessTokenExtension orchAccessTokenExtension =
+            new OrchAccessTokenExtension();
 
     @BeforeEach
     void setup() {

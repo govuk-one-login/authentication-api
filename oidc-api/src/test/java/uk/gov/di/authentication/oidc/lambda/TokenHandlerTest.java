@@ -57,6 +57,7 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -1495,6 +1496,128 @@ public class TokenHandlerTest {
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
 
         assertAuthCodeExchangeDataRetrieved(authCode);
+    }
+
+    @Test
+    void shouldReturn500ForRefreshTokenRequestIfSaveOrchAccessTokenFails()
+            throws JOSEException, TokenAuthInvalidException, ParseException, Json.JsonException {
+
+        SignedJWT signedRefreshToken = createSignedRefreshToken();
+        KeyPair keyPair = generateRsaKeyPair();
+        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+
+        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
+                .thenReturn(true);
+        when(tokenValidationService.validateRefreshTokenScopes(
+                        SCOPES.toStringList(), SCOPES.toStringList()))
+                .thenReturn(true);
+        RefreshTokenStore tokenStore =
+                new RefreshTokenStore(
+                        refreshToken.getValue(), INTERNAL_PAIRWISE_SUBJECT.getValue());
+        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
+        when(redisConnectionService.popValue(
+                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
+                .thenReturn(null);
+        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
+        when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+        OrchRefreshTokenItem orchRefreshTokenItem =
+                new OrchRefreshTokenItem().withJwtId(jwtId).withAuthCode(AUTH_CODE);
+        when(orchRefreshTokenService.getRefreshToken(jwtId))
+                .thenReturn(Optional.of(orchRefreshTokenItem));
+
+        when(tokenService.generateRefreshTokenResponse(
+                        CLIENT_ID,
+                        SCOPES.toStringList(),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        JWSAlgorithm.ES256,
+                        AUTH_CODE))
+                .thenThrow(OrchAccessTokenException.class);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), CLIENT_ID);
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasBody("Internal server error"));
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID));
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+    }
+
+    @Test
+    void shouldReturn500ForTokenRequestIfSaveOrchAccessTokenFails()
+            throws JOSEException, TokenAuthInvalidException {
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest =
+                generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl"));
+        List<VectorOfTrust> vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
+        setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        when(tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        SCOPES,
+                        Map.of("nonce", NONCE),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        null,
+                        false,
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID,
+                        vot,
+                        AUTH_TIME,
+                        authCode))
+                .thenThrow(OrchAccessTokenException.class);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasBody("Internal server error"));
+
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID,
+                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                CLIENT_NAME));
+        verify(auditService, never())
+                .submitAuditEvent(
+                        OIDC_TOKEN_GENERATED,
+                        CLIENT_ID,
+                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
     }
 
     private void setupClientSessions(
