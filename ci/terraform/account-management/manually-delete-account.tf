@@ -20,74 +20,57 @@ module "account_management_manually_delete_account_role" {
   }
 }
 
-resource "aws_lambda_function" "manually_delete_account_lambda" {
-  function_name                  = replace("${var.environment}-manually-delete-account-lambda", ".", "")
-  role                           = module.account_management_manually_delete_account_role.arn
-  handler                        = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
-  timeout                        = 30
-  publish                        = true
-  memory_size                    = 1536
-  reserved_concurrent_executions = 1
+module "manually_delete_account" {
+  source = "../modules/endpoint-lambda"
 
-  s3_bucket               = aws_s3_bucket.source_bucket.bucket
-  s3_key                  = aws_s3_object.account_management_api_release_zip.key
-  s3_object_version       = aws_s3_object.account_management_api_release_zip.version_id
+  endpoint_name         = "manually-delete-account"
+  handler_function_name = "uk.gov.di.accountmanagement.lambda.ManuallyDeleteAccountHandler::handleRequest"
+
+  memory_size                 = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "manually-delete-account", local.default_performance_parameters).scaling_trigger
+
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
-  vpc_config {
-    security_group_ids = [
-      local.allow_aws_service_access_security_group_id,
-      aws_security_group.allow_access_to_am_redis.id,
-    ]
-    subnet_ids = local.private_subnet_ids
+  security_group_ids = concat([
+    local.allow_aws_service_access_security_group_id,
+  ], var.environment == "production" ? [aws_security_group.allow_access_to_am_redis.id] : [])
+  subnet_id = local.private_subnet_ids
+
+  environment                            = var.environment
+  lambda_role_arn                        = module.account_management_manually_delete_account_role.arn
+  logging_endpoint_arns                  = var.logging_endpoint_arns
+  cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  cloudwatch_log_retention               = var.cloudwatch_log_retention
+  lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  account_alias         = local.aws_account_alias
+  slack_event_topic_arn = local.slack_event_sns_topic_arn
+  dynatrace_secret      = local.dynatrace_secret
+
+  lambda_log_alarm_error_rate_threshold = 25
+
+  handler_environment_variables = {
+    JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+    ENVIRONMENT                       = var.environment
+    EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI               = var.internal_sector_uri
+    LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
   }
-
-  environment {
-    variables = {
-      JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
-      ENVIRONMENT                       = var.environment
-      EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
-      TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
-      INTERNAl_SECTOR_URI               = var.internal_sector_uri
-      LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
-    }
-  }
-
-  kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-  runtime     = "java17"
-
   depends_on = [module.account_management_manually_delete_account_role]
 }
-
-resource "aws_cloudwatch_log_group" "manually_delete_account_lambda_log_group" {
-  name              = "/aws/lambda/${aws_lambda_function.manually_delete_account_lambda.function_name}"
-  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
-  retention_in_days = var.cloudwatch_log_retention
-
-  depends_on = [
-    aws_lambda_function.manually_delete_account_lambda
-  ]
-}
-
-resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
-  count           = length(var.logging_endpoint_arns)
-  name            = "manually_delete_account-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.manually_delete_account_lambda_log_group.name
-  filter_pattern  = ""
-  destination_arn = var.logging_endpoint_arns[count.index]
-
-  lifecycle {
-    create_before_destroy = false
-  }
-}
-
 
 data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
   statement {
     sid       = "permitInvokeLambda"
     effect    = "Allow"
     actions   = ["lambda:InvokeFunction"]
-    resources = [aws_lambda_function.manually_delete_account_lambda.arn]
+    resources = [module.manually_delete_account.invoke_arn]
 
   }
 }
