@@ -22,6 +22,126 @@ resources:
     method: GET
     response:
       statusCode: 500
+  # Authenticate Mock Endpoints
+  - path: "/authenticate"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/authenticate/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
+  - path: "/authenticate/account-does-not-exist"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1010,
+          "message": "An account with this email address does not exist"
+        }
+  - path: "/authenticate/invalid-credentials"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 401
+      staticData: |
+        {
+          "code": 1008,
+          "message": "Invalid login credentials"
+        }
+  - path: "/authenticate/user-blocked"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 403
+      staticData: |
+        {
+          "code": 1084,
+          "message": "User's account is blocked"
+        }
+  - path: "/authenticate/user-suspended"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 403
+      staticData: |
+        {
+          "code": 1083,
+          "message": "User's account is suspended"
+        }
+  - path: "/authenticate/interventions-error"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 500
+      staticData: |
+        {
+          "code": 1085,
+          "message": "Account interventions service returned an unexpected error"
+        }
+  # Send OTP Challenge Mock Endpoints
+  - path: "/send-otp-challenge"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/send-otp-challenge/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
+  - path: "/send-otp-challenge/invalid-principal"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 401
+      staticData: |
+        {
+          "code": 1079,
+          "message": "Invalid principal in request"
+        }
+  - path: "/send-otp-challenge/blocked-for-requesting-codes"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1092,
+          "message": "User is blocked from requesting OTP codes"
+        }
+  - path: "/send-otp-challenge/blocked-for-entering-codes"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1093,
+          "message": "User is blocked from entering OTP codes"
+        }
+  - path: "/send-otp-challenge/unexpected-error"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 500
+      staticData: |
+        {
+          "code": 1071,
+          "message": "Account Management API encountered Unexpected Error"
+        }
   # Update Email Mock Endpoints
   - path: "/update-email"
     method: POST
@@ -96,4 +216,64 @@ resources:
         {
           "code": 1089,
           "message": "Email address is denied"
+        }
+  # Verify OTP Challenge Mock Endpoints
+  - path: "/verify-otp-challenge"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/verify-otp-challenge/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
+  - path: "/verify-otp-challenge/invalid-otp"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1020,
+          "message": "Invalid OTP code"
+        }
+  - path: "/verify-otp-challenge/blocked-for-entering-codes"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1093,
+          "message": "User is blocked from entering OTP codes"
+        }
+  # Delete Account Mock Endpoints
+  - path: "/delete-account"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/delete-account/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
+  - path: "/delete-account/account-does-not-exist"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1010,
+          "message": "An account with this email address does not exist"
         }
