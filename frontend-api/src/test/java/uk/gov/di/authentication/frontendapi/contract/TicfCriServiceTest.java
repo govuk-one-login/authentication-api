@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.http.HttpClient;
 import java.util.List;
+import java.util.Map;
 
 import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -64,6 +65,7 @@ class TicfCriServiceTest {
                 .path("/auth")
                 .method("POST")
                 .body(createSuccessfulAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(202)
                 .body(createTicfResponseBody())
@@ -101,6 +103,7 @@ class TicfCriServiceTest {
                 .path("/auth")
                 .method("POST")
                 .body(createFailedAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(202)
                 .body(createTicfResponseBody())
@@ -138,6 +141,7 @@ class TicfCriServiceTest {
                 .path("/auth")
                 .method("POST")
                 .body(createIncompleteRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(400)
                 .toPact();
@@ -150,6 +154,7 @@ class TicfCriServiceTest {
                 .path("/auth")
                 .method("POST")
                 .body(createSuccessfulAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(500)
                 .toPact();
@@ -216,9 +221,9 @@ class TicfCriServiceTest {
     private static DslPart createSuccessfulAuthRequestBody() {
         return newJsonBody(
                         body -> {
-                            body.stringType("sub", INTERNAL_PAIRWISE_ID);
+                            body.stringValue("sub", INTERNAL_PAIRWISE_ID);
                             body.array("vtr", arr -> arr.stringValue("Cl.Cm"));
-                            body.stringType("govuk_signin_journey_id", JOURNEY_ID);
+                            body.stringValue("govuk_signin_journey_id", JOURNEY_ID);
                             body.stringValue("authenticated", "Y");
                             body.array("2fa_method", arr -> arr.stringValue("SMS"));
                         })
@@ -228,9 +233,9 @@ class TicfCriServiceTest {
     private static DslPart createFailedAuthRequestBody() {
         return newJsonBody(
                         body -> {
-                            body.stringType("sub", INTERNAL_PAIRWISE_ID);
+                            body.stringValue("sub", INTERNAL_PAIRWISE_ID);
                             body.array("vtr", arr -> arr.stringValue("Cl.Cm"));
-                            body.stringType("govuk_signin_journey_id", JOURNEY_ID);
+                            body.stringValue("govuk_signin_journey_id", JOURNEY_ID);
                             body.stringValue("authenticated", "N");
                             body.stringValue("password_reset", "Y");
                             body.array("2fa_method", arr -> arr.stringValue("SMS"));

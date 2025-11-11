@@ -106,6 +106,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
                 HttpRequest.newBuilder(
                                 buildURI(configurationService.getTicfCriServiceURI(), "/auth"))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
+                        .header("Content-Type", "application/json")
                         .timeout(timeoutInMilliseconds)
                         .build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
