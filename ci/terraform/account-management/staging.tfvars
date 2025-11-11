@@ -35,5 +35,5 @@ mfa_method_management_api_enabled = true
 ais_call_in_authenticate_enabled  = true
 
 #Vpc endpoint IDs
-# di-account-staging, ??????????, di-account-components-staging
-home_vpc_endpoint_id = ["vpce-0c9ce65be09f99db7", "vpce-0f8229749074d5400", "vpce-0fed7b2d44a0bde33"]
+# di-account-staging, di-account-components-staging
+home_vpc_endpoint_id = ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
