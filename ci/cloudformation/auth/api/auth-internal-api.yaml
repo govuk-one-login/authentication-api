@@ -330,3 +330,10 @@ Resources:
               ]
             }
           - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+Outputs:
+  AuthInternalApiId:
+    Description: "API Gateway ID for Auth Internal API"
+    Value: !Ref AuthInternalApi
+    Export:
+      Name: !Sub "${AWS::StackName}-AuthInternalApiId"
