@@ -48,4 +48,5 @@ logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csl
 am_api_fms_tag_value = "accountmanagementprod"
 
 #Vpc endpoint IDs
-home_vpc_endpoint_id = ["vpce-0d7972874707185a0", "vpce-0b09a60749cdaad5a"]
+# di-account-production, ??????????, di-account-components-production
+home_vpc_endpoint_id = ["vpce-0d7972874707185a0", "vpce-0b09a60749cdaad5a", "vpce-08bfce415b33dc8f6"]
