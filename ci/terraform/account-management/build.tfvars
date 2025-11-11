@@ -20,3 +20,7 @@ logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_c
 
 # FMS
 am_api_fms_tag_value = "accountmanagementbuild"
+
+#Vpc endpoint IDs
+# di-account-build, di-account-components-build
+home_vpc_endpoint_id = ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
