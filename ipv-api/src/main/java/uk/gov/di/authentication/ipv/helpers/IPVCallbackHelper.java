@@ -277,6 +277,8 @@ public class IPVCallbackHelper {
                 Map.of(
                         "clientName", clientName,
                         "clientId", clientId));
+        cloudwatchMetricsService.incrementCounter(
+                "orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     public void queueSPOTRequest(

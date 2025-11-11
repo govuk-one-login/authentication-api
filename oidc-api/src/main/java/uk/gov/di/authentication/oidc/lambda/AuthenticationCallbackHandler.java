@@ -536,7 +536,8 @@ public class AuthenticationCallbackHandler
                 cloudwatchMetricsService.incrementCounter(
                         "orchAuthJourneyCompleted",
                         Map.of("clientName", client.getClientName(), "clientId", clientId));
-
+                cloudwatchMetricsService.incrementCounter(
+                        "orchJourneyCompleted", Map.of("journeyType", "auth"));
                 LOG.info("Successfully processed request");
 
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();
