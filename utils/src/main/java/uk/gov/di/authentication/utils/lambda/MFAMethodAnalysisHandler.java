@@ -366,8 +366,7 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                     maxRetries);
         }
 
-        int missingCount = batch.size() - allResults.size();
-
+        int matchedCount = 0;
         for (Map<String, AttributeValue> item : allResults) {
             String email =
                     Optional.ofNullable(item.get("Email")).map(AttributeValue::s).orElse(null);
@@ -383,18 +382,26 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
                                 .map(AttributeValue::bool)
                                 .orElse(false);
 
-                batch.stream()
-                        .filter(user -> email.equalsIgnoreCase(user.getEmail()))
-                        .findFirst()
-                        .ifPresent(
-                                user -> {
-                                    user.setPhoneNumberVerified(phoneNumberVerified);
-                                    user.setMfaMethodsMigrated(Optional.of(mfaMethodsMigrated));
-                                    user.setHasPhoneNumber(
-                                            isAttributeNonEmptyString(item.get("PhoneNumber")));
-                                });
+                matchedCount +=
+                        batch.stream()
+                                .filter(user -> email.equalsIgnoreCase(user.getEmail()))
+                                .findFirst()
+                                .map(
+                                        user -> {
+                                            user.setPhoneNumberVerified(phoneNumberVerified);
+                                            user.setMfaMethodsMigrated(
+                                                    Optional.of(mfaMethodsMigrated));
+                                            user.setHasPhoneNumber(
+                                                    isAttributeNonEmptyString(
+                                                            item.get("PhoneNumber")));
+
+                                            return 1;
+                                        })
+                                .orElse(0);
             }
         }
+
+        int missingCount = batch.size() - matchedCount;
 
         MFAMethodAnalysis mfaMethodAnalysis = new MFAMethodAnalysis();
         mfaMethodAnalysis.incrementCountOfAuthAppUsersAssessed(
