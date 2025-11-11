@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -414,5 +415,23 @@ class CheckReAuthUserHandlerTest {
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         TEST_SUBJECT_ID, TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, subjectIdCount + pairwiseIdCount));
+    }
+
+    @Test
+    void shouldIncrementLockoutCountWhenUserDoesNotMatch() {
+        setupExistingEnterEmailAttemptsCountForIdentifier(0, TEST_SUBJECT_ID);
+
+        handler.handleRequestWithUserContext(
+                API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                context,
+                new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
+                userContext);
+
+        verify(authenticationAttemptsService)
+                .createOrIncrementCount(
+                        eq(TEST_SUBJECT_ID),
+                        anyLong(),
+                        eq(JourneyType.REAUTHENTICATION),
+                        eq(CountType.ENTER_EMAIL));
     }
 }
