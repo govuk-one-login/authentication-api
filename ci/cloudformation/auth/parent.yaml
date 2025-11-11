@@ -1997,7 +1997,7 @@ Resources:
   IPVReverificationRequestSigningKeyPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for managing KMS connection for a lambda which allows signing of the JARs sent from Auth to IPV when re-authenticating for MFA reset - Updated"
+      Description: "IAM policy for managing KMS connection for a lambda which allows signing of the JARs sent from Auth to IPV when re-authenticating for MFA reset"
       Path: !Sub
         - /${Env}/mfa-reset-jar/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -2009,7 +2009,10 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource: "arn:aws:kms:eu-west-2:653994557586:key/df6d08be-3597-4e2d-8b49-1f9af268a0d9"
+            Resource: !Sub
+              - "{{resolve:secretsmanager:/deploy/${env}/ipv_reverification_request_signing_key_v2}}"
+              - env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
   MfaResetTokenKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy
