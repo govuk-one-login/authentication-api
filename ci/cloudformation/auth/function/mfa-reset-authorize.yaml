@@ -23,11 +23,7 @@ Resources:
             - DataStoreAccountId:
                 !FindInMap [
                   EnvironmentConfiguration,
-                  !If [
-                    UseSubEnvironment,
-                    !Ref SubEnvironment,
-                    !Ref Environment,
-                  ],
+                  !Ref Environment,
                   dataStoreAccountId,
                 ]
           EVCS_AUDIENCE: !Sub

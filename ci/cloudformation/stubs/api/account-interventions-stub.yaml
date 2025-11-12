@@ -1,55 +1,32 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   AccountInterventionsStubApi:
-    Type: AWS::ApiGateway::RestApi
+    Type: AWS::Serverless::Api
     Properties:
       Name: !Sub
         - ${Env}-di-interventions-api-stub
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      OpenApiVersion: 3.0.1
       EndpointConfiguration:
-        Types:
-          - PRIVATE
-        VpcEndpointIds:
+        Type: PRIVATE
+        VPCEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-      Policy:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-          - Effect: Deny
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-            Condition:
-              StringNotEquals:
-                aws:SourceVpce:
-                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-      Body:
-        openapi: "3.0.1"
-        info:
-          title: !Sub "${Environment}-di-interventions-api-stub"
-        paths:
-          /v1/ais/{internalPairwiseId}:
-            get:
-              x-amazon-apigateway-integration:
-                type: aws_proxy
-                httpMethod: POST
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsApiStubLambdaFunction.Arn}:active/invocations"
-                timeoutInMillis: 29000
-
-  AccountInterventionsStubDeployment:
-    Type: AWS::ApiGateway::Deployment
-    Properties:
-      RestApiId: !Ref AccountInterventionsStubApi
-
-  AccountInterventionsStubApiStage:
-    Type: AWS::ApiGateway::Stage
-    DependsOn: AccountInterventionsApiStubLambdaFunction
-    Properties:
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
       AccessLogSetting:
         DestinationArn: !GetAtt AccountInterventionsStubApiAccessLogGroup.Arn
         Format:
@@ -66,8 +43,6 @@ Resources:
             integrationStatus: $context.integration.integrationStatus
             integrationLatency: $context.integration.latency
             integrationRequestId: $context.integration.requestId
-      CacheClusterEnabled: false
-      DeploymentId: !Ref AccountInterventionsStubDeployment
       MethodSettings:
         - CachingEnabled: false
           DataTraceEnabled: false
@@ -75,9 +50,27 @@ Resources:
           ResourcePath: "/*"
           LoggingLevel: INFO
           MetricsEnabled: true
-      RestApiId: !Ref AccountInterventionsStubApi
-      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${Environment}-di-interventions-api-stub"
+        paths:
+          /v1/ais/{internalPairwiseId}:
+            get:
+              parameters:
+                - name: internalPairwiseId
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountInterventionsApiStubLambdaFunction.Arn}:active/invocations"
+                requestParameters:
+                  integration.request.path.internalPairwiseId: method.request.path.internalPairwiseId
+                timeoutInMillis: 29000
 
   AccountInterventionsStubApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
@@ -111,8 +104,6 @@ Resources:
   AccountInterventionsStubApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
-    DependsOn:
-      - AccountInterventionsStubApiStage
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
