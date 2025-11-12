@@ -305,7 +305,7 @@ Mappings:
       otpCodeTtlDuration: 60
       reauthEnterEmailCountTtl: 3600
       reducedLockoutDuration: 30
-      supportReauthSignoutEnabled: false
+      supportReauthSignoutEnabled: true
       termsConditionsVersion: 1.13
       testClientsEnabled: true
       useStronglyConsistentReads: true
