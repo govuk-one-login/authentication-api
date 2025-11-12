@@ -164,6 +164,15 @@ Conditions:
       !Equals [!Ref Environment, "production"],
     ]
 
+  IsLowerEnv:
+    !Not [
+      !Or [
+        !Equals [!Ref Environment, production],
+        !Equals [!Ref Environment, staging],
+        !Equals [!Ref Environment, integration],
+      ],
+    ]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
