@@ -97,3 +97,38 @@ resources:
           "code": 1089,
           "message": "Email address is denied"
         }
+  # Verify OTP Notification Mock Endpoints
+  - path: "/verify-otp-notification"
+    method: POST
+    response:
+      statusCode: 204
+  - path: "/verify-otp-notification/invalid-otp"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1020,
+          "message": "Invalid OTP code"
+        }
+  - path: "/verify-otp-notification/missing-parameters"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 400
+      staticData: |
+        {
+          "code": 1001,
+          "message": "Request is missing parameters"
+        }
+  - path: "/verify-otp-notification/rate-limit"
+    contentType: "application/json"
+    method: POST
+    response:
+      statusCode: 429
+      staticData: |
+        {
+          "code": 1090,
+          "message": "OTP verification rate limit exceeded"
+        }
