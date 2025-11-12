@@ -337,3 +337,16 @@ Outputs:
     Value: !Ref AuthInternalApi
     Export:
       Name: !Sub "${AWS::StackName}-AuthInternalApiId"
+  
+  AuthInternalApiVpcEndpointId:
+    Description: "VPC Endpoint ID for Auth Internal API"
+    Value: !ImportValue
+      Fn::Sub: ${VpcStackName}-ExecuteApiGatewayEndpointId
+    Export:
+      Name: !Sub "${AWS::StackName}-AuthInternalApiVpcEndpointId"
+      
+  AuthInternalApiStageName:
+    Description: "Stage name for Auth Internal API"
+    Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+    Export:
+      Name: !Sub "${AWS::StackName}-AuthInternalApiStageName"
