@@ -60,7 +60,6 @@ import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -94,6 +93,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -273,7 +273,7 @@ public class TokenHandlerTest {
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
                         CLIENT_ID,
-                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
+                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService)
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
@@ -410,7 +410,7 @@ public class TokenHandlerTest {
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
                         CLIENT_ID,
-                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
+                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -419,7 +419,7 @@ public class TokenHandlerTest {
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
     void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
-            throws JOSEException, ParseException, Json.JsonException, TokenAuthInvalidException {
+            throws JOSEException, ParseException, TokenAuthInvalidException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
@@ -481,7 +481,7 @@ public class TokenHandlerTest {
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
     void shouldReturn200ForSuccessfulRefreshTokenRequestWithRsaSigning(String clientId)
-            throws JOSEException, ParseException, Json.JsonException, TokenAuthInvalidException {
+            throws JOSEException, ParseException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
@@ -807,7 +807,7 @@ public class TokenHandlerTest {
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
             assertThat(result, hasStatus(200));
             verify(cloudwatchMetricsService)
                     .incrementCounter(
@@ -823,7 +823,7 @@ public class TokenHandlerTest {
                     .submitAuditEvent(
                             OIDC_TOKEN_GENERATED,
                             CLIENT_ID,
-                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
+                            auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -848,7 +848,7 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -895,7 +895,7 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -941,7 +941,7 @@ public class TokenHandlerTest {
 
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCodeVerifier(
-                            privateKeyJWT, authCode, REDIRECT_URI, true, codeVerifier);
+                            privateKeyJWT, authCode, codeVerifier);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -985,8 +985,7 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCodeVerifier(
-                            privateKeyJWT, authCode, REDIRECT_URI, true, null);
+                    generateApiGatewayRequestWithCodeVerifier(privateKeyJWT, authCode, null);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -1058,7 +1057,7 @@ public class TokenHandlerTest {
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode, true);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -1146,7 +1145,7 @@ public class TokenHandlerTest {
                     .submitAuditEvent(
                             OIDC_TOKEN_GENERATED,
                             CLIENT_ID,
-                            auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
+                            auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
 
             assertAuthCodeExchangeDataRetrieved(authCode);
         }
@@ -1184,30 +1183,20 @@ public class TokenHandlerTest {
         }
 
         private APIGatewayProxyResponseEvent generateApiGatewayRequestWithCorrectCodeVerifier(
-                PrivateKeyJWT privateKeyJWT, String authorisationCode, boolean clientIdInHeader) {
+                PrivateKeyJWT privateKeyJWT, String authorisationCode) {
             return generateApiGatewayRequestWithCodeVerifier(
-                    privateKeyJWT,
-                    authorisationCode,
-                    REDIRECT_URI,
-                    clientIdInHeader,
-                    CODE_VERIFIER.getValue());
+                    privateKeyJWT, authorisationCode, CODE_VERIFIER.getValue());
         }
 
         private APIGatewayProxyResponseEvent generateApiGatewayRequestWithCodeVerifier(
-                PrivateKeyJWT privateKeyJWT,
-                String authorisationCode,
-                String redirectUri,
-                boolean clientIdInHeader,
-                String codeVerifier) {
+                PrivateKeyJWT privateKeyJWT, String authorisationCode, String codeVerifier) {
             Map<String, List<String>> customParams = new HashMap<>();
             customParams.put(
                     "grant_type",
                     Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-            if (clientIdInHeader) {
-                customParams.put("client_id", Collections.singletonList(IGNORE_CLIENT_ID));
-            }
+            customParams.put("client_id", Collections.singletonList(IGNORE_CLIENT_ID));
             customParams.put("code", Collections.singletonList(authorisationCode));
-            customParams.put("redirect_uri", Collections.singletonList(redirectUri));
+            customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
             customParams.put("code_verifier", Collections.singletonList(codeVerifier));
             Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
             privateKeyParams.putAll(customParams);
@@ -1289,7 +1278,7 @@ public class TokenHandlerTest {
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
                         DOC_APP_CLIENT_ID.getValue(),
-                        auditUser(CLIENT_SESSION_ID, DOC_APP_USER_PUBLIC_SUBJECT.getValue()));
+                        auditUser(DOC_APP_USER_PUBLIC_SUBJECT.getValue()));
 
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
@@ -1486,7 +1475,7 @@ public class TokenHandlerTest {
 
     @Test
     void shouldReturn500ForRefreshTokenRequestIfSaveOrchAccessTokenFails()
-            throws JOSEException, TokenAuthInvalidException, ParseException, Json.JsonException {
+            throws JOSEException, TokenAuthInvalidException, ParseException {
 
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
@@ -1598,7 +1587,7 @@ public class TokenHandlerTest {
                 .submitAuditEvent(
                         OIDC_TOKEN_GENERATED,
                         CLIENT_ID,
-                        auditUser(CLIENT_SESSION_ID, INTERNAL_PAIRWISE_SUBJECT.getValue()));
+                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
     }
 
     private void setupClientSessions(
@@ -1821,7 +1810,7 @@ public class TokenHandlerTest {
                     oidcClaimsRequest.toJSONString(),
                     finalClaimsRequestCaptor.getValue().toJSONString());
         } else {
-            assertEquals(null, finalClaimsRequestCaptor.getValue());
+            assertNull(finalClaimsRequestCaptor.getValue());
         }
     }
 
@@ -1829,7 +1818,7 @@ public class TokenHandlerTest {
         verify(orchAuthCodeService, times(1)).getExchangeDataForCode(eq(authCode));
     }
 
-    private static TxmaAuditUser auditUser(String clientSessionId, String userId) {
-        return TxmaAuditUser.user().withUserId(userId).withGovukSigninJourneyId(clientSessionId);
+    private static TxmaAuditUser auditUser(String userId) {
+        return TxmaAuditUser.user().withUserId(userId).withGovukSigninJourneyId(CLIENT_SESSION_ID);
     }
 }
