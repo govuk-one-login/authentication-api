@@ -273,6 +273,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9b906941-9de4-400e-84ac-65af1eccc831
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
+      parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f7f540ee-5bac-4785-a3eb-a5653bd7c137
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
@@ -318,20 +320,22 @@ Mappings:
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev2.dev.account.gov.uk
     authdev3:
-      accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
-      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
-      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/9f2c0adf-ca5d-42a2-966f-6424311c2ba7
-      authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0c1930f0-3cb2-4d71-b4a1-e2b9bdd6668c
-      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e1d340f9-276d-4f56-b97d-799ae2ddce6f
-      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70a5d810-8dcf-449d-bdf0-aed149c52302
-      clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/42f5a19c-11ce-4a0c-8b9d-c162a85d6f51
-      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
-      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
-      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
-      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d8cdded0-8805-430a-9ae9-139a776ecd02
-      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9b906941-9de4-400e-84ac-65af1eccc831
-      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
-      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
+      accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
+      accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
+      auditPayloadSigningKey: arn:aws:kms:eu-west-2:653994557586:key/0797a9bd-d728-4473-9b62-7a43767d75a7
+      authCodeStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4d72b78b-e8ed-4b5f-a045-383170969226
+      authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/51712670-ba1d-4f4a-a7de-8fc1f47fec2f
+      authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/38223bde-df39-4240-b614-3169cb19a342
+      clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
+      commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
+      emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
+      eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
+      experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0e5934b0-d876-4803-a206-36d9ef872abc
+      idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/af014656-1c40-4ba1-b656-aba07fd258d4
+      userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
+      userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
+      parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f944cc04-ec31-4ff5-843f-c72e87f5f334
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6f8567bc-37aa-4a12-a3e7-87312701ebcb
       orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
       orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
@@ -376,6 +380,10 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
+      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/b7cb6340-0d22-4b6a-8702-b5ec17d4f979
+      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/7a1d86fe-1ca0-499c-95e9-ee8593a850f9
+      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/e284a04a-bac2-42b0-b723-ef0d32722ad5
+      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/84243770-7ba6-42c6-a26c-28bc82e3efa2
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -392,6 +400,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e5f9f975-760d-4c34-ade5-7cc91ba09a7e
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/cc4448e9-1b9d-4309-ad65-deb619dc444c
       frontendApiFMSTagValue: "authfrontenddev"
       frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
       cloudwatchLogRetentionInDays: 1
