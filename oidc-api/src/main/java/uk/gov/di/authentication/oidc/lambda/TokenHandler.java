@@ -28,7 +28,6 @@ import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
@@ -36,8 +35,6 @@ import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ApiResponse;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -50,7 +47,6 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -59,7 +55,6 @@ import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -87,7 +82,7 @@ public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
-
+    private static final String INTERNAL_SERVER_ERROR = "Internal server error";
     private final TokenService tokenService;
     private final ConfigurationService configurationService;
     private final OrchAuthCodeService orchAuthCodeService;
@@ -98,10 +93,7 @@ public class TokenHandler
     private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
-
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
     public TokenHandler(
             TokenService tokenService,
@@ -248,7 +240,7 @@ public class TokenHandler
             LOG.error(
                     "Failed to retrieve authorisation code from orch auth code DynamoDB store. Error: {}",
                     e.getMessage());
-            return generateApiGatewayProxyResponse(500, "Internal server error");
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 
         if (authCodeExchangeDataMaybe.isEmpty()) {
@@ -305,9 +297,9 @@ public class TokenHandler
                             getSigningAlgorithm(clientRegistry),
                             authCodeExchangeData,
                             authCode);
-        } catch (OrchAccessTokenException e) {
+        } catch (OrchAccessTokenException | OrchRefreshTokenException e) {
             LOG.error("Failed to process token request", e);
-            return generateApiGatewayProxyResponse(500, "Internal server error");
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 
         var idTokenHint = tokenResponse.getOIDCTokens().getIDToken().serialize();
@@ -381,12 +373,12 @@ public class TokenHandler
         }
         Subject rpPairwiseSubject;
         List<String> scopes;
-        String jti;
+        String jwtId;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
             rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
-            jti = signedJwt.getJWTClaimsSet().getJWTID();
+            jwtId = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse RefreshToken");
             return ApiResponse.badRequest(
@@ -398,45 +390,29 @@ public class TokenHandler
             return ApiResponse.badRequest(OAuth2Error.INVALID_SCOPE);
         }
 
-        LOG.info("Retrieving stored refresh token with jwt id {}", jti);
-        String redisKey = REFRESH_TOKEN_PREFIX + jti;
-        Optional<String> refreshToken =
-                Optional.ofNullable(redisConnectionService.popValue(redisKey));
-        RefreshTokenStore tokenStore;
+        LOG.info("Retrieving stored refresh token with jwt id {}", jwtId);
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItemMaybe;
         try {
-            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
-        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
-            LOG.warn("Refresh token not found with given key");
+            orchRefreshTokenItemMaybe = orchRefreshTokenService.getRefreshToken(jwtId);
+        } catch (OrchRefreshTokenException e) {
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
+        }
+
+        if (orchRefreshTokenItemMaybe.isEmpty()) {
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
-        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
+
+        OrchRefreshTokenItem orchRefreshTokenItem = orchRefreshTokenItemMaybe.get();
+        if (!orchRefreshTokenItem.getToken().equals(currentRefreshToken.getValue())) {
             LOG.warn("Refresh token store does not contain Refresh token in request");
             return ApiResponse.badRequest(
                     new ErrorObject(INVALID_GRANT_CODE, "Invalid Refresh token"));
         }
 
-        Optional<OrchRefreshTokenItem> orchRefreshTokenItem = Optional.empty();
-        try {
-            orchRefreshTokenItem = orchRefreshTokenService.getRefreshToken(jti);
-            if (orchRefreshTokenItem.isPresent()) {
-                if (orchRefreshTokenItem.get().getAuthCode().equals("placeholder-for-auth-code")) {
-                    LOG.info("The refresh token in dynamo has a placeholder for auth code.");
-                }
-            }
-        } catch (OrchRefreshTokenException e) {
-            LOG.warn("Unable to get refresh token from dynamo");
-        }
-
-        // Getting auth code from dynamo,
-        // but ensuring any problem with dynamo doesn't break the journey
-        // This will be redundant when we transfer reads from Redis to Dynamo
-        String authCode;
-        if (orchRefreshTokenItem.isEmpty()) {
-            LOG.warn("No auth code available, assigning placeholder value");
-            authCode = "placeholder-for-auth-code";
-        } else {
-            authCode = orchRefreshTokenItem.get().getAuthCode();
+        // TO DO: this will be removed after a few days of monitoring
+        if (orchRefreshTokenItem.getAuthCode().equals("placeholder-for-auth-code")) {
+            LOG.info("The refresh token in dynamo has a placeholder for auth code.");
         }
 
         OIDCTokenResponse tokenResponse;
@@ -446,15 +422,14 @@ public class TokenHandler
                             clientId,
                             scopes,
                             rpPairwiseSubject,
-                            new Subject(tokenStore.getInternalPairwiseSubjectId()),
+                            new Subject(orchRefreshTokenItem.getInternalPairwiseSubjectId()),
                             signingAlgorithm,
-                            authCode);
-        } catch (OrchAccessTokenException e) {
+                            orchRefreshTokenItem.getAuthCode());
+        } catch (OrchAccessTokenException | OrchRefreshTokenException e) {
             LOG.error("Failed to process refresh token", e);
-            return generateApiGatewayProxyResponse(500, "Internal server error");
+            return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);
         }
 
-        LOG.info("Refresh token with jwt id {} has been used successfully.", jti);
         LOG.info("Generating successful RefreshToken response");
         return ApiResponse.ok(tokenResponse);
     }

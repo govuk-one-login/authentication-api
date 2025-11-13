@@ -49,7 +49,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
+import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationT
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAccessTokenExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchAuthCodeExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchClientSessionExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchRefreshTokenExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
@@ -100,7 +101,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
     private static final String RP_PAIRWISE_ID = "rp-pairwise-id";
     private static final String PUBLIC_SUBJECT_ID = "public-subject-id";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
+    private static final String AUTH_CODE = "test-auth-code";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
     private final CodeVerifier CODE_VERIFIER = new CodeVerifier();
@@ -136,6 +137,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchAccessTokenExtension orchAccessTokenExtension =
             new OrchAccessTokenExtension();
+
+    @RegisterExtension
+    public static final OrchRefreshTokenExtension orchRefreshTokenExtension =
+            new OrchRefreshTokenExtension();
 
     @BeforeEach
     void setup() {
@@ -509,18 +514,17 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
         Subject publicSubject = new Subject();
-        Subject internalPairwiseSubject = new Subject();
         KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), internalPairwiseSubject.getValue());
-        redis.addToRedis(
-                REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(),
-                objectMapper.writeValueAsString(tokenStore),
-                900L);
+        orchRefreshTokenExtension.saveRefreshToken(
+                signedJWT.getJWTClaimsSet().getJWTID(),
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                refreshToken.getValue(),
+                AUTH_CODE);
+
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
@@ -547,12 +551,15 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNotNull(tokens.getBearerAccessToken());
         String jwtId =
                 SignedJWT.parse(tokens.getRefreshToken().getValue()).getJWTClaimsSet().getJWTID();
-        String redisResponse = redis.getFromRedis(REFRESH_TOKEN_PREFIX + jwtId);
-        RefreshTokenStore refreshTokenStore =
-                objectMapper.readValue(redisResponse, RefreshTokenStore.class);
+        Optional<OrchRefreshTokenItem> orchRefreshTokenItem =
+                orchRefreshTokenExtension.getRefreshToken(jwtId);
+        assertTrue(orchRefreshTokenItem.isPresent());
         assertEquals(
-                refreshTokenStore.getInternalPairwiseSubjectId(),
-                internalPairwiseSubject.getValue());
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                orchRefreshTokenItem.get().getInternalPairwiseSubjectId());
+        assertEquals(AUTH_CODE, orchRefreshTokenItem.get().getAuthCode());
+        assertEquals(tokens.getRefreshToken().getValue(), orchRefreshTokenItem.get().getToken());
+
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
@@ -563,20 +570,16 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
         Subject publicSubject = new Subject();
-        Subject internalSubject = new Subject();
         KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-        String tokenStore =
-                "{\"refresh_token\":\""
-                        + refreshToken.getValue()
-                        + "\",\"internal_subject_id\":\""
-                        + internalSubject.getValue()
-                        + "\"}";
-        redis.addToRedis(
-                REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(), tokenStore, 900L);
+        orchRefreshTokenExtension.saveRefreshToken(
+                signedJWT.getJWTClaimsSet().getJWTID(),
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                refreshToken.getValue(),
+                AUTH_CODE);
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
@@ -608,6 +611,107 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .toSuccessResponse()
                         .getTokens()
                         .getBearerAccessToken());
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void shouldCallTokenResourceWithUsedRefreshTokenGrantAndReturn400() throws Exception {
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+        Subject publicSubject = new Subject();
+        KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
+        RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
+        orchRefreshTokenExtension.saveRefreshToken(
+                signedJWT.getJWTClaimsSet().getJWTID(),
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                refreshToken.getValue(),
+                AUTH_CODE);
+
+        PrivateKey privateKey = keyPair.getPrivate();
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
+        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
+        privateKeyParams.putAll(customParams);
+        String requestParams = URLUtils.serializeParameters(privateKeyParams);
+        var response = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+        Tokens tokens = TokenResponse.parse(jsonResponse).toSuccessResponse().getTokens();
+        assertNotNull(tokens.getRefreshToken());
+        assertNotNull(tokens.getBearerAccessToken());
+
+        // try to reuse a previously used token
+        var secondResponse = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
+        assertThat(secondResponse, hasStatus(400));
+        assertThat(
+                secondResponse,
+                hasBody(
+                        new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                                .toJSONObject()
+                                .toJSONString()));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void shouldCallTokenResourceWithRefreshTokenGrantAndReturn400WhenStoredTokenNotMatchingRequest()
+            throws Exception {
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+        Subject publicSubject = new Subject();
+        KeyPair keyPair = KeyPairUtils.generateRsaKeyPair();
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
+        RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
+        orchRefreshTokenExtension.saveRefreshToken(
+                signedJWT.getJWTClaimsSet().getJWTID(),
+                INTERNAL_PAIRWISE_SUBJECT_ID,
+                "a-different-token-value",
+                AUTH_CODE);
+
+        PrivateKey privateKey = keyPair.getPrivate();
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
+        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
+        privateKeyParams.putAll(customParams);
+        String requestParams = URLUtils.serializeParameters(privateKeyParams);
+        var response = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response,
+                hasBody(
+                        new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                                .toJSONObject()
+                                .toJSONString()));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
