@@ -285,7 +285,7 @@ public class AuthCodeHandler
 
             sendCloudwatchMetrics(
                     orchSession, orchClientSession, clientID, isDocAppJourney, client);
-
+            authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
             LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(
                     200,
@@ -357,7 +357,6 @@ public class AuthCodeHandler
                 Map.of(
                         "clientName", client.getClientName(),
                         "clientId", clientID.getValue()));
-        authCodeResponseService.saveSession(isDocAppJourney, orchSessionService, orchSession);
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
