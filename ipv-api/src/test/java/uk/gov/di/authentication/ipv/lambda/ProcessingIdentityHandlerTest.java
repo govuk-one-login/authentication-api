@@ -17,7 +17,6 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
@@ -49,7 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -85,7 +83,6 @@ class ProcessingIdentityHandlerTest {
                     URI.create(INTERNAL_SECTOR_URI),
                     SdkBytes.fromByteBuffer(SALT).asByteArray());
 
-    private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final String ENVIRONMENT = "test-environment";
 
     private final Context context = mock(Context.class);
@@ -113,8 +110,6 @@ class ProcessingIdentityHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(dynamoClientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         Map<String, String> headers = new HashMap<>();
@@ -389,17 +384,5 @@ class ProcessingIdentityHandlerTest {
 
     private void usingValidSession() {
         when(orchSessionService.getSession(anyString())).thenReturn(Optional.of(orchSession));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withClientID(CLIENT_ID)
-                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .withPublicKey(null)
-                .withSectorIdentifierUri("http://sector-identifier")
-                .withScopes(singletonList("openid"))
-                .withCookieConsentShared(true)
-                .withSubjectType("pairwise");
     }
 }
