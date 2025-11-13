@@ -222,7 +222,7 @@ public class IPVCallbackHelper {
                 internalPairwiseSubjectId,
                 authCode);
         sendCloudwatchMetrics(orchSession, clientSessionId, clientId, clientName);
-
+        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
     }
 
@@ -277,8 +277,6 @@ public class IPVCallbackHelper {
                 Map.of(
                         "clientName", clientName,
                         "clientId", clientId));
-
-        authCodeResponseService.saveSession(false, orchSessionService, orchSession);
     }
 
     public void queueSPOTRequest(
