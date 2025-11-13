@@ -144,7 +144,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new TokenHandler(configuration, redisConnectionService);
+        handler = new TokenHandler(configuration);
         txmaAuditQueue.clear();
     }
 
