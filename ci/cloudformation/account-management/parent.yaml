@@ -471,6 +471,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/bfeb0cf7-41fd-4ef5-bf3e-5cbda059a375
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/353a8367-d45a-47b5-b16b-b94cd163ab22
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://apitest.signin.build.account.gov.uk
       cloudwatchLogRetentionInDays: 7
