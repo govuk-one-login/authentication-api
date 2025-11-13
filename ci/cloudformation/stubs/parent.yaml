@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform:
-  - AWS::LanguageExtensions
   - AWS::Serverless-2016-10-31
+  - AWS::LanguageExtensions
 
 Metadata:
   cfn-lint:
@@ -298,7 +298,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: Service
-          Value: ticf-cri-stub
+          Value: Account-Interventions-stub
 
   CodeDeployServiceRole:
     Type: AWS::IAM::Role
@@ -397,6 +397,7 @@ Resources:
             Effect: Allow
             Action:
               - dynamodb:DescribeTable
+              - dynamodb:Get*
             Resource:
               - !Sub
                 - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-ticf-cri
@@ -431,6 +432,7 @@ Resources:
             Effect: Allow
             Action:
               - dynamodb:DescribeTable
+              - dynamodb:Get*
             Resource:
               - !Sub
                 - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-account-interventions
