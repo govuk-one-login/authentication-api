@@ -7,6 +7,7 @@ Resources:
         - ${Env}-di-ticf-cri-stub
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      OpenApiVersion: 3.0.1
       EndpointConfiguration:
         Type: PRIVATE
         VPCEndpointIds:
