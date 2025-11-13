@@ -16,15 +16,59 @@ paths:
         uri: "${endpoint_modules.authenticate.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Authenticates a user by verifying their email and password credentials. Also checks for account interventions (suspended or blocked status) if enabled."
+      summary: Authenticates a user
+      operationId: "authenticate"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateRequest"
+            examples:
+              authenticate-request:
+                summary: Authenticate user
+                value:
+                  email: "user@example.gov.uk"
+                  password: "MySecurePassword123!"
+        required: true
       responses:
         "204":
-          description: Successful Operation. The password is correct for this user.
+          description: Authentication successful. The password is correct and the account has no interventions.
+          content:
+            application/json:
+              examples:
+                authenticate-success:
+                  value: {}
         "400":
-          description: One of the required fields is missing.
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/AccountDoesNotExist"
+              examples:
+                authenticate-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                authenticate-when-account-does-not-exist:
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
         "401":
-          description: This user does not have an account or the password is wrong.
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidLoginCredentials"
+              examples:
+                authenticate-when-invalid-credentials:
+                  value:
+                    code: 1008
+                    message: "Invalid login credentials"
         "403":
-          description: This user cannot authenticate because of a suspension.
+          description: Forbidden - Account has an intervention
           content:
             application/json:
               schema:
@@ -32,14 +76,36 @@ paths:
                   - $ref: "#/components/schemas/UserAccountBlocked"
                   - $ref: "#/components/schemas/UserAccountSuspended"
               examples:
-                post-when-user-has-blocked-intervention:
+                authenticate-when-user-has-blocked-intervention:
                   value:
                     code: 1084
                     message: "User's account is blocked"
-                post-when-user-has-suspended-intervention:
+                authenticate-when-user-has-suspended-intervention:
                   value:
                     code: 1083
                     message: "User's account is suspended"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountInterventionsUnexpectedError"
+              examples:
+                authenticate-when-account-interventions-error:
+                  value:
+                    code: 1091
+                    message: "Account interventions service returned an unexpected error"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "https://localhost:8080/authenticate" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+              -d '{
+                "email": "user@example.gov.uk",
+                "password": "MySecurePassword123!"
+              }'
 
   /update-password:
     post:
@@ -1511,6 +1577,47 @@ components:
           example: "user@example.gov.uk"
       example:
         email: "user@example.gov.uk"
+    AuthenticateRequest:
+      required:
+        - email
+        - password
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's email address
+          example: "user@example.gov.uk"
+        password:
+          type: string
+          format: password
+          description: The user's password
+          example: "MySecurePassword123!"
+      example:
+        email: "user@example.gov.uk"
+        password: "MySecurePassword123!"
+    InvalidLoginCredentials:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1008]
+          example:
+            code: 1008
+            message: "Invalid login credentials"
+    AccountInterventionsUnexpectedError:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1091]
+          example:
+            code: 1091
+            message: "Account interventions service returned an unexpected error"
 
   securitySchemes:
     authorise-access-token:
