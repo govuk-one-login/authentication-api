@@ -1,55 +1,31 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
   TicfCriStubApi:
-    Type: AWS::ApiGateway::RestApi
+    Type: AWS::Serverless::Api
     Properties:
       Name: !Sub
         - ${Env}-di-ticf-cri-stub
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EndpointConfiguration:
-        Types:
-          - PRIVATE
-        VpcEndpointIds:
+        Type: PRIVATE
+        VPCEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-      Policy:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-          - Effect: Deny
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource:
-              - "execute-api:/*"
-            Condition:
-              StringNotEquals:
-                aws:SourceVpce:
-                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-      Body:
-        openapi: "3.0.1"
-        info:
-          title: !Sub "${Environment}-di-ticf-cri-stub"
-        paths:
-          /auth:
-            post:
-              x-amazon-apigateway-integration:
-                type: aws_proxy
-                httpMethod: POST
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:active/invocations"
-                timeoutInMillis: 29000
-
-  TicfCriStubDeployment:
-    Type: AWS::ApiGateway::Deployment
-    Properties:
-      RestApiId: !Ref TicfCriStubApi
-
-  TicfCriStubApiStage:
-    Type: AWS::ApiGateway::Stage
-    DependsOn: TicfCriStubLambdaFunction
-    Properties:
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+            - Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
       AccessLogSetting:
         DestinationArn: !GetAtt TicfCriStubApiAccessLogGroup.Arn
         Format:
@@ -67,7 +43,6 @@ Resources:
             integrationLatency: $context.integration.latency
             integrationRequestId: $context.integration.requestId
       CacheClusterEnabled: false
-      DeploymentId: !Ref TicfCriStubDeployment
       MethodSettings:
         - CachingEnabled: false
           DataTraceEnabled: false
@@ -75,9 +50,19 @@ Resources:
           ResourcePath: "/*"
           LoggingLevel: INFO
           MetricsEnabled: true
-      RestApiId: !Ref TicfCriStubApi
-      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       TracingEnabled: true
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: !Sub "${Environment}-di-ticf-cri-stub"
+        paths:
+          /auth:
+            post:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:active/invocations"
+                timeoutInMillis: 29000
 
   TicfCriStubApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
@@ -108,15 +93,39 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref TicfCriStubApiAccessLogGroup
 
-  TicfCriStubApiExecutionLogSubscriptionFilter:
-    Condition: IsSplunkEnabled
-    Type: AWS::Logs::SubscriptionFilter
-    DependsOn:
-      - TicfCriStubApiStage
+  TicfCriStubApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      DestinationArn: !Ref LoggingSubscriptionEndpointArn
-      FilterPattern: ""
+      KmsKeyId: !GetAtt MainKmsKey.Arn
       LogGroupName: !Sub
         - API-Gateway-Execution-Logs_${TicfCriStubApi}/${StageName}
         - StageName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-TicfCriStubApiExecutionLogGroup"
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/ticf-stub-api.yaml
+
+  TicfCriStubApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TicfCriStubApiExecutionLogGroup
+
+Outputs:
+  TicfCriStubApiID:
+    Description: "API Gateway ID for ticf cri stub API"
+    Value: !Ref TicfCriStubApi
+    Export:
+      Name: !Sub "${AWS::StackName}-TicfCriStubApiID"

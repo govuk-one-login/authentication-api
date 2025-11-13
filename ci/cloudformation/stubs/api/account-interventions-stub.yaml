@@ -133,7 +133,7 @@ Resources:
 
 Outputs:
   AccountInterventionsStubApiID:
-    Description: "API Gateway ID for Auth Internal API"
+    Description: "API Gateway ID for Account intervention API "
     Value: !Ref AccountInterventionsStubApi
     Export:
       Name: !Sub "${AWS::StackName}-AccountInterventionsStubApiID"
