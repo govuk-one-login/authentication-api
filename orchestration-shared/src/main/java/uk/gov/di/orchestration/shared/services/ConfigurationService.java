@@ -388,6 +388,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
+    public boolean isOrchClientRegistryEnabled() {
+        return getFlagOrFalse("USE_ORCH_CLIENT_REGISTRY_TABLE");
+    }
+
     public String getStorageTokenSigningKeyAlias() {
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
