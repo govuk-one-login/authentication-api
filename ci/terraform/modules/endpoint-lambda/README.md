@@ -86,6 +86,7 @@ Eventually, this module will be consumed by [endpoint-module](../endpoint-module
 |------|-------------|
 | <a name="output_endpoint_lambda_alias"></a> [endpoint\_lambda\_alias](#output\_endpoint\_lambda\_alias) | n/a |
 | <a name="output_endpoint_lambda_function"></a> [endpoint\_lambda\_function](#output\_endpoint\_lambda\_function) | n/a |
+| <a name="output_function_arn"></a> [function\_arn](#output\_function\_arn) | n/a |
 | <a name="output_integration_uri"></a> [integration\_uri](#output\_integration\_uri) | n/a |
 | <a name="output_invoke_arn"></a> [invoke\_arn](#output\_invoke\_arn) | n/a |
 <!-- END_TF_DOCS -->
