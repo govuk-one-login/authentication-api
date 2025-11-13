@@ -150,6 +150,55 @@ paths:
         uri: "${endpoint_modules.delete-account.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Deletes a user's account. This action is irreversible and removes all user data from the system. A confirmation email is sent to the user."
+      summary: Deletes a user account
+      operationId: "delete-account"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveAccountRequest"
+            examples:
+              delete-account-request:
+                summary: Delete user account
+                value:
+                  email: "user@example.gov.uk"
+        required: true
+      responses:
+        "204":
+          description: Account successfully deleted
+          content:
+            application/json:
+              examples:
+                delete-account-success:
+                  value: {}
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/AccountDoesNotExist"
+              examples:
+                delete-account-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                delete-account-when-account-does-not-exist:
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "https://localhost:8080/delete-account" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+              -d '{
+                "email": "user@example.gov.uk"
+              }'
   /send-otp-notification:
     post:
       security:
@@ -1450,6 +1499,18 @@ components:
           example:
             code: 1044
             message: "New phone number already in use"
+    RemoveAccountRequest:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email address of the account to delete
+          example: "user@example.gov.uk"
+      example:
+        email: "user@example.gov.uk"
 
   securitySchemes:
     authorise-access-token:
