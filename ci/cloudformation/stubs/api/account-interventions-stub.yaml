@@ -91,7 +91,7 @@ Resources:
         - Key: Environment
           Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/account-interventions-stub.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/account-interventions-stub.yaml
 
   AccountInterventionsStubApiAccessLogSubscriptionFilter:
     Condition: IsSplunkEnabled
@@ -101,16 +101,35 @@ Resources:
       FilterPattern: ""
       LogGroupName: !Ref AccountInterventionsStubApiAccessLogGroup
 
+  AccountInterventionsStubApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AccountInterventionsStubApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountInterventionsStubApiExecutionLogGroup"
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/stubs/api/account-interventions-stub.yaml
+
   AccountInterventionsStubApiExecutionLogSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
-      LogGroupName: !Sub
-        - API-Gateway-Execution-Logs_${AccountInterventionsStubApi}/${StageName}
-        - StageName:
-            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      LogGroupName: !Ref AccountInterventionsStubApiExecutionLogGroup
 
 Outputs:
   AccountInterventionsStubApiID:
