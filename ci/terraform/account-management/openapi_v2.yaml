@@ -160,6 +160,94 @@ paths:
         uri: "${endpoint_modules.send-otp-notification.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+      description: "Sends an OTP notification to verify an email address or phone number. Supports VERIFY_EMAIL and VERIFY_PHONE_NUMBER notification types."
+      summary: Sends an OTP notification
+      operationId: "send-otp-notification"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendNotificationRequest"
+            examples:
+              send-otp-verify-email:
+                summary: Send OTP to verify email
+                value:
+                  email: "new.user@example.gov.uk"
+                  notificationType: "VERIFY_EMAIL"
+              send-otp-verify-phone:
+                summary: Send OTP to verify phone number
+                value:
+                  email: "user@example.gov.uk"
+                  notificationType: "VERIFY_PHONE_NUMBER"
+                  phoneNumber: "+447700900000"
+        required: true
+      responses:
+        "204":
+          description: OTP notification sent successfully
+          content:
+            application/json:
+              examples:
+                send-otp-success:
+                  value: {}
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/InvalidNotificationType"
+                  - $ref: "#/components/schemas/InvalidEmailFormat"
+                  - $ref: "#/components/schemas/AccountWithEmailExists"
+                  - $ref: "#/components/schemas/InvalidPhoneNumber"
+                  - $ref: "#/components/schemas/NewPhoneNumberAlreadyInUse"
+              examples:
+                send-otp-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                send-otp-when-invalid-notification-type:
+                  value:
+                    code: 1011
+                    message: "Invalid notification type"
+                send-otp-when-invalid-email-format:
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                send-otp-when-account-with-email-exists:
+                  value:
+                    code: 1009
+                    message: "An account with this email address already exists"
+                send-otp-when-invalid-phone-number:
+                  value:
+                    code: 1012
+                    message: "Invalid phone number"
+                send-otp-when-new-phone-number-already-in-use:
+                  value:
+                    code: 1044
+                    message: "New phone number already in use"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimpleError"
+              examples:
+                send-otp-when-error-sending-message:
+                  value:
+                    code: 500
+                    message: "Error sending message to queue"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "https://localhost:8080/send-otp-notification" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+              -d '{
+                "email": "new.user@example.gov.uk",
+                "notificationType": "VERIFY_EMAIL"
+              }'
   /verify-otp-notification:
     post:
       security:
@@ -1303,6 +1391,65 @@ components:
           example:
             code: 1090
             message: "OTP verification rate limit exceeded"
+    NotificationTypeEnum:
+      type: string
+      enum:
+        - VERIFY_EMAIL
+        - VERIFY_PHONE_NUMBER
+      description: The type of notification to send
+    SendNotificationRequest:
+      required:
+        - email
+        - notificationType
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's email address
+          example: "user@example.gov.uk"
+        notificationType:
+          $ref: "#/components/schemas/NotificationTypeEnum"
+        phoneNumber:
+          type: string
+          description: The phone number to verify (required when notificationType is VERIFY_PHONE_NUMBER)
+          example: "+447700900000"
+      example:
+        email: "user@example.gov.uk"
+        notificationType: "VERIFY_EMAIL"
+    InvalidNotificationType:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1011]
+          example:
+            code: 1011
+            message: "Invalid notification type"
+    InvalidPhoneNumber:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1012]
+          example:
+            code: 1012
+            message: "Invalid phone number"
+    NewPhoneNumberAlreadyInUse:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1044]
+          example:
+            code: 1044
+            message: "New phone number already in use"
 
   securitySchemes:
     authorise-access-token:
