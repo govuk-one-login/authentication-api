@@ -36,7 +36,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
@@ -44,11 +43,8 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -87,8 +83,6 @@ class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private final OrchAccessTokenService orchAccessTokenService =
             mock(OrchAccessTokenService.class);
     private final OrchRefreshTokenService orchRefreshTokenService =
@@ -97,7 +91,6 @@ class TokenServiceTest {
     private final TokenService tokenService =
             new TokenService(
                     configurationService,
-                    redisConnectionService,
                     kmsConnectionService,
                     orchAccessTokenService,
                     orchRefreshTokenService,
@@ -124,15 +117,11 @@ class TokenServiceTest {
     private static final String OIDC_BASE_URI = "https://oidc.test.account.gov.uk";
     private static final String OIDC_TRUSTMARK_URI = "https://oidc.test.account.gov.uk/trustmark";
     private static final String KEY_ID = "14342354354353";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String STORAGE_TOKEN_PREFIX =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
     private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
     private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
     private static final Long AUTH_TIME = NowHelper.now().toInstant().getEpochSecond() - 120L;
-
-    private static final Json objectMapper = SerializationService.getInstance();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(TokenService.class);
@@ -157,8 +146,7 @@ class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateTokenResponseWithRefreshToken()
-            throws ParseException, JOSEException, Json.JsonException {
+    void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
@@ -184,17 +172,8 @@ class TokenServiceTest {
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(refreshTokenValue, INTERNAL_PAIRWISE_SUBJECT.getValue());
         var refreshToken = SignedJWT.parse(refreshTokenValue);
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
-
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
 
         verify(orchRefreshTokenService)
                 .saveRefreshToken(
@@ -202,9 +181,6 @@ class TokenServiceTest {
                         eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
                         eq(refreshTokenValue),
                         eq(AUTH_CODE));
-
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
 
     @Test
@@ -229,10 +205,7 @@ class TokenServiceTest {
 
     @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
-            throws ParseException,
-                    JOSEException,
-                    Json.JsonException,
-                    com.nimbusds.oauth2.sdk.ParseException {
+            throws ParseException, JOSEException, com.nimbusds.oauth2.sdk.ParseException {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
 
@@ -282,15 +255,6 @@ class TokenServiceTest {
         String refreshTokenValue = tokenResponse.getOIDCTokens().getRefreshToken().getValue();
         var refreshToken = SignedJWT.parse(refreshTokenValue);
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
-        RefreshTokenStore refreshTokenStore =
-                new RefreshTokenStore(refreshTokenValue, INTERNAL_PAIRWISE_SUBJECT.getValue());
-
-        ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        redisKey.capture(),
-                        eq(objectMapper.writeValueAsString(refreshTokenStore)),
-                        eq(300L));
 
         verify(orchRefreshTokenService)
                 .saveRefreshToken(
@@ -298,14 +262,11 @@ class TokenServiceTest {
                         eq(INTERNAL_PAIRWISE_SUBJECT.getValue()),
                         eq(refreshTokenValue),
                         eq(AUTH_CODE));
-
-        assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
-        assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
     }
 
     @Test
     void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
-            throws ParseException, JOSEException, Json.JsonException {
+            throws ParseException, JOSEException {
         when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
@@ -598,17 +559,7 @@ class TokenServiceTest {
     }
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
-            throws ParseException, Json.JsonException {
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
-                        JOURNEY_ID);
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
+            throws ParseException {
 
         verify(orchAccessTokenService)
                 .saveAccessToken(

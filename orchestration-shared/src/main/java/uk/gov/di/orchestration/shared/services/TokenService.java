@@ -34,13 +34,9 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RequestBodyHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -58,29 +54,22 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 public class TokenService {
 
     private final ConfigurationService configService;
-    private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     private final OrchAccessTokenService orchAccessTokenService;
     private final OrchRefreshTokenService orchRefreshTokenService;
     private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
-    private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final List<String> ALLOWED_GRANTS =
             List.of(GrantType.AUTHORIZATION_CODE.getValue(), GrantType.REFRESH_TOKEN.getValue());
 
-    private final Json objectMapper = SerializationService.getInstance();
-
     public TokenService(
             ConfigurationService configService,
-            RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService,
             OrchAccessTokenService orchAccessTokenService,
             OrchRefreshTokenService orchRefreshTokenService,
             OidcAPI oidcApi) {
         this.configService = configService;
-        this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
         this.orchAccessTokenService = orchAccessTokenService;
         this.orchRefreshTokenService = orchRefreshTokenService;
@@ -343,20 +332,6 @@ public class TokenService {
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
 
-        try {
-            redisConnectionService.saveWithExpiry(
-                    ACCESS_TOKEN_PREFIX + clientId + "." + rpPairwiseSubject.getValue(),
-                    objectMapper.writeValueAsString(
-                            new AccessTokenStore(
-                                    accessToken.getValue(),
-                                    internalPairwiseSubject.getValue(),
-                                    journeyId)),
-                    configService.getAccessTokenExpiry());
-        } catch (JsonException e) {
-            LOG.error("Unable to save access token to Redis");
-            throw new RuntimeException(e);
-        }
-
         String clientAndRpPairwiseId = clientId + "." + rpPairwiseSubject.getValue();
 
         orchAccessTokenService.saveAccessToken(
@@ -393,18 +368,6 @@ public class TokenService {
         SignedJWT signedJWT =
                 generateSignedJwtUsingExternalKey(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
-
-        String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        var store =
-                new RefreshTokenStore(refreshToken.getValue(), internalPairwiseSubject.toString());
-        try {
-            redisConnectionService.saveWithExpiry(
-                    redisKey,
-                    objectMapper.writeValueAsString(store),
-                    configService.getSessionExpiry());
-        } catch (JsonException e) {
-            throw new RuntimeException("Error serializing refresh token store", e);
-        }
 
         orchRefreshTokenService.saveRefreshToken(
                 jwtId, internalPairwiseSubject.toString(), refreshToken.getValue(), authCode);

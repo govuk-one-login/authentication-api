@@ -54,7 +54,6 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
         this.tokenService =
                 new TokenService(
                         configurationService,
-                        null,
                         new KmsConnectionService(configurationService),
                         new OrchAccessTokenService(configurationService),
                         new OrchRefreshTokenService(configurationService),

@@ -46,7 +46,6 @@ import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
@@ -90,7 +89,6 @@ public class TokenHandler
     private final OrchAccessTokenService orchAccessTokenService;
     private final OrchRefreshTokenService orchRefreshTokenService;
     private final TokenValidationService tokenValidationService;
-    private final RedisConnectionService redisConnectionService;
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuditService auditService;
@@ -103,7 +101,6 @@ public class TokenHandler
             OrchAuthCodeService orchAuthCodeService,
             OrchClientSessionService orchClientSessionService,
             TokenValidationService tokenValidationService,
-            RedisConnectionService redisConnectionService,
             TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
@@ -114,7 +111,6 @@ public class TokenHandler
         this.orchAccessTokenService = orchAccessTokenService;
         this.orchRefreshTokenService = orchRefreshTokenService;
         this.tokenValidationService = tokenValidationService;
-        this.redisConnectionService = redisConnectionService;
         this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.auditService = auditService;
@@ -123,44 +119,12 @@ public class TokenHandler
     public TokenHandler(ConfigurationService configurationService) {
         var kms = new KmsConnectionService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
-
         this.configurationService = configurationService;
-        this.redisConnectionService = new RedisConnectionService(configurationService);
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
         this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
         this.tokenService =
                 new TokenService(
                         configurationService,
-                        this.redisConnectionService,
-                        kms,
-                        orchAccessTokenService,
-                        orchRefreshTokenService,
-                        oidcApi);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.tokenValidationService =
-                new TokenValidationService(
-                        new JwksService(configurationService, kms), configurationService);
-        this.tokenClientAuthValidatorFactory =
-                new TokenClientAuthValidatorFactory(
-                        new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        var kms = new KmsConnectionService(configurationService);
-        var oidcApi = new OidcAPI(configurationService);
-
-        this.configurationService = configurationService;
-        this.redisConnectionService = redis;
-        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
-        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
-        this.tokenService =
-                new TokenService(
-                        configurationService,
-                        this.redisConnectionService,
                         kms,
                         orchAccessTokenService,
                         orchRefreshTokenService,
