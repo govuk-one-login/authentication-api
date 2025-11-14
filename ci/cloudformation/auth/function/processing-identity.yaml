@@ -28,30 +28,10 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/account_intervention_service_call_enabled}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          ACCOUNT_INTERVENTION_SERVICE_URI: !If
-            - IsLowerEnv
-            - !Join
-              - ""
-              - - "https://"
-                - !ImportValue
-                  Fn::Sub:
-                    - "${Env}-auth-stubs-api-AccountInterventionsStubApiID"
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-                - "-"
-                - !ImportValue "vpc-ExecuteApiGatewayEndpointId"
-                - ".execute-api."
-                - !Ref "AWS::Region"
-                - ".amazonaws.com/"
-                - !If
-                  - UseSubEnvironment
-                  - !Ref SubEnvironment
-                  - !Ref Environment
-            - ""
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/account_intervention_service_uri}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ORCH_DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${OrchAccountID}:table/${OrchEnv}-"
             - OrchAccountID:

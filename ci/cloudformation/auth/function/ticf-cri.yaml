@@ -51,30 +51,10 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/ticf_cri_service_call_timeout}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          TICF_CRI_SERVICE_URI: !If
-            - IsLowerEnv
-            - !Join
-              - ""
-              - - "https://"
-                - !ImportValue
-                  Fn::Sub:
-                    - "${Env}-auth-stubs-api-TicfCriStubApiID"
-                    - Env:
-                        !If [
-                          UseSubEnvironment,
-                          !Ref SubEnvironment,
-                          !Ref Environment,
-                        ]
-                - "-"
-                - !ImportValue "vpc-ExecuteApiGatewayEndpointId"
-                - ".execute-api."
-                - !Ref "AWS::Region"
-                - ".amazonaws.com/"
-                - !If
-                  - UseSubEnvironment
-                  - !Ref SubEnvironment
-                  - !Ref Environment
-            - ""
+          TICF_CRI_SERVICE_URI: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/ticf_cri_service_uri}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref TicfCriFunctionLogGroup
       Policies:
