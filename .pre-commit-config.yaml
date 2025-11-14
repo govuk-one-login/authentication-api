@@ -26,7 +26,6 @@ repos:
           ^(ci|.github|http|openAPI)/.*|\
           docker-compose.*|\
           .pre-commit-config.yaml|\
-          orchestration-canary-alarms.template.yaml|\
           checkov-policies.*|\
           .terraform-docs.yml|\
           account-management-api/api-contract(/.*)?$"
