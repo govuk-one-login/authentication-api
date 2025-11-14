@@ -270,6 +270,8 @@ public class DocAppCallbackHandler
                                         "Environment", configurationService.getEnvironment(),
                                         "Successful", Boolean.toString(true)));
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
+                cloudwatchMetricsService.incrementCounter(
+                        "orchJourneyCompleted", Map.of("journeyType", "docapp"));
 
                 var authCode =
                         orchAuthCodeService.generateAndSaveAuthorisationCode(

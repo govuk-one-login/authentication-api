@@ -38,6 +38,18 @@ Parameters:
     Type: Number
     Description: Minimum number of errors before error rate alarms can be triggered
     Default: 4
+  MinAuthJourneyThreshold:
+    Type: Number
+    Description: Minimum number of auth journeys started before the journey completion rate alarm can be triggered
+    Default: 10
+  MinIdentityJourneyThreshold:
+    Type: Number
+    Description: Minimum number of identity journeys started before the journey completion rate alarm can be triggered
+    Default: 8
+  MinDocAppJourneyThreshold:
+    Type: Number
+    Description: Minimum number of docapp journeys started before the journey completion rate alarm can be triggered
+    Default: 4
 
 Conditions:
   UsePermissionsBoundary:
@@ -65,6 +77,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
+  IsDev: !Equals [dev, !Ref Environment]
   IsDevOrBuild:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
@@ -8239,6 +8252,169 @@ Resources:
             Period: 600
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region journey completion rate alarms
+  AuthJourneyCompletionRateAlarm:
+    Condition: IsDev
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "Auth journey completion rate has dropped below 80% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 80
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinAuthJourneyThreshold}, m1/m2*100)"
+          Label: Journey Completion Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchJourneyCompleted
+              Dimensions:
+                - Name: journeyType
+                  Value: auth
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-AuthenticationCallbackFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-AuthenticationCallbackFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchAuthorizeRequestCountForAlarm
+              Dimensions:
+                - Name: isDocAppJourney
+                  Value: false
+                - Name: isIdentityJourney
+                  Value: false
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+
+  IdentityJourneyCompletionRateAlarm:
+    Condition: IsDev
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "Identity journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 50
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinIdentityJourneyThreshold}, m1/m2*100)"
+          Label: Journey Completion Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchJourneyCompleted
+              Dimensions:
+                - Name: journeyType
+                  Value: identity
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchAuthorizeRequestCountForAlarm
+              Dimensions:
+                - Name: isDocAppJourney
+                  Value: false
+                - Name: isIdentityJourney
+                  Value: true
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+
+  DocAppJourneyCompletionRateAlarm:
+    Condition: IsDev
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions: !Ref SlackEvents
+      AlarmDescription: !Sub "Doc app journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
+      ComparisonOperator: LessThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 30
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinDocAppJourneyThreshold}, m1/m2*100)"
+          Label: Journey Completion Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchJourneyCompleted
+              Dimensions:
+                - Name: journeyType
+                  Value: docapp
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-DocAppCallbackFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-DocAppCallbackFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchAuthorizeRequestCountForAlarm
+              Dimensions:
+                - Name: isDocAppJourney
+                  Value: true
+                - Name: isIdentityJourney
+                  Value: false
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-AuthorisationFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
   #endregion
 
 Outputs:
