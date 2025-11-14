@@ -24,7 +24,8 @@ public class DynamoClientService implements ClientService {
 
     public DynamoClientService(ConfigurationService configurationService) {
         var tableName = CLIENT_REGISTRY_TABLE;
-        if (configurationService.getDynamoArnPrefix().isPresent()) {
+        if (configurationService.getDynamoArnPrefix().isPresent()
+                && !configurationService.isOrchClientRegistryEnabled()) {
             tableName = configurationService.getDynamoArnPrefix().get() + tableName;
         } else {
             tableName = configurationService.getEnvironment() + "-" + tableName;
@@ -33,14 +34,19 @@ public class DynamoClientService implements ClientService {
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
-        warmUp();
+
+        if (configurationService.getDynamoArnPrefix().isPresent()
+                && !configurationService.isOrchClientRegistryEnabled()) {
+            warmUp();
+        }
     }
 
     public DynamoClientService(
             ConfigurationService configurationService,
             DynamoDbEnhancedClient dynamoDbEnhancedClient) {
         var tableName = CLIENT_REGISTRY_TABLE;
-        if (configurationService.getDynamoArnPrefix().isPresent()) {
+        if (configurationService.getDynamoArnPrefix().isPresent()
+                && !configurationService.isOrchClientRegistryEnabled()) {
             tableName = configurationService.getDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
         } else {
             tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
