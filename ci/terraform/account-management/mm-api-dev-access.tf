@@ -1,5 +1,5 @@
 locals {
-  is_dev                   = contains(["authdev1", "authdev2", "sandpit", "dev"], var.environment)
+  is_dev                   = contains(["authdev1", "authdev2", "dev"], var.environment)
   mm_dev_access_count      = local.is_dev ? 1 : 0
   port_forward_doc_suffix  = "mm-api-developer-proxy-ssm-document"
   mm_proxy_instance_suffix = "mm-api-developer-proxy"

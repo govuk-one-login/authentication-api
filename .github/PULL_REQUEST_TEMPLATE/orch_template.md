@@ -65,11 +65,11 @@ If this is a session split change, please check that it can be deployed to eithe
 
 - [ ] Successfully deployed to authdev or not required.
 
-<!-- Run Authentication acceptance tests against sandpit?
-As Orch code reaches production faster than Auth code, if this change could affect Auth, please run [Authentication acceptance tests](https://github.com/govuk-one-login/authentication-acceptance-tests) against sandpit.
+<!-- Run Authentication acceptance tests against authdev?
+As Orch code reaches production faster than Auth code, if this change could affect Auth, please run [Authentication acceptance tests](https://github.com/govuk-one-login/authentication-acceptance-tests) against authdev.
 -->
 
-- [ ] Successfully run Authentication acceptance tests against sandpit or not required.
+- [ ] Successfully run Authentication acceptance tests against authdev or not required.
 
 ### Related PRs
 
