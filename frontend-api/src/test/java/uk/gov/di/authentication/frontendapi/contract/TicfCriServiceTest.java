@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.http.HttpClient;
 import java.util.List;
+import java.util.Map;
 
 import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -63,6 +64,8 @@ class TicfCriServiceTest {
                 .uponReceiving("a request for successful authentication")
                 .path("/auth")
                 .method("POST")
+                .body(createSuccessfulAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(202)
                 .body(createTicfResponseBody())
@@ -99,6 +102,8 @@ class TicfCriServiceTest {
                 .uponReceiving("a request for failed authentication")
                 .path("/auth")
                 .method("POST")
+                .body(createFailedAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(202)
                 .body(createTicfResponseBody())
@@ -135,6 +140,8 @@ class TicfCriServiceTest {
                 .uponReceiving("a request with missing required fields")
                 .path("/auth")
                 .method("POST")
+                .body(createIncompleteRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(400)
                 .toPact();
@@ -146,6 +153,8 @@ class TicfCriServiceTest {
                 .uponReceiving("a request when service is experiencing issues")
                 .path("/auth")
                 .method("POST")
+                .body(createSuccessfulAuthRequestBody())
+                .headers(Map.of("Content-Type", "application/json"))
                 .willRespondWith()
                 .status(500)
                 .toPact();
@@ -207,6 +216,40 @@ class TicfCriServiceTest {
                 hasItem(
                         withMessageContaining(
                                 "Response received from TICF CRI Service with status 500")));
+    }
+
+    private static DslPart createSuccessfulAuthRequestBody() {
+        return newJsonBody(
+                        body -> {
+                            body.stringValue("sub", INTERNAL_PAIRWISE_ID);
+                            body.array("vtr", arr -> arr.stringValue("Cl.Cm"));
+                            body.stringValue("govuk_signin_journey_id", JOURNEY_ID);
+                            body.stringValue("authenticated", "Y");
+                            body.array("2fa_method", arr -> arr.stringValue("SMS"));
+                        })
+                .build();
+    }
+
+    private static DslPart createFailedAuthRequestBody() {
+        return newJsonBody(
+                        body -> {
+                            body.stringValue("sub", INTERNAL_PAIRWISE_ID);
+                            body.array("vtr", arr -> arr.stringValue("Cl.Cm"));
+                            body.stringValue("govuk_signin_journey_id", JOURNEY_ID);
+                            body.stringValue("authenticated", "N");
+                            body.stringValue("password_reset", "Y");
+                            body.array("2fa_method", arr -> arr.stringValue("SMS"));
+                        })
+                .build();
+    }
+
+    private static DslPart createIncompleteRequestBody() {
+        return newJsonBody(
+                        body -> {
+                            body.stringValue("authenticated", "Y");
+                            body.array("2fa_method", arr -> arr.stringValue("SMS"));
+                        })
+                .build();
     }
 
     private static DslPart createTicfResponseBody() {
