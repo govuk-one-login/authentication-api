@@ -48,6 +48,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -83,10 +84,12 @@ import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -141,6 +144,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final OrchRefreshTokenExtension orchRefreshTokenExtension =
             new OrchRefreshTokenExtension();
+
+    @RegisterExtension
+    private static final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(TokenHandler.class);
 
     @BeforeEach
     void setup() {
@@ -650,32 +657,24 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         registerClientSecretClient(
-                "test-client-1",
-                clientSecret.getValue(),
-                ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                scope);
-        registerClientSecretClient(
-                "test-client-2",
+                CLIENT_ID,
                 clientSecret.getValue(),
                 ClientAuthenticationMethod.CLIENT_SECRET_POST,
                 scope);
 
-        createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
+        generateAuthRequestAndStoreClientSession(scope, Optional.of("Cl.Cm"), Optional.empty());
+        AuthorizationCode authCode = generateAndSaveAuthCode("different-client-id");
+        var customParams = constructCustomParams(Optional.of(CLIENT_ID), authCode.getValue());
 
-        var baseTokenRequest =
-                constructBaseTokenRequest(
-                        scope,
-                        Optional.of("Cl.Cm"),
-                        Optional.empty(),
-                        Optional.of("test-client-1"),
-                        CODE_VERIFIER.getValue());
-        var response =
-                makeTokenRequestWithClientSecretPost(
-                        "test-client-1", baseTokenRequest, clientSecret);
+        var response = makeTokenRequestWithClientSecretPost(CLIENT_ID, customParams, clientSecret);
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Client ID from auth code does not match client ID from request body")));
     }
 
     @Test
@@ -686,27 +685,26 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         registerClientWithPrivateKeyJwtAuthentication(
-                "test-client-1", keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+                CLIENT_ID, keyPair.getPublic(), scope, SubjectType.PAIRWISE);
 
-        createAuthCodeForClient(Optional.of("test-client-1"), "test-auth-code-1");
-        createAuthCodeForClient(Optional.of("test-client-2"), "test-auth-code-2");
+        generateAuthRequestAndStoreClientSession(scope, Optional.of("Cl.Cm"), Optional.empty());
+        AuthorizationCode authCode = generateAndSaveAuthCode("different-client-id");
+        var customParams = constructCustomParams(Optional.of(CLIENT_ID), authCode.getValue());
 
-        var baseTokenRequest =
-                constructBaseTokenRequest(
-                        scope,
-                        Optional.of("Cl.Cm"),
-                        Optional.empty(),
-                        Optional.of("test-client-1"),
-                        CODE_VERIFIER.getValue());
         var response =
                 makeTokenRequestWithPrivateKeyJWT(
-                        "test-client-1",
-                        baseTokenRequest,
+                        CLIENT_ID,
+                        customParams,
                         keyPair.getPrivate(),
                         new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT).toSingleAudienceList());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Client ID from auth code does not match client ID from request body")));
     }
 
     @Test
@@ -859,6 +857,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId,
             String codeVerifier) {
+
+        generateAuthRequestAndStoreClientSession(scope, vtr, oidcClaimsRequest);
+        AuthorizationCode authCode = generateAndSaveAuthCode(clientId.orElse(CLIENT_ID));
+        return constructCustomParams(clientId, authCode.getValue(), codeVerifier);
+    }
+
+    private void generateAuthRequestAndStoreClientSession(
+            Scope scope, Optional<String> vtr, Optional<OIDCClaimsRequest> oidcClaimsRequest) {
         List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
         if (vtr.isPresent()) {
             vtrList =
@@ -876,33 +882,27 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "client-name")
                         .withRpPairwiseId(RP_PAIRWISE_ID)
                         .withPublicSubjectId(PUBLIC_SUBJECT_ID));
-
-        AuthorizationCode code =
-                orchAuthCodeExtension.generateAndSaveAuthorisationCode(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        TEST_EMAIL,
-                        AUTH_TIME,
-                        INTERNAL_PAIRWISE_SUBJECT_ID);
-
-        Map<String, List<String>> customParams = new HashMap<>();
-        customParams.put(
-                "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
-        clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
-        customParams.put("code", Collections.singletonList(code.getValue()));
-        customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
-        customParams.put("code_verifier", Collections.singletonList(codeVerifier));
-        return customParams;
     }
 
-    private Map<String, List<String>> createAuthCodeForClient(
-            Optional<String> clientId, String code) {
+    private AuthorizationCode generateAndSaveAuthCode(String clientId) {
+        return orchAuthCodeExtension.generateAndSaveAuthorisationCode(
+                clientId, CLIENT_SESSION_ID, TEST_EMAIL, AUTH_TIME, INTERNAL_PAIRWISE_SUBJECT_ID);
+    }
+
+    private Map<String, List<String>> constructCustomParams(
+            Optional<String> clientId, String authCode) {
+        return constructCustomParams(clientId, authCode, CODE_VERIFIER.getValue());
+    }
+
+    private Map<String, List<String>> constructCustomParams(
+            Optional<String> clientId, String authCode, String codeVerifier) {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
-        customParams.put("code", Collections.singletonList(code));
+        customParams.put("code", Collections.singletonList(authCode));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
+        customParams.put("code_verifier", Collections.singletonList(codeVerifier));
         return customParams;
     }
 
