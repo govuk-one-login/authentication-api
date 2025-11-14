@@ -12,7 +12,6 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import java.util.Optional;
 
 import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class RedisConnectionService implements AutoCloseable {
 
@@ -50,52 +49,44 @@ public class RedisConnectionService implements AutoCloseable {
     }
 
     private <T> T executeCommand(RedisFunction<T> callable) {
-        try (StatefulRedisConnection<String, String> connection =
-                segmentedFunctionCall("Redis: getConnection", () -> pool.borrowObject())) {
-            return callable.getResult(connection.sync());
+        try {
+            try (StatefulRedisConnection<String, String> connection = pool.borrowObject()) {
+                return callable.getResult(connection.sync());
+            }
         } catch (Exception e) {
             throw new RedisConnectionException(REDIS_CONNECTION_ERROR, e);
         }
     }
 
     public void saveWithExpiry(final String key, final String value, final long expiry) {
-        segmentedFunctionCall(
-                "Redis: saveWithExpiry",
-                () -> executeCommand(commands -> commands.setex(key, expiry, value)));
+        executeCommand(commands -> commands.setex(key, expiry, value));
     }
 
     public boolean keyExists(final String key) {
-        return segmentedFunctionCall(
-                "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));
+        return executeCommand(commands -> commands.exists(key) == 1);
     }
 
     public String getValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: getValue", () -> executeCommand(commands -> commands.get(key)));
+        return executeCommand(commands -> commands.get(key));
     }
 
     public long deleteValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: deleteValue", () -> executeCommand(commands -> commands.del(key)));
+        return executeCommand(commands -> commands.del(key));
     }
 
     public String popValue(final String key) {
-        return segmentedFunctionCall(
-                "Redis: popValue",
-                () ->
-                        executeCommand(
-                                commands -> {
-                                    commands.multi();
-                                    commands.get(key);
-                                    commands.del(key);
-                                    TransactionResult result = commands.exec();
-                                    return result.get(0);
-                                }));
+        return executeCommand(
+                commands -> {
+                    commands.multi();
+                    commands.get(key);
+                    commands.del(key);
+                    TransactionResult result = commands.exec();
+                    return result.get(0);
+                });
     }
 
     private void warmUp() {
-        segmentedFunctionCall(
-                "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
+        executeCommand(RedisServerCommands::clientGetname);
     }
 
     @Override

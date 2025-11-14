@@ -47,7 +47,6 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class IPVCallbackHelper {
@@ -162,11 +161,9 @@ public class IPVCallbackHelper {
         var clientName = clientSession.getClientName();
         var rpPairwiseSubject = new Subject(clientSession.getRpPairwiseId());
         var internalPairwiseSubjectId = orchSession.getInternalCommonSubjectId();
-        segmentedFunctionCall(
-                "saveIdentityClaims",
-                () ->
-                        saveIdentityClaimsToDynamo(
-                                clientSessionId, rpPairwiseSubject, userIdentityUserInfo));
+
+        saveIdentityClaimsToDynamo(clientSessionId, rpPairwiseSubject, userIdentityUserInfo);
+
         return generateAuthenticationResponse(
                 authRequest,
                 orchSession,
