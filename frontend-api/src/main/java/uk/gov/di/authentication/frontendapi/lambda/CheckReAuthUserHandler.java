@@ -116,13 +116,16 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         Optional<UserProfile> maybeUserProfileOfUserSuppliedEmail =
                 authenticationService.getUserProfileByEmailMaybe(request.email());
 
+        var userProfileOfSignedInUser =
+                authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
+
         try {
+            throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+                    userProfileOfSignedInUser, auditContext, request.rpPairwiseId());
+
             return maybeUserProfileOfUserSuppliedEmail
                     .flatMap(
                             userProfile -> {
-                                throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
-                                        userProfile, auditContext, request.rpPairwiseId());
-
                                 return verifyReAuthentication(
                                         userProfile,
                                         userContext,
@@ -134,7 +137,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .orElseGet(
                             () ->
                                     generateErrorResponse(
-                                            emailUserIsSignedInWith,
+                                            userProfileOfSignedInUser,
                                             request.rpPairwiseId(),
                                             auditContext,
                                             pairwiseIdMetadataPair,
@@ -189,7 +192,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String emailUserIsSignedInWith,
+            UserProfile userProfileOfSignedInUser,
             String rpPairwiseId,
             AuditContext auditContext,
             AuditService.MetadataPair pairwiseIdMetadataPair,
@@ -198,13 +201,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         String uniqueUserIdentifier = rpPairwiseId;
         Optional<String> additionalIdentifier = Optional.empty();
-        if (emailUserIsSignedInWith != null) {
-            var userProfile = authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
-
-            if (userProfile != null) {
-                uniqueUserIdentifier = userProfile.getSubjectID();
-                additionalIdentifier = Optional.of(rpPairwiseId);
-            }
+        if (userProfileOfSignedInUser != null) {
+            uniqueUserIdentifier = userProfileOfSignedInUser.getSubjectID();
+            additionalIdentifier = Optional.of(rpPairwiseId);
         }
 
         authenticationAttemptsService.createOrIncrementCount(
@@ -296,7 +295,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             throws AccountLockedException {
         var countTypesToCounts =
                 authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        userProfile.getSubjectID(), pairwiseId, JourneyType.REAUTHENTICATION);
+                        userProfile != null ? userProfile.getSubjectID() : null,
+                        pairwiseId,
+                        JourneyType.REAUTHENTICATION);
 
         var exceededCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
