@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
@@ -26,7 +27,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallenge;
 import com.nimbusds.oauth2.sdk.pkce.CodeChallengeMethod;
 import com.nimbusds.oauth2.sdk.pkce.CodeVerifier;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
@@ -176,16 +176,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+
+        assertTokensPresent(jsonResponse);
 
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo(expectedVotClaim));
@@ -219,16 +211,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
 
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
@@ -265,16 +248,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
 
         var idToken = OIDCTokenResponse.parse(jsonResponse).getOIDCTokens().getIDToken();
         assertThat(idToken.getJWTClaimsSet().getClaim(VOT.getValue()), equalTo("Cl.Cm"));
@@ -296,24 +270,19 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
         registerClientSecretClient(
-                clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_POST, scope);
+                CLIENT_ID,
+                clientSecret.getValue(),
+                ClientAuthenticationMethod.CLIENT_SECRET_POST,
+                scope);
         var baseTokenRequest =
                 constructBaseTokenRequest(
                         scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
-        var response = makeTokenRequestWithClientSecretPost(baseTokenRequest, clientSecret);
+        var response =
+                makeTokenRequestWithClientSecretPost(CLIENT_ID, baseTokenRequest, clientSecret);
 
         assertThat(response, hasStatus(200));
         var jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
 
         assertThat(
                 OIDCTokenResponse.parse(jsonResponse)
@@ -375,16 +344,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getIDToken()
                         .getJWTClaimsSet();
 
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
         assertThat(idTokenClaims.getSubject(), equalTo(PUBLIC_SUBJECT_ID));
         assertThat(idTokenClaims.getClaim("auth_time"), equalTo(AUTH_TIME));
 
@@ -413,16 +373,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getOIDCTokens()
                         .getIDToken()
                         .getJWTClaimsSet();
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
         assertThat(idTokenClaims.getSubject(), equalTo(RP_PAIRWISE_ID));
         assertThat(idTokenClaims.getClaim("auth_time"), equalTo(AUTH_TIME));
 
@@ -449,28 +400,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-        BearerAccessToken bearerAccessToken =
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken();
-        JSONArray jsonarray =
-                JSONArrayUtils.parse(
-                        new Gson()
-                                .toJson(
-                                        SignedJWT.parse(bearerAccessToken.getValue())
-                                                .getJWTClaimsSet()
-                                                .getClaim("claims")));
+
+        Tokens tokens = TokenResponse.parse(jsonResponse).toSuccessResponse().getTokens();
+        assertNull(tokens.getRefreshToken());
+        assertNotNull(tokens.getBearerAccessToken());
+
+        JWTClaimsSet claimsSet =
+                SignedJWT.parse(tokens.getBearerAccessToken().getValue()).getJWTClaimsSet();
+        JSONArray jsonarray = JSONArrayUtils.parse(new Gson().toJson(claimsSet.getClaim("claims")));
 
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
@@ -601,16 +538,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
 
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -652,9 +580,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
-        Tokens tokens = TokenResponse.parse(jsonResponse).toSuccessResponse().getTokens();
-        assertNotNull(tokens.getRefreshToken());
-        assertNotNull(tokens.getBearerAccessToken());
+        assertTokensPresent(jsonResponse);
 
         // try to reuse a previously used token
         var secondResponse = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
@@ -847,13 +773,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void registerClientSecretClient(
-            String clientSecret,
-            ClientAuthenticationMethod clientAuthenticationMethod,
-            Scope scope) {
-        registerClientSecretClient(CLIENT_ID, clientSecret, clientAuthenticationMethod, scope);
-    }
-
-    private void registerClientSecretClient(
             String clientId,
             String clientSecret,
             ClientAuthenticationMethod clientAuthenticationMethod,
@@ -918,14 +837,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
-            Map<String, List<String>> requestParams, Secret clientSecret) {
-        return makeTokenRequestWithClientSecretPost(CLIENT_ID, requestParams, clientSecret);
-    }
-
-    private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
             String clientId, Map<String, List<String>> requestParams, Secret clientSecret) {
         var clientSecretPost = new ClientSecretPost(new ClientID(clientId), clientSecret);
-        clientSecretPost.toParameters();
         requestParams.putAll(clientSecretPost.toParameters());
         var requestBody = URLUtils.serializeParameters(requestParams);
         return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
@@ -995,5 +908,11 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private String createCodeChallengeFromCodeVerifier(CodeVerifier codeVerifier) {
         return CodeChallenge.compute(CodeChallengeMethod.S256, codeVerifier).toString();
+    }
+
+    private static void assertTokensPresent(JSONObject jsonResponse) throws ParseException {
+        var tokensInResponse = TokenResponse.parse(jsonResponse).toSuccessResponse().getTokens();
+        assertNotNull(tokensInResponse.getRefreshToken());
+        assertNotNull(tokensInResponse.getBearerAccessToken());
     }
 }
