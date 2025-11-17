@@ -354,7 +354,7 @@ class AuthenticationCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         doThrow(new AuthenticationCallbackValidationException())
                 .when(authorizationService)
-                .validateRequest(any(), any());
+                .validateRequest(any(), any(), anyBoolean());
 
         var response = handler.handleRequest(event, CONTEXT);
 
@@ -453,7 +453,7 @@ class AuthenticationCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
         doThrow(new AuthenticationCallbackValidationException(OIDCError.LOGIN_REQUIRED, true))
                 .when(authorizationService)
-                .validateRequest(any(), any());
+                .validateRequest(any(), any(), anyBoolean());
 
         var response = handler.handleRequest(event, CONTEXT);
 
