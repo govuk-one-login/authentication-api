@@ -8368,7 +8368,8 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
-      AlarmActions: !Ref SlackEvents
+      AlarmActions:
+        - !Ref SlackEvents
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
