@@ -66,7 +66,6 @@ import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -126,7 +125,6 @@ public class AuthenticationCallbackHandler
 
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
-        var redisConnectionService = new RedisConnectionService(configurationService);
         var stateStorageService = new StateStorageService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
@@ -153,54 +151,10 @@ public class AuthenticationCallbackHandler
                         new CrossBrowserOrchestrationService(configurationService),
                         new TokenService(
                                 configurationService,
-                                redisConnectionService,
                                 kmsConnectionService,
                                 orchAccessTokenService,
                                 orchRefreshTokenService,
                                 oidcApi));
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
-        this.logoutService = new LogoutService(configurationService);
-        this.authFrontend = new AuthFrontend(configurationService);
-        this.crossBrowserOrchestrationService =
-                new CrossBrowserOrchestrationService(configurationService);
-    }
-
-    public AuthenticationCallbackHandler(
-            ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService) {
-
-        var stateStorageService = new StateStorageService(configurationService);
-        var kmsConnectionService = new KmsConnectionService(configurationService);
-        this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(stateStorageService);
-        this.tokenService =
-                new AuthenticationTokenService(configurationService, kmsConnectionService);
-        this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
-        this.orchRefreshTokenService = new OrchRefreshTokenService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.userInfoStorageService =
-                new AuthenticationUserInfoStorageService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
-        this.clientService = new DynamoClientService(configurationService);
-        this.initiateIPVAuthorisationService =
-                new InitiateIPVAuthorisationService(
-                        configurationService,
-                        auditService,
-                        new IPVAuthorisationService(configurationService, kmsConnectionService),
-                        cloudwatchMetricsService,
-                        new CrossBrowserOrchestrationService(configurationService),
-                        new TokenService(
-                                configurationService,
-                                redisConnectionService,
-                                kmsConnectionService,
-                                orchAccessTokenService,
-                                orchRefreshTokenService,
-                                new OidcAPI(configurationService)));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);

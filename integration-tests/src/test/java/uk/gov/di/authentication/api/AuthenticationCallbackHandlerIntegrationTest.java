@@ -1064,7 +1064,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         docAppPrivateKeyJwtSigner,
                         accountInterventionApiStub,
                         abortOnAisErrorResponse);
-        handler = new AuthenticationCallbackHandler(configurationService, redisConnectionService);
+        handler = new AuthenticationCallbackHandler(configurationService);
         authExternalApiStub.init(SUBJECT_ID);
         txmaAuditQueue.clear();
     }
