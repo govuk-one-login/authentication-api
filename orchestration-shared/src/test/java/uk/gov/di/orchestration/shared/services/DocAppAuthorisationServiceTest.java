@@ -223,7 +223,7 @@ class DocAppAuthorisationServiceTest {
     }
 
     @Test
-    void shouldSaveStateToRedisAndDynamo() {
+    void shouldSaveStateToDynamo() {
         var sessionId = "session-id";
         authorisationService.storeState(sessionId, STATE);
 

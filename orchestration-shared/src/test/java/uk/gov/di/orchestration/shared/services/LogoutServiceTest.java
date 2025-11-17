@@ -398,7 +398,7 @@ class LogoutServiceTest {
     }
 
     @Test
-    void shouldDeleteSessionFromRedisWhenNoCookieExists() {
+    void shouldDeleteSessionFromDynamoWhenNoCookieExists() {
         APIGatewayProxyRequestEvent input = new APIGatewayProxyRequestEvent();
         input.setQueryStringParameters(
                 Map.of(

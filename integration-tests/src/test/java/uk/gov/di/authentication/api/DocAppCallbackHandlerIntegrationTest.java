@@ -330,7 +330,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorIsPresent()
             throws Json.JsonException {
         setupSession();
-        redis.addClientSessionAndStateToRedis(DOC_APP_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(DOC_APP_STATE, CLIENT_SESSION_ID);
 
         var queryStringParameters =
