@@ -422,6 +422,13 @@ public class AuthorisationHandler
                         Boolean.toString(isDocAppJourney),
                         "isIdentityJourney",
                         Boolean.toString(isIdentityJourney)));
+        cloudwatchMetricsService.incrementCounter(
+                "orchAuthorizeRequestCountForAlarm",
+                Map.of(
+                        "isDocAppJourney",
+                        Boolean.toString(isDocAppJourney),
+                        "isIdentityJourney",
+                        Boolean.toString(isIdentityJourney)));
 
         boolean reauthRequested =
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
