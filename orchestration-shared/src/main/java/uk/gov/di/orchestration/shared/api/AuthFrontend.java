@@ -32,7 +32,7 @@ public class AuthFrontend implements CommonFrontend {
     }
 
     public URI ipvCallbackURI() {
-        return buildURI(frontendBaseUri, "ipv-callback");
+        return buildURI(frontendBaseUri, "ipv/callback/authorize");
     }
 
     public URI authorizeURI(Optional<Prompt.Type> prompt, Optional<String> googleAnalytics) {
