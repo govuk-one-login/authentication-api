@@ -31,4 +31,5 @@ module "endpoint_lambda" {
   dynatrace_secret                       = var.dynatrace_secret
   runbook_link                           = var.runbook_link
   snapstart                              = var.snapstart
+  lambda_error_alarm_disabled            = var.lambda_error_alarm_disabled
 }
