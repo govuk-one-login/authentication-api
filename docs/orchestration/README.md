@@ -8,7 +8,7 @@ High level sequence diagrams for the Orchestration component are located [here](
 
 ## Infrastructure:
 
-Most of the infrastructure for the Orchestration component is defined in the [main cloudformation template](../../template.yaml) as well as a small template [snippet for anomaly alerts](../../orchestration-canary-alarms.template.yaml). However, there are still some resources defined in the Terraform (`./ci/terraform/...`).
+Most of the infrastructure for the Orchestration component is defined in the [main cloudformation template](../../template.yaml). However, there are still some resources defined in the Terraform (`./ci/terraform/...`).
 
 ## Code
 
