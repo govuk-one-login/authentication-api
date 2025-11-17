@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.PersonClaims;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -81,6 +82,7 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -255,9 +257,18 @@ public class AuthenticationCallbackHandler
             String clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
+            boolean reauthRequested =
+                    getCustomParameterOpt(authenticationRequest, "id_token_hint").isPresent()
+                            && authenticationRequest.getPrompt() != null
+                            && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN);
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, sessionId, orchSession);
+                            authenticationRequest,
+                            input,
+                            user,
+                            sessionId,
+                            orchSession,
+                            reauthRequested);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
@@ -634,9 +645,11 @@ public class AuthenticationCallbackHandler
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
                     String sessionId,
-                    OrchSessionItem orchSession) {
+                    OrchSessionItem orchSession,
+                    boolean reauthRequested) {
         try {
-            authorisationService.validateRequest(input.getQueryStringParameters(), sessionId);
+            authorisationService.validateRequest(
+                    input.getQueryStringParameters(), sessionId, reauthRequested);
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
