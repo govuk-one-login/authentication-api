@@ -69,7 +69,7 @@ data "aws_iam_policy_document" "invoke_account_deletion_lambda" {
   statement {
     sid       = "permitInvokeLambda"
     effect    = "Allow"
-    actions   = ["lambda:InvokeFunction"]
+    actions   = ["lambda:InvokeFunction", "lambda:GetFunctionConfiguration"]
     resources = [module.manually_delete_account.function_arn]
   }
 }
