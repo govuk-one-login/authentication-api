@@ -51,6 +51,8 @@ import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfAnyMfaMethodHasNullPriority;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfMfaMethodHasNullPriority;
 
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
@@ -471,6 +473,9 @@ public class DynamoService implements AuthenticationService {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         mfaMethod.setUpdated(dateTime);
 
+        logDebugIfMfaMethodHasNullPriority(
+                mfaMethod, "addMFAMethodSupportingMultiple (user should be migrated)");
+
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
                         .getItem(
@@ -484,6 +489,10 @@ public class DynamoService implements AuthenticationService {
             String email, List<MFAMethod> mfaMethods) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         mfaMethods.forEach(mfaMethod -> mfaMethod.setUpdated(dateTime));
+
+        logDebugIfAnyMfaMethodHasNullPriority(
+                mfaMethods,
+                "overwriteUserCredentialsMfaMethods (user is being migrated in the same transaction)");
 
         return dynamoUserCredentialsTable
                 .getItem(Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
