@@ -103,6 +103,7 @@ Conditions:
     ]
   UseOrchClientRegistry: !Equals [!Ref Environment, dev]
   UseSyncWaitForSpot: !Equals [!Ref Environment, dev]
+  UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2979,6 +2980,10 @@ Resources:
             ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED: !If
+            - UseSingleFactorAccountDeletion
+            - true
+            - false
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy

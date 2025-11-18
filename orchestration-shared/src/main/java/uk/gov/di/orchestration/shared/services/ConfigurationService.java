@@ -363,6 +363,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("USE_ORCH_CLIENT_REGISTRY_TABLE");
     }
 
+    public boolean isSingleFactorAccountDeletionEnabled() {
+        return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
+    }
+
     public String getStorageTokenSigningKeyAlias() {
         return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
