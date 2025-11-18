@@ -52,7 +52,8 @@ module "manually_delete_account" {
   slack_event_topic_arn = local.slack_event_sns_topic_arn
   dynatrace_secret      = local.dynatrace_secret
 
-  lambda_log_alarm_error_rate_threshold = 25
+  lambda_error_alarm_disabled      = true
+  lambda_error_rate_alarm_disabled = true
 
   handler_environment_variables = {
     JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"

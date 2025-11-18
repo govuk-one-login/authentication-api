@@ -202,3 +202,8 @@ variable "runbook_link" {
   type        = string
   default     = null
 }
+
+variable "lambda_error_alarm_disabled" {
+  type    = bool
+  default = false
+}
