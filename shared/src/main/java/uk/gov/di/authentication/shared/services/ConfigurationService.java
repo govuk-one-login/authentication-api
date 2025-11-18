@@ -739,7 +739,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public double getInternationalSmsQuotaThreshold() {
         return Double.parseDouble(
-                System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "5000"));
+                System.getenv().getOrDefault("INTERNATIONAL_SMS_QUOTA_THRESHOLD", "15000"));
     }
 
     public boolean isBulkAccountDeletionEnabled() {
