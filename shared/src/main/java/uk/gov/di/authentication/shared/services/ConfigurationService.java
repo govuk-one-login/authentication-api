@@ -734,7 +734,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public double getDomesticSmsQuotaThreshold() {
         return Double.parseDouble(
-                System.getenv().getOrDefault("DOMESTIC_SMS_QUOTA_THRESHOLD", "20000"));
+                System.getenv().getOrDefault("DOMESTIC_SMS_QUOTA_THRESHOLD", "600000"));
     }
 
     public double getInternationalSmsQuotaThreshold() {
