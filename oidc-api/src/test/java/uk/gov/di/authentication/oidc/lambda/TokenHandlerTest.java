@@ -11,6 +11,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.JWKGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -174,6 +175,11 @@ public class TokenHandlerTest {
     private TokenHandler handler;
     private final LocalDateTime clientSessionCreationTime = LocalDateTime.now();
     private final AuditService auditService = mock(AuditService.class);
+    private final JWKGenerator<ECKey> ecKeyGenerator =
+            new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256);
+
+    private record TestTokenSetup(
+            KeyPair keyPair, PrivateKeyJWT privateKeyJWT, ClientRegistry clientRegistry) {}
 
     @BeforeEach
     void setUp() {
@@ -208,24 +214,10 @@ public class TokenHandlerTest {
     @MethodSource("validVectorValues")
     void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        CLIENT_ID,
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
 
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
@@ -235,6 +227,11 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -251,7 +248,8 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, clientIdInHeader);
+                generateApiGatewayRequest(
+                        testTokenSetup.privateKeyJWT(), authCode, clientIdInHeader);
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -281,24 +279,9 @@ public class TokenHandlerTest {
     @Test
     void shouldReturn400ForTokenRequestIfClientIdInAuthCodeIsDifferentFromRequestParams()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        CLIENT_ID,
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
 
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl.Cm"));
@@ -309,6 +292,11 @@ public class TokenHandlerTest {
         setupClientSessions(
                 authCode, authenticationRequest.toParameters(), vtr, "a-different-client-id", null);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -325,7 +313,7 @@ public class TokenHandlerTest {
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -342,7 +330,6 @@ public class TokenHandlerTest {
             String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-
         KeyPair keyPair = generateRsaKeyPair();
         SignedJWT signedJWT =
                 generateIDToken(
@@ -350,19 +337,12 @@ public class TokenHandlerTest {
                         RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
                 generateClientRegistry(keyPair, CLIENT_ID)
                         .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
 
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        setupTokenServiceValidationMocks(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
@@ -372,6 +352,8 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -411,132 +393,6 @@ public class TokenHandlerTest {
         assertAuthCodeExchangeDataRetrieved(authCode);
     }
 
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = {CLIENT_ID})
-    void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
-            throws JOSEException, ParseException, TokenAuthInvalidException {
-        SignedJWT signedRefreshToken = createSignedRefreshToken();
-        KeyPair keyPair = generateRsaKeyPair();
-        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(
-                        new OIDCTokens("test-id-token-string", accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
-
-        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
-                .thenReturn(true);
-        when(tokenValidationService.validateRefreshTokenScopes(
-                        SCOPES.toStringList(), SCOPES.toStringList()))
-                .thenReturn(true);
-        OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem()
-                        .withJwtId(jwtId)
-                        .withAuthCode(AUTH_CODE)
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
-                        .withToken(refreshToken.getValue());
-        when(orchRefreshTokenService.getRefreshToken(jwtId))
-                .thenReturn(Optional.of(orchRefreshTokenItem));
-
-        when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(SCOPES.toStringList()),
-                        eq(RP_PAIRWISE_SUBJECT),
-                        eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.ES256),
-                        eq(AUTH_CODE)))
-                .thenReturn(tokenResponse);
-
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), clientId);
-        assertThat(result, hasStatus(200));
-        assertTrue(result.getBody().contains(refreshToken.getValue()));
-        assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = {CLIENT_ID})
-    void shouldReturn200ForSuccessfulRefreshTokenRequestWithRsaSigning(String clientId)
-            throws JOSEException, ParseException, TokenAuthInvalidException {
-        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-
-        SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
-        KeyPair keyPair = generateRsaKeyPair();
-        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
-        ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
-
-        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
-                .thenReturn(true);
-        when(tokenValidationService.validateRefreshTokenScopes(
-                        SCOPES.toStringList(), SCOPES.toStringList()))
-                .thenReturn(true);
-        OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem()
-                        .withJwtId(jwtId)
-                        .withAuthCode(AUTH_CODE)
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
-                        .withToken(refreshToken.getValue());
-        when(orchRefreshTokenService.getRefreshToken(jwtId))
-                .thenReturn(Optional.of(orchRefreshTokenItem));
-
-        when(tokenService.generateRefreshTokenResponse(
-                        eq(CLIENT_ID),
-                        eq(SCOPES.toStringList()),
-                        eq(RP_PAIRWISE_SUBJECT),
-                        eq(INTERNAL_PAIRWISE_SUBJECT),
-                        eq(JWSAlgorithm.RS256),
-                        eq(AUTH_CODE)))
-                .thenReturn(tokenResponse);
-
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), clientId);
-        assertThat(result, hasStatus(200));
-        assertTrue(result.getBody().contains(refreshToken.getValue()));
-        assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-    }
-
     @Test
     void shouldReturn400IfClientIsNotValid() throws JOSEException, TokenAuthInvalidException {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
@@ -572,49 +428,13 @@ public class TokenHandlerTest {
     @Test
     void shouldReturn400IfClientSessionIsNotValid()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        CLIENT_ID,
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
-        AuthenticationRequest authenticationRequest = generateAuthRequest();
-        List<VectorOfTrust> vtr =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        authenticationRequest.getCustomParameter("vtr"));
-        VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
-        String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().getValue();
-        when(tokenService.generateTokenResponse(
-                        CLIENT_ID,
-                        SCOPES,
-                        Map.of("nonce", NONCE),
-                        RP_PAIRWISE_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        null,
-                        false,
-                        JWSAlgorithm.ES256,
-                        CLIENT_SESSION_ID,
-                        vot,
-                        AUTH_TIME,
-                        authCode))
-                .thenReturn(tokenResponse);
         setupNoClientSessions();
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
@@ -641,7 +461,6 @@ public class TokenHandlerTest {
     void shouldReturn400IfSignatureOfPrivateKeyJWTCantBeVerified()
             throws JOSEException, TokenAuthInvalidException {
         var privateKeyJWT = generatePrivateKeyJWT(generateRsaKeyPair().getPrivate());
-
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
@@ -681,21 +500,13 @@ public class TokenHandlerTest {
 
     @Test
     void shouldReturn400IfAuthCodeIsNotFound() throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().toString();
         when(orchAuthCodeService.getExchangeDataForCode(authCode)).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -715,22 +526,18 @@ public class TokenHandlerTest {
     @Test
     void shouldReturn400IfRedirectUriDoesNotMatchRedirectUriFromAuthRequest()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().toString();
         List<VectorOfTrust> vtr = List.of(mock(VectorOfTrust.class));
         var authRequestParams = generateAuthRequest().toParameters();
         setupClientSessions(authCode, authRequestParams, vtr);
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
-                        privateKeyJWT, authCode, "http://invalid-redirect-uri", true);
+                        testTokenSetup.privateKeyJWT(),
+                        authCode,
+                        "http://invalid-redirect-uri",
+                        true);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
         verify(cloudwatchMetricsService, never())
@@ -758,26 +565,8 @@ public class TokenHandlerTest {
         @Test
         void shouldReturn200IfCodeChallengeAndVerifierIsCorrect()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            SignedJWT signedJWT =
-                    generateIDToken(
-                            CLIENT_ID,
-                            RP_PAIRWISE_SUBJECT,
-                            "issuer-url",
-                            new ECKeyGenerator(Curve.P_256)
-                                    .algorithm(JWSAlgorithm.ES256)
-                                    .generate());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-            when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-            when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                    .thenReturn(Optional.of(tokenClientAuthValidator));
-            when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                            anyString(), any()))
-                    .thenReturn(clientRegistry);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+            setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCorrectCodeChallenge();
@@ -787,6 +576,14 @@ public class TokenHandlerTest {
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
             String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+            SignedJWT signedJWT =
+                    generateIDToken(
+                            CLIENT_ID,
+                            RP_PAIRWISE_SUBJECT,
+                            "issuer-url",
+                            ecKeyGenerator.generate());
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
                             SCOPES,
@@ -803,7 +600,8 @@ public class TokenHandlerTest {
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(
+                            testTokenSetup.privateKeyJWT(), authCode);
             assertThat(result, hasStatus(200));
             verify(cloudwatchMetricsService)
                     .incrementCounter(
@@ -827,16 +625,14 @@ public class TokenHandlerTest {
         @Test
         void shouldReturn400IfPkceVerificationFailed()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
 
             when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                     .thenReturn(Optional.of(tokenClientAuthValidator));
             when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
             when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                             anyString(), any()))
-                    .thenReturn(clientRegistry);
+                    .thenReturn(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -844,7 +640,8 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(
+                            testTokenSetup.privateKeyJWT(), authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -873,16 +670,8 @@ public class TokenHandlerTest {
         @Test
         void shouldReturn400IfCodeChallengeMethodPlainIsUsed()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-            when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-            when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                    .thenReturn(Optional.of(tokenClientAuthValidator));
-            when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                            anyString(), any()))
-                    .thenReturn(clientRegistry);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+            setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -891,7 +680,8 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(
+                            testTokenSetup.privateKeyJWT(), authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -919,16 +709,14 @@ public class TokenHandlerTest {
         @MethodSource("invalidCodeVerifiers")
         void shouldReturn400IfCodeVerifierFailsSyntax(String codeVerifier)
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
 
             when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                     .thenReturn(Optional.of(tokenClientAuthValidator));
             when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
             when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                             anyString(), any()))
-                    .thenReturn(clientRegistry);
+                    .thenReturn(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -937,7 +725,7 @@ public class TokenHandlerTest {
 
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCodeVerifier(
-                            privateKeyJWT, authCode, codeVerifier);
+                            testTokenSetup.privateKeyJWT(), authCode, codeVerifier);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -964,16 +752,14 @@ public class TokenHandlerTest {
         @Test
         void shouldReturn400IfCodeVerifierDoesNotExistButCodeChallengeDoes()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
 
             when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                     .thenReturn(Optional.of(tokenClientAuthValidator));
             when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
             when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                             anyString(), any()))
-                    .thenReturn(clientRegistry);
+                    .thenReturn(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -981,7 +767,8 @@ public class TokenHandlerTest {
                     List.of(mock(VectorOfTrust.class)));
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCodeVerifier(privateKeyJWT, authCode, null);
+                    generateApiGatewayRequestWithCodeVerifier(
+                            testTokenSetup.privateKeyJWT(), authCode, null);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -1008,52 +795,20 @@ public class TokenHandlerTest {
         @Test
         void shouldReturn400IfCodeChallengeDoesNotExistButCodeVerifierDoes()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            SignedJWT signedJWT =
-                    generateIDToken(
-                            CLIENT_ID,
-                            RP_PAIRWISE_SUBJECT,
-                            "issuer-url",
-                            new ECKeyGenerator(Curve.P_256)
-                                    .algorithm(JWSAlgorithm.ES256)
-                                    .generate());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
 
-            when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-            when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                    .thenReturn(Optional.of(tokenClientAuthValidator));
-            when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                            anyString(), any()))
-                    .thenReturn(clientRegistry);
+            setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCodeChallenge(null);
             List<VectorOfTrust> vtr =
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             authenticationRequest.getCustomParameter("vtr"));
-            VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
-            String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
-            when(tokenService.generateTokenResponse(
-                            CLIENT_ID,
-                            SCOPES,
-                            Map.of("nonce", NONCE),
-                            RP_PAIRWISE_SUBJECT,
-                            INTERNAL_PAIRWISE_SUBJECT,
-                            null,
-                            false,
-                            JWSAlgorithm.ES256,
-                            CLIENT_SESSION_ID,
-                            vot,
-                            AUTH_TIME,
-                            authCode))
-                    .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequestWithCorrectCodeVerifier(privateKeyJWT, authCode);
+                    generateApiGatewayRequestWithCorrectCodeVerifier(
+                            testTokenSetup.privateKeyJWT(), authCode);
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -1078,28 +833,10 @@ public class TokenHandlerTest {
         }
 
         @Test
-        void shouldNotValidateCodeIfCodeChallengeAndCodeVerifierDoesNotExist()
+        void shouldReturn200WhenNeitherCodeChallengeNorCodeVerifierExists()
                 throws JOSEException, TokenAuthInvalidException {
-            KeyPair keyPair = generateRsaKeyPair();
-            SignedJWT signedJWT =
-                    generateIDToken(
-                            CLIENT_ID,
-                            RP_PAIRWISE_SUBJECT,
-                            "issuer-url",
-                            new ECKeyGenerator(Curve.P_256)
-                                    .algorithm(JWSAlgorithm.ES256)
-                                    .generate());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-            when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-            when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                    .thenReturn(Optional.of(tokenClientAuthValidator));
-            when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                            anyString(), any()))
-                    .thenReturn(clientRegistry);
+            var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+            setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCodeChallenge(null);
@@ -1109,6 +846,14 @@ public class TokenHandlerTest {
             VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
             setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
             String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+            SignedJWT signedJWT =
+                    generateIDToken(
+                            CLIENT_ID,
+                            RP_PAIRWISE_SUBJECT,
+                            "issuer-url",
+                            ecKeyGenerator.generate());
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
             when(tokenService.generateTokenResponse(
                             CLIENT_ID,
                             SCOPES,
@@ -1125,7 +870,7 @@ public class TokenHandlerTest {
                     .thenReturn(tokenResponse);
 
             APIGatewayProxyResponseEvent result =
-                    generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                    generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
             assertThat(result, hasStatus(200));
             verify(cloudwatchMetricsService)
                     .incrementCounter(
@@ -1206,25 +951,8 @@ public class TokenHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        DOC_APP_CLIENT_ID.getValue(),
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, DOC_APP_CLIENT_ID.getValue());
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        var testTokenSetup = createStandardTokenSetup(DOC_APP_CLIENT_ID.getValue());
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().toString();
         AuthorizationRequest authenticationRequest = generateRequestObjectAuthRequest();
         List<VectorOfTrust> vtr =
@@ -1240,6 +968,11 @@ public class TokenHandlerTest {
         String clientID = DOC_APP_CLIENT_ID.getValue();
         Scope authRequestScopes = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         clientID,
                         authRequestScopes,
@@ -1255,7 +988,7 @@ public class TokenHandlerTest {
                         authCode))
                 .thenReturn(tokenResponse);
 
-        var result = generateApiGatewayRequest(privateKeyJWT, authCode, true);
+        var result = generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
 
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
@@ -1296,19 +1029,12 @@ public class TokenHandlerTest {
                         RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
                 generateClientRegistry(keyPair, CLIENT_ID)
                         .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
 
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        setupTokenServiceValidationMocks(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -1320,6 +1046,8 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
                         eq(SCOPES),
@@ -1348,27 +1076,12 @@ public class TokenHandlerTest {
     @Test
     void shouldReturnClaimsForIdentityJourney() throws JOSEException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-
         KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        CLIENT_ID,
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
                 generateClientRegistry(keyPair, CLIENT_ID)
                         .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        setupTokenServiceValidationMocks(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -1380,6 +1093,14 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        RP_PAIRWISE_SUBJECT,
+                        "issuer-url",
+                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         eq(CLIENT_ID),
                         eq(SCOPES),
@@ -1410,24 +1131,8 @@ public class TokenHandlerTest {
     @Test
     void shouldReturn500ForTokenRequestIfOrchAuthCodeGetExchangeDataThrowsException()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        SignedJWT signedJWT =
-                generateIDToken(
-                        CLIENT_ID,
-                        RP_PAIRWISE_SUBJECT,
-                        "issuer-url",
-                        new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
-        OIDCTokenResponse tokenResponse =
-                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest = generateAuthRequest();
         List<VectorOfTrust> vtr =
@@ -1436,6 +1141,11 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -1457,7 +1167,7 @@ public class TokenHandlerTest {
                                 "Some unchecked exception during orch auth code exchange data retrieval."));
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
@@ -1470,76 +1180,10 @@ public class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn500ForRefreshTokenRequestIfSaveOrchAccessTokenFails()
-            throws JOSEException, TokenAuthInvalidException, ParseException {
-
-        SignedJWT signedRefreshToken = createSignedRefreshToken();
-        KeyPair keyPair = generateRsaKeyPair();
-        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-        String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
-
-        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
-                .thenReturn(true);
-        when(tokenValidationService.validateRefreshTokenScopes(
-                        SCOPES.toStringList(), SCOPES.toStringList()))
-                .thenReturn(true);
-        OrchRefreshTokenItem orchRefreshTokenItem =
-                new OrchRefreshTokenItem()
-                        .withJwtId(jwtId)
-                        .withAuthCode(AUTH_CODE)
-                        .withToken(refreshToken.getValue())
-                        .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
-        when(orchRefreshTokenService.getRefreshToken(jwtId))
-                .thenReturn(Optional.of(orchRefreshTokenItem));
-
-        when(tokenService.generateRefreshTokenResponse(
-                        CLIENT_ID,
-                        SCOPES.toStringList(),
-                        RP_PAIRWISE_SUBJECT,
-                        INTERNAL_PAIRWISE_SUBJECT,
-                        JWSAlgorithm.ES256,
-                        AUTH_CODE))
-                .thenThrow(OrchAccessTokenException.class);
-
-        APIGatewayProxyResponseEvent result =
-                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), CLIENT_ID);
-        assertThat(result, hasStatus(500));
-        assertThat(result, hasBody("Internal server error"));
-
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-    }
-
-    @Test
     void shouldReturn500ForTokenRequestIfSaveOrchAccessTokenFails()
             throws JOSEException, TokenAuthInvalidException {
-        KeyPair keyPair = generateRsaKeyPair();
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-
-        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
-                .thenReturn(Optional.of(tokenClientAuthValidator));
-        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
-                        anyString(), any()))
-                .thenReturn(clientRegistry);
+        var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
+        setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl"));
@@ -1565,7 +1209,7 @@ public class TokenHandlerTest {
                 .thenThrow(OrchAccessTokenException.class);
 
         APIGatewayProxyResponseEvent result =
-                generateApiGatewayRequest(privateKeyJWT, authCode, true);
+                generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
 
@@ -1584,6 +1228,203 @@ public class TokenHandlerTest {
                         OIDC_TOKEN_GENERATED,
                         CLIENT_ID,
                         auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
+    }
+
+    @Nested
+    class RefreshTokenRequest {
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = {CLIENT_ID})
+        void shouldReturn200ForSuccessfulRequest(String clientId)
+                throws JOSEException, ParseException, TokenAuthInvalidException {
+            SignedJWT signedRefreshToken = createSignedRefreshToken();
+            KeyPair keyPair = generateRsaKeyPair();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(
+                            new OIDCTokens(
+                                    "test-id-token-string", accessToken, refreshTokenInRequest));
+            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
+
+            setupTokenServiceValidationMocks(clientRegistry);
+
+            when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                            refreshTokenInRequest))
+                    .thenReturn(true);
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
+            OrchRefreshTokenItem orchRefreshTokenItem =
+                    new OrchRefreshTokenItem()
+                            .withJwtId(jwtId)
+                            .withAuthCode(AUTH_CODE)
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                            .withToken(refreshTokenInRequest.getValue());
+            when(orchRefreshTokenService.getRefreshToken(jwtId))
+                    .thenReturn(Optional.of(orchRefreshTokenItem));
+
+            when(tokenService.generateRefreshTokenResponse(
+                            eq(CLIENT_ID),
+                            eq(SCOPES.toStringList()),
+                            eq(RP_PAIRWISE_SUBJECT),
+                            eq(INTERNAL_PAIRWISE_SUBJECT),
+                            eq(JWSAlgorithm.ES256),
+                            eq(AUTH_CODE)))
+                    .thenReturn(tokenResponse);
+
+            APIGatewayProxyResponseEvent result =
+                    generateApiGatewayRefreshRequest(
+                            privateKeyJWT, refreshTokenInRequest.getValue(), clientId);
+            assertThat(result, hasStatus(200));
+            assertTrue(result.getBody().contains(refreshTokenInRequest.getValue()));
+            assertTrue(result.getBody().contains(accessToken.getValue()));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    CLIENT.getValue(),
+                                    CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = {CLIENT_ID})
+        void shouldReturn200ForSuccessfulRequestWithRsaSigning(String clientId)
+                throws JOSEException, ParseException, TokenAuthInvalidException {
+            when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+
+            SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
+            KeyPair keyPair = generateRsaKeyPair();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(new OIDCTokens(accessToken, refreshTokenInRequest));
+            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
+            ClientRegistry clientRegistry =
+                    generateClientRegistry(keyPair, CLIENT_ID)
+                            .withIdTokenSigningAlgorithm("RSA256");
+
+            setupTokenServiceValidationMocks(clientRegistry);
+
+            when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                            refreshTokenInRequest))
+                    .thenReturn(true);
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
+            OrchRefreshTokenItem orchRefreshTokenItem =
+                    new OrchRefreshTokenItem()
+                            .withJwtId(jwtId)
+                            .withAuthCode(AUTH_CODE)
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                            .withToken(refreshTokenInRequest.getValue());
+            when(orchRefreshTokenService.getRefreshToken(jwtId))
+                    .thenReturn(Optional.of(orchRefreshTokenItem));
+
+            when(tokenService.generateRefreshTokenResponse(
+                            eq(CLIENT_ID),
+                            eq(SCOPES.toStringList()),
+                            eq(RP_PAIRWISE_SUBJECT),
+                            eq(INTERNAL_PAIRWISE_SUBJECT),
+                            eq(JWSAlgorithm.RS256),
+                            eq(AUTH_CODE)))
+                    .thenReturn(tokenResponse);
+
+            APIGatewayProxyResponseEvent result =
+                    generateApiGatewayRefreshRequest(
+                            privateKeyJWT, refreshTokenInRequest.getValue(), clientId);
+            assertThat(result, hasStatus(200));
+            assertTrue(result.getBody().contains(refreshTokenInRequest.getValue()));
+            assertTrue(result.getBody().contains(accessToken.getValue()));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    CLIENT.getValue(),
+                                    CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+        }
+
+        @Test
+        void shouldReturn500IfSaveOrchAccessTokenFails()
+                throws JOSEException, TokenAuthInvalidException, ParseException {
+
+            SignedJWT signedRefreshToken = createSignedRefreshToken();
+            KeyPair keyPair = generateRsaKeyPair();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
+            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+            ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
+
+            setupTokenServiceValidationMocks(clientRegistry);
+
+            when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
+                            refreshTokenInRequest))
+                    .thenReturn(true);
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
+            OrchRefreshTokenItem orchRefreshTokenItem =
+                    new OrchRefreshTokenItem()
+                            .withJwtId(jwtId)
+                            .withAuthCode(AUTH_CODE)
+                            .withToken(refreshTokenInRequest.getValue())
+                            .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
+            when(orchRefreshTokenService.getRefreshToken(jwtId))
+                    .thenReturn(Optional.of(orchRefreshTokenItem));
+
+            when(tokenService.generateRefreshTokenResponse(
+                            CLIENT_ID,
+                            SCOPES.toStringList(),
+                            RP_PAIRWISE_SUBJECT,
+                            INTERNAL_PAIRWISE_SUBJECT,
+                            JWSAlgorithm.ES256,
+                            AUTH_CODE))
+                    .thenThrow(OrchAccessTokenException.class);
+
+            APIGatewayProxyResponseEvent result =
+                    generateApiGatewayRefreshRequest(
+                            privateKeyJWT, refreshTokenInRequest.getValue(), CLIENT_ID);
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasBody("Internal server error"));
+
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                            Map.of(
+                                    ENVIRONMENT.getValue(),
+                                    configurationService.getEnvironment(),
+                                    CLIENT.getValue(),
+                                    CLIENT_ID));
+            verify(auditService, never())
+                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+        }
+    }
+
+    private void setupTokenServiceValidationMocks(ClientRegistry clientRegistry)
+            throws TokenAuthInvalidException {
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+    }
+
+    private TestTokenSetup createStandardTokenSetup(String clientId) throws JOSEException {
+        KeyPair keyPair = generateRsaKeyPair();
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, clientId);
+        return new TestTokenSetup(keyPair, privateKeyJWT, clientRegistry);
     }
 
     private void setupClientSessions(
