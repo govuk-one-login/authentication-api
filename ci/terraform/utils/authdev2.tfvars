@@ -22,8 +22,3 @@ performance_tuning = {
 }
 
 email_check_results_writer_provisioned_concurrency = 0
-
-# SMS Quota Monitoring
-sms_quota_monitor_schedule_rate   = "rate(1 minute)"
-domestic_sms_quota_threshold      = "600000"
-international_sms_quota_threshold = "15000"
