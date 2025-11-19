@@ -153,7 +153,6 @@ Mappings:
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "No"
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Architectures:
@@ -294,6 +293,35 @@ Resources:
         - AttributeName: InternalPairwiseId
           KeyType: HASH
       DeletionProtectionEnabled: false
+      ResourcePolicy:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: !Sub
+                  - "arn:aws:iam::${DataStoreAccountId}:root"
+                  - DataStoreAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ],
+                        dataStoreAccountId,
+                      ]
+              Action:
+                - "dynamodb:UpdateItem"
+                - "dynamodb:Scan"
+                - "dynamodb:Query"
+                - "dynamodb:PutItem"
+                - "dynamodb:DeleteItem"
+                - "dynamodb:Get*"
+                - "dynamodb:DescribeTable"
+                - "dynamodb:BatchWriteItem"
+                - "dynamodb:BatchGetItem"
+              Resource: "*"
       Tags:
         - Key: Environment
           Value: !Ref Environment
