@@ -295,12 +295,18 @@ public class AuthenticationCallbackHandler
                 attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, newClientSessionId);
                 generateNewSession(orchSession, newSessionId, newClientSessionId);
                 generateNewClientSession(orchClientSession, newClientSessionId);
+                var newSessionCookie =
+                        CookieHelper.buildCookieString(
+                                CookieHelper.SESSION_COOKIE_NAME,
+                                newSessionId + "." + newClientSessionId,
+                                configurationService.getSessionCookieMaxAge(),
+                                configurationService.getSessionCookieAttributes(),
+                                configurationService.getDomainName());
                 return generateApiGatewayProxyResponse(
                         302,
                         "",
                         Map.of(ResponseHeaders.LOCATION, authFrontend.errorURI().toString()),
-                        null);
-                // TODO Set cookies
+                        Map.of(ResponseHeaders.SET_COOKIE, List.of(newSessionCookie)));
                 // TODO: ATO-2109 Redirect to auth frontend on success
             }
 
