@@ -3003,6 +3003,7 @@ Resources:
         - !Ref StorageTokenSigningKmsAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
+        - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
         - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadWriteAndDeleteAccessPolicy
