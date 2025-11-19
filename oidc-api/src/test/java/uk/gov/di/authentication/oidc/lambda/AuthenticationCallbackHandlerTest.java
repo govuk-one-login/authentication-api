@@ -668,29 +668,6 @@ class AuthenticationCallbackHandlerTest {
                         pair("credential_trust_level", "MEDIUM_LEVEL"));
     }
 
-    private static Stream<Arguments> currentCredentialStrengthParams() {
-        return Stream.of(
-                Arguments.of(
-                        null, CredentialTrustLevel.MEDIUM_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL),
-                Arguments.of(null, CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL),
-                Arguments.of(
-                        CredentialTrustLevel.MEDIUM_LEVEL,
-                        CredentialTrustLevel.LOW_LEVEL,
-                        CredentialTrustLevel.MEDIUM_LEVEL));
-    }
-
     // TODO: ATO-1218: Following the handler changes, update this method to test
     // shouldRedirectToFrontendErrorPageWhenCallToOrchAuthCodeServiceThrowsException.
     @Test
