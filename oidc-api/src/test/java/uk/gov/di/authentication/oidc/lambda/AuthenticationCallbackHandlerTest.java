@@ -95,6 +95,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -1286,6 +1287,13 @@ class AuthenticationCallbackHandlerTest {
                 var response = handler.handleRequest(event, CONTEXT);
                 assertThat(response, hasStatus(302));
                 assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
+                assertThat(
+                        response.getMultiValueHeaders().get("Set-Cookie"),
+                        hasItem(
+                                containsString(
+                                        String.format(
+                                                "gs=%s.%s",
+                                                NEW_SESSION_ID, NEW_CLIENT_SESSION_ID))));
 
                 mockLogHelper.verify(() -> LogLineHelper.attachSessionIdToLogs(NEW_SESSION_ID));
                 mockLogHelper.verify(
