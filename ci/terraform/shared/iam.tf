@@ -65,6 +65,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       data.aws_dynamodb_table.user_profile_table[0].arn,
       data.aws_dynamodb_table.stub_account_intevention_table[0].arn,
       data.aws_dynamodb_table.account_modifiers_table[0].arn,
+      "arn:aws:dynamodb:eu-west-2:${var.auth_new_account_id}:table/${var.environment}-stub-account-interventions",
     ]
   }
 
