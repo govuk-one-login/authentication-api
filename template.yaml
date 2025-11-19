@@ -5339,6 +5339,149 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Client Registry Migration Lambda
+  ClientRegistryMigrationFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: Lambda is manually invoked so DLQ not needed
+    Properties:
+      FunctionName: !Sub ${Environment}-ClientRegistryMigrationFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
+      Handler: uk.gov.di.authentication.oidc.lambda.ClientRegistryMigrationHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref ClientRegistryMigrationFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          DYNAMO_ARN_PREFIX: !Sub
+            - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  ClientRegistryMigrationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-client-registry-migration-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  ClientRegistryMigrationFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ClientRegistryMigrationFunctionLogGroup
+
+  ClientRegistryMigrationFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-client-registry-migration-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref ClientRegistryMigrationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-client-registry-migration-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  ClientRegistryMigrationFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} client registry migration lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-client-registry-migration-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-client-registry-migration-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  ClientRegistryMigrationFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-client-registry-migration-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} client registry migration lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-ClientRegistryMigrationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-ClientRegistryMigrationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   AccountInterventionsServiceUriSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
