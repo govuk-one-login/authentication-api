@@ -109,7 +109,9 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
             validateUserExists(request, userContext, input)
                 .flatMap(profile -> createUserPermissionContext(profile, userContext))
                 .flatMap(ctx -> checkPasswordPermission(ctx, journeyType))
-                .flatMap(ctx -> handleDecision(ctx, request, userContext, journeyType, input)),
+                .flatMap(ctx -> validateCredentials(ctx, request, userContext, journeyType, input))
+                .flatMap(ctx -> retrieveMfaMethods(ctx, request, userContext))
+                .flatMap(ctx -> buildLoginResponse(ctx, request, userContext)),
             error -> generateApiGatewayProxyErrorResponse(error.statusCode(), error.errorResponse()),
             response -> response
         );
@@ -166,23 +168,67 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
         return Result.success(context);
     }
 
-    private Result<LoginError, APIGatewayProxyResponseEvent> handleDecision(
-            UserPermissionContext context, 
-            LoginRequest request, 
-            UserContext userContext, 
+    private Result<LoginError, LoginContext> validateCredentials(
+            UserPermissionContext permissionContext,
+            LoginRequest request,
+            UserContext userContext,
             JourneyType journeyType,
             APIGatewayProxyRequestEvent input) {
         
         var userProfile = authenticationService.getUserProfileByEmailMaybe(request.getEmail()).get();
         
         if (!credentialsAreValid(request, userProfile)) {
-            return handleInvalidCredentials(context, userProfile, userContext, journeyType, input);
+            return handleInvalidCredentials(permissionContext, userProfile, userContext, journeyType, input);
         }
         
-        return handleValidCredentials(request, userContext, userProfile, journeyType, context, input);
+        recordSuccessMetrics(userContext, userProfile);
+        return Result.success(new LoginContext(permissionContext, userProfile, userContext));
     }
 
-    private Result<LoginError, APIGatewayProxyResponseEvent> handleInvalidCredentials(
+    private Result<LoginError, LoginContext> retrieveMfaMethods(LoginContext context, LoginRequest request, UserContext userContext) {
+        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(context.userProfile().getEmail());
+        if (retrieveMfaMethods.isFailure()) {
+            return Result.failure(new LoginError(500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
+        }
+        
+        var mfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrieveMfaMethods.getSuccess());
+        if (mfaMethodResponses.isFailure()) {
+            return Result.failure(new LoginError(500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
+        }
+        
+        return Result.success(context.withMfaMethodResponses(mfaMethodResponses.getSuccess()));
+    }
+
+    private Result<LoginError, APIGatewayProxyResponseEvent> buildLoginResponse(LoginContext context, LoginRequest request, UserContext userContext) {
+        var userCredentials = userContext.getUserCredentials().get();
+        var authSession = userContext.getAuthSession();
+        var userProfile = context.userProfile();
+        
+        var userMfaDetail = getUserMFADetail(
+            authSession.getRequestedCredentialStrength(),
+            userCredentials,
+            userProfile);
+        
+        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(authSession, userProfile);
+        boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+        
+        String redactedPhoneNumber = userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
+            ? redactPhoneNumber(userMfaDetail.phoneNumber()) : null;
+        
+        try {
+            var response = generateApiGatewayProxyResponse(200, new LoginResponse(
+                redactedPhoneNumber,
+                userMfaDetail,
+                termsAndConditionsAccepted,
+                context.mfaMethodResponses(),
+                isPasswordChangeRequired));
+            return Result.success(response);
+        } catch (JsonException e) {
+            return Result.failure(new LoginError(400, ErrorResponse.REQUEST_MISSING_PARAMS));
+        }
+    }
+
+    private Result<LoginError, LoginContext> handleInvalidCredentials(
             UserPermissionContext context,
             UserProfile userProfile,
             UserContext userContext,
@@ -204,14 +250,7 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
         return Result.failure(new LoginError(401, ErrorResponse.INVALID_LOGIN_CREDS));
     }
 
-    private Result<LoginError, APIGatewayProxyResponseEvent> handleValidCredentials(
-            LoginRequest request,
-            UserContext userContext,
-            UserProfile userProfile,
-            JourneyType journeyType,
-            UserPermissionContext context,
-            APIGatewayProxyRequestEvent input) {
-        
+    private void recordSuccessMetrics(UserContext userContext, UserProfile userProfile) {
         var userCredentials = userContext.getUserCredentials().get();
         var authSession = userContext.getAuthSession();
         
@@ -220,42 +259,13 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
             userCredentials,
             userProfile);
         
-        var clientId = authSession.getClientId();
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccessWithoutMfa(
                 AuthSessionItem.AccountState.EXISTING,
-                clientId,
+                authSession.getClientId(),
                 authSession.getClientName(),
                 "P0",
                 testUserHelper.isTestJourney(userProfile.getEmail()));
-        }
-        
-        var retrieveMfaMethods = mfaMethodsService.getMfaMethods(userProfile.getEmail());
-        if (retrieveMfaMethods.isFailure()) {
-            return Result.failure(new LoginError(500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
-        }
-        
-        var mfaMethodResponses = convertMfaMethodsToMfaMethodResponse(retrieveMfaMethods.getSuccess());
-        if (mfaMethodResponses.isFailure()) {
-            return Result.failure(new LoginError(500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
-        }
-        
-        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(authSession, userProfile);
-        boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
-        
-        String redactedPhoneNumber = userMfaDetail.phoneNumber() != null && userMfaDetail.mfaMethodVerified()
-            ? redactPhoneNumber(userMfaDetail.phoneNumber()) : null;
-        
-        try {
-            var response = generateApiGatewayProxyResponse(200, new LoginResponse(
-                redactedPhoneNumber,
-                userMfaDetail,
-                termsAndConditionsAccepted,
-                mfaMethodResponses.getSuccess(),
-                isPasswordChangeRequired));
-            return Result.success(response);
-        } catch (JsonException e) {
-            return Result.failure(new LoginError(400, ErrorResponse.REQUEST_MISSING_PARAMS));
         }
     }
 
@@ -294,4 +304,19 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private record LoginError(int statusCode, ErrorResponse errorResponse) {}
+    
+    private record LoginContext(
+        UserPermissionContext permissionContext,
+        UserProfile userProfile,
+        UserContext userContext,
+        Object mfaMethodResponses
+    ) {
+        public LoginContext(UserPermissionContext permissionContext, UserProfile userProfile, UserContext userContext) {
+            this(permissionContext, userProfile, userContext, null);
+        }
+        
+        public LoginContext withMfaMethodResponses(Object mfaMethodResponses) {
+            return new LoginContext(permissionContext, userProfile, userContext, mfaMethodResponses);
+        }
+    }
 }
