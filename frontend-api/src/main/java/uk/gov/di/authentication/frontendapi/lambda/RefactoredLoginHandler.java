@@ -57,6 +57,46 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
+/**
+ * Refactored LoginHandler demonstrating method chaining with the existing Result pattern.
+ * This shows how the complex nested logic can be simplified using functional composition.
+ * 
+ * TESTING APPROACH:
+ * Use TDD with public methods first, then extract private methods during refactoring.
+ * Test all scenarios through handleRequestWithUserContext by mocking dependencies
+ * and crafting specific inputs to exercise each validation path.
+ * 
+ * BENEFITS OF THIS REFACTOR:
+ * 
+ * Code Structure & Readability:
+ * - Eliminates deep nesting: Original had 4+ levels of if/else, now linear chain
+ * - Clear flow: setupLogging -> validateUserExists -> createContext -> checkPermission -> validateCredentials -> retrieveMfaMethods -> buildResponse
+ * - Single responsibility: Each method does one thing and returns a Result
+ * - Reduced complexity: Main method is 1 statement vs original's 200+ lines
+ * 
+ * Error Handling:
+ * - Consistent error propagation: All errors flow through Result type automatically
+ * - No scattered return statements: Error handling centralized in fold() call
+ * - Type-safe errors: LoginError encapsulates status code and ErrorResponse
+ * - Early termination: Failed steps automatically short-circuit the chain
+ * 
+ * Maintainability:
+ * - Composable functions: Easy to add/remove/reorder validation steps
+ * - Immutable data flow: No shared mutable state between steps
+ * - Clear contracts: Each method's input/output types are explicit
+ * - Easier debugging: Can inspect Result at each step in the chain
+ * 
+ * Testing Benefits:
+ * - Black-box testing: Test behavior through public interface, not implementation details
+ * - Mockable dependencies: Pure functions easier to mock/stub at service layer
+ * - Predictable outcomes: Given inputs always produce same Result
+ * - Edge case testing: Craft inputs to trigger specific validation failures (e.g., missing user)
+ * - Behavioral verification: Test what the handler does, not how it does it
+ * - Refactoring safety: Private method changes don't break tests
+ * - Reduced test complexity: Single entry point with clear input/output contract
+ * - TDD-friendly: Start with public methods, extract private methods during refactoring
+ * - Better encapsulation: Private methods remain implementation details
+ */
 public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -101,23 +141,27 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
             LoginRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        var journeyType = request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
-        attachLogFieldToLogs(JOURNEY_TYPE, journeyType != null ? journeyType.getValue() : "missing");
-
         return fold(
-            validateUserExists(request, userContext, input)
-                .flatMap(profile -> createUserPermissionContext(profile, userContext))
-                .flatMap(ctx -> checkPasswordPermission(ctx, journeyType))
-                .flatMap(ctx -> validateCredentials(ctx, request, userContext, journeyType, input))
-                .flatMap(ctx -> retrieveMfaMethods(ctx, request, userContext))
-                .flatMap(ctx -> buildLoginResponse(ctx, request, userContext)),
+            setupLogging(request, userContext)
+                .flatMap(journeyType -> validateUserExists(request, userContext, input, journeyType))
+                .flatMap(this::createUserPermissionContext)
+                .flatMap(this::checkPasswordPermission)
+                .flatMap(ctx -> validateCredentials(ctx, request, input))
+                .flatMap(this::retrieveMfaMethods)
+                .flatMap(ctx -> buildLoginResponse(ctx, request)),
             error -> generateApiGatewayProxyErrorResponse(error.statusCode(), error.errorResponse()),
             response -> response
         );
     }
 
-    private Result<LoginError, UserProfile> validateUserExists(LoginRequest request, UserContext userContext, APIGatewayProxyRequestEvent input) {
+    private Result<LoginError, JourneyType> setupLogging(LoginRequest request, UserContext userContext) {
+        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        var journeyType = request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
+        attachLogFieldToLogs(JOURNEY_TYPE, journeyType != null ? journeyType.getValue() : "missing");
+        return Result.success(journeyType);
+    }
+
+    private Result<LoginError, LoginContext> validateUserExists(LoginRequest request, UserContext userContext, APIGatewayProxyRequestEvent input, JourneyType journeyType) {
         var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(request.getEmail());
         
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
@@ -133,22 +177,24 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
             return Result.failure(new LoginError(400, ErrorResponse.ACCT_DOES_NOT_EXIST));
         }
         
-        return Result.success(userProfileMaybe.get());
+        return Result.success(new LoginContext(null, userProfileMaybe.get(), userContext, journeyType, null));
     }
 
-    private Result<LoginError, UserPermissionContext> createUserPermissionContext(UserProfile userProfile, UserContext userContext) {
+    private Result<LoginError, LoginContext> createUserPermissionContext(LoginContext context) {
         var calculatedPairwiseId = ClientSubjectHelper.getSubject(
-            userProfile, userContext.getAuthSession(), authenticationService).getValue();
+            context.userProfile(), context.userContext().getAuthSession(), authenticationService).getValue();
         
-        return Result.success(new UserPermissionContext(
-            userProfile.getSubjectID(),
+        var permissionContext = new UserPermissionContext(
+            context.userProfile().getSubjectID(),
             calculatedPairwiseId,
-            userProfile.getEmail(),
-            null));
+            context.userProfile().getEmail(),
+            null);
+            
+        return Result.success(context.withPermissionContext(permissionContext));
     }
 
-    private Result<LoginError, UserPermissionContext> checkPasswordPermission(UserPermissionContext context, JourneyType journeyType) {
-        var decisionResult = permissionDecisionManager.canReceivePassword(journeyType, context);
+    private Result<LoginError, LoginContext> checkPasswordPermission(LoginContext context) {
+        var decisionResult = permissionDecisionManager.canReceivePassword(context.journeyType(), context.permissionContext());
         
         if (decisionResult.isFailure()) {
             LOG.error("Failure to get canReceivePassword decision due to {}", decisionResult.getFailure());
@@ -169,23 +215,19 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Result<LoginError, LoginContext> validateCredentials(
-            UserPermissionContext permissionContext,
+            LoginContext context,
             LoginRequest request,
-            UserContext userContext,
-            JourneyType journeyType,
             APIGatewayProxyRequestEvent input) {
         
-        var userProfile = authenticationService.getUserProfileByEmailMaybe(request.getEmail()).get();
-        
-        if (!credentialsAreValid(request, userProfile)) {
-            return handleInvalidCredentials(permissionContext, userProfile, userContext, journeyType, input);
+        if (!credentialsAreValid(request, context.userProfile())) {
+            return handleInvalidCredentials(context, input);
         }
         
-        recordSuccessMetrics(userContext, userProfile);
-        return Result.success(new LoginContext(permissionContext, userProfile, userContext));
+        recordSuccessMetrics(context.userContext(), context.userProfile());
+        return Result.success(context);
     }
 
-    private Result<LoginError, LoginContext> retrieveMfaMethods(LoginContext context, LoginRequest request, UserContext userContext) {
+    private Result<LoginError, LoginContext> retrieveMfaMethods(LoginContext context) {
         var retrieveMfaMethods = mfaMethodsService.getMfaMethods(context.userProfile().getEmail());
         if (retrieveMfaMethods.isFailure()) {
             return Result.failure(new LoginError(500, ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
@@ -199,9 +241,9 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
         return Result.success(context.withMfaMethodResponses(mfaMethodResponses.getSuccess()));
     }
 
-    private Result<LoginError, APIGatewayProxyResponseEvent> buildLoginResponse(LoginContext context, LoginRequest request, UserContext userContext) {
-        var userCredentials = userContext.getUserCredentials().get();
-        var authSession = userContext.getAuthSession();
+    private Result<LoginError, APIGatewayProxyResponseEvent> buildLoginResponse(LoginContext context, LoginRequest request) {
+        var userCredentials = context.userContext().getUserCredentials().get();
+        var authSession = context.userContext().getAuthSession();
         var userProfile = context.userProfile();
         
         var userMfaDetail = getUserMFADetail(
@@ -229,15 +271,12 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Result<LoginError, LoginContext> handleInvalidCredentials(
-            UserPermissionContext context,
-            UserProfile userProfile,
-            UserContext userContext,
-            JourneyType journeyType,
+            LoginContext context,
             APIGatewayProxyRequestEvent input) {
         
-        userActionsManager.incorrectPasswordReceived(journeyType, context);
+        userActionsManager.incorrectPasswordReceived(context.journeyType(), context.permissionContext());
         
-        var isReauthJourney = journeyType == JourneyType.REAUTHENTICATION;
+        var isReauthJourney = context.journeyType() == JourneyType.REAUTHENTICATION;
         
         if (isReauthJourney) {
             cloudwatchMetricsService.incrementCounter(
@@ -309,14 +348,15 @@ public class RefactoredLoginHandler extends BaseFrontendHandler<LoginRequest>
         UserPermissionContext permissionContext,
         UserProfile userProfile,
         UserContext userContext,
+        JourneyType journeyType,
         Object mfaMethodResponses
     ) {
-        public LoginContext(UserPermissionContext permissionContext, UserProfile userProfile, UserContext userContext) {
-            this(permissionContext, userProfile, userContext, null);
+        public LoginContext withPermissionContext(UserPermissionContext permissionContext) {
+            return new LoginContext(permissionContext, userProfile, userContext, journeyType, mfaMethodResponses);
         }
         
         public LoginContext withMfaMethodResponses(Object mfaMethodResponses) {
-            return new LoginContext(permissionContext, userProfile, userContext, mfaMethodResponses);
+            return new LoginContext(permissionContext, userProfile, userContext, journeyType, mfaMethodResponses);
         }
     }
 }
