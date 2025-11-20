@@ -173,6 +173,11 @@ Conditions:
       ],
     ]
 
+  IsStaging:
+    Fn::Equals:
+      - !Ref Environment
+      - staging
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -591,6 +596,8 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
+        DT_LAMBDA_SNAPSTART_COMPATIBLE: !If [IsStaging, true, !Ref AWS::NoValue]
+        DT_LAMBDA_INIT_DELAY: !If [IsStaging, 10000, !Ref AWS::NoValue] # 10 second delay
         OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING: "true"
         JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     KmsKeyArn: !GetAtt MainKmsKey.Arn
