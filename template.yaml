@@ -16,6 +16,9 @@ Parameters:
   Environment:
     Type: String
     Description: The name of the environment to deploy to
+  SubEnvironment:
+    Type: String
+    Description: When deploying to dev, optionally configure which sub-environment to deploy to i.e. orchdev1, orchdev2. This feature is not available for route-to-live environments.
   VpcStackName:
     Type: String
     Description: The name of the stack used to create the VPC
@@ -146,6 +149,30 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 3c2cb819-4dd1-4fbc-90f0-cbdc3ec24e50
+      authStubEnabled: false
+    orchdev1:
+      authApiId: "9il43udl10"
+      authExternalApiId: "i5ib7bm0pe"
+      authAccountId: "653994557586"
+      newauthAccountId: "975050272416"
+      authEnvironment: authdev3
+      serviceDomain: authdev3.dev.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/cf42638b-73a6-498f-a56f-e7ec341c276b
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
+      docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppCriDataV2Endpoint: credentials/issue
+      docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
+      docAppClientId: orch-dev
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/055d799b-c648-4232-801b-c83aef0f2bd1
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:653994557586:key/3e5dd566-314a-4be8-8976-d8177824f959
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:653994557586:key/258b15a8-6157-439e-8018-24c59b91c8c5
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:653994557586:key/22649b3a-4a9f-49c8-96ba-a517c49f9f37?
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:653994557586:key/8a74d461-33b1-455e-9539-3d8ad2916deb
       authStubEnabled: false
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
