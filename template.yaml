@@ -5348,6 +5348,7 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       SnapStart:
         ApplyOn: PublishedVersions
+      Timeout: 300 #5 min
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
