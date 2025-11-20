@@ -118,6 +118,15 @@ Conditions:
     ]
   UseSyncWaitForSpot: !Equals [dev, !Ref Environment]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
+  UseSubEnvironment:
+    Fn::And:
+      - Fn::Equals:
+          - !Ref Environment
+          - dev
+      - Fn::Not:
+          - Fn::Equals:
+              - !Ref SubEnvironment
+              - none
 
 Mappings:
   EnvironmentConfiguration:
@@ -478,7 +487,10 @@ Resources:
   OrchSessionTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Orch-Session
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Orch-Session
+        - !Sub ${Environment}-Orch-Session
       AttributeDefinitions:
         - AttributeName: SessionId
           AttributeType: S
@@ -620,7 +632,10 @@ Resources:
   AuthUserInfoTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Auth-User-Info
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Auth-User-Info
+        - !Sub ${Environment}-Auth-User-Info
       AttributeDefinitions:
         - AttributeName: InternalCommonSubjectId
           AttributeType: S
@@ -723,7 +738,10 @@ Resources:
   ClientSessionTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Client-Session
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Client-Session
+        - !Sub ${Environment}-Client-Session
       AttributeDefinitions:
         - AttributeName: ClientSessionId
           AttributeType: S
@@ -853,7 +871,10 @@ Resources:
   ClientRegistryTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-client-registry
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-client-registry
+        - !Sub ${Environment}-client-registry
       AttributeDefinitions:
         - AttributeName: ClientID
           AttributeType: S
@@ -1032,7 +1053,10 @@ Resources:
   OrchIdentityCredentialsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Orch-Identity-Credentials
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Orch-Identity-Credentials
+        - !Sub ${Environment}-Orch-Identity-Credentials
       AttributeDefinitions:
         - AttributeName: ClientSessionId
           AttributeType: S
@@ -1173,7 +1197,10 @@ Resources:
     Type: AWS::DynamoDB::Table
     # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
     Properties:
-      TableName: !Sub ${Environment}-RpPublicKeyCache
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-RpPublicKeyCache
+        - !Sub ${Environment}-RpPublicKeyCache
       AttributeDefinitions:
         - AttributeName: clientId
           AttributeType: S
@@ -1235,7 +1262,10 @@ Resources:
   StateStorageTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-State-Storage
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-State-Storage
+        - !Sub ${Environment}-State-Storage
       AttributeDefinitions:
         - AttributeName: PrefixedSessionId
           AttributeType: S
@@ -1293,7 +1323,10 @@ Resources:
   DocAppCredentialTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Orch-Doc-App-Credential
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Orch-Doc-App-Credential
+        - !Sub ${Environment}-Orch-Doc-App-Credential
       AttributeDefinitions:
         - AttributeName: SubjectID
           AttributeType: S
@@ -1371,7 +1404,10 @@ Resources:
   JwksCacheTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Jwks-Cache
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Jwks-Cache
+        - !Sub ${Environment}-Jwks-Cache
       AttributeDefinitions:
         - AttributeName: JwksUrl
           AttributeType: S
@@ -1407,7 +1443,10 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not required
     # checkov:skip=CKV_AWS_117: Lambda needs to exist outside our VPC so default AWS Lambda service VPC is OK
     Properties:
-      FunctionName: !Sub ${Environment}-FetchJwksFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-FetchJwksFunction
+        - !Sub ${Environment}-FetchJwksFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
@@ -1424,7 +1463,10 @@ Resources:
   FetchJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-fetch-jwks-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-fetch-jwks-lambda
+        - !Sub /aws/lambda/${Environment}-fetch-jwks-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -1439,11 +1481,17 @@ Resources:
   FetchJwksFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-fetchjwks-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-fetchjwks-errors
+        - !Sub ${Environment}-fetchjwks-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref FetchJwksFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-fetchjwks-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-fetchjwks-error-count
+            - !Sub ${Environment}-fetchjwks-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -1457,10 +1505,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
-      AlarmName: !Sub ${Environment}-fetchjwks-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-fetchjwks-alarm
+        - !Sub ${Environment}-fetchjwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-fetchjwks-error-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-fetchjwks-error-count
+        - !Sub ${Environment}-fetchjwks-error-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -1469,7 +1523,10 @@ Resources:
   FetchJwksFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-fetchjwks-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-fetchjwks-error-rate-alarm
+        - !Sub ${Environment}-fetchjwks-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
@@ -1493,7 +1550,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-FetchJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-FetchJwksFunction
+                    - !Sub ${Environment}-FetchJwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1505,7 +1565,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-FetchJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-FetchJwksFunction
+                    - !Sub ${Environment}-FetchJwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1519,7 +1582,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-OpenIdConfigurationFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+        - !Sub ${Environment}-OpenIdConfigurationFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
@@ -1580,7 +1646,10 @@ Resources:
   OpenIdConfigurationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-openid-configuration-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-openid-configuration-lambda
+        - !Sub /aws/lambda/${Environment}-openid-configuration-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -1595,11 +1664,17 @@ Resources:
   OpenIdConfigurationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-openid-configuration-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-openid-configuration-errors
+        - !Sub ${Environment}-openid-configuration-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref OpenIdConfigurationFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-openid-configuration-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-openid-configuration-error-count
+            - !Sub ${Environment}-openid-configuration-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -1613,10 +1688,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-openid-configuration-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-openid-configuration-alarm
+        - !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-openid-configuration-error-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-openid-configuration-error-count
+        - !Sub ${Environment}-openid-configuration-error-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -1625,7 +1706,10 @@ Resources:
   OpenIdConfigurationFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-openid-configuration-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-openid-configuration-error-rate-alarm
+        - !Sub ${Environment}-openid-configuration-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -1649,7 +1733,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+                    - !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1661,7 +1748,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+                    - !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1674,7 +1764,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-TrustmarkFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-TrustmarkFunction
+        - !Sub ${Environment}-TrustmarkFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
@@ -1727,7 +1820,10 @@ Resources:
   TrustmarkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-trustmark-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-trustmark-lambda
+        - !Sub /aws/lambda/${Environment}-trustmark-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -1742,11 +1838,17 @@ Resources:
   TrustmarkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-trustmark-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-errors
+        - !Sub ${Environment}-trustmark-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref TrustmarkFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-trustmark-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-trustmark-error-count
+            - !Sub ${Environment}-trustmark-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -1760,10 +1862,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-trustmark-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-alarm
+        - !Sub ${Environment}-trustmark-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-trustmark-error-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-error-count
+        - !Sub ${Environment}-trustmark-error-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -1772,7 +1880,10 @@ Resources:
   TrustmarkFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-trustmark-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-error-rate-alarm
+        - !Sub ${Environment}-trustmark-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -1796,7 +1907,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TrustmarkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TrustmarkFunction
+                    - !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1808,7 +1922,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TrustmarkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TrustmarkFunction
+                    - !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1822,7 +1939,10 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
     Properties:
-      FunctionName: !Sub ${Environment}-BackChannelLogoutRequestFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-BackChannelLogoutRequestFunction
+        - !Sub ${Environment}-BackChannelLogoutRequestFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
@@ -1877,7 +1997,10 @@ Resources:
   BackChannelLogoutRequestFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-backchannel-logout-request-lambda
+        - !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -1892,11 +2015,17 @@ Resources:
   BackChannelLogoutRequestFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-backchannel-logout-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-backchannel-logout-request-errors
+        - !Sub ${Environment}-backchannel-logout-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-backchannel-logout-request-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-backchannel-logout-request-count
+            - !Sub ${Environment}-backchannel-logout-request-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -1913,10 +2042,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
-      AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-backchannel-logout-request-alarm
+        - !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-backchannel-logout-request-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-backchannel-logout-request-count
+        - !Sub ${Environment}-backchannel-logout-request-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -1925,7 +2060,10 @@ Resources:
   BackChannelLogoutRequestFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-backchannel-logout-request-error-rate-alarm
+        - !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 25 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/OoDyFAE"
       ActionsEnabled: !If
         - IsIntegrationOrProduction
@@ -1952,7 +2090,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-BackChannelLogoutRequestFunction
+                    - !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1964,7 +2105,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-BackChannelLogoutRequestFunction
+                    - !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1977,7 +2121,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-DocAppCallbackFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-DocAppCallbackFunction
+        - !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./doc-checking-app-api/build/distributions/doc-checking-app-api.zip
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
@@ -2101,7 +2248,10 @@ Resources:
   DocAppCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-doc-app-callback-lambda
+        - !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -2133,11 +2283,17 @@ Resources:
   DocAppCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-doc-app-callback-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-doc-app-callback-request-errors
+        - !Sub ${Environment}-doc-app-callback-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref DocAppCallbackFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-doc-app-callback-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-doc-app-callback-count
+            - !Sub ${Environment}-doc-app-callback-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -2151,10 +2307,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-doc-app-callback-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-doc-app-callback-alarm
+        - !Sub ${Environment}-doc-app-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-doc-app-callback-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-doc-app-callback-count
+        - !Sub ${Environment}-doc-app-callback-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -2163,7 +2325,10 @@ Resources:
   DocAppCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-doc-app-callback-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-doc-app-callback-error-rate-alarm
+        - !Sub ${Environment}-doc-app-callback-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} doc app callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -2187,7 +2352,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-DocAppCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2199,7 +2367,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-DocAppCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2213,7 +2384,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-TokenFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-TokenFunction
+        - !Sub ${Environment}-TokenFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
@@ -2324,7 +2498,10 @@ Resources:
   TokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-token-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-token-lambda
+        - !Sub /aws/lambda/${Environment}-token-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -2339,11 +2516,17 @@ Resources:
   TokenFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-token-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-token-request-errors
+        - !Sub ${Environment}-token-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref TokenFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-token-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-token-count
+            - !Sub ${Environment}-token-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -2357,10 +2540,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-token-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-token-alarm
+        - !Sub ${Environment}-token-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-token-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-token-count
+        - !Sub ${Environment}-token-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -2369,7 +2558,10 @@ Resources:
   TokenFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-token-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-token-error-rate-alarm
+        - !Sub ${Environment}-token-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -2393,7 +2585,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TokenFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TokenFunction
+                    - !Sub ${Environment}-TokenFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2405,7 +2600,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TokenFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TokenFunction
+                    - !Sub ${Environment}-TokenFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2419,7 +2617,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-LogoutFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-LogoutFunction
+        - !Sub ${Environment}-LogoutFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
@@ -2536,7 +2737,10 @@ Resources:
   LogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-logout-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-logout-lambda
+        - !Sub /aws/lambda/${Environment}-logout-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -2551,11 +2755,17 @@ Resources:
   LogoutFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-logout-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-logout-request-errors
+        - !Sub ${Environment}-logout-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref LogoutFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-logout-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-logout-count
+            - !Sub ${Environment}-logout-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -2569,10 +2779,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
-      AlarmName: !Sub ${Environment}-logout-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-logout-alarm
+        - !Sub ${Environment}-logout-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-logout-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-logout-count
+        - !Sub ${Environment}-logout-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -2581,7 +2797,10 @@ Resources:
   LogoutFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-logout-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-logout-error-rate-alarm
+        - !Sub ${Environment}-logout-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
@@ -2605,7 +2824,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-LogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-LogoutFunction
+                    - !Sub ${Environment}-LogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2617,7 +2839,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-LogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-LogoutFunction
+                    - !Sub ${Environment}-LogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2629,7 +2854,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: Lambda is triggered by SQS so DLQ not needed
     Properties:
-      FunctionName: !Sub ${Environment}-GlobalLogoutFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-GlobalLogoutFunction
+        - !Sub ${Environment}-GlobalLogoutFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.GlobalLogoutHandler::handleRequest
@@ -2697,7 +2925,10 @@ Resources:
   GlobalLogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-global-logout-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-global-logout-lambda
+        - !Sub /aws/lambda/${Environment}-global-logout-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -2712,11 +2943,17 @@ Resources:
   GlobalLogoutFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-global-logout-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-global-logout-request-errors
+        - !Sub ${Environment}-global-logout-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref GlobalLogoutFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-global-logout-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-global-logout-count
+            - !Sub ${Environment}-global-logout-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -2730,10 +2967,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
-      AlarmName: !Sub ${Environment}-global-logout-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-global-logout-alarm
+        - !Sub ${Environment}-global-logout-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-global-logout-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-global-logout-count
+        - !Sub ${Environment}-global-logout-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -2742,7 +2985,10 @@ Resources:
   GlobalLogoutFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-global-logout-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-global-logout-error-rate-alarm
+        - !Sub ${Environment}-global-logout-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} global logout lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
@@ -2766,7 +3012,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-GlobalLogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-GlobalLogoutFunction
+                    - !Sub ${Environment}-GlobalLogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2778,7 +3027,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-GlobalLogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-GlobalLogoutFunction
+                    - !Sub ${Environment}-GlobalLogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2801,7 +3053,10 @@ Resources:
     Condition: IsDevOrBuild
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-GlobalLogoutTestQueue
+      QueueName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-GlobalLogoutTestQueue
+        - !Sub ${Environment}-GlobalLogoutTestQueue
       MaximumMessageSize: 2048
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 10
@@ -2815,7 +3070,10 @@ Resources:
     Condition: IsDevOrBuild
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-GlobalLogoutTestDlq
+      QueueName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-GlobalLogoutTestDlq
+        - !Sub ${Environment}-GlobalLogoutTestDlq
       KmsMasterKeyId: !GetAtt GlobalLogoutTestQueueEncryptionKey.Arn
       KmsDataKeyReusePeriodSeconds: 300
       MessageRetentionPeriod: 259200
@@ -2843,7 +3101,10 @@ Resources:
     Condition: IsDevOrBuild
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-global-logout-test-dlq-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-global-logout-test-dlq-alarm
+        - !Sub ${Environment}-global-logout-test-dlq-alarm
       AlarmDescription: !Sub "${Environment} global logout test DLQ has a message.ACCOUNT: di-orchestration-${Environment}."
       ActionsEnabled: true
       AlarmActions:
@@ -2873,7 +3134,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+        - !Sub ${Environment}-AuthenticationCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
@@ -3111,7 +3375,10 @@ Resources:
   AuthenticationCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-authentication-callback-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-authentication-callback-lambda
+        - !Sub /aws/lambda/${Environment}-authentication-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -3126,11 +3393,17 @@ Resources:
   AuthenticationCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-authentication-callback-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-request-errors
+        - !Sub ${Environment}-authentication-callback-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-authentication-callback-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-authentication-callback-count
+            - !Sub ${Environment}-authentication-callback-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3144,10 +3417,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-authentication-callback-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-alarm
+        - !Sub ${Environment}-authentication-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-authentication-callback-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-count
+        - !Sub ${Environment}-authentication-callback-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3156,7 +3435,10 @@ Resources:
   AuthenticationCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-authentication-callback-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-error-rate-alarm
+        - !Sub ${Environment}-authentication-callback-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -3180,7 +3462,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3192,7 +3477,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3200,11 +3488,17 @@ Resources:
   AuthenticationCallbackAisErrorFailOpenMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-ais-error-fail-open
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ais-error-fail-open
+        - !Sub ${Environment}-ais-error-fail-open
       FilterPattern: '{$.AISException = 1 && $.AbortOnError = "false"}'
       LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-ais-error-fail-open-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ais-error-fail-open-count
+            - !Sub ${Environment}-ais-error-fail-open-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3218,10 +3512,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Assuming no intervention and continuing with user journey. ACCOUNT: di-orchestration-${Environment}"
-      AlarmName: !Sub ${Environment}-authentication-callback-ais-error-fail-open-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-ais-error-fail-open-alarm
+        - !Sub ${Environment}-authentication-callback-ais-error-fail-open-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-ais-error-fail-open-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ais-error-fail-open-count
+        - !Sub ${Environment}-ais-error-fail-open-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3230,11 +3530,17 @@ Resources:
   AuthenticationCallbackAisErrorAbortMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-ais-error-abort
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ais-error-abort
+        - !Sub ${Environment}-ais-error-abort
       FilterPattern: '{$.AISException = 1 && $.AbortOnError = "true"}'
       LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-ais-error-abort-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ais-error-abort-count
+            - !Sub ${Environment}-ais-error-abort-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3248,10 +3554,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more Account Intervention Service errors have occurred in ${Environment}-AuthenticationCallbackFunction. Aborting user journey - P1 alarm. ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/l/cp/7Z2cm5rQ"
-      AlarmName: !Sub ${Environment}-authentication-callback-ais-error-abort-p1-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authentication-callback-ais-error-abort-p1-alarm
+        - !Sub ${Environment}-authentication-callback-ais-error-abort-p1-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-ais-error-abort-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ais-error-abort-count
+        - !Sub ${Environment}-ais-error-abort-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3266,7 +3578,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-JwksFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-JwksFunction
+        - !Sub ${Environment}-JwksFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
@@ -3333,7 +3648,10 @@ Resources:
   JwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-jwks-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-jwks-lambda
+        - !Sub /aws/lambda/${Environment}-jwks-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -3348,11 +3666,17 @@ Resources:
   JwksFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-jwks-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-jwks-errors
+        - !Sub ${Environment}-jwks-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref JwksFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-jwks-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-jwks-error-count
+            - !Sub ${Environment}-jwks-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3366,10 +3690,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-jwks-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-jwks-alarm
+        - !Sub ${Environment}-jwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-jwks-error-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-jwks-error-count
+        - !Sub ${Environment}-jwks-error-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3378,7 +3708,10 @@ Resources:
   JwksFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-jwks-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-jwks-error-rate-alarm
+        - !Sub ${Environment}-jwks-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -3402,7 +3735,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-JwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-JwksFunction
+                    - !Sub ${Environment}-JwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3414,7 +3750,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-JwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-JwksFunction
+                    - !Sub ${Environment}-JwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3426,7 +3765,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-IpvJwksFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-IpvJwksFunction
+        - !Sub ${Environment}-IpvJwksFunction
       AutoPublishAlias: latest
       CodeUri: ./ipv-api/build/distributions/ipv-api.zip
       Handler: uk.gov.di.authentication.ipv.lambda.IpvJwksHandler::handleRequest
@@ -3474,7 +3816,10 @@ Resources:
   IpvJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-ipv-jwks-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-ipv-jwks-lambda
+        - !Sub /aws/lambda/${Environment}-ipv-jwks-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -3489,18 +3834,27 @@ Resources:
   IpvJwksFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-ipv-jwks-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-jwks-errors
+        - !Sub ${Environment}-ipv-jwks-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref IpvJwksFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-ipv-jwks-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ipv-jwks-error-count
+            - !Sub ${Environment}-ipv-jwks-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
   IpvJwksFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-ipv-jwks-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-jwks-error-rate-alarm
+        - !Sub ${Environment}-ipv-jwks-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv jwks lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -3524,7 +3878,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvJwksFunction
+                    - !Sub ${Environment}-IpvJwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3536,7 +3893,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvJwksFunction
+                    - !Sub ${Environment}-IpvJwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3549,7 +3909,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-AuthorisationFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthorisationFunction
+        - !Sub ${Environment}-AuthorisationFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
@@ -3750,7 +4113,10 @@ Resources:
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-authorisation-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-authorisation-lambda
+        - !Sub /aws/lambda/${Environment}-authorisation-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -3765,11 +4131,17 @@ Resources:
   AuthorisationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-authorisation-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authorisation-errors
+        - !Sub ${Environment}-authorisation-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthorisationFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-authorisation-error-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-authorisation-error-count
+            - !Sub ${Environment}-authorisation-error-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3783,10 +4155,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/PADNHwE"
-      AlarmName: !Sub ${Environment}-authorisation-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authorisation-alarm
+        - !Sub ${Environment}-authorisation-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-authorisation-error-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authorisation-error-count
+        - !Sub ${Environment}-authorisation-error-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3795,7 +4173,10 @@ Resources:
   AuthorisationFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-authorisation-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-authorisation-error-rate-alarm
+        - !Sub ${Environment}-authorisation-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -3819,7 +4200,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthorisationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3831,7 +4215,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthorisationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3845,7 +4232,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-UserInfoFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-UserInfoFunction
+        - !Sub ${Environment}-UserInfoFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
@@ -3953,7 +4343,10 @@ Resources:
   UserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-userinfo-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-userinfo-lambda
+        - !Sub /aws/lambda/${Environment}-userinfo-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -3968,11 +4361,17 @@ Resources:
   UserInfoFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-userinfo-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-userinfo-request-errors
+        - !Sub ${Environment}-userinfo-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref UserInfoFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-userinfo-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-userinfo-count
+            - !Sub ${Environment}-userinfo-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -3986,10 +4385,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-userinfo-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-userinfo-alarm
+        - !Sub ${Environment}-userinfo-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-userinfo-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-userinfo-count
+        - !Sub ${Environment}-userinfo-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -3998,7 +4403,10 @@ Resources:
   UserInfoFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-userinfo-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-userinfo-error-rate-alarm
+        - !Sub ${Environment}-userinfo-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -4022,7 +4430,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-UserInfoFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-UserInfoFunction
+                    - !Sub ${Environment}-UserInfoFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4034,7 +4445,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-UserInfoFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-UserInfoFunction
+                    - !Sub ${Environment}-UserInfoFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4048,7 +4462,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-AuthCodeFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthCodeFunction
+        - !Sub ${Environment}-AuthCodeFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
@@ -4143,7 +4560,10 @@ Resources:
   AuthCodeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-auth-code-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-auth-code-lambda
+        - !Sub /aws/lambda/${Environment}-auth-code-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -4158,11 +4578,17 @@ Resources:
   AuthCodeFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-auth-code-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-auth-code-errors
+        - !Sub ${Environment}-auth-code-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthCodeFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-auth-code-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-auth-code-count
+            - !Sub ${Environment}-auth-code-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -4176,10 +4602,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-auth-code-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-auth-code-alarm
+        - !Sub ${Environment}-auth-code-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-auth-code-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-auth-code-count
+        - !Sub ${Environment}-auth-code-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -4188,7 +4620,10 @@ Resources:
   AuthCodeFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-auth-code-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-auth-code-error-rate-alarm
+        - !Sub ${Environment}-auth-code-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -4212,7 +4647,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthCodeFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthCodeFunction
+                    - !Sub ${Environment}-AuthCodeFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4224,7 +4662,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthCodeFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthCodeFunction
+                    - !Sub ${Environment}-AuthCodeFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4410,7 +4851,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-ClientRegistrationFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ClientRegistrationFunction
+        - !Sub ${Environment}-ClientRegistrationFunction
       AutoPublishAlias: latest
       CodeUri: ./client-registry-api/build/distributions/client-registry-api.zip
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
@@ -4490,7 +4934,10 @@ Resources:
     Type: AWS::Logs::LogGroup
     Condition: IsNotProduction
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-register-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-register-lambda
+        - !Sub /aws/lambda/${Environment}-register-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -4506,11 +4953,17 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Condition: IsNotProduction
     Properties:
-      FilterName: !Sub ${Environment}-register-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-register-request-errors
+        - !Sub ${Environment}-register-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref ClientRegistrationFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-register-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-register-count
+            - !Sub ${Environment}-register-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -4522,10 +4975,16 @@ Resources:
       AlarmActions:
         - !Ref SlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} register lambda.ACCOUNT: di-orchestration-${Environment}"
-      AlarmName: !Sub ${Environment}-register-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-register-alarm
+        - !Sub ${Environment}-register-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-register-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-register-count
+        - !Sub ${Environment}-register-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -4535,7 +4994,10 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Condition: IsNotProduction
     Properties:
-      AlarmName: !Sub ${Environment}-register-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-register-error-rate-alarm
+        - !Sub ${Environment}-register-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} register lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
@@ -4556,7 +5018,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-ClientRegistrationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-ClientRegistrationFunction
+                    - !Sub ${Environment}-ClientRegistrationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4568,7 +5033,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-ClientRegistrationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-ClientRegistrationFunction
+                    - !Sub ${Environment}-ClientRegistrationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4582,7 +5050,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-IpvCallbackFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-IpvCallbackFunction
+        - !Sub ${Environment}-IpvCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./ipv-api/build/distributions/ipv-api.zip
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
@@ -4810,7 +5281,10 @@ Resources:
   IpvCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-ipv-callback-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-ipv-callback-lambda
+        - !Sub /aws/lambda/${Environment}-ipv-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -4825,11 +5299,17 @@ Resources:
   IpvCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-ipv-callback-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-callback-request-errors
+        - !Sub ${Environment}-ipv-callback-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref IpvCallbackFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-ipv-callback-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ipv-callback-count
+            - !Sub ${Environment}-ipv-callback-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -4843,10 +5323,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "20 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-ipv-callback-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-callback-alarm
+        - !Sub ${Environment}-ipv-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-ipv-callback-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-callback-count
+        - !Sub ${Environment}-ipv-callback-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -4855,7 +5341,10 @@ Resources:
   IpvCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-ipv-callback-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ipv-callback-error-rate-alarm
+        - !Sub ${Environment}-ipv-callback-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -4879,7 +5368,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvCallbackFunction
+                    - !Sub ${Environment}-IpvCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4891,7 +5383,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvCallbackFunction
+                    - !Sub ${Environment}-IpvCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -4904,7 +5399,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-ManualUpdateClientRegistryFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ManualUpdateClientRegistryFunction
+        - !Sub ${Environment}-ManualUpdateClientRegistryFunction
       AutoPublishAlias: latest
       CodeUri: ./client-registry-api/build/distributions/client-registry-api.zip
       Handler: uk.gov.di.authentication.clientregistry.lambda.ManualUpdateClientRegistryHandler::handleRequest
@@ -4957,7 +5455,10 @@ Resources:
   ManualUpdateClientRegistryFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-manual-update-client-registry-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-manual-update-client-registry-lambda
+        - !Sub /aws/lambda/${Environment}-manual-update-client-registry-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -4976,7 +5477,10 @@ Resources:
               - lambda:InvokeFunction
               - lambda:GetFunction
             Resource:
-              - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Environment}-ManualUpdateClientRegistryFunction
+              - !If
+                - UseSubEnvironment
+                - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubEnvironment}-ManualUpdateClientRegistryFunction
+                - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Environment}-ManualUpdateClientRegistryFunction
 
   ManualUpdateClientRegistryFunctionInvokeRole:
     Type: AWS::IAM::Role
@@ -5019,7 +5523,10 @@ Resources:
     Type: AWS::SQS::Queue
     Condition: UseSpotStub
     Properties:
-      QueueName: !Sub ${Environment}-stub-spot-request-queue
+      QueueName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-stub-spot-request-queue
+        - !Sub ${Environment}-stub-spot-request-queue
       MaximumMessageSize: 256000
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 10
@@ -5035,7 +5542,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-SpotResponseFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-SpotResponseFunction
+        - !Sub ${Environment}-SpotResponseFunction
       AutoPublishAlias: latest
       CodeUri: ./ipv-api/build/distributions/ipv-api.zip
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
@@ -5119,7 +5629,10 @@ Resources:
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-spot-response-lambda
+        - !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -5134,11 +5647,17 @@ Resources:
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-spot-response-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-spot-response-request-errors
+        - !Sub ${Environment}-spot-response-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref SpotResponseFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-spot-response-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-spot-response-count
+            - !Sub ${Environment}-spot-response-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -5152,10 +5671,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-spot-response-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-spot-response-alarm
+        - !Sub ${Environment}-spot-response-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-spot-response-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-spot-response-count
+        - !Sub ${Environment}-spot-response-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -5164,7 +5689,10 @@ Resources:
   SpotResponseFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-spot-response-error-rate-alarm
+        - !Sub ${Environment}-spot-response-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -5188,7 +5716,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-SpotResponseFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-SpotResponseFunction
+                    - !Sub ${Environment}-SpotResponseFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -5200,7 +5731,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-SpotResponseFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-SpotResponseFunction
+                    - !Sub ${Environment}-SpotResponseFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -5211,7 +5745,10 @@ Resources:
   BackChannelLogoutQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-BackChannelLogoutQueue
+      QueueName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-BackChannelLogoutQueue
+        - !Sub ${Environment}-BackChannelLogoutQueue
       MaximumMessageSize: 2048
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 10
@@ -5224,7 +5761,10 @@ Resources:
   BackChannelLogoutDeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub ${Environment}-BackChannelLogoutDlq
+      QueueName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-BackChannelLogoutDlq
+        - !Sub ${Environment}-BackChannelLogoutDlq
       KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
       KmsDataKeyReusePeriodSeconds: 300
       MessageRetentionPeriod: 259200
@@ -5242,7 +5782,10 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Condition: IsNotIntegration
     Properties:
-      AlarmName: !Sub ${Environment}-backchannel-logout-dlq-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-backchannel-logout-dlq-alarm
+        - !Sub ${Environment}-backchannel-logout-dlq-alarm
       AlarmDescription: !Sub "${Environment} backchannel logout DLQ has 5 or more messages.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5292228639/Runbook+Backchannel+Logout+DLQ+Alarm"
       ActionsEnabled: true
       AlarmActions:
@@ -5272,7 +5815,10 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
-      FunctionName: !Sub ${Environment}-StorageTokenJwkFunction
+      FunctionName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+        - !Sub ${Environment}-StorageTokenJwkFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
@@ -5325,7 +5871,10 @@ Resources:
   StorageTokenJwkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
+      LogGroupName: !If
+        - UseSubEnvironment
+        - !Sub /aws/lambda/${SubEnvironment}-storage-token-jwk-lambda
+        - !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
@@ -5340,11 +5889,17 @@ Resources:
   StorageTokenJwkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-storage-token-jwk-request-errors
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-storage-token-jwk-request-errors
+        - !Sub ${Environment}-storage-token-jwk-request-errors
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref StorageTokenJwkFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-storage-token-jwk-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-storage-token-jwk-count
+            - !Sub ${Environment}-storage-token-jwk-count
           MetricNamespace: LambdaErrorsNamespace
           MetricValue: 1
 
@@ -5358,10 +5913,16 @@ Resources:
           - !Ref SlackEvents
           - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
-      AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-storage-token-jwk-alarm
+        - !Sub ${Environment}-storage-token-jwk-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: !Sub ${Environment}-storage-token-jwk-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-storage-token-jwk-count
+        - !Sub ${Environment}-storage-token-jwk-count
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
@@ -5370,7 +5931,10 @@ Resources:
   StorageTokenJwkFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-storage-token-jwk-error-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-storage-token-jwk-error-rate-alarm
+        - !Sub ${Environment}-storage-token-jwk-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
       ActionsEnabled: true
       AlarmActions:
@@ -5394,7 +5958,10 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+                    - !Sub ${Environment}-StorageTokenJwkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -5406,7 +5973,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+                    - !Sub ${Environment}-StorageTokenJwkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -6199,7 +6769,10 @@ Resources:
               - ssm:GetParameter
               - ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-capacity
+              - !If
+                - UseSubEnvironment
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-ipv-capacity
+                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-capacity
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
@@ -6487,7 +7060,10 @@ Resources:
         Statement:
           - Effect: Allow
             Action: lambda:InvokeFunction
-            Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction:latest
+            Resource: !If
+              - UseSubEnvironment
+              - !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${SubEnvironment}-FetchJwksFunction:latest
+              - !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction:latest
 
   JwksCacheTableReadWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -6981,7 +7557,10 @@ Resources:
   OrchAuthCodeTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Orch-Auth-Code
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Orch-Auth-Code
+        - !Sub ${Environment}-Orch-Auth-Code
       AttributeDefinitions:
         - AttributeName: AuthCode
           AttributeType: S
@@ -7076,7 +7655,10 @@ Resources:
   ClientRateLimitTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Client-Rate-Limit
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Client-Rate-Limit
+        - !Sub ${Environment}-Client-Rate-Limit
       AttributeDefinitions:
         - AttributeName: ClientId
           AttributeType: S
@@ -7105,21 +7687,33 @@ Resources:
   ClientRateLimitMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-client-rate-limit-filter
+      FilterName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-client-rate-limit-filter
+        - !Sub ${Environment}-client-rate-limit-filter
       FilterPattern: '{($.message = "Client with ID * has exceeded rate limit. Current count: *. Limit *")}'
       LogGroupName: !Ref AuthorisationFunctionLogGroup
       MetricTransformations:
-        - MetricName: !Sub ${Environment}-client-rate-limit-count
+        - MetricName: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-client-rate-limit-count
+            - !Sub ${Environment}-client-rate-limit-count
           MetricNamespace: ClientRateLimitCount
           MetricValue: 1
 
   ClientRateLimitAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-client-rate-limit-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-client-rate-limit-alarm
+        - !Sub ${Environment}-client-rate-limit-alarm
       AlarmDescription: !Sub "1 or more clients have hit their rate limit for ${Environment}.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/h4DKTQE"
       Namespace: ClientRateLimitCount
-      MetricName: !Sub ${Environment}-client-rate-limit-count
+      MetricName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-client-rate-limit-count
+        - !Sub ${Environment}-client-rate-limit-count
       Statistic: Sum
       Period: 60
       EvaluationPeriods: 1
@@ -7257,7 +7851,10 @@ Resources:
   CrossBrowserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Cross-Browser
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Cross-Browser
+        - !Sub ${Environment}-Cross-Browser
       AttributeDefinitions:
         - AttributeName: State
           AttributeType: S
@@ -7389,7 +7986,10 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub ${Environment}-Access-Token
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Access-Token
+        - !Sub ${Environment}-Access-Token
       AttributeDefinitions:
         - AttributeName: ClientAndRpPairwiseId
           AttributeType: S
@@ -7508,7 +8108,10 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      TableName: !Sub ${Environment}-Refresh-Token
+      TableName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-Refresh-Token
+        - !Sub ${Environment}-Refresh-Token
       AttributeDefinitions:
         - AttributeName: JwtId
           AttributeType: S
@@ -7579,7 +8182,10 @@ Resources:
   OrchIPVTokenSigningKmsKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: !Sub "alias/${Environment}-orch-ipv-token-auth-kms-key-alias"
+      AliasName: !If
+        - UseSubEnvironment
+        - !Sub "alias/${SubEnvironment}-orch-ipv-token-auth-kms-key-alias"
+        - !Sub "alias/${Environment}-orch-ipv-token-auth-kms-key-alias"
       TargetKeyId: !Ref OrchIPVTokenSigningKmsKey
 
   OrchIPVTokenSigningKmsKey:
@@ -7611,12 +8217,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-FetchJwksFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-FetchJwksFunction
+            - !Sub ${Environment}-FetchJwksFunction
 
   FetchJwksErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-FetchJwks-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-FetchJwks-error-anomaly-alarm
+        - !Sub ${Environment}-FetchJwks-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} FetchJwks lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7635,7 +8247,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-FetchJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-FetchJwksFunction
+                    - !Sub ${Environment}-FetchJwksFunction
             Period: 60
             Stat: Average
 
@@ -7651,12 +8266,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-OpenIdConfigurationFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+            - !Sub ${Environment}-OpenIdConfigurationFunction
 
   OpenIdConfigurationErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-OpenIdConfiguration-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-OpenIdConfiguration-error-anomaly-alarm
+        - !Sub ${Environment}-OpenIdConfiguration-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} OpenIdConfiguration lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7675,7 +8296,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-OpenIdConfigurationFunction
+                    - !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Average
 
@@ -7691,12 +8315,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-TrustmarkFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-TrustmarkFunction
+            - !Sub ${Environment}-TrustmarkFunction
 
   TrustmarkFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-trustmark-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-trustmark-error-anomaly-alarm
+        - !Sub ${Environment}-trustmark-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} trustmark lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7715,7 +8345,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TrustmarkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TrustmarkFunction
+                    - !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Average
 
@@ -7730,12 +8363,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-DocAppCallbackFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-DocAppCallbackFunction
+            - !Sub ${Environment}-DocAppCallbackFunction
 
   DocAppCallbackErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-DocAppCallback-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-DocAppCallback-error-anomaly-alarm
+        - !Sub ${Environment}-DocAppCallback-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} DocAppCallback lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7754,7 +8393,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-DocAppCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
             Period: 60
             Stat: Average
   #endregion
@@ -7768,12 +8410,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-TokenFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-TokenFunction
+            - !Sub ${Environment}-TokenFunction
 
   TokenFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-TokenFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-TokenFunction-error-anomaly-alarm
+        - !Sub ${Environment}-TokenFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} TokenFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7792,7 +8440,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-TokenFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-TokenFunction
+                    - !Sub ${Environment}-TokenFunction
             Period: 60
             Stat: Average
   #endregion
@@ -7806,12 +8457,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-LogoutFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-LogoutFunction
+            - !Sub ${Environment}-LogoutFunction
 
   LogoutFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-LogoutFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-LogoutFunction-error-anomaly-alarm
+        - !Sub ${Environment}-LogoutFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} LogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7830,7 +8487,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-LogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-LogoutFunction
+                    - !Sub ${Environment}-LogoutFunction
             Period: 60
             Stat: Average
   #endregion
@@ -7844,12 +8504,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-AuthenticationCallbackFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+            - !Sub ${Environment}-AuthenticationCallbackFunction
 
   AuthenticationCallbackFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthenticationCallbackFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthenticationCallbackFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthenticationCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7868,7 +8534,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
             Period: 60
             Stat: Average
 
@@ -7883,12 +8552,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-JwksFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-JwksFunction
+            - !Sub ${Environment}-JwksFunction
 
   JwksFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-JwksFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-JwksFunction-error-anomaly-alarm
+        - !Sub ${Environment}-JwksFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} JwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7907,7 +8582,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-JwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-JwksFunction
+                    - !Sub ${Environment}-JwksFunction
             Period: 60
             Stat: Average
 
@@ -7922,12 +8600,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-AuthorisationFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthorisationFunction
+            - !Sub ${Environment}-AuthorisationFunction
 
   AuthorisationFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-AuthorisationFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthorisationFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthorisationFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthorisationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7946,7 +8630,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthorisationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
             Period: 60
             Stat: Average
 
@@ -7961,12 +8648,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-UserInfoFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-UserInfoFunction
+            - !Sub ${Environment}-UserInfoFunction
 
   UserInfoFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-UserInfoFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-UserInfoFunction-error-anomaly-alarm
+        - !Sub ${Environment}-UserInfoFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} UserInfoFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -7985,7 +8678,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-UserInfoFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-UserInfoFunction
+                    - !Sub ${Environment}-UserInfoFunction
             Period: 60
             Stat: Average
 
@@ -8000,12 +8696,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-AuthCodeFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-AuthCodeFunction
+            - !Sub ${Environment}-AuthCodeFunction
 
   AuthCodeFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-AuthCodeFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-AuthCodeFunction-error-anomaly-alarm
+        - !Sub ${Environment}-AuthCodeFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} AuthCodeFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8024,7 +8726,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-AuthCodeFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthCodeFunction
+                    - !Sub ${Environment}-AuthCodeFunction
             Period: 60
             Stat: Average
 
@@ -8081,13 +8786,19 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-ClientRegistrationFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-ClientRegistrationFunction
+            - !Sub ${Environment}-ClientRegistrationFunction
 
   ClientRegistrationFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Condition: IsNotProduction
     Properties:
-      AlarmName: !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-ClientRegistrationFunction-error-anomaly-alarm
+        - !Sub ${Environment}-ClientRegistrationFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} ClientRegistrationFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8106,7 +8817,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-ClientRegistrationFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-ClientRegistrationFunction
+                    - !Sub ${Environment}-ClientRegistrationFunction
             Period: 60
             Stat: Average
 
@@ -8121,12 +8835,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-IpvCallbackFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-IpvCallbackFunction
+            - !Sub ${Environment}-IpvCallbackFunction
 
   IpvCallbackFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-IpvCallbackFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-IpvCallbackFunction-error-anomaly-alarm
+        - !Sub ${Environment}-IpvCallbackFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8145,7 +8865,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvCallbackFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvCallbackFunction
+                    - !Sub ${Environment}-IpvCallbackFunction
             Period: 60
             Stat: Average
 
@@ -8166,7 +8889,10 @@ Resources:
   SpotResponseFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-SpotResponseFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-SpotResponseFunction-error-anomaly-alarm
+        - !Sub ${Environment}-SpotResponseFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SpotResponseFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8185,7 +8911,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-SpotResponseFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-SpotResponseFunction
+                    - !Sub ${Environment}-SpotResponseFunction
             Period: 60
             Stat: Average
 
@@ -8200,12 +8929,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-StorageTokenJwkFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+            - !Sub ${Environment}-StorageTokenJwkFunction
 
   StorageTokenJwkFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-StorageTokenJwkFunction-error-anomaly-alarm
+        - !Sub ${Environment}-StorageTokenJwkFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} StorageTokenJwkFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8224,7 +8959,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-StorageTokenJwkFunction
+                    - !Sub ${Environment}-StorageTokenJwkFunction
             Period: 60
             Stat: Average
   #endregion
@@ -8238,12 +8976,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-IpvJwksFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-IpvJwksFunction
+            - !Sub ${Environment}-IpvJwksFunction
 
   IpvJwksFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-IpvJwksFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-IpvJwksFunction-error-anomaly-alarm
+        - !Sub ${Environment}-IpvJwksFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} IpvJwksFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8262,7 +9006,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-IpvJwksFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IpvJwksFunction
+                    - !Sub ${Environment}-IpvJwksFunction
             Period: 60
             Stat: Average
   #endregion
@@ -8276,12 +9023,18 @@ Resources:
       Stat: Average
       Dimensions:
         - Name: FunctionName
-          Value: !Sub ${Environment}-GlobalLogoutFunction
+          Value: !If
+            - UseSubEnvironment
+            - !Sub ${SubEnvironment}-GlobalLogoutFunction
+            - !Sub ${Environment}-GlobalLogoutFunction
 
   GlobalLogoutFunctionErrorAnomalyAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub ${Environment}-GlobalLogoutFunction-error-anomaly-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-GlobalLogoutFunction-error-anomaly-alarm
+        - !Sub ${Environment}-GlobalLogoutFunction-error-anomaly-alarm
       AlarmDescription: !Sub "Anomalous Error rate in ${Environment} GlobalLogoutFunction lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: false
       ComparisonOperator: GreaterThanUpperThreshold
@@ -8300,7 +9053,10 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Sub ${Environment}-GlobalLogoutFunction
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-GlobalLogoutFunction
+                    - !Sub ${Environment}-GlobalLogoutFunction
             Period: 60
             Stat: Average
   #endregion
@@ -8397,7 +9153,10 @@ Resources:
       AlarmActions:
         - !Ref SlackEvents
       AlarmDescription: !Sub "Auth journey completion rate has dropped below 80% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
-      AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-auth-journey-completion-rate-alarm
+        - !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 80
@@ -8416,9 +9175,15 @@ Resources:
                 - Name: journeyType
                   Value: auth
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-AuthenticationCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-AuthenticationCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthenticationCallbackFunction
+                    - !Sub ${Environment}-AuthenticationCallbackFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
@@ -8435,9 +9200,15 @@ Resources:
                 - Name: isIdentityJourney
                   Value: false
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
@@ -8451,7 +9222,10 @@ Resources:
       AlarmActions:
         - !Ref SlackEvents
       AlarmDescription: !Sub "Identity journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
-      AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-identity-journey-completion-rate-alarm
+        - !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 50
@@ -8470,9 +9244,15 @@ Resources:
                 - Name: journeyType
                   Value: identity
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IPVCallbackFunction
+                    - !Sub ${Environment}-IPVCallbackFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-IPVCallbackFunction
+                    - !Sub ${Environment}-IPVCallbackFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
@@ -8489,9 +9269,15 @@ Resources:
                 - Name: isIdentityJourney
                   Value: true
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
@@ -8505,7 +9291,10 @@ Resources:
       AlarmActions:
         - !Ref SlackEvents
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
-      AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
+      AlarmName: !If
+        - UseSubEnvironment
+        - !Sub ${SubEnvironment}-docapp-journey-completion-rate-alarm
+        - !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
       Threshold: 30
@@ -8524,9 +9313,15 @@ Resources:
                 - Name: journeyType
                   Value: docapp
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-DocAppCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-DocAppCallbackFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-DocAppCallbackFunction
+                    - !Sub ${Environment}-DocAppCallbackFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
@@ -8543,9 +9338,15 @@ Resources:
                 - Name: isIdentityJourney
                   Value: false
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-AuthorisationFunction"
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Sub ${SubEnvironment}-AuthorisationFunction
+                    - !Sub ${Environment}-AuthorisationFunction
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
