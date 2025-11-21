@@ -13,13 +13,15 @@ Resources:
           !Ref Environment,
           sendOtpNotificationMemorySize,
         ]
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            sendOtpNotificationProvisionedConcurrency,
-          ]
+      ProvisionedConcurrencyConfig: !If
+        - SendOtpNotificationProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              sendOtpNotificationProvisionedConcurrency,
+            ]
+        - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest
       Environment:
