@@ -215,7 +215,6 @@ public class TokenHandlerTest {
     void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
-
         setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
 
         String authCode = new AuthorizationCode().toString();
@@ -230,6 +229,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -250,30 +250,18 @@ public class TokenHandlerTest {
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
                         testTokenSetup.privateKeyJWT(), authCode, clientIdInHeader);
+
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID,
-                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                CLIENT_NAME));
-        verify(auditService)
-                .submitAuditEvent(
-                        OIDC_TOKEN_GENERATED,
-                        CLIENT_ID,
-                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
+        verifySuccessfulTokenMetricIncremented();
+        verifyTokenGeneratedAuditEventSubmitted();
+
         var orchClientSessionCaptor = ArgumentCaptor.forClass(OrchClientSessionItem.class);
         verify(orchClientSessionService)
                 .updateStoredClientSession(orchClientSessionCaptor.capture());
         assertEquals(signedJWT.serialize(), orchClientSessionCaptor.getValue().getIdTokenHint());
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -295,6 +283,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -314,14 +303,11 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
+
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyNoMetricsOrAuditEvents();
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @ParameterizedTest
@@ -352,6 +338,7 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -371,26 +358,13 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, clientIdInHeader);
+
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID,
-                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                CLIENT_NAME));
-        verify(auditService)
-                .submitAuditEvent(
-                        OIDC_TOKEN_GENERATED,
-                        CLIENT_ID,
-                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifySuccessfulTokenMetricIncremented();
+        verifyTokenGeneratedAuditEventSubmitted();
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -413,16 +387,7 @@ public class TokenHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+        verifyNoMetricsOrAuditEvents();
     }
 
     @Test
@@ -430,6 +395,7 @@ public class TokenHandlerTest {
             throws JOSEException, TokenAuthInvalidException {
         var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
         setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
         String authCode = new AuthorizationCode().getValue();
         setupNoClientSessions();
 
@@ -438,8 +404,8 @@ public class TokenHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyNoMetricsOrAuditEvents();
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -455,6 +421,7 @@ public class TokenHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasBody(error.toJSONObject().toJSONString()));
+        verifyNoMetricsOrAuditEvents();
     }
 
     @Test
@@ -486,16 +453,7 @@ public class TokenHandlerTest {
                                         "Invalid signature in private_key_jwt")
                                 .toJSONObject()
                                 .toJSONString()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+        verifyNoMetricsOrAuditEvents();
     }
 
     @Test
@@ -507,20 +465,11 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
+
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyNoMetricsOrAuditEvents();
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -532,26 +481,18 @@ public class TokenHandlerTest {
         List<VectorOfTrust> vtr = List.of(mock(VectorOfTrust.class));
         var authRequestParams = generateAuthRequest().toParameters();
         setupClientSessions(authCode, authRequestParams, vtr);
+
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
                         testTokenSetup.privateKeyJWT(),
                         authCode,
                         "http://invalid-redirect-uri",
                         true);
+
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString()));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID));
-        verify(auditService, never())
-                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyNoMetricsOrAuditEvents();
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Nested
@@ -567,6 +508,7 @@ public class TokenHandlerTest {
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
             setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCorrectCodeChallenge();
@@ -582,6 +524,7 @@ public class TokenHandlerTest {
                             RP_PAIRWISE_SUBJECT,
                             "issuer-url",
                             ecKeyGenerator.generate());
+
             OIDCTokenResponse tokenResponse =
                     new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
             when(tokenService.generateTokenResponse(
@@ -603,23 +546,9 @@ public class TokenHandlerTest {
                     generateApiGatewayRequestWithCorrectCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode);
             assertThat(result, hasStatus(200));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID,
-                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                    CLIENT_NAME));
-            verify(auditService)
-                    .submitAuditEvent(
-                            OIDC_TOKEN_GENERATED,
-                            CLIENT_ID,
-                            auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
+            verifySuccessfulTokenMetricIncremented();
+            verifyTokenGeneratedAuditEventSubmitted();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -642,6 +571,7 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCorrectCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode);
+
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -651,20 +581,8 @@ public class TokenHandlerTest {
                                             "PKCE code verification failed")
                                     .toJSONObject()
                                     .toJSONString()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID,
-                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                    CLIENT_NAME));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
+            verifyNoMetricsOrAuditEvents();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -672,6 +590,7 @@ public class TokenHandlerTest {
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
             setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -682,6 +601,7 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCorrectCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode);
+
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -691,18 +611,18 @@ public class TokenHandlerTest {
                                             "PKCE code verification failed")
                                     .toJSONObject()
                                     .toJSONString()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+            verifyNoMetricsOrAuditEvents();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
+        }
 
-            assertAuthCodeExchangeDataRetrieved(authCode);
+        // Based off the spec:
+        // https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
+        private static Stream<String> invalidCodeVerifiers() {
+            return Stream.of(
+                    "LessThan43Characters",
+                    "InvalidCharacters$£!@)(*&^aaaaaaaaaaaaaaaaaaaa",
+                    "",
+                    "ThisIsOverTheCharacterCount128aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
         }
 
         @ParameterizedTest
@@ -710,13 +630,13 @@ public class TokenHandlerTest {
         void shouldReturn400IfCodeVerifierFailsSyntax(String codeVerifier)
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
-
             when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                     .thenReturn(Optional.of(tokenClientAuthValidator));
             when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
             when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                             anyString(), any()))
                     .thenReturn(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -726,6 +646,7 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode, codeVerifier);
+
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -735,31 +656,21 @@ public class TokenHandlerTest {
                                             "PKCE code verification failed")
                                     .toJSONObject()
                                     .toJSONString()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
+            verifyNoMetricsOrAuditEvents();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
         void shouldReturn400IfCodeVerifierDoesNotExistButCodeChallengeDoes()
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
-
             when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                     .thenReturn(Optional.of(tokenClientAuthValidator));
             when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
             when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                             anyString(), any()))
                     .thenReturn(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             setupClientSessions(
                     authCode,
@@ -769,6 +680,7 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode, null);
+
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -778,26 +690,16 @@ public class TokenHandlerTest {
                                             "PKCE code verification failed")
                                     .toJSONObject()
                                     .toJSONString()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
+            verifyNoMetricsOrAuditEvents();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
         void shouldReturn400IfCodeChallengeDoesNotExistButCodeVerifierDoes()
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
-
             setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCodeChallenge(null);
@@ -809,6 +711,7 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequestWithCorrectCodeVerifier(
                             testTokenSetup.privateKeyJWT(), authCode);
+
             assertThat(result, hasStatus(400));
             assertThat(
                     result,
@@ -818,18 +721,8 @@ public class TokenHandlerTest {
                                             "PKCE code verification failed")
                                     .toJSONObject()
                                     .toJSONString()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
+            verifyNoMetricsOrAuditEvents();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         @Test
@@ -837,6 +730,7 @@ public class TokenHandlerTest {
                 throws JOSEException, TokenAuthInvalidException {
             var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
             setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
             String authCode = new AuthorizationCode().toString();
             AuthenticationRequest authenticationRequest =
                     generateAuthRequestWithCodeChallenge(null);
@@ -852,6 +746,7 @@ public class TokenHandlerTest {
                             RP_PAIRWISE_SUBJECT,
                             "issuer-url",
                             ecKeyGenerator.generate());
+
             OIDCTokenResponse tokenResponse =
                     new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
             when(tokenService.generateTokenResponse(
@@ -872,33 +767,9 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
             assertThat(result, hasStatus(200));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID,
-                                    CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                    CLIENT_NAME));
-            verify(auditService)
-                    .submitAuditEvent(
-                            OIDC_TOKEN_GENERATED,
-                            CLIENT_ID,
-                            auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
-
-            assertAuthCodeExchangeDataRetrieved(authCode);
-        }
-
-        // Based off the spec:
-        // https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
-        private static Stream<String> invalidCodeVerifiers() {
-            return Stream.of(
-                    "LessThan43Characters",
-                    "InvalidCharacters$£!@)(*&^aaaaaaaaaaaaaaaaaaaa",
-                    "",
-                    "ThisIsOverTheCharacterCount128aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            verifySuccessfulTokenMetricIncremented();
+            verifyTokenGeneratedAuditEventSubmitted();
+            verifyAuthCodeExchangeDataRetrieved(authCode);
         }
 
         private AuthenticationRequest generateAuthRequestWithCorrectCodeChallenge() {
@@ -953,6 +824,7 @@ public class TokenHandlerTest {
             throws JOSEException, TokenAuthInvalidException {
         var testTokenSetup = createStandardTokenSetup(DOC_APP_CLIENT_ID.getValue());
         setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
         String authCode = new AuthorizationCode().toString();
         AuthorizationRequest authenticationRequest = generateRequestObjectAuthRequest();
         List<VectorOfTrust> vtr =
@@ -971,6 +843,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -1008,8 +881,7 @@ public class TokenHandlerTest {
                         OIDC_TOKEN_GENERATED,
                         DOC_APP_CLIENT_ID.getValue(),
                         auditUser(DOC_APP_USER_PUBLIC_SUBJECT.getValue()));
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     private static Stream<Arguments> vectorsTypesThatShouldNotReturnClaims() {
@@ -1033,8 +905,8 @@ public class TokenHandlerTest {
         ClientRegistry clientRegistry =
                 generateClientRegistry(keyPair, CLIENT_ID)
                         .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
-
         setupTokenServiceValidationMocks(clientRegistry);
+
         String authCode = new AuthorizationCode().toString();
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -1046,6 +918,7 @@ public class TokenHandlerTest {
                         authenticationRequest.getCustomParameter("vtr"));
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -1065,12 +938,12 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, true);
+
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
         assertClaimsRequestIfPresent(oidcClaimsRequest, false);
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -1082,6 +955,7 @@ public class TokenHandlerTest {
                 generateClientRegistry(keyPair, CLIENT_ID)
                         .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
         setupTokenServiceValidationMocks(clientRegistry);
+
         String authCode = new AuthorizationCode().toString();
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -1099,6 +973,7 @@ public class TokenHandlerTest {
                         RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -1122,6 +997,7 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(privateKeyJWT, authCode, true);
+
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -1133,6 +1009,7 @@ public class TokenHandlerTest {
             throws JOSEException, TokenAuthInvalidException {
         var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
         setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest = generateAuthRequest();
         List<VectorOfTrust> vtr =
@@ -1144,6 +1021,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID, RP_PAIRWISE_SUBJECT, "issuer-url", ecKeyGenerator.generate());
+
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         when(tokenService.generateTokenResponse(
@@ -1175,8 +1053,7 @@ public class TokenHandlerTest {
                 .incrementCounter(eq(SUCCESSFUL_TOKEN_ISSUED.getValue()), anyMap());
         verify(auditService, never())
                 .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
-
-        assertAuthCodeExchangeDataRetrieved(authCode);
+        verifyAuthCodeExchangeDataRetrieved(authCode);
     }
 
     @Test
@@ -1184,6 +1061,7 @@ public class TokenHandlerTest {
             throws JOSEException, TokenAuthInvalidException {
         var testTokenSetup = createStandardTokenSetup(CLIENT_ID);
         setupTokenServiceValidationMocks(testTokenSetup.clientRegistry());
+
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf("Cl"));
@@ -1193,6 +1071,7 @@ public class TokenHandlerTest {
         VectorOfTrust lowestLevelVtr = VectorOfTrust.orderVtrList(vtr).get(0);
         setupClientSessions(authCode, authenticationRequest.toParameters(), vtr);
         String vot = lowestLevelVtr.retrieveVectorOfTrustForToken();
+
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
                         SCOPES,
@@ -1210,24 +1089,10 @@ public class TokenHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(testTokenSetup.privateKeyJWT(), authCode, true);
+
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Internal server error"));
-
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                        Map.of(
-                                ENVIRONMENT.getValue(),
-                                configurationService.getEnvironment(),
-                                CLIENT.getValue(),
-                                CLIENT_ID,
-                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
-                                CLIENT_NAME));
-        verify(auditService, never())
-                .submitAuditEvent(
-                        OIDC_TOKEN_GENERATED,
-                        CLIENT_ID,
-                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
+        verifyNoMetricsOrAuditEvents();
     }
 
     @Nested
@@ -1237,25 +1102,18 @@ public class TokenHandlerTest {
         @ValueSource(strings = {CLIENT_ID})
         void shouldReturn200ForSuccessfulRequest(String clientId)
                 throws JOSEException, ParseException, TokenAuthInvalidException {
-            SignedJWT signedRefreshToken = createSignedRefreshToken();
             KeyPair keyPair = generateRsaKeyPair();
-            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(
-                            new OIDCTokens(
-                                    "test-id-token-string", accessToken, refreshTokenInRequest));
             PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
             ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
-
             setupTokenServiceValidationMocks(clientRegistry);
 
+            SignedJWT signedRefreshToken = createSignedRefreshToken();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
             when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
                             refreshTokenInRequest))
                     .thenReturn(true);
-            when(tokenValidationService.validateRefreshTokenScopes(
-                            SCOPES.toStringList(), SCOPES.toStringList()))
-                    .thenReturn(true);
+
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
             OrchRefreshTokenItem orchRefreshTokenItem =
                     new OrchRefreshTokenItem()
                             .withJwtId(jwtId)
@@ -1264,7 +1122,14 @@ public class TokenHandlerTest {
                             .withToken(refreshTokenInRequest.getValue());
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
 
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(
+                            new OIDCTokens(
+                                    "test-id-token-string", accessToken, refreshTokenInRequest));
             when(tokenService.generateRefreshTokenResponse(
                             eq(CLIENT_ID),
                             eq(SCOPES.toStringList()),
@@ -1277,19 +1142,11 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRefreshRequest(
                             privateKeyJWT, refreshTokenInRequest.getValue(), clientId);
+
             assertThat(result, hasStatus(200));
             assertTrue(result.getBody().contains(refreshTokenInRequest.getValue()));
             assertTrue(result.getBody().contains(accessToken.getValue()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+            verifyNoMetricsOrAuditEvents();
         }
 
         @ParameterizedTest
@@ -1298,26 +1155,20 @@ public class TokenHandlerTest {
         void shouldReturn200ForSuccessfulRequestWithRsaSigning(String clientId)
                 throws JOSEException, ParseException, TokenAuthInvalidException {
             when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-
-            SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
             KeyPair keyPair = generateRsaKeyPair();
-            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
-            OIDCTokenResponse tokenResponse =
-                    new OIDCTokenResponse(new OIDCTokens(accessToken, refreshTokenInRequest));
-            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
             ClientRegistry clientRegistry =
                     generateClientRegistry(keyPair, CLIENT_ID)
                             .withIdTokenSigningAlgorithm("RSA256");
-
             setupTokenServiceValidationMocks(clientRegistry);
 
+            SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
+            PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
             when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
                             refreshTokenInRequest))
                     .thenReturn(true);
-            when(tokenValidationService.validateRefreshTokenScopes(
-                            SCOPES.toStringList(), SCOPES.toStringList()))
-                    .thenReturn(true);
+
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
             OrchRefreshTokenItem orchRefreshTokenItem =
                     new OrchRefreshTokenItem()
                             .withJwtId(jwtId)
@@ -1326,7 +1177,12 @@ public class TokenHandlerTest {
                             .withToken(refreshTokenInRequest.getValue());
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
 
+            OIDCTokenResponse tokenResponse =
+                    new OIDCTokenResponse(new OIDCTokens(accessToken, refreshTokenInRequest));
             when(tokenService.generateRefreshTokenResponse(
                             eq(CLIENT_ID),
                             eq(SCOPES.toStringList()),
@@ -1339,40 +1195,29 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRefreshRequest(
                             privateKeyJWT, refreshTokenInRequest.getValue(), clientId);
+
             assertThat(result, hasStatus(200));
             assertTrue(result.getBody().contains(refreshTokenInRequest.getValue()));
             assertTrue(result.getBody().contains(accessToken.getValue()));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+            verifyNoMetricsOrAuditEvents();
         }
 
         @Test
         void shouldReturn500IfSaveOrchAccessTokenFails()
                 throws JOSEException, TokenAuthInvalidException, ParseException {
 
-            SignedJWT signedRefreshToken = createSignedRefreshToken();
             KeyPair keyPair = generateRsaKeyPair();
-            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
             PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
             ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
-            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
-
             setupTokenServiceValidationMocks(clientRegistry);
 
+            SignedJWT signedRefreshToken = createSignedRefreshToken();
+            RefreshToken refreshTokenInRequest = new RefreshToken(signedRefreshToken.serialize());
             when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(
                             refreshTokenInRequest))
                     .thenReturn(true);
-            when(tokenValidationService.validateRefreshTokenScopes(
-                            SCOPES.toStringList(), SCOPES.toStringList()))
-                    .thenReturn(true);
+
+            String jwtId = signedRefreshToken.getJWTClaimsSet().getJWTID();
             OrchRefreshTokenItem orchRefreshTokenItem =
                     new OrchRefreshTokenItem()
                             .withJwtId(jwtId)
@@ -1381,6 +1226,9 @@ public class TokenHandlerTest {
                             .withInternalPairwiseSubjectId(INTERNAL_PAIRWISE_SUBJECT.getValue());
             when(orchRefreshTokenService.getRefreshToken(jwtId))
                     .thenReturn(Optional.of(orchRefreshTokenItem));
+            when(tokenValidationService.validateRefreshTokenScopes(
+                            SCOPES.toStringList(), SCOPES.toStringList()))
+                    .thenReturn(true);
 
             when(tokenService.generateRefreshTokenResponse(
                             CLIENT_ID,
@@ -1394,19 +1242,10 @@ public class TokenHandlerTest {
             APIGatewayProxyResponseEvent result =
                     generateApiGatewayRefreshRequest(
                             privateKeyJWT, refreshTokenInRequest.getValue(), CLIENT_ID);
+
             assertThat(result, hasStatus(500));
             assertThat(result, hasBody("Internal server error"));
-
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            SUCCESSFUL_TOKEN_ISSUED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    CLIENT.getValue(),
-                                    CLIENT_ID));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+            verifyNoMetricsOrAuditEvents();
         }
     }
 
@@ -1651,7 +1490,34 @@ public class TokenHandlerTest {
         }
     }
 
-    private void assertAuthCodeExchangeDataRetrieved(String authCode) {
+    private void verifySuccessfulTokenMetricIncremented() {
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        SUCCESSFUL_TOKEN_ISSUED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                CLIENT.getValue(),
+                                CLIENT_ID,
+                                CloudwatchMetricDimensions.CLIENT_NAME.getValue(),
+                                CLIENT_NAME));
+    }
+
+    private void verifyTokenGeneratedAuditEventSubmitted() {
+        verify(auditService)
+                .submitAuditEvent(
+                        OIDC_TOKEN_GENERATED,
+                        CLIENT_ID,
+                        auditUser(INTERNAL_PAIRWISE_SUBJECT.getValue()));
+    }
+
+    private void verifyNoMetricsOrAuditEvents() {
+        verify(cloudwatchMetricsService, never()).incrementCounter(any(), anyMap());
+        verify(auditService, never())
+                .submitAuditEvent(eq(OIDC_TOKEN_GENERATED), anyString(), any());
+    }
+
+    private void verifyAuthCodeExchangeDataRetrieved(String authCode) {
         verify(orchAuthCodeService, times(1)).getExchangeDataForCode(eq(authCode));
     }
 
