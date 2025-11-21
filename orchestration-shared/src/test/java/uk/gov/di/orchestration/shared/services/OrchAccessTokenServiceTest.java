@@ -11,7 +11,11 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchAccessTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchAccessTokenException;
+import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -24,7 +28,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class OrchAccessTokenServiceTest {
+class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenItem> {
 
     private static final String CLIENT_AND_RP_PAIRWISE_ID = "test-clientId.rpPairwiseId";
     private static final String TOKEN = "test-token";
@@ -32,6 +36,7 @@ class OrchAccessTokenServiceTest {
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String AUTH_CODE = "test-auth-code";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
+    private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
 
     private final DynamoDbTable<OrchAccessTokenItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
@@ -39,7 +44,13 @@ class OrchAccessTokenServiceTest {
 
     @BeforeEach
     void setup() {
-        orchAccessTokenService = new OrchAccessTokenService(dynamoDbClient, table);
+        when(configurationService.getAccessTokenExpiry()).thenReturn(3600L);
+        orchAccessTokenService =
+                new OrchAccessTokenService(
+                        dynamoDbClient,
+                        table,
+                        configurationService,
+                        Clock.fixed(CREATION_INSTANT, ZoneId.systemDefault()));
     }
 
     @Nested
@@ -58,6 +69,7 @@ class OrchAccessTokenServiceTest {
             var capturedRequest = orchAccessTokenItemCaptor.getValue();
 
             assertOrchAccessTokenItemMatchesExpected(capturedRequest);
+            assertTrue(capturedRequest.getTimeToLive() > CREATION_INSTANT.getEpochSecond());
         }
 
         @Test

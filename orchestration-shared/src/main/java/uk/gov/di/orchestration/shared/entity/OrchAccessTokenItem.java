@@ -15,12 +15,14 @@ public class OrchAccessTokenItem {
     private static final String ATTRIBUTE_INTERNAL_PAIRWISE_SUBJECT_ID =
             "InternalPairwiseSubjectId";
     private static final String ATTRIBUTE_CLIENT_SESSION_ID = "ClientSessionId";
+    private static final String ATTRIBUTE_TTL = "ttl";
 
     private String clientAndRpPairwiseId;
     private String authCode;
     private String token;
     private String internalPairwiseSubjectId;
     private String clientSessionId;
+    private long timeToLive;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_CLIENT_AND_RP_PAIRWISE_ID)
@@ -92,6 +94,20 @@ public class OrchAccessTokenItem {
 
     public OrchAccessTokenItem withClientSessionId(String clientSessionId) {
         this.clientSessionId = clientSessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TTL)
+    public long getTimeToLive() {
+        return timeToLive;
+    }
+
+    public void setTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
+
+    public OrchAccessTokenItem withTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
         return this;
     }
 }
