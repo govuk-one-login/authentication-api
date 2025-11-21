@@ -8,9 +8,9 @@
 For example:
 
 1. Code Review
-1. Deploy to sandpit with `./deploy-sandpit.sh -a`
+1. Deploy to authdevs with `./deploy-authdevs.sh -a`
 1. Ensure that resources `x`, `y` and `z` were not changed
-1. Visit [some url](https://some.sandpit.url/to/visit)
+1. Visit [some url](https://some.authdev1.url/to/visit)
 1. Log in
 1. Ensure `x` message appears in a modal
 -->
