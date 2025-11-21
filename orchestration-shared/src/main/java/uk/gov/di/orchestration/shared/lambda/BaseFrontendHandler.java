@@ -166,7 +166,7 @@ public abstract class BaseFrontendHandler<T>
 
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
-        clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
+        clientID.ifPresent(userContextBuilder::withClientId);
 
         orchClientSession.ifPresent(userContextBuilder::withOrchClientSession);
 
