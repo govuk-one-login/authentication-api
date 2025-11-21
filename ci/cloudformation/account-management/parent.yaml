@@ -98,6 +98,50 @@ Conditions:
                 ]
               - "0"
 
+  MfaMethodsProvisionedConcurrency:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              mfaMethodsCreateProvisionedConcurrency,
+              DefaultValue: 0,
+            ]
+          - 0
+
+  UpdatePhoneNumberProvisionedConcurrency:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              updatePhoneNumberProvisionedConcurrency,
+              DefaultValue: 0,
+            ]
+          - 0
+
+  UpdateEmailProvisionedConcurrency:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              updateEmailProvisionedConcurrency,
+              DefaultValue: 0,
+            ]
+          - 0
+
+  SendOtpNotificationProvisionedConcurrency:
+    Fn::Not:
+      - Fn::Equals:
+          - !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              sendOtpNotificationProvisionedConcurrency,
+              DefaultValue: 0,
+            ]
+          - 0
+
   EnforceLambdaDeploymentOrder:
     Fn::And:
       - !Condition NotSubEnvironment
@@ -412,9 +456,9 @@ Mappings:
       lambdaMinConcurrency: 0
       authenticateMemorySize: 1536
       sendOtpNotificationMemorySize: 1536
-      sendOtpNotificationProvisionedConcurrency: 1
+      sendOtpNotificationProvisionedConcurrency: 0
       mfaMethodsCreateMemorySize: 1536
-      mfaMethodsCreateProvisionedConcurrency: 1
+      mfaMethodsCreateProvisionedConcurrency: 0
       mfaMethodsCreateMaxConcurrency: 10
       mfaMethodsDeleteMemorySize: 1536
       mfaMethodsDeleteProvisionedConcurrency: 0
@@ -423,13 +467,13 @@ Mappings:
       mfaMethodsUpdateProvisionedConcurrency: 0
       mfaMethodsUpdateMaxConcurrency: 10
       updateEmailMemorySize: 1536
-      updateEmailProvisionedConcurrency: 1
+      updateEmailProvisionedConcurrency: 0
       updateEmailMaxConcurrency: 10
       updatePasswordMemorySize: 1536
       updatePasswordProvisionedConcurrency: 0
       updatePasswordMaxConcurrency: 10
       updatePhoneNumberMemorySize: 1536
-      updatePhoneNumberProvisionedConcurrency: 1
+      updatePhoneNumberProvisionedConcurrency: 0
       updatePhoneNumberMaxConcurrency: 10
       bulkRemoveAccountMemorySize: 1536
       bulkRemoveAccountProvisionedConcurrency: 0

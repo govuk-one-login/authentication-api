@@ -14,14 +14,16 @@ Resources:
           updateEmailMemorySize,
           DefaultValue: 1536,
         ]
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            updateEmailProvisionedConcurrency,
-            DefaultValue: 1,
-          ]
+      ProvisionedConcurrencyConfig: !If
+        - UpdateEmailProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              updateEmailProvisionedConcurrency,
+              DefaultValue: 1,
+            ]
+        - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest
       Environment:

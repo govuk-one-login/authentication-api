@@ -14,14 +14,16 @@ Resources:
           updatePhoneNumberMemorySize,
           DefaultValue: 1536,
         ]
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            updatePhoneNumberProvisionedConcurrency,
-            DefaultValue: 1,
-          ]
+      ProvisionedConcurrencyConfig: !If
+        - UpdatePhoneNumberProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              updatePhoneNumberProvisionedConcurrency,
+              DefaultValue: 1,
+            ]
+        - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler::handleRequest
       Environment:

@@ -14,14 +14,17 @@ Resources:
           mfaMethodsCreateMemorySize,
           DefaultValue: 1536,
         ]
-      ProvisionedConcurrencyConfig:
-        ProvisionedConcurrentExecutions:
-          !FindInMap [
-            EnvironmentConfiguration,
-            !Ref Environment,
-            mfaMethodsCreateProvisionedConcurrency,
-            DefaultValue: 0,
-          ]
+
+      ProvisionedConcurrencyConfig: !If
+        - MfaMethodsProvisionedConcurrency
+        - ProvisionedConcurrentExecutions:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              mfaMethodsCreateProvisionedConcurrency,
+              DefaultValue: 0,
+            ]
+        - !Ref AWS::NoValue
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler::handleRequest
       Environment:
