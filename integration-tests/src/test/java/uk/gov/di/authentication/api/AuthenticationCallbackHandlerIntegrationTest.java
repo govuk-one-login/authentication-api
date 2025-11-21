@@ -45,9 +45,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
@@ -176,7 +174,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         docAppPrivateKeyJwtSigner,
                         accountInterventionApiStub,
                         false);
-        redisConnectionService = new RedisConnectionService(configurationService);
         var rsaKey =
                 new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
                         .keyUse(KeyUse.ENCRYPTION)
@@ -186,7 +183,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @BeforeEach()
-    void authSetup() throws Json.JsonException {
+    void authSetup() {
         setupTestWithDefaultEnvVars();
         setupSession();
         setupClientRegByClientIdAndByIdentityVerificationSupported(CLIENT_ID, false);
@@ -784,7 +781,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         @Test
         void updatesOrchSessionWhenPreviousCommonSubjectIdMatchesAuthUserInfoResponse()
-                throws Json.JsonException, ParseException {
+                throws ParseException {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();
@@ -807,8 +804,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Test
-        void doesNotUpdateOrchSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse()
-                throws Json.JsonException {
+        void doesNotUpdateOrchSessionWhenPreviousCommonSubjectIdDoesNotMatchUserInfoResponse() {
             authExternalApiStub.init(
                     new Subject(INTERNAL_COMMON_SUBJECT_ID), Long.MAX_VALUE, false);
             setupMaxAgeSession();

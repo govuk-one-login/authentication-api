@@ -8,8 +8,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
-import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
-import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
@@ -21,9 +19,7 @@ import java.net.URL;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
@@ -40,8 +36,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     private SsmClient ssmClient;
-    private Map<String, String> ssmRedisParameters;
-
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
@@ -311,29 +305,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
-    public String getRedisHost() {
-        return getSsmRedisParameters()
-                .get(format("{0}-{1}-redis-master-host", getEnvironment(), getRedisKey()));
-    }
-
-    public Optional<String> getRedisPassword() {
-        return Optional.ofNullable(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-password", getEnvironment(), getRedisKey())));
-    }
-
-    public int getRedisPort() {
-        return Integer.parseInt(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-port", getEnvironment(), getRedisKey())));
-    }
-
-    public boolean getUseRedisTLS() {
-        return Boolean.parseBoolean(
-                getSsmRedisParameters()
-                        .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
-    }
-
     public String getSessionCookieAttributes() {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");
@@ -409,29 +380,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    private Map<String, String> getSsmRedisParameters() {
-        if (ssmRedisParameters == null) {
-            var getParametersRequest =
-                    GetParametersRequest.builder()
-                            .names(
-                                    format(
-                                            "{0}-{1}-redis-master-host",
-                                            getEnvironment(), getRedisKey()),
-                                    format(
-                                            "{0}-{1}-redis-password",
-                                            getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()))
-                            .withDecryption(true)
-                            .build();
-            var result = getSsmClient().getParameters(getParametersRequest);
-            ssmRedisParameters =
-                    result.parameters().stream()
-                            .collect(Collectors.toMap(Parameter::name, Parameter::value));
-        }
-        return ssmRedisParameters;
-    }
-
     private SsmClient getSsmClient() {
         if (ssmClient == null) {
             ssmClient =
@@ -456,10 +404,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                                                     .build());
         }
         return ssmClient;
-    }
-
-    private String getRedisKey() {
-        return System.getenv("REDIS_KEY");
     }
 
     public String getBackChannelLogoutQueueURI() {

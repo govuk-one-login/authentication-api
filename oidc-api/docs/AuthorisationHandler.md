@@ -19,7 +19,7 @@ The lambda performs the following functions, although not all functions take pla
   - User session set or created - “parent session”
   - New client session - effectively a child of user session
   - Persistent session ID created if it doesn’t already exist
-  - All stored in redis
+  - All stored in dynamo
 
 - Validation
 
