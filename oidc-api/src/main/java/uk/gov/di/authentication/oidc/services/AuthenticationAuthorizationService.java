@@ -8,26 +8,32 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.orchestration.shared.entity.StateItem;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.util.List;
 import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 
 public class AuthenticationAuthorizationService {
     private static final Logger LOG =
             LogManager.getLogger(AuthenticationAuthorizationService.class);
+    private final ConfigurationService configurationService;
     private final StateStorageService stateStorageService;
     public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
     public static final List<ErrorObject> reauthErrors =
             List.of(OIDCError.LOGIN_REQUIRED, OAuth2Error.ACCESS_DENIED);
 
-    public AuthenticationAuthorizationService(StateStorageService stateStorageService) {
+    public AuthenticationAuthorizationService(
+            ConfigurationService configurationService, StateStorageService stateStorageService) {
+        this.configurationService = configurationService;
         this.stateStorageService = stateStorageService;
     }
 
-    public void validateRequest(Map<String, String> queryParams, String sessionId)
+    public void validateRequest(
+            Map<String, String> queryParams, String sessionId, boolean reauthRequested)
             throws AuthenticationCallbackValidationException {
         LOG.info("Validating authentication callback request");
         if (queryParams == null || queryParams.isEmpty()) {
@@ -42,6 +48,16 @@ public class AuthenticationAuthorizationService {
                             .findFirst();
             if (reauthError.isPresent()) {
                 throw new AuthenticationCallbackValidationException(reauthError.get(), true);
+            } else if (configurationService.isSingleFactorAccountDeletionEnabled()
+                    && SFAD_ERROR.toString().equals(queryParams.get("error"))) {
+                if (!reauthRequested) {
+                    LOG.info("Performing single factor account deletion on an auth journey");
+                    return;
+                } else {
+                    LOG.warn("Cannot perform single factor account deletion on a reauth journey");
+                    throw new AuthenticationCallbackValidationException();
+                }
+
             } else {
                 throw new AuthenticationCallbackValidationException();
             }
