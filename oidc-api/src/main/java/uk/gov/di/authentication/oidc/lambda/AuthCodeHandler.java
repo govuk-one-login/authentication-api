@@ -53,8 +53,6 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSIO
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -130,9 +128,7 @@ public class AuthCodeHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authCodeRequestHandler(input, context));
+        return authCodeRequestHandler(input, context);
     }
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
@@ -189,9 +185,6 @@ public class AuthCodeHandler
             attachLogFieldToLogs(
                     PERSISTENT_SESSION_ID,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            addAnnotation(
-                    "client_id",
-                    String.valueOf(orchClientSession.getAuthRequestParams().get("client_id")));
 
             redirectUri = authenticationRequest.getRedirectionURI();
             state = authenticationRequest.getState();

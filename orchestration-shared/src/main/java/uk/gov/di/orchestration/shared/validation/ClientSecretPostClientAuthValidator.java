@@ -14,7 +14,6 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -32,7 +31,6 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
             LOG.info("Validating client_secret_post");
             var clientSecretPost = ClientSecretPost.parse(requestBody);
             attachLogFieldToLogs(CLIENT_ID, clientSecretPost.getClientID().getValue());
-            addAnnotation("client_id", clientSecretPost.getClientID().getValue());
 
             var clientRegistry = getClientRegistryFromTokenAuth(clientSecretPost.getClientID());
             validateTokenAuthMethod(clientRegistry);

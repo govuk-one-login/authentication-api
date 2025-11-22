@@ -67,8 +67,6 @@ import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SUCCESSFUL
 import static uk.gov.di.orchestration.shared.domain.TokenGeneratedAuditableEvent.OIDC_TOKEN_GENERATED;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -152,8 +150,7 @@ public class TokenHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
+        return tokenRequestHandler(input);
     }
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
@@ -165,7 +162,6 @@ public class TokenHandler
         }
 
         Map<String, String> requestBody = parseRequestBody(input.getBody());
-        addAnnotation("grant_type", requestBody.get("grant_type"));
 
         TokenClientAuthValidator tokenAuthenticationValidator;
         try {
@@ -185,14 +181,11 @@ public class TokenHandler
 
         if (refreshTokenRequest(requestBody)) {
             LOG.info("Processing refresh token request");
-            return segmentedFunctionCall(
-                    "processRefreshTokenRequest",
-                    () ->
-                            processRefreshTokenRequest(
-                                    clientRegistry.getScopes(),
-                                    new RefreshToken(requestBody.get("refresh_token")),
-                                    clientRegistry.getClientID(),
-                                    getSigningAlgorithm(clientRegistry)));
+            return processRefreshTokenRequest(
+                    clientRegistry.getScopes(),
+                    new RefreshToken(requestBody.get("refresh_token")),
+                    clientRegistry.getClientID(),
+                    getSigningAlgorithm(clientRegistry));
         }
 
         String authCode = requestBody.get("code");
@@ -476,26 +469,22 @@ public class TokenHandler
         if (isDocCheckingAppUserWithSubjectId(orchClientSessionItem)) {
             userId = orchClientSessionItem.getDocAppSubjectId();
             var clientDocAppSubjectId = new Subject(userId);
+            String clientID = clientRegistry.getClientID();
+            Scope authRequestScopes = authRequest.getScope();
             tokenResponse =
-                    segmentedFunctionCall(
-                            "generateTokenResponse",
-                            () -> {
-                                String clientID = clientRegistry.getClientID();
-                                Scope authRequestScopes = authRequest.getScope();
-                                return tokenService.generateTokenResponse(
-                                        clientID,
-                                        authRequestScopes,
-                                        additionalTokenClaims,
-                                        clientDocAppSubjectId,
-                                        clientDocAppSubjectId,
-                                        finalClaimsRequest,
-                                        true,
-                                        signingAlgorithm,
-                                        clientSessionId,
-                                        vot,
-                                        null,
-                                        authCode);
-                            });
+                    tokenService.generateTokenResponse(
+                            clientID,
+                            authRequestScopes,
+                            additionalTokenClaims,
+                            clientDocAppSubjectId,
+                            clientDocAppSubjectId,
+                            finalClaimsRequest,
+                            true,
+                            signingAlgorithm,
+                            clientSessionId,
+                            vot,
+                            null,
+                            authCode);
         } else {
             String rpPairwiseSubjectId =
                     orchClientSessionItem.getCorrectPairwiseIdGivenSubjectType(
@@ -506,22 +495,19 @@ public class TokenHandler
             Subject internalPairwiseSubject = new Subject(userId);
 
             tokenResponse =
-                    segmentedFunctionCall(
-                            "generateTokenResponse",
-                            () ->
-                                    tokenService.generateTokenResponse(
-                                            clientRegistry.getClientID(),
-                                            authRequest.getScope(),
-                                            additionalTokenClaims,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            finalClaimsRequest,
-                                            false,
-                                            signingAlgorithm,
-                                            clientSessionId,
-                                            vot,
-                                            authCodeExchangeData.getAuthTime(),
-                                            authCode));
+                    tokenService.generateTokenResponse(
+                            clientRegistry.getClientID(),
+                            authRequest.getScope(),
+                            additionalTokenClaims,
+                            rpPairwiseSubject,
+                            internalPairwiseSubject,
+                            finalClaimsRequest,
+                            false,
+                            signingAlgorithm,
+                            clientSessionId,
+                            vot,
+                            authCodeExchangeData.getAuthTime(),
+                            authCode);
         }
 
         var user =
