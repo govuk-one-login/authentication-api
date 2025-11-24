@@ -2413,12 +2413,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - docAppClientId
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppSigningKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppSigningKeyArn
           DOC_APP_BACKEND_URI: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4155,12 +4159,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - idTokenKeyRsaArn
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppSigningKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppSigningKeyArn
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -4581,12 +4589,16 @@ Resources:
                   ],
                 ]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppSigningKeyArn,
-            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppSigningKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppSigningKeyArn
           DOMAIN_NAME: !If
             - UseSubEnvironment
             - !FindInMap
@@ -7813,12 +7825,16 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource:
-              !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                docAppSigningKeyArn,
-              ]
+            Resource: !If
+              - UseSubEnvironment
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !Ref SubEnvironment
+                - docAppSigningKeyArn
+              - !FindInMap
+                - EnvironmentConfiguration
+                - !Ref Environment
+                - docAppSigningKeyArn
 
   StorageTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
