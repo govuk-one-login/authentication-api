@@ -68,6 +68,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -229,69 +230,43 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
-        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
+        var identityCredentials =
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID).orElseThrow();
+        var additionalClaims = identityCredentials.getAdditionalClaims();
 
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.ADDRESS.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
-                        .isPresent());
+        assertThat(
+                additionalClaims.keySet(),
+                hasItems(
+                        ValidClaims.ADDRESS.getValue(),
+                        ValidClaims.PASSPORT.getValue(),
+                        ValidClaims.DRIVING_PERMIT.getValue(),
+                        ValidClaims.RETURN_CODE.getValue()));
 
         var addressClaim =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.ADDRESS.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.ADDRESS.getValue()), JSONArray.class);
         assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(8));
 
         var passportClaim =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.PASSPORT.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.PASSPORT.getValue()), JSONArray.class);
         assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
 
         var drivingPermit =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.DRIVING_PERMIT.getValue()),
+                        additionalClaims.get(ValidClaims.DRIVING_PERMIT.getValue()),
                         JSONArray.class);
         assertThat(((LinkedTreeMap) drivingPermit.get(0)).size(), equalTo(6));
 
         var returnCode =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.RETURN_CODE.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.RETURN_CODE.getValue()), JSONArray.class);
         assertThat(returnCode.size(), equalTo(2));
     }
 
     @Test
     void shouldRedirectToRPWhenSuccessfullyProcessedIpvResponseAndSyncWaitForSPOT()
-            throws Json.JsonException {
+            throws Exception {
         enableSyncWaitForSPOT();
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -365,63 +340,37 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
-        var identityCredentials = identityStore.getIdentityCredentials(CLIENT_SESSION_ID);
+        var identityCredentials =
+                identityStore.getIdentityCredentials(CLIENT_SESSION_ID).orElseThrow();
+        var additionalClaims = identityCredentials.getAdditionalClaims();
 
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.ADDRESS.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
-                        .isPresent());
-        assertTrue(
-                identityCredentials
-                        .map(OrchIdentityCredentials::getAdditionalClaims)
-                        .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
-                        .isPresent());
+        assertThat(
+                additionalClaims.keySet(),
+                hasItems(
+                        ValidClaims.ADDRESS.getValue(),
+                        ValidClaims.PASSPORT.getValue(),
+                        ValidClaims.DRIVING_PERMIT.getValue(),
+                        ValidClaims.RETURN_CODE.getValue()));
 
         var addressClaim =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.ADDRESS.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.ADDRESS.getValue()), JSONArray.class);
         assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(8));
 
         var passportClaim =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.PASSPORT.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.PASSPORT.getValue()), JSONArray.class);
         assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
 
         var drivingPermit =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.DRIVING_PERMIT.getValue()),
+                        additionalClaims.get(ValidClaims.DRIVING_PERMIT.getValue()),
                         JSONArray.class);
         assertThat(((LinkedTreeMap) drivingPermit.get(0)).size(), equalTo(6));
 
         var returnCode =
                 objectMapper.readValue(
-                        identityCredentials
-                                .get()
-                                .getAdditionalClaims()
-                                .get(ValidClaims.RETURN_CODE.getValue()),
-                        JSONArray.class);
+                        additionalClaims.get(ValidClaims.RETURN_CODE.getValue()), JSONArray.class);
         assertThat(returnCode.size(), equalTo(2));
     }
 
