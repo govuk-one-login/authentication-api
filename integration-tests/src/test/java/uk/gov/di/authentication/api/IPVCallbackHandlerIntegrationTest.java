@@ -161,23 +161,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
@@ -270,23 +255,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         enableSyncWaitForSPOT();
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
@@ -400,23 +370,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @Test
     void shouldSendCorrectRawStringToSpot() {
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
@@ -460,23 +415,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void
             shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity() {
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -509,23 +449,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButClientSessionNotFoundWithGivenState() {
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
 
         var response =
                 makeRequest(
@@ -559,24 +484,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 new OIDCClaimsRequest()
                         .withUserInfoClaimsRequest(
                                 new ClaimsSetRequest().add(ValidClaims.RETURN_CODE.getValue()));
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE)
-                        .claims(oidcValidClaimsRequest);
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).claims(oidcValidClaimsRequest).build();
+        setupClientSession(authRequest);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
@@ -649,25 +558,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 new OIDCClaimsRequest()
                         .withUserInfoClaimsRequest(
                                 new ClaimsSetRequest().add(ValidClaims.RETURN_CODE.getValue()));
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE)
-                        .claims(oidcValidClaimsRequest);
-
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).claims(oidcValidClaimsRequest).build();
+        setupClientSession(authRequest);
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
@@ -705,24 +597,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         var sessionId = "some-session-id";
         var scope = new Scope(OIDCScopeValue.OPENID);
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .state(RP_STATE);
-
-        var clientCreationTime = LocalDateTime.now();
-        orchClientSessionExtension.storeClientSession(
-                new OrchClientSessionItem(
-                                CLIENT_SESSION_ID,
-                                authRequestBuilder.build().toParameters(),
-                                clientCreationTime,
-                                List.of(VectorOfTrust.getDefaults()),
-                                CLIENT_NAME)
-                        .withRpPairwiseId(rpPairwiseId));
+        var authRequest = createAuthRequestBuilder(scope).build();
+        setupClientSession(authRequest);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -766,6 +642,24 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 new OrchSessionItem(SESSION_ID)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                         .withInternalCommonSubjectId(internalCommonSubjectId));
+    }
+
+    private void setupClientSession(AuthenticationRequest authRequest) {
+        orchClientSessionExtension.storeClientSession(
+                new OrchClientSessionItem(
+                                CLIENT_SESSION_ID,
+                                authRequest.toParameters(),
+                                LocalDateTime.now(),
+                                List.of(VectorOfTrust.getDefaults()),
+                                CLIENT_NAME)
+                        .withRpPairwiseId(rpPairwiseId));
+    }
+
+    private AuthenticationRequest.Builder createAuthRequestBuilder(Scope scope) {
+        return new AuthenticationRequest.Builder(
+                        ResponseType.CODE, scope, new ClientID(CLIENT_ID), URI.create(REDIRECT_URI))
+                .nonce(new Nonce())
+                .state(RP_STATE);
     }
 
     private void setupAuthUserInfoTable(String internalCommonSubjectId) {
