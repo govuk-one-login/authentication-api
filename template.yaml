@@ -2425,12 +2425,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - docAppBackendUri
-          DOC_APP_CRI_DATA_V2_ENDPOINT:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppCriDataV2Endpoint,
-            ]
+          DOC_APP_CRI_DATA_V2_ENDPOINT: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppCriDataV2Endpoint
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppCriDataV2Endpoint
           DOC_APP_CRI_DATA_ENDPOINT: unused
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
