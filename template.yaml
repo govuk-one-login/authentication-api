@@ -2403,12 +2403,16 @@ Resources:
                     serviceDomain,
                   ],
                 ]
-          DOC_APP_AUTHORISATION_CLIENT_ID:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppClientId,
-            ]
+          DOC_APP_AUTHORISATION_CLIENT_ID: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppClientId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppClientId
           DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4530,12 +4534,16 @@ Resources:
                     serviceDomain,
                   ],
                 ]
-          DOC_APP_AUTHORISATION_CLIENT_ID:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppClientId,
-            ]
+          DOC_APP_AUTHORISATION_CLIENT_ID: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppClientId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppClientId
           DOC_APP_AUTHORISATION_URI: !If
             - UseSubEnvironment
             - !FindInMap
