@@ -2223,12 +2223,16 @@ Resources:
       FunctionName: !Ref BackChannelLogoutRequestFunction.Alias
       Action: lambda:InvokeFunction
       Principal: sqs.amazonaws.com
-      SourceArn:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          backchannelLogoutQueueArn,
-        ]
+      SourceArn: !If
+        - UseSubEnvironment
+        - !FindInMap
+          - EnvironmentConfiguration
+          - !Ref SubEnvironment
+          - backchannelLogoutQueueArn
+        - !FindInMap
+          - EnvironmentConfiguration
+          - !Ref Environment
+          - backchannelLogoutQueueArn
 
   BackChannelLogoutRequestFunctionLogGroup:
     Type: AWS::Logs::LogGroup
