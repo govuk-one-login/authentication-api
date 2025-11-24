@@ -1785,19 +1785,35 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           ENVIRONMENT: !Sub ${Environment}
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
@@ -1979,10 +1995,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           ENVIRONMENT: !Sub ${Environment}
       Tags:
@@ -2170,10 +2194,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref IdTokenKmsAccessPolicy
@@ -2350,10 +2382,18 @@ Resources:
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DOC_APP_AUTHORISATION_CLIENT_ID:
             !FindInMap [
@@ -2394,18 +2434,34 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
@@ -2413,10 +2469,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -2653,20 +2717,36 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -2906,20 +2986,36 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
@@ -2947,10 +3043,18 @@ Resources:
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -3165,10 +3269,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
@@ -3479,10 +3591,18 @@ Resources:
           CREDENTIAL_STORE_URI: !Sub
             - https://credential-store.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -3510,10 +3630,18 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           IPV_AUDIENCE: !If
             - IpvExists
@@ -3528,18 +3656,34 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/ipv-callback
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !If
@@ -3555,10 +3699,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}/authorize
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
@@ -3574,10 +3726,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
@@ -3591,10 +3751,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           AUTH_FRONTEND_BASE_URL: !If
             - UseAuthStub
@@ -3602,10 +3770,18 @@ Resources:
             - !Sub
               - https://signin.${ServiceDomain}/
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
             !If [AisAbortOnError, true, false]
@@ -4269,10 +4445,18 @@ Resources:
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DOC_APP_AUTHORISATION_CLIENT_ID:
             !FindInMap [
@@ -4307,12 +4491,16 @@ Resources:
               !Ref Environment,
               docAppSigningKeyArn,
             ]
-          DOMAIN_NAME:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              serviceDomain,
-            ]
+          DOMAIN_NAME: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - serviceDomain
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - serviceDomain
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
             - AccountId: !If
@@ -4346,10 +4534,18 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           AUTH_FRONTEND_BASE_URL: !If
             - UseAuthStub
@@ -4357,35 +4553,67 @@ Resources:
             - !Sub
               - https://signin.${ServiceDomain}/
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           OIDC_SERVICE_DOMAIN: !Sub
             - oidc.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_REDIRECT_URI: !Sub
             - https://oidc.${ServiceDomain}/orchestration-redirect
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
@@ -4622,20 +4850,36 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -4861,10 +5105,18 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -4891,10 +5143,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -5114,10 +5374,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -5308,10 +5576,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -5500,20 +5776,36 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
@@ -5540,10 +5832,18 @@ Resources:
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
@@ -5572,10 +5872,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !If
             - IpvExists
@@ -5590,10 +5898,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}/ipv-callback
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !If
@@ -5609,10 +5925,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}/authorize
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_BACKEND_URI: !If
             - IpvExists
@@ -5627,10 +5951,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
@@ -5646,10 +5978,18 @@ Resources:
             - !Sub
               - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
               - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
+                  !If [
+                    UseSubEnvironment,
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref SubEnvironment,
+                      serviceDomain,
+                    ],
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      serviceDomain,
+                    ],
                   ]
           SPOT_QUEUE_URL: !If
             - IpvExists
@@ -5888,10 +6228,18 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -6016,28 +6364,52 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    serviceDomain,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ],
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
