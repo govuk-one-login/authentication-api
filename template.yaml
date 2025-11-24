@@ -4740,7 +4740,10 @@ Resources:
           ORCH_TO_AUTH_ENCRYPTION_KEY_PARAM: !If
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
-            - !Sub ${Environment}-auth-public-encryption-key
+            - !If
+              - UseSubEnvironment
+              - !Sub ${SubEnvironment}-auth-public-encryption-key
+              - !Sub ${Environment}-auth-public-encryption-key
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
@@ -7751,7 +7754,10 @@ Resources:
               - !If
                 - UseAuthStub
                 - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/orch-stubs/dev-auth-stub-auth-public-encryption-key
-                - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key
+                - !If
+                  - UseSubEnvironment
+                  - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${SubEnvironment}-auth-public-encryption-key
+                  - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
