@@ -14,6 +14,7 @@ public class UserContext {
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
     private final OrchSessionItem orchSession;
+    private final String clientId;
 
     protected UserContext(
             String sessionId,
@@ -21,13 +22,15 @@ public class UserContext {
             OrchClientSessionItem orchClientSession,
             SupportedLanguage userLanguage,
             String clientSessionId,
-            OrchSessionItem orchSession) {
+            OrchSessionItem orchSession,
+            String clientId) {
         this.sessionId = sessionId;
         this.client = client;
         this.orchClientSession = orchClientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.orchSession = orchSession;
+        this.clientId = clientId;
     }
 
     public String getSessionId() {
@@ -39,7 +42,7 @@ public class UserContext {
     }
 
     public String getClientId() {
-        return getClient().map(ClientRegistry::getClientID).orElse("");
+        return clientId;
     }
 
     public String getClientName() {
@@ -73,6 +76,7 @@ public class UserContext {
         private SupportedLanguage userLanguage;
         private String clientSessionId;
         private OrchSessionItem orchSession;
+        private String clientId;
 
         protected Builder() {}
 
@@ -87,6 +91,11 @@ public class UserContext {
 
         public Builder withClient(Optional<ClientRegistry> client) {
             this.client = client;
+            return this;
+        }
+
+        public Builder withClientId(String clientId) {
+            this.clientId = clientId;
             return this;
         }
 
@@ -117,7 +126,8 @@ public class UserContext {
                     orchClientSession,
                     userLanguage,
                     clientSessionId,
-                    orchSession);
+                    orchSession,
+                    clientId);
         }
     }
 }

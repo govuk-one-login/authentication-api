@@ -12,7 +12,6 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -102,7 +101,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         LOG.info("ProcessingIdentity request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
-            ClientRegistry client = userContext.getClient().orElseThrow();
 
             int processingAttempts =
                     userContext.getOrchSession().incrementProcessingIdentityAttempts();
@@ -129,7 +127,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     new AuditContext(
                             userContext.getClientSessionId(),
                             userContext.getSessionId(),
-                            client.getClientID(),
+                            userContext.getClientId(),
                             AuditService.UNKNOWN,
                             Optional.ofNullable(request.getEmail()).orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
@@ -154,7 +152,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                                 auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (intervention.getSuspended() || intervention.getBlocked())) {
-                    return performIntervention(input, userContext, client, intervention);
+                    return performIntervention(input, userContext, intervention);
                 }
             } else if (processingStatus == ProcessingIdentityStatus.ERROR) {
                 LOG.error("Error response received from SPOT");
@@ -175,7 +173,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private APIGatewayProxyResponseEvent performIntervention(
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            ClientRegistry client,
             AccountIntervention intervention)
             throws Json.JsonException {
         var logoutResult =
@@ -184,7 +181,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                 userContext.getSessionId(), userContext.getOrchSession()),
                         userContext.getOrchSession().getInternalCommonSubjectId(),
                         input,
-                        client.getClientID(),
+                        userContext.getClientId(),
                         intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
         return generateApiGatewayProxyResponse(
