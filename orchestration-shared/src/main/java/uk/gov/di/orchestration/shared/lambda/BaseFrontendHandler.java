@@ -19,7 +19,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
@@ -65,17 +64,6 @@ public abstract class BaseFrontendHandler<T>
     }
 
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
-        this.clazz = clazz;
-        this.configurationService = configurationService;
-        this.clientService = new DynamoClientService(configurationService);
-        this.orchSessionService = new OrchSessionService(configurationService);
-        this.orchClientSessionService = new OrchClientSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            RedisConnectionService redis) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.clientService = new DynamoClientService(configurationService);

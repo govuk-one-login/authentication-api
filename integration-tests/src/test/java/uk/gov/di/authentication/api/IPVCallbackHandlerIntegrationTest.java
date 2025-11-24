@@ -176,7 +176,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -309,7 +308,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         makeRequest(
@@ -369,7 +367,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -471,7 +468,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -563,7 +559,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
         stateStorageExtension.storeState("state:" + SESSION_ID, ORCHESTRATION_STATE.getValue());
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =
@@ -618,7 +613,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 List.of(VectorOfTrust.getDefaults()),
                                 CLIENT_NAME)
                         .withRpPairwiseId(rpPairwiseId));
-        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
         crossBrowserStorageExtension.store(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
 
         var response =

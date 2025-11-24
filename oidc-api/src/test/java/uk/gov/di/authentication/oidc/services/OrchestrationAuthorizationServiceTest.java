@@ -286,7 +286,7 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldSaveStateInRedisAndDynamo() {
+    void shouldSaveStateInDynamo() {
         when(configurationService.getSessionExpiry()).thenReturn(3600L);
         var sessionId = "new-session-id";
         var clientSessionId = "new-client-session-id";

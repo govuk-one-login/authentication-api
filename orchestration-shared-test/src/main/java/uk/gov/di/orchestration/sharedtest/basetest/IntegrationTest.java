@@ -4,13 +4,10 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
 import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
@@ -19,7 +16,6 @@ import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreE
 import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.RedisExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
@@ -34,10 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class IntegrationTest {
-    private static final String REDIS_HOST = "localhost";
-    private static final int REDIS_PORT = 6379;
-    private static final String REDIS_PASSWORD = null;
-    private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
 
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
@@ -63,18 +55,6 @@ public class IntegrationTest {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    protected static RedisConnectionService redisConnectionService;
-
-    @BeforeAll
-    static void setUp() {
-        redisConnectionService = new RedisConnectionService(TEST_CONFIGURATION_SERVICE);
-    }
-
-    @AfterAll
-    static void tearDown() {
-        redisConnectionService.close();
     }
 
     @RegisterExtension
@@ -126,22 +106,6 @@ public class IntegrationTest {
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
                     Map.ofEntries(
-                            Map.entry("local-session-redis-master-host", REDIS_HOST),
-                            Map.entry(
-                                    "local-session-redis-password", String.valueOf(REDIS_PASSWORD)),
-                            Map.entry("local-session-redis-port", String.valueOf(REDIS_PORT)),
-                            Map.entry(
-                                    "local-session-redis-tls", String.valueOf(DOES_REDIS_USE_TLS)),
-                            Map.entry("local-account-management-redis-master-host", REDIS_HOST),
-                            Map.entry(
-                                    "local-account-management-redis-password",
-                                    String.valueOf(REDIS_PASSWORD)),
-                            Map.entry(
-                                    "local-account-management-redis-port",
-                                    String.valueOf(REDIS_PORT)),
-                            Map.entry(
-                                    "local-account-management-redis-tls",
-                                    String.valueOf(DOES_REDIS_USE_TLS)),
                             Map.entry("local-password-pepper", "pepper"),
                             Map.entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
                             Map.entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
@@ -195,9 +159,6 @@ public class IntegrationTest {
             };
 
     protected final Json objectMapper = SerializationService.getInstance();
-
-    @RegisterExtension
-    protected static final RedisExtension redis = new RedisExtension(TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
