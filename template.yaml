@@ -1978,7 +1978,6 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           ENVIRONMENT: !Sub ${Environment}
@@ -2008,7 +2007,6 @@ Resources:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
@@ -2186,7 +2184,6 @@ Resources:
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
@@ -2212,7 +2209,6 @@ Resources:
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref InvokeFetchJwksHandlerPolicy
@@ -2394,7 +2390,6 @@ Resources:
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
@@ -2429,7 +2424,6 @@ Resources:
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
@@ -2603,7 +2597,6 @@ Resources:
       Policies:
         - !Ref OrchSessionTableReadAndDeleteAccessPolicy
         - !Ref ClientSessionTableReadAndDeleteAccessPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -2963,7 +2956,6 @@ Resources:
               !Ref Environment,
               orchToAuthKeyArn,
             ]
-          REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           OIDC_API_BASE_URL: !Sub
@@ -2999,7 +2991,6 @@ Resources:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
@@ -3629,7 +3620,6 @@ Resources:
             - UseAuthStub
             - !Sub /orch-stubs/${Environment}-auth-stub-auth-public-encryption-key
             - !Sub ${Environment}-auth-public-encryption-key
-          REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
@@ -3638,7 +3628,6 @@ Resources:
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
@@ -3824,7 +3813,6 @@ Resources:
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
@@ -3853,7 +3841,6 @@ Resources:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref AccessTokenTableReadAccessPolicy
@@ -4008,7 +3995,6 @@ Resources:
           ENVIRONMENT: !Sub ${Environment}
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
@@ -4042,7 +4028,6 @@ Resources:
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref OrchSessionTableReadAccessPolicy
         - !Ref OrchSessionTableWriteAccessPolicy
         - !Ref ClientSessionTableReadAccessPolicy
@@ -4545,7 +4530,6 @@ Resources:
                 ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain:
@@ -4704,7 +4688,6 @@ Resources:
         - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
-        - !Ref RedisParametersAccessPolicy
         - !Ref IpvTokenSigningKmsAccessPolicy
         - !Ref SpotRequestQueueWritePolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
@@ -6022,27 +6005,6 @@ Resources:
               - sqs:SendMessage
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
-
-  RedisParametersAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
 
   AuthPublicEncryptionKeyAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
