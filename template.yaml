@@ -2185,12 +2185,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2702,12 +2706,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -2971,12 +2979,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4075,12 +4087,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4524,12 +4540,16 @@ Resources:
                   - !Ref Environment
                   - authEnvironment
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -4835,12 +4855,16 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyArn
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -7646,11 +7670,19 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [
+              !If [
+                UseSubEnvironment,
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref SubEnvironment,
+                  idTokenKeyArn,
+                ],
+                !FindInMap [
                   EnvironmentConfiguration,
                   !Ref Environment,
                   idTokenKeyArn,
-                ]
+                ],
+              ]
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
