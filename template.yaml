@@ -3805,12 +3805,16 @@ Resources:
                   ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
             !If [AisAbortOnError, true, false]
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              storageTokenKeyArn,
-            ]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - storageTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - storageTokenKeyArn
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
           JWK_CACHE_EXPIRATION_IN_SECONDS: 300
           SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED: !If
@@ -6708,12 +6712,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              storageTokenKeyArn,
-            ]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - storageTokenKeyArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - storageTokenKeyArn
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
@@ -7756,10 +7764,18 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  storageTokenKeyArn,
+              - !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    storageTokenKeyArn,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    storageTokenKeyArn,
+                  ],
                 ]
 
   IpvTokenSigningKmsAccessPolicy:
