@@ -2452,8 +2452,16 @@ Resources:
                     docAppBackendUri,
                   ],
                 ]
-          DOC_APP_AUD:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
+          DOC_APP_AUD: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppAud
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppAud
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -4496,8 +4504,16 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           CUSTOM_DOC_APP_CLAIM_ENABLED: true
-          DOC_APP_AUD:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
+          DOC_APP_AUD: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppAud
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppAud
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
             - ServiceDomain:
