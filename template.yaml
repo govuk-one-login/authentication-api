@@ -2430,12 +2430,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
       Policies:
         - !Ref OrchDocAppCredentialTableReadAccessPolicy
         - !Ref OrchDocAppCredentialTableWriteAccessPolicy
@@ -2676,12 +2680,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -2925,12 +2933,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
@@ -3139,12 +3151,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
@@ -3448,12 +3464,16 @@ Resources:
                     - !Ref Environment
                     - authExternalApiId
                 VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
-                AuthEnvironment:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authEnvironment,
-                  ]
+                AuthEnvironment: !If
+                  - UseSubEnvironment
+                  - !FindInMap
+                    - EnvironmentConfiguration
+                    - !Ref SubEnvironment
+                    - authEnvironment
+                  - !FindInMap
+                    - EnvironmentConfiguration
+                    - !Ref Environment
+                    - authEnvironment
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           CREDENTIAL_STORE_URI: !Sub
@@ -3476,12 +3496,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
@@ -4301,12 +4325,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           ENVIRONMENT: !Sub ${Environment}
           EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
@@ -4621,12 +4649,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -4846,12 +4878,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -5065,12 +5101,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -5255,12 +5295,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -5483,12 +5527,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
@@ -5827,12 +5875,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -5999,12 +6051,16 @@ Resources:
                   - EnvironmentConfiguration
                   - !Ref Environment
                   - authAccountId
-              AuthEnvironment:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authEnvironment,
-                ]
+              AuthEnvironment: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authEnvironment
       Policies:
         - !Ref OrchIdentityCredentialsTableReadAccessPolicy
         - !Ref OrchIdentityCredentialsTableWriteAccessPolicy
@@ -6981,12 +7037,16 @@ Resources:
                       - EnvironmentConfiguration
                       - !Ref Environment
                       - authAccountId
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
+                  AuthEnvironment: !If
+                    - UseSubEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref SubEnvironment
+                      - authEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref Environment
+                      - authEnvironment
               - !GetAtt ClientRegistryTable.Arn
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
@@ -7030,12 +7090,16 @@ Resources:
                       - EnvironmentConfiguration
                       - !Ref Environment
                       - authAccountId
-                  AuthEnvironment:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authEnvironment,
-                    ]
+                  AuthEnvironment: !If
+                    - UseSubEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref SubEnvironment
+                      - authEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref Environment
+                      - authEnvironment
               - !GetAtt ClientRegistryTable.Arn
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
