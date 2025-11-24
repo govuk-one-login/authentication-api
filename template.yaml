@@ -2716,12 +2716,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - idTokenKeyArn
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyRsaArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyRsaArn
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2989,12 +2993,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - idTokenKeyArn
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyRsaArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyRsaArn
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -4097,12 +4105,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - idTokenKeyArn
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyRsaArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyRsaArn
           DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4865,12 +4877,16 @@ Resources:
               - EnvironmentConfiguration
               - !Ref Environment
               - idTokenKeyArn
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - idTokenKeyRsaArn
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - idTokenKeyRsaArn
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -7696,10 +7712,18 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  idTokenKeyRsaArn,
+              - !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    idTokenKeyRsaArn,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    idTokenKeyRsaArn,
+                  ],
                 ]
 
   DocAppSigningKmsAccessPolicy:
