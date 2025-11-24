@@ -4522,12 +4522,16 @@ Resources:
               !Ref Environment,
               docAppAuthorisationUrl,
             ]
-          DOC_APP_DOMAIN:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppDomain,
-            ]
+          DOC_APP_DOMAIN: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppDomain
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppDomain
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
             - DocAppBackendUri:
