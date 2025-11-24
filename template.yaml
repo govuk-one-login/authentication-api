@@ -482,10 +482,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
                   - NewAuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        newauthAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          newauthAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ],
                       ]
             Action:
               - kms:Decrypt
@@ -559,10 +567,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
             - Sid: AllowOrchSessionTableCrossAccountDeleteAccess
               Effect: Allow
@@ -590,10 +606,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
             - Sid: AllowOrchSessionTableCrossAccountWriteAccess
               Effect: Allow
@@ -622,10 +646,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
 
   #endregion
@@ -766,10 +798,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
                   - NewAuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        newauthAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          newauthAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ],
                       ]
             Action:
               - kms:Decrypt
@@ -830,10 +870,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
             - Sid: AllowClientSessionTableDeleteAccessPolicy
               Effect: Allow
@@ -861,10 +909,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
       Tags:
         - Key: Name
@@ -923,10 +979,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
                   - NewAuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        newauthAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          newauthAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ],
                       ]
             Action:
               - kms:Decrypt
@@ -993,10 +1057,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
       Tags:
         - Key: Name
@@ -1121,10 +1193,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
                   - NewAuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        newauthAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          newauthAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          newauthAccountId,
+                        ],
                       ]
             Action:
               - kms:Decrypt
@@ -1188,10 +1268,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
                     - NewAuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          newauthAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            newauthAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            newauthAccountId,
+                          ],
                         ]
             - Fn::If:
                 - IsNotDevEnvironment
