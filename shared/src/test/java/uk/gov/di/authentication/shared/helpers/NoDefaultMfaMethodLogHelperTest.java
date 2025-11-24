@@ -12,6 +12,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfAnyMfaMethodHasNullPriority;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfMfaMethodHasNullPriority;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -96,6 +98,107 @@ class NoDefaultMfaMethodLogHelperTest {
                 hasItem(
                         withMessageContaining(
                                 "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 1, MFA method priority-type pairs: (DEFAULT,SMS).")));
+    }
+
+    @Test
+    void shouldLogDebugWhenMfaMethodHasNullPriority() {
+        var mfaMethod =
+                new MFAMethod().withMfaMethodType(MFAMethodType.SMS.getValue()).withPriority(null);
+
+        assertDoesNotThrow(
+                () -> logDebugIfAnyMfaMethodHasNullPriority(List.of(mfaMethod), "test context"));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "MFA method with null priority identifier found. MFA method priority-type pair(s): (absent_attribute,SMS). Context: test context.")));
+    }
+
+    @Test
+    void shouldLogDebugWhenAnyMfaMethodHasNullPriorityWithMultipleMethods() {
+        var validMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withPriority(DEFAULT.name());
+        var nullPriorityMethod =
+                new MFAMethod().withMfaMethodType(MFAMethodType.SMS.getValue()).withPriority(null);
+
+        assertDoesNotThrow(
+                () ->
+                        logDebugIfAnyMfaMethodHasNullPriority(
+                                List.of(validMethod, nullPriorityMethod), "multiple methods test"));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "MFA method with null priority identifier found. MFA method priority-type pair(s): (DEFAULT,AUTH_APP), (absent_attribute,SMS). Context: multiple methods test.")));
+    }
+
+    @Test
+    void shouldNotLogDebugWhenNoMfaMethodHasNullPriority() {
+        var mfaMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.SMS.getValue())
+                        .withPriority(DEFAULT.name());
+
+        assertDoesNotThrow(
+                () ->
+                        logDebugIfAnyMfaMethodHasNullPriority(
+                                List.of(mfaMethod), "no null priority test"));
+
+        assertThat(logging.events().size(), org.hamcrest.Matchers.is(0));
+    }
+
+    @Test
+    void shouldNotLogDebugWhenNoMfaMethodHasNullPriorityWithMultipleMethods() {
+        var smsMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.SMS.getValue())
+                        .withPriority(DEFAULT.name());
+        var authAppMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withPriority(DEFAULT.name());
+
+        assertDoesNotThrow(
+                () ->
+                        logDebugIfAnyMfaMethodHasNullPriority(
+                                List.of(smsMethod, authAppMethod), "multiple valid methods test"));
+
+        assertThat(logging.events().size(), org.hamcrest.Matchers.is(0));
+    }
+
+    @Test
+    void shouldLogDebugForSingleMfaMethodWithNullPriority() {
+        var mfaMethod =
+                new MFAMethod()
+                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                        .withPriority(null);
+
+        assertDoesNotThrow(
+                () -> logDebugIfMfaMethodHasNullPriority(mfaMethod, "single method test"));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "MFA method with null priority identifier found. MFA method priority-type pair(s): (absent_attribute,AUTH_APP). Context: single method test.")));
+    }
+
+    @Test
+    void shouldCatchExceptionsInLogDebugIfAnyMfaMethodHasNullPriority() {
+        var mfaMethod = new ThrowingMFAMethod();
+
+        assertDoesNotThrow(
+                () -> logDebugIfAnyMfaMethodHasNullPriority(List.of(mfaMethod), "exception test"));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Non-fatal: Exception whilst logging MFA method null priority debug. Exception: Test exception")));
     }
 
     private static class ThrowingMFAMethod extends MFAMethod {

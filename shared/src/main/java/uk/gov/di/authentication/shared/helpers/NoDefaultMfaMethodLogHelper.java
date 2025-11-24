@@ -20,17 +20,7 @@ public class NoDefaultMfaMethodLogHelper {
             List<MFAMethod> mfaMethods, Boolean isUserMigrated) {
         try {
             var mfaMethodCount = mfaMethods.size();
-            var mfaMethodPriorityTypePairs =
-                    mfaMethods.stream()
-                            .map(
-                                    m ->
-                                            String.format(
-                                                    "(%s,%s)",
-                                                    Optional.ofNullable(m.getPriority())
-                                                            .orElse("absent_attribute"),
-                                                    Optional.ofNullable(m.getMfaMethodType())
-                                                            .orElse("absent_attribute")))
-                            .collect(Collectors.joining(", "));
+            var mfaMethodPriorityTypePairs = generateMfaMethodPriorityTypePairs(mfaMethods);
             var isUserMigratedParsed =
                     isUserMigrated == null ? "unknown" : isUserMigrated.toString();
 
@@ -45,5 +35,43 @@ public class NoDefaultMfaMethodLogHelper {
                     e.getMessage(),
                     e);
         }
+    }
+
+    public static void logDebugIfMfaMethodHasNullPriority(MFAMethod mfaMethod, String context) {
+        logDebugIfAnyMfaMethodHasNullPriority(List.of(mfaMethod), context);
+    }
+
+    public static void logDebugIfAnyMfaMethodHasNullPriority(
+            List<MFAMethod> mfaMethods, String context) {
+        try {
+            boolean hasNullPriority = mfaMethods.stream().anyMatch(m -> m.getPriority() == null);
+            if (hasNullPriority) {
+                var mfaMethodPriorityTypePairs = generateMfaMethodPriorityTypePairs(mfaMethods);
+                var contextMessage = context != null ? " Context: " + context + "." : "";
+
+                LOG.warn(
+                        "MFA method with null priority identifier found. MFA method priority-type pair(s): {}.{}",
+                        mfaMethodPriorityTypePairs,
+                        contextMessage);
+            }
+        } catch (Exception e) {
+            LOG.warn(
+                    "Non-fatal: Exception whilst logging MFA method null priority debug. Exception: {}",
+                    e.getMessage(),
+                    e);
+        }
+    }
+
+    private static String generateMfaMethodPriorityTypePairs(List<MFAMethod> mfaMethods) {
+        return mfaMethods.stream()
+                .map(
+                        m ->
+                                String.format(
+                                        "(%s,%s)",
+                                        Optional.ofNullable(m.getPriority())
+                                                .orElse("absent_attribute"),
+                                        Optional.ofNullable(m.getMfaMethodType())
+                                                .orElse("absent_attribute")))
+                .collect(Collectors.joining(", "));
     }
 }

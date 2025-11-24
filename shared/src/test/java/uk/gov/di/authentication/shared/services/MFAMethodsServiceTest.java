@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest.MfaMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
@@ -179,6 +180,34 @@ public class MFAMethodsServiceTest {
                             withMessageContaining(
                                     "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 2, MFA method priority-type pairs: (absent_attribute,SMS), (BACKUP,AUTH_APP).")));
         }
+
+        @Test
+        void logsWarningWhenMigratedUserHasMethodsWithNullPriority() {
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            MFAMethod methodWithNullPriority =
+                    MFAMethod.smsMfaMethod(
+                                    true,
+                                    true,
+                                    UK_MOBILE_NUMBER,
+                                    PriorityIdentifier.DEFAULT,
+                                    "sms-identifier")
+                            .withPriority(null);
+            mockUserCredentials.setMfaMethods(List.of(methodWithNullPriority));
+            when(persistentService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(mockUserCredentials);
+            when(persistentService.getUserProfileByEmail(EMAIL)).thenReturn(userProfile);
+
+            service.getMfaMethods(EMAIL);
+
+            assertThat(
+                    noDefaultMfaMethodLogging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "MFA method with null priority identifier found. MFA method priority-type pair(s): (absent_attribute,SMS). Context: getMfaMethodsForMigratedUser (user is migrated).")));
+        }
     }
 
     @Nested
@@ -208,6 +237,39 @@ public class MFAMethodsServiceTest {
                             ACCOUNT_MANAGEMENT,
                             "AUTH_APP",
                             BACKUP);
+        }
+    }
+
+    @Nested
+    class AddBackupMfa {
+        @Test
+        void logsDebugWhenExistingMfaMethodsHaveNullPriority() {
+            var service =
+                    new MFAMethodsService(
+                            configurationService, persistentService, cloudwatchMetricsService);
+            var mockUserCredentials = new UserCredentials();
+            MFAMethod methodWithNullPriority =
+                    MFAMethod.smsMfaMethod(
+                                    true,
+                                    true,
+                                    UK_MOBILE_NUMBER,
+                                    PriorityIdentifier.DEFAULT,
+                                    "sms-identifier")
+                            .withPriority(null);
+            mockUserCredentials.setMfaMethods(List.of(methodWithNullPriority));
+            when(persistentService.getUserCredentialsFromEmailWithStronglyConsistentRead(EMAIL))
+                    .thenReturn(mockUserCredentials);
+
+            var mfaDetail = new RequestSmsMfaDetail("07777777777", "123123");
+            var request = new MfaMethodCreateRequest.MfaMethod(BACKUP, mfaDetail);
+
+            service.addBackupMfa(EMAIL, request);
+
+            assertThat(
+                    noDefaultMfaMethodLogging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "MFA method with null priority identifier found. MFA method priority-type pair(s): (absent_attribute,SMS). Context: addBackupMfa (existing MFA methods).")));
         }
     }
 

@@ -34,6 +34,7 @@ import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfAnyMfaMethodHasNullPriority;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.UNKNOWN_MFA_IDENTIFIER;
 import static uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT;
@@ -143,7 +144,13 @@ public class MFAMethodsService {
     }
 
     private List<MFAMethod> getMfaMethodsForMigratedUser(UserCredentials userCredentials) {
-        return Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
+        var mfaMethods =
+                Optional.ofNullable(userCredentials.getMfaMethods()).orElse(new ArrayList<>());
+
+        logDebugIfAnyMfaMethodHasNullPriority(
+                mfaMethods, "getMfaMethodsForMigratedUser (user is migrated)");
+
+        return mfaMethods;
     }
 
     public Result<MfaDeleteFailureReason, MFAMethod> deleteMfaMethod(
@@ -254,7 +261,14 @@ public class MFAMethodsService {
             return Result.failure(MfaCreateFailureReason.BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST);
         }
 
+        logDebugIfAnyMfaMethodHasNullPriority(mfaMethods, "addBackupMfa (existing MFA methods)");
+
         if (mfaMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+            if (mfaMethod.priorityIdentifier() == null) {
+                LOG.warn(
+                        "Migrated MFA user attempted to add SMS backup MFA method with null priority identifier");
+            }
+
             var maybePhoneNumberWithCountryCode =
                     getPhoneNumberWithCountryCode(requestSmsMfaDetail.phoneNumber());
 
@@ -291,6 +305,11 @@ public class MFAMethodsService {
             persistentService.addMFAMethodSupportingMultiple(email, smsMfaMethod);
             return Result.success(smsMfaMethod);
         } else {
+            if (mfaMethod.priorityIdentifier() == null) {
+                LOG.warn(
+                        "Migrated MFA user attempted to add AUTH_APP backup MFA method with null priority identifier");
+            }
+
             boolean authAppExists = // TODO: Should this logic change to only look for "enabled"
                     // auth apps?
                     mfaMethods.stream()
