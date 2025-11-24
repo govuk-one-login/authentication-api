@@ -4536,12 +4536,16 @@ Resources:
               !Ref Environment,
               docAppClientId,
             ]
-          DOC_APP_AUTHORISATION_URI:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppAuthorisationUrl,
-            ]
+          DOC_APP_AUTHORISATION_URI: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppAuthorisationUrl
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppAuthorisationUrl
           DOC_APP_DOMAIN: !If
             - UseSubEnvironment
             - !FindInMap
