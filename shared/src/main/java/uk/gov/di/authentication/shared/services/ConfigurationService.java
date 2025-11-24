@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
+import uk.gov.di.authentication.shared.configuration.OauthClientConfig;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
@@ -329,6 +330,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getOrchestrationClientId() {
         return System.getenv().getOrDefault("ORCH_CLIENT_ID", "UNKNOWN");
+    }
+
+    public String getOrchestrationStubClientId() {
+        return System.getenv().getOrDefault("ORCH_STUB_CLIENT_ID", "UNKNOWN");
     }
 
     public URI getGovUKAccountsURL() {
@@ -752,5 +757,59 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getAccountManagementSqsLambdaFunctionName() {
         return String.format("%s-account-management-sqs-lambda", getEnvironment());
+    }
+
+    public boolean isJarValidationEnabled() {
+        return System.getenv()
+                .getOrDefault("JAR_VALIDATION_ENABLED", String.valueOf(false))
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public int getMaxJarTimeToLiveSeconds() {
+        return Integer.parseInt(System.getenv().getOrDefault("MAX_JAR_TTL_SECONDS", "300"));
+    }
+
+    public URI getAuthAudience() {
+        return URI.create(System.getenv().getOrDefault("AUTH_AUDIENCE", ""));
+    }
+
+    public List<String> getOrchestrationRedirectUris() {
+        return Arrays.asList(System.getenv("ORCH_REDIRECT_URIS").split(","));
+    }
+
+    public List<String> getOrchestrationStubRedirectUris() {
+        return Arrays.asList(System.getenv().getOrDefault("ORCH_STUB_REDIRECT_URIS", "").split(","));
+    }
+
+    public Map<String, OauthClientConfig> getOauthClientConfig() {
+        var mainConfig = new OauthClientConfig(
+                getOrchestrationClientId(),
+                getOrchestrationRedirectUris(),
+                getOrchestrationToAuthenticationSigningPublicKey());
+
+        if (getOrchestrationStubToAuthenticationSigningPublicKey().isPresent()) {
+            var stubConfig = new OauthClientConfig(
+                    getOrchestrationStubClientId(),
+                    getOrchestrationStubRedirectUris(),
+                    getOrchestrationStubToAuthenticationSigningPublicKey().get());
+            return Map.of(
+                    getOrchestrationClientId(), mainConfig,
+                    getOrchestrationStubClientId(), stubConfig);
+        }
+
+        return Map.of(getOrchestrationClientId(), mainConfig);
+    }
+
+    public String getAuthEncryptionKeyPrimaryAlias() {
+        return System.getenv("AUTH_ENCRYPTION_KEY_PRIMARY_ALIAS");
+    }
+
+    public Optional<String> getAuthEncryptionKeySecondaryAlias() {
+        return Optional.ofNullable(System.getenv("AUTH_ENCRYPTION_KEY_SECONDARY_ALIAS"));
+    }
+
+    // Encryption key for local running - can be removed if orch-stub uses JWKS
+    public String getAuthEncryptionKeyLocal() {
+        return System.getenv("AUTH_ENCRYPTION_KEY_LOCAL");
     }
 }
