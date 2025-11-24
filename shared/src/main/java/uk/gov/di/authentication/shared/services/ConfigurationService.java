@@ -778,20 +778,23 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public List<String> getOrchestrationStubRedirectUris() {
-        return Arrays.asList(System.getenv().getOrDefault("ORCH_STUB_REDIRECT_URIS", "").split(","));
+        return Arrays.asList(
+                System.getenv().getOrDefault("ORCH_STUB_REDIRECT_URIS", "").split(","));
     }
 
     public Map<String, OauthClientConfig> getOauthClientConfig() {
-        var mainConfig = new OauthClientConfig(
-                getOrchestrationClientId(),
-                getOrchestrationRedirectUris(),
-                getOrchestrationToAuthenticationSigningPublicKey());
+        var mainConfig =
+                new OauthClientConfig(
+                        getOrchestrationClientId(),
+                        getOrchestrationRedirectUris(),
+                        getOrchestrationToAuthenticationSigningPublicKey());
 
         if (getOrchestrationStubToAuthenticationSigningPublicKey().isPresent()) {
-            var stubConfig = new OauthClientConfig(
-                    getOrchestrationStubClientId(),
-                    getOrchestrationStubRedirectUris(),
-                    getOrchestrationStubToAuthenticationSigningPublicKey().get());
+            var stubConfig =
+                    new OauthClientConfig(
+                            getOrchestrationStubClientId(),
+                            getOrchestrationStubRedirectUris(),
+                            getOrchestrationStubToAuthenticationSigningPublicKey().get());
             return Map.of(
                     getOrchestrationClientId(), mainConfig,
                     getOrchestrationStubClientId(), stubConfig);
