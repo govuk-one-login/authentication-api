@@ -22,15 +22,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout repo
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Set up SAM cli
-        uses: aws-actions/setup-sam@f664fad9e12492edfc187a31f575537dfbb0ff63 # v2
+        uses: aws-actions/setup-sam@c71dd89d980e49367c70391e8ada4353f52f2800 # v2
         with:
           use-installer: true
 
       - name: Set up AWS creds
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8 # v5.1.0
         with:
           role-to-assume: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
           aws-region: eu-west-2
