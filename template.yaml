@@ -466,10 +466,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${AuthAccountId}:root
                   - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          authAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ],
                       ]
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
@@ -535,10 +543,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -558,10 +574,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -582,10 +606,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -718,10 +750,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${AuthAccountId}:root
                   - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          authAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ],
                       ]
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
@@ -774,10 +814,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -797,10 +845,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -851,10 +907,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${AuthAccountId}:root
                   - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          authAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ],
                       ]
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
@@ -913,10 +977,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -1033,10 +1105,18 @@ Resources:
                 - !Sub
                   - arn:aws:iam::${AuthAccountId}:root
                   - AuthAccountId:
-                      !FindInMap [
-                        EnvironmentConfiguration,
-                        !Ref Environment,
-                        authAccountId,
+                      !If [
+                        UseSubEnvironment,
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref SubEnvironment,
+                          authAccountId,
+                        ],
+                        !FindInMap [
+                          EnvironmentConfiguration,
+                          !Ref Environment,
+                          authAccountId,
+                        ],
                       ]
                 - !Sub
                   - arn:aws:iam::${NewAuthAccountId}:root
@@ -1092,10 +1172,18 @@ Resources:
                   - !Sub
                     - arn:aws:iam::${AuthAccountId}:root
                     - AuthAccountId:
-                        !FindInMap [
-                          EnvironmentConfiguration,
-                          !Ref Environment,
-                          authAccountId,
+                        !If [
+                          UseSubEnvironment,
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref SubEnvironment,
+                            authAccountId,
+                          ],
+                          !FindInMap [
+                            EnvironmentConfiguration,
+                            !Ref Environment,
+                            authAccountId,
+                          ],
                         ]
                   - !Sub
                     - arn:aws:iam::${NewAuthAccountId}:root
@@ -1634,12 +1722,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -1816,12 +1908,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/trustmark"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -2236,12 +2332,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -2287,12 +2387,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -2474,12 +2578,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -2510,12 +2618,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/token"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -2715,12 +2827,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -2757,12 +2873,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/logout
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -2921,12 +3041,16 @@ Resources:
           ENVIRONMENT: !Sub ${Environment}
           DYNAMO_ARN_PREFIX: !Sub
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -3254,12 +3378,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -3407,12 +3535,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/orchestration-redirect"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -3688,12 +3820,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/jwks.json"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -3864,12 +4000,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/ipv-jwks.json"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4063,12 +4203,16 @@ Resources:
             ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -4169,12 +4313,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/authorize"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4375,12 +4523,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -4407,12 +4559,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/userinfo"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4592,12 +4748,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -4632,12 +4792,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/auth-code"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4803,12 +4967,16 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -4839,12 +5007,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/PUT/connect/register/{clientId}"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -4985,12 +5157,16 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -5021,12 +5197,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/connect/register"
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -5205,12 +5385,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -5377,12 +5561,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/ipv-callback
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -5541,12 +5729,16 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -5709,12 +5901,16 @@ Resources:
                 ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
-            - AccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  authAccountId,
-                ]
+            - AccountId: !If
+                - UseSubEnvironment
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref SubEnvironment
+                  - authAccountId
+                - !FindInMap
+                  - EnvironmentConfiguration
+                  - !Ref Environment
+                  - authAccountId
               AuthEnvironment:
                 !FindInMap [
                   EnvironmentConfiguration,
@@ -5975,12 +6171,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/storage-token-jwk.json
-        - AccountId:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              authAccountId,
-            ]
+        - AccountId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authAccountId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authAccountId
           ApiId: !If
             - UseSubEnvironment
             - !FindInMap
@@ -6683,12 +6883,16 @@ Resources:
             Resource:
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+                - AccountId: !If
+                    - UseSubEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref SubEnvironment
+                      - authAccountId
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref Environment
+                      - authAccountId
                   AuthEnvironment:
                     !FindInMap [
                       EnvironmentConfiguration,
@@ -6728,12 +6932,16 @@ Resources:
             Resource:
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-                - AccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      authAccountId,
-                    ]
+                - AccountId: !If
+                    - UseSubEnvironment
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref SubEnvironment
+                      - authAccountId
+                    - !FindInMap
+                      - EnvironmentConfiguration
+                      - !Ref Environment
+                      - authAccountId
                   AuthEnvironment:
                     !FindInMap [
                       EnvironmentConfiguration,
