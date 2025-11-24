@@ -1640,8 +1640,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   OpenIdConfigurationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1814,8 +1822,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   TrustmarkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2277,8 +2293,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   DocAppCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
@@ -2492,8 +2516,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   TokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2731,8 +2763,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   LogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -3369,8 +3409,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   AuthenticationCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -3642,8 +3690,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   JwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -3810,8 +3866,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   IpvJwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4107,8 +4171,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4337,8 +4409,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   UserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4554,8 +4634,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   AuthCodeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4753,8 +4841,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   UpdateClientConfigFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -4927,8 +5023,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   ClientRegistrationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -5275,8 +5379,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   IpvCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -5865,8 +5977,16 @@ Resources:
               !Ref Environment,
               authAccountId,
             ]
-          ApiId:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+          ApiId: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - authApiId
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - authApiId
 
   StorageTokenJwkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
