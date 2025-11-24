@@ -2415,12 +2415,16 @@ Resources:
               !Ref Environment,
               docAppSigningKeyArn,
             ]
-          DOC_APP_BACKEND_URI:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              docAppBackendUri,
-            ]
+          DOC_APP_BACKEND_URI: !If
+            - UseSubEnvironment
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref SubEnvironment
+              - docAppBackendUri
+            - !FindInMap
+              - EnvironmentConfiguration
+              - !Ref Environment
+              - docAppBackendUri
           DOC_APP_CRI_DATA_V2_ENDPOINT:
             !FindInMap [
               EnvironmentConfiguration,
@@ -2431,10 +2435,18 @@ Resources:
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
             - DocAppBackendUri:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  docAppBackendUri,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    docAppBackendUri,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    docAppBackendUri,
+                  ],
                 ]
           DOC_APP_AUD:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
@@ -4519,10 +4531,18 @@ Resources:
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
             - DocAppBackendUri:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  docAppBackendUri,
+                !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    docAppBackendUri,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    docAppBackendUri,
+                  ],
                 ]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
           DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
