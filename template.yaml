@@ -7558,10 +7558,18 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  clientRegistryTableKeyArn,
+              - !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    clientRegistryTableKeyArn,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    clientRegistryTableKeyArn,
+                  ],
                 ]
               - !GetAtt ClientRegistryTableEncryptionKey.Arn
 
@@ -7611,10 +7619,18 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  clientRegistryTableKeyArn,
+              - !If [
+                  UseSubEnvironment,
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    clientRegistryTableKeyArn,
+                  ],
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    clientRegistryTableKeyArn,
+                  ],
                 ]
               - !GetAtt ClientRegistryTableEncryptionKey.Arn
 
