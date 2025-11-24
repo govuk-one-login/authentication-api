@@ -2187,19 +2187,14 @@ Resources:
               - dynamodb:DeleteItem
             Resource:
               - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Orch-Session"
+                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Orch-Session"
                 - OrchAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
                       !Ref Environment,
                       OrchAccountID,
                     ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
+                  OrchEnv: !Ref Environment
 
           # Orch Client Session Encryption Key - Decrypt
           - Sid: AllowOrchClientSessionEncryptionKeyCrossAccountDecryptAccess
@@ -2229,19 +2224,14 @@ Resources:
               - dynamodb:DeleteItem
             Resource:
               - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Client-Session"
+                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Client-Session"
                 - OrchAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
                       !Ref Environment,
                       OrchAccountID,
                     ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
+                  OrchEnv: !Ref Environment
 
           # Orch Identity Credentials Encryption Key - Decrypt
           - Sid: AllowOrchIdentityCredentialsEncryptionKeyCrossAccountDecryptAccess
@@ -2270,19 +2260,14 @@ Resources:
               - dynamodb:Get*
             Resource:
               - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${Env}-Orch-Identity-Credentials"
+                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Orch-Identity-Credentials"
                 - OrchAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
                       !Ref Environment,
                       OrchAccountID,
                     ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
+                  OrchEnv: !Ref Environment
 
   S3SmokeTestPolicy:
     Type: AWS::IAM::ManagedPolicy
