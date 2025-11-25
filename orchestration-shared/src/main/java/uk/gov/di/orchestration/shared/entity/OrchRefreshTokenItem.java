@@ -13,12 +13,14 @@ public class OrchRefreshTokenItem {
     private static final String ATTRIBUTE_TOKEN = "Token";
     private static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
     private static final String ATTRIBUTE_IS_USED = "IsUsed";
+    private static final String ATTRIBUTE_TTL = "ttl";
 
     private String jwtId;
     private String internalPairwiseSubjectId;
     private String token;
     private String authCode;
     private boolean isUsed = false;
+    private long timeToLive;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_JWT_ID)
@@ -89,6 +91,20 @@ public class OrchRefreshTokenItem {
 
     public OrchRefreshTokenItem withIsUsed(boolean isUsed) {
         this.isUsed = isUsed;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TTL)
+    public long getTimeToLive() {
+        return timeToLive;
+    }
+
+    public void setTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
+
+    public OrchRefreshTokenItem withTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
         return this;
     }
 }
