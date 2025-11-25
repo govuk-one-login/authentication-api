@@ -19,13 +19,6 @@ paths:
       description: "Authenticates a user with email and password credentials. Used by the Home service to verify user credentials before issuing access tokens."
       summary: Authenticates a user
       operationId: "authenticate"
-      parameters:
-        - name: clientId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
@@ -238,13 +231,6 @@ paths:
       description: "Deletes a user account. The email in the request must match the authenticated user's email."
       summary: Deletes a user account
       operationId: "delete-account"
-      parameters:
-        - name: clientId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
@@ -316,13 +302,6 @@ paths:
       description: "Sends an OTP code to the user's known contact method for verification purposes. Unlike /send-otp-notification, this endpoint only sends to contact methods already associated with the user's account."
       summary: Sends an OTP challenge
       operationId: "send-otp-challenge"
-      parameters:
-        - name: clientId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
@@ -424,13 +403,6 @@ paths:
       description: "Verifies an OTP code sent to the user's contact method. This endpoint validates the OTP without performing any account updates."
       summary: Verifies an OTP challenge
       operationId: "verify-otp-challenge"
-      parameters:
-        - name: clientId
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
