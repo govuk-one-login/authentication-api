@@ -147,7 +147,7 @@
           "phase": "pre-merge",
           "config": {
             "file": ".github/workflows/checkov.yml",
-            "path": "jobs.scan-"
+            "path": "jobs.scan"
           }
         },
         {
@@ -165,7 +165,7 @@
           "phase": "pre-upload",
           "config": {
             "file": ".github/workflows/checkov.yml",
-            "path": "jobs.scan-"
+            "path": "jobs.scan"
           }
         },
         {
