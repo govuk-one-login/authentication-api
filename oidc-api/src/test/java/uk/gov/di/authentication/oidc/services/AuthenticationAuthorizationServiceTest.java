@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.time.Clock.fixed;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -78,6 +79,7 @@ import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.LOCAL_ACCOUNT_ID;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.PHONE_NUMBER;
+import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.SALT;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.UPLIFT_REQUIRED;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE;
@@ -426,6 +428,59 @@ class AuthenticationAuthorizationServiceTest {
             assertThat(claimsSet.getClaim("authenticated"), equalTo(isAuthenticated));
         }
 
+        @Test
+        void shouldAddPublicSubjectIdClaimIfClientHasPublicSubjectTypePresent() throws Exception {
+            clientRegistry = generateClientRegistry().withSubjectType(PUBLIC.toString());
+            var authRequest = generateAuthRequest(AUTH_ONLY_VTR);
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            assertRequiredClaimsAreSet(claimsSet);
+            assertThat(claimsSet.getClaim("subject_type"), equalTo(PUBLIC.toString()));
+            var actualUserinfo =
+                    SerializationService.getInstance()
+                            .readValue(claimsSet.getClaim("claim").toString(), Map.class);
+            var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
+            assertRequiredUserInfoClaimsAreSet(actualUserInfoClaims);
+            assertTrue(actualUserInfoClaims.containsKey(PUBLIC_SUBJECT_ID.getValue()));
+        }
+
+        @Test
+        void shouldAddPublicSubjectIdClaimIfAuthRequestHasAmScope() throws Exception {
+            var authRequest =
+                    authRequestBuilder(AUTH_ONLY_VTR).scope(Scope.parse("openid am")).build();
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            var actualUserinfo =
+                    SerializationService.getInstance()
+                            .readValue(claimsSet.getClaim("claim").toString(), Map.class);
+            var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
+            assertTrue(actualUserInfoClaims.containsKey(PUBLIC_SUBJECT_ID.getValue()));
+        }
+
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
             assertTrue(actualUserInfoClaims.containsKey(EMAIL.getValue()));
             assertTrue(actualUserInfoClaims.containsKey(LOCAL_ACCOUNT_ID.getValue()));
@@ -450,7 +505,6 @@ class AuthenticationAuthorizationServiceTest {
             assertThat(claimsSet.getClaim("govuk_signin_journey_id"), equalTo(CLIENT_SESSION_ID));
             assertThat(claimsSet.getClaim("redirect_uri"), equalTo(ORCH_REDIRECT_URI));
             assertThat(claimsSet.getClaim("scope"), equalTo(SCOPE));
-            assertThat(claimsSet.getClaim("subject_type"), equalTo(RP_SUBJECT_TYPE));
         }
 
         private AuthenticationRequest.Builder authRequestBuilder(VectorOfTrust vtr)

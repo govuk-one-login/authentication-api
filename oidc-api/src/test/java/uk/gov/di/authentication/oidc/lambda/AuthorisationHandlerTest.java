@@ -1190,47 +1190,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddPublicSubjectIdClaimIfAmScopePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent();
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
-        }
-
-        @Test
-        void shouldAddPublicSubjectIdClaimIfClientHasPublicSubjectTypePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            when(clientService.getClient(CLIENT_ID.getValue()))
-                    .thenReturn(Optional.of(generateClientRegistry().withSubjectType("public")));
-
-            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid"));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent();
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"verified_mfa_method_type\":null,\"public_subject_id\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
-        }
-
-        @Test
         void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
                 throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
             Map<String, String> requestParams =
