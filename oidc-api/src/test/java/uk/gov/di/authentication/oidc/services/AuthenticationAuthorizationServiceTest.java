@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -610,6 +611,29 @@ class AuthenticationAuthorizationServiceTest {
                 JsonApprovals.verifyAsJson(
                         jwtClaimSetCaptor.getValue().toJSONObject(), GsonBuilder::serializeNulls);
             }
+        }
+
+        @Test
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfReauthRequestedFalse()
+                throws Exception {
+            var authRequest = generateAuthRequest(AUTH_ONLY_VTR);
+
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            assertNull(claimsSet.getClaim("reauthenticate"));
+            assertNull(claimsSet.getClaim("previous_govuk_signin_journey_id"));
         }
 
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
