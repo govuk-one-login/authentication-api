@@ -74,6 +74,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
+import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
@@ -510,6 +511,42 @@ class AuthenticationAuthorizationServiceTest {
                             .readValue(claimsSet.getClaim("claim").toString(), Map.class);
             var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
             assertTrue(actualUserInfoClaims.containsKey(LEGACY_SUBJECT_ID.getValue()));
+        }
+
+        @Test
+        void shouldRedirectToLoginWithPromptParamWhenSetToLogin() throws Exception {
+            var authRequest = authRequestBuilder(AUTH_ONLY_VTR).prompt(Prompt.Type.LOGIN).build();
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            verify(authFrontend).authorizeURI(Optional.of(Prompt.Type.LOGIN), Optional.empty());
+        }
+
+        @Test
+        void shouldRetainGoogleAnalyticsParamThroughRedirectToLogin() throws Exception {
+            var authRequest =
+                    authRequestBuilder(AUTH_ONLY_VTR)
+                            .customParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY, "test")
+                            .build();
+
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            verify(authFrontend).authorizeURI(Optional.empty(), Optional.of("test"));
         }
 
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
