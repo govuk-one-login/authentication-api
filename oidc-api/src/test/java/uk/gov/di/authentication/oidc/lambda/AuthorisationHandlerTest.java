@@ -688,10 +688,8 @@ class AuthorisationHandlerTest {
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
-        @ParameterizedTest
-        @ValueSource(booleans = {true, false})
-        void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
-                boolean isAuthOrchSplitEnabled) {
+        @Test
+        void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp() {
             withExistingSession();
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -1380,8 +1378,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void
-                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
