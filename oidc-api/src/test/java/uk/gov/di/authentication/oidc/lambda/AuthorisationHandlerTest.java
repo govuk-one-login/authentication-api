@@ -23,6 +23,7 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -36,7 +37,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,11 +54,13 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.entity.ClientRateLimitConfig;
 import uk.gov.di.authentication.oidc.entity.RateLimitDecision;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
+import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RateLimitService;
@@ -69,10 +71,13 @@ import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -182,6 +187,8 @@ class AuthorisationHandlerTest {
             mock(QueryParamsAuthorizeValidator.class);
     private final RateLimitService rateLimitService = mock(RateLimitService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final AuthenticationAuthorizationService authenticationAuthorisationService =
+            mock(AuthenticationAuthorizationService.class);
     private static final String EXPECTED_NEW_SESSION_COOKIE_STRING =
             "gs=a-new-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_BASE_PERSISTENT_COOKIE_VALUE = IdGenerator.generate();
@@ -265,7 +272,7 @@ class AuthorisationHandlerTest {
     private final long timeNow = fixedNowClock.now().toInstant().getEpochSecond();
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         when(configService.getEnvironment()).thenReturn("test-env");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getOidcDomainName())
@@ -301,6 +308,7 @@ class AuthorisationHandlerTest {
                         queryParamsAuthorizeValidator,
                         requestObjectAuthorizeValidator,
                         clientService,
+                        authenticationAuthorisationService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
                         crossBrowserOrchestrationService,
@@ -319,6 +327,15 @@ class AuthorisationHandlerTest {
                 .thenReturn(RateLimitDecision.UNDER_LIMIT_NO_ACTION);
         clientRegistry = generateClientRegistry().withRateLimit(400);
         when(clientService.getClient(anyString())).thenReturn(Optional.of(clientRegistry));
+        when(authenticationAuthorisationService.generateAuthRedirectRequest(
+                        anyString(), anyString(), any(), any(), anyBoolean(), any(), any(), any()))
+                .thenReturn(
+                        new AuthorizationRequest.Builder(
+                                        new ResponseType(ResponseType.Value.CODE),
+                                        new ClientID(TEST_ORCHESTRATOR_CLIENT_ID))
+                                .endpointURI(FRONT_END_AUTHORIZE_LOGIN_URI)
+                                .requestObject(TEST_ENCRYPTED_JWT)
+                                .build());
     }
 
     @Nested
@@ -358,125 +375,37 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
-        void shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBody()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            var orchClientId = "orchestration-client-id";
-            when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-            when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
-                    .thenReturn(TEST_ENCRYPTED_JWT);
-
+        void shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBody() {
             var requestParams = buildRequestParams(null);
             var event = withRequestEvent(requestParams);
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
             var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
-            verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
             assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
             assertThat(
                     splitQuery(locationHeader).get("request"),
                     equalTo(TEST_ENCRYPTED_JWT.serialize()));
-            assertThat(splitQuery(locationHeader).get("client_id"), equalTo(orchClientId));
+            assertThat(
+                    splitQuery(locationHeader).get("client_id"),
+                    equalTo(TEST_ORCHESTRATOR_CLIENT_ID));
             assertThat(
                     splitQuery(locationHeader).get("response_type"),
                     equalTo(ResponseType.CODE.toString()));
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var expectedClaimSetRequest =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"email_verified\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
-            var actualClaimSetRequest =
-                    ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
-            assertEquals(
-                    expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            1003,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
         @Test
-        void shouldPassTheCorrectClaimsToAuthForLowLevelTrustJourneys()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            var orchClientId = "orchestration-client-id";
-            when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-            when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
-                    .thenReturn(TEST_ENCRYPTED_JWT);
-
-            var requestParams =
-                    buildRequestParams(Map.of("scope", "openid phone", "vtr", "[\"Cl\"]"));
-            var event = withRequestEvent(requestParams);
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
-            verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
-            assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
-            assertThat(
-                    splitQuery(locationHeader).get("request"),
-                    equalTo(TEST_ENCRYPTED_JWT.serialize()));
-            assertThat(splitQuery(locationHeader).get("client_id"), equalTo(orchClientId));
-            assertThat(
-                    splitQuery(locationHeader).get("response_type"),
-                    equalTo(ResponseType.CODE.toString()));
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var expectedClaimSetRequest =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"local_account_id\":null, \"phone_number_verified\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
-            var actualClaimSetRequest =
-                    ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
-            assertEquals(
-                    expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
-        }
-
-        @Test
-        void shouldPassTheCorrectClaimsToAuthForHighLevelTrustJourneys()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            var orchClientId = "orchestration-client-id";
-            when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-            when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
-                    .thenReturn(TEST_ENCRYPTED_JWT);
-
-            var requestParams =
-                    buildRequestParams(Map.of("scope", "openid", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            var response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
-            verify(orchestrationAuthorizationService)
-                    .storeState(eq(NEW_SESSION_ID), eq(NEW_CLIENT_SESSION_ID), any(State.class));
-            assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
-            assertThat(
-                    splitQuery(locationHeader).get("request"),
-                    equalTo(TEST_ENCRYPTED_JWT.serialize()));
-            assertThat(splitQuery(locationHeader).get("client_id"), equalTo(orchClientId));
-            assertThat(
-                    splitQuery(locationHeader).get("response_type"),
-                    equalTo(ResponseType.CODE.toString()));
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var expectedClaimSetRequest =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"salt\":null,\"email_verified\":null,\"local_account_id\":null,\"phone_number\":null,\"email\":null,\"verified_mfa_method_type\":null, \"uplift_required\":null , \"achieved_credential_strength\":null}}");
-            var actualClaimSetRequest =
-                    ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
-            assertEquals(
-                    expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
-        }
-
-        @Test
-        void authenticatedClaimIsFalseIfNewSession() {
+        void authenticatedClaimIsFalseIfNewSession() throws Exception {
             withNoSession();
 
             var requestParams =
@@ -486,10 +415,16 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(false, actualAuthenticatedClaim);
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            anyBoolean(),
+                            any(),
+                            any(),
+                            argThat(session -> !session.getAuthenticated()));
         }
 
         @ParameterizedTest
@@ -556,7 +491,7 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
@@ -628,7 +563,7 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
@@ -673,7 +608,7 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
@@ -899,7 +834,7 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
@@ -986,7 +921,7 @@ class AuthorisationHandlerTest {
             verify(cloudwatchMetricsService)
                     .putEmbeddedValue(
                             "AuthRedirectQueryParamSize",
-                            48,
+                            1012,
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
@@ -1083,7 +1018,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws ParseException {
+        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingOrchSession() throws Exception {
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
 
             var requestParams =
@@ -1094,15 +1029,21 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(
-                    argument.getValue().getStringClaim("previous_session_id"), equalTo(SESSION_ID));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            anyBoolean(),
+                            any(),
+                            eq(Optional.of(SESSION_ID)),
+                            any());
         }
 
         @Test
         void shouldNotAddPreviousSessionIdWhenSessionCookiePresentButNotOrchSession()
-                throws ParseException {
+                throws Exception {
             when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
 
             var requestParams =
@@ -1113,9 +1054,16 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getStringClaim("previous_session_id"));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            anyBoolean(),
+                            any(),
+                            eq(Optional.empty()),
+                            any());
         }
 
         @Test
@@ -1150,46 +1098,8 @@ class AuthorisationHandlerTest {
     @Nested
     class Reauthentication {
         @Test
-        void shouldAddReauthenticateAndPreviousJourneyIdClaimIfPromptIsLoginAndIdTokenIsValid()
-                throws JOSEException, ParseException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE,
-                            Prompt.Type.LOGIN.toString(),
-                            SERIALIZED_SIGNED_ID_TOKEN);
-
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent(Map.of("reauthRequested", true));
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(
-                    argument.getValue().getStringClaim("reauthenticate"),
-                    equalTo(SUBJECT.getValue()));
-            assertThat(
-                    argument.getValue().getStringClaim("previous_govuk_signin_journey_id"),
-                    equalTo(NEW_CLIENT_SESSION_ID));
-        }
-
-        @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
+        void shouldNotPassReauthRequestedToAuthoriseServiceIfUsingQueryParameters()
+                throws Exception {
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1203,15 +1113,25 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent();
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(), anyString(), any(), any(), eq(false), any(), any(), any());
         }
 
         @Test
-        void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
+        void shouldErrorIfIdTokenSignatureIsInvalid() throws Exception {
+            when(authenticationAuthorisationService.generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            anyBoolean(),
+                            any(),
+                            any(),
+                            any()))
+                    .thenThrow(
+                            new AuthenticationAuthorisationRequestException(
+                                    "Unable to validate id_token_hint"));
 
             var jwtClaimsSet =
                     buildjwtClaimsSet(
@@ -1260,7 +1180,19 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldErrorIfIdTokenHasIncorrectClient() throws JOSEException {
+        void shouldErrorIfIdTokenHasIncorrectClient() throws Exception {
+            when(authenticationAuthorisationService.generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            anyBoolean(),
+                            any(),
+                            any(),
+                            any()))
+                    .thenThrow(
+                            new AuthenticationAuthorisationRequestException(
+                                    "Invalid id_token_hint for client"));
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var signedIDTokenIncorrectClient =
@@ -1315,8 +1247,9 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldGetVtrFromIdTokenIfNotPresentInAuthenticationRequestAndReauthRequested()
-                throws JOSEException {
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+                throws Exception {
+            var vtrFromIdToken =
+                    VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HMRC200);
             var serialisedIdTokenHint =
                     TokenGeneratorHelper.generateIDToken(
                                     CLIENT_ID.getValue(),
@@ -1348,19 +1281,21 @@ class AuthorisationHandlerTest {
                     makeHandlerRequest(withRequestEvent(requestParams));
             assertThat(response.getStatusCode(), equalTo(302));
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(
-                    argument.getValue().getClaim("requested_credential_strength"),
-                    equalTo("Cl.Cm"));
-            assertThat(
-                    argument.getValue().getClaim("requested_level_of_confidence"),
-                    equalTo("PCL200"));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(),
+                            anyString(),
+                            any(),
+                            any(),
+                            eq(true),
+                            eq(vtrFromIdToken),
+                            any(),
+                            any());
         }
 
         @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
-                throws JOSEException {
+        void shouldNotPassReauthRequestedToAuthoriseServiceIfIdTokenHintIsNotPresent()
+                throws Exception {
             var jwtClaimsSet =
                     buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
 
@@ -1382,10 +1317,9 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent();
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(), anyString(), any(), any(), eq(false), any(), any(), any());
         }
 
         private static Stream<Prompt.Type> prompts() {
@@ -1394,8 +1328,8 @@ class AuthorisationHandlerTest {
 
         @ParameterizedTest
         @MethodSource("prompts")
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
-                Prompt.Type prompt) throws JOSEException {
+        void shouldNotPassReauthRequestedToAuthoriseServiceIfPromptIsNotLoginAndIdTokenIsValid(
+                Prompt.Type prompt) throws Exception {
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var jwtClaimsSet =
@@ -1422,10 +1356,9 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent();
 
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertNull(argument.getValue().getClaim("reauthenticate"));
-            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
+            verify(authenticationAuthorisationService)
+                    .generateAuthRedirectRequest(
+                            anyString(), anyString(), any(), any(), eq(false), any(), any(), any());
         }
     }
 
