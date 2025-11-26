@@ -77,6 +77,7 @@ import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorization
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
+import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.LEGACY_SUBJECT_ID;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.LOCAL_ACCOUNT_ID;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.PHONE_NUMBER;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.PUBLIC_SUBJECT_ID;
@@ -481,6 +482,36 @@ class AuthenticationAuthorizationServiceTest {
             assertTrue(actualUserInfoClaims.containsKey(PUBLIC_SUBJECT_ID.getValue()));
         }
 
+        @Test
+        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent() throws Exception {
+            clientRegistry = generateClientRegistry().withSubjectType(PUBLIC.toString());
+            var authRequest =
+                    authRequestBuilder(AUTH_ONLY_VTR)
+                            .scope(Scope.parse("openid govuk-account"))
+                            .build();
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            assertRequiredClaimsAreSet(claimsSet);
+            assertThat(claimsSet.getClaim("scope"), equalTo("openid govuk-account"));
+            var actualUserinfo =
+                    SerializationService.getInstance()
+                            .readValue(claimsSet.getClaim("claim").toString(), Map.class);
+            var actualUserInfoClaims = (Map<String, String>) actualUserinfo.get("userinfo");
+            assertTrue(actualUserInfoClaims.containsKey(LEGACY_SUBJECT_ID.getValue()));
+        }
+
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
             assertTrue(actualUserInfoClaims.containsKey(EMAIL.getValue()));
             assertTrue(actualUserInfoClaims.containsKey(LOCAL_ACCOUNT_ID.getValue()));
@@ -504,7 +535,6 @@ class AuthenticationAuthorizationServiceTest {
             assertThat(claimsSet.getClaim("service_type"), equalTo(RP_SERVICE_TYPE));
             assertThat(claimsSet.getClaim("govuk_signin_journey_id"), equalTo(CLIENT_SESSION_ID));
             assertThat(claimsSet.getClaim("redirect_uri"), equalTo(ORCH_REDIRECT_URI));
-            assertThat(claimsSet.getClaim("scope"), equalTo(SCOPE));
         }
 
         private AuthenticationRequest.Builder authRequestBuilder(VectorOfTrust vtr)

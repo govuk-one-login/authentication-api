@@ -1190,26 +1190,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent()
-                throws com.nimbusds.oauth2.sdk.ParseException, ParseException {
-            Map<String, String> requestParams =
-                    buildRequestParams(Map.of("scope", "openid govuk-account"));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            verifyAuthorisationRequestParsedAuditEvent();
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-
-            var expectedClaim =
-                    ClaimsSetRequest.parse(
-                            "{\"userinfo\":{\"legacy_subject_id\":null,\"local_account_id\":null,\"verified_mfa_method_type\":null,\"email\":null, \"uplift_required\":null, \"achieved_credential_strength\":null}}");
-            var actualClaim = ClaimsSetRequest.parse(argument.getValue().getStringClaim("claim"));
-            assertEquals(actualClaim.toJSONObject(), expectedClaim.toJSONObject());
-        }
-
-        @Test
         void shouldSetTheRelevantCookiesInTheHeader() {
             Map<String, String> requestParams = buildRequestParams(null);
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
