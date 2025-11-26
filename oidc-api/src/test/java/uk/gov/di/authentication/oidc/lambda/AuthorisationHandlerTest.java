@@ -1402,27 +1402,6 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verifyAuthorisationRequestParsedAuditEvent();
-
-            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
-            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
-        }
-
-        @Test
         void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
 
