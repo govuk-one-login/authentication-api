@@ -1,6 +1,6 @@
 [versions]
 awsSdk = "2.33.4"
-junit = "5.13.4"
+junit = "6.0.1"
 pact = "4.6.17"
 xray = "2.20.0"
 
