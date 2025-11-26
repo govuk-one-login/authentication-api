@@ -478,43 +478,6 @@ class AuthorisationHandlerTest {
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
         }
 
-        private static Stream<Arguments> clientChannelsAndExpectedChannels() {
-            return Stream.of(
-                    arguments(null, null, Channel.WEB.getValue()),
-                    arguments(null, Channel.WEB.getValue(), Channel.WEB.getValue()),
-                    arguments(
-                            null,
-                            Channel.STRATEGIC_APP.getValue(),
-                            Channel.STRATEGIC_APP.getValue()),
-                    arguments(null, Channel.GENERIC_APP.getValue(), Channel.GENERIC_APP.getValue()),
-                    arguments(Channel.WEB.getValue(), null, Channel.WEB.getValue()),
-                    arguments(Channel.GENERIC_APP.getValue(), null, Channel.GENERIC_APP.getValue()),
-                    arguments(
-                            Channel.GENERIC_APP.getValue(),
-                            Channel.WEB.getValue(),
-                            Channel.GENERIC_APP.getValue()));
-        }
-
-        @ParameterizedTest
-        @MethodSource("clientChannelsAndExpectedChannels")
-        void shouldPassTheCorrectChannelClaimToAuth(
-                String authRequestChannel, String clientChannel, String expectedChannelClaim) {
-            when(clientService.getClient(anyString()))
-                    .thenReturn(Optional.of(generateClientRegistry().withChannel(clientChannel)));
-            var requestParams = buildRequestParams(Map.of("scope", "openid profile phone"));
-            if (authRequestChannel != null) {
-                requestParams.put("channel", authRequestChannel);
-            }
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("channel");
-            assertEquals(expectedChannelClaim, actualChannelClaim);
-        }
-
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated) {

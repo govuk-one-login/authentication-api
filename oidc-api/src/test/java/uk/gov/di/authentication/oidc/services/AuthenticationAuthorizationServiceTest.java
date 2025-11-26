@@ -27,6 +27,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationReque
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -61,6 +62,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -131,7 +133,7 @@ class AuthenticationAuthorizationServiceTest {
                 VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.NONE);
         private static final VectorOfTrust IDENTITY_VTR =
                 VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
-        private final ClientRegistry clientRegistry = generateClientRegistry();
+        private ClientRegistry clientRegistry = generateClientRegistry();
         private static final ClientID CLIENT_ID = new ClientID("test-id");
         private static final String PREVIOUS_SESSION_ID = "previous-session-id";
         private static final String CLIENT_SESSION_ID = "a-client-session-id";
@@ -346,6 +348,57 @@ class AuthenticationAuthorizationServiceTest {
                                     AUTH_ONLY_VTR,
                                     Optional.of(PREVIOUS_SESSION_ID),
                                     orchSession));
+        }
+
+        private static Stream<Arguments> clientChannelsAndExpectedChannels() {
+            return Stream.of(
+                    arguments(null, null, Channel.WEB.getValue()),
+                    arguments(null, Channel.WEB.getValue(), Channel.WEB.getValue()),
+                    arguments(
+                            null,
+                            Channel.STRATEGIC_APP.getValue(),
+                            Channel.STRATEGIC_APP.getValue()),
+                    arguments(null, Channel.GENERIC_APP.getValue(), Channel.GENERIC_APP.getValue()),
+                    arguments(Channel.WEB.getValue(), null, Channel.WEB.getValue()),
+                    arguments(Channel.GENERIC_APP.getValue(), null, Channel.GENERIC_APP.getValue()),
+                    arguments(
+                            Channel.GENERIC_APP.getValue(),
+                            Channel.WEB.getValue(),
+                            Channel.GENERIC_APP.getValue()));
+        }
+
+        @ParameterizedTest
+        @MethodSource("clientChannelsAndExpectedChannels")
+        void shouldPassTheCorrectChannelClaimToAuth(
+                String authRequestChannel, String clientChannel, String expectedChannelClaim)
+                throws Exception {
+            clientRegistry.setChannel(clientChannel);
+
+            AuthenticationRequest authRequest;
+            if (authRequestChannel != null) {
+                authRequest =
+                        authRequestBuilder(AUTH_ONLY_VTR)
+                                .customParameter("channel", authRequestChannel)
+                                .build();
+            } else {
+                authRequest = generateAuthRequest(AUTH_ONLY_VTR);
+            }
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            assertRequiredClaimsAreSet(claimsSet);
+            assertThat(claimsSet.getClaim("channel"), equalTo(expectedChannelClaim));
         }
 
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
