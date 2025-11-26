@@ -478,26 +478,6 @@ class AuthorisationHandlerTest {
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
         }
 
-        @ParameterizedTest
-        @ValueSource(booleans = {true, false})
-        void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated) {
-            withExistingSession();
-            withExistingOrchSession(
-                    new OrchSessionItem(NEW_SESSION_ID).withAuthenticated(isAuthenticated));
-
-            var requestParams =
-                    buildRequestParams(
-                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
-            var event = withRequestEvent(requestParams);
-
-            makeHandlerRequest(event);
-
-            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(isAuthenticated, actualAuthenticatedClaim);
-        }
-
         @Test
         void authenticatedClaimIsFalseIfNewSession() {
             withNoSession();

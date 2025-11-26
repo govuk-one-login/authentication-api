@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
@@ -399,6 +400,30 @@ class AuthenticationAuthorizationServiceTest {
             var claimsSet = claimsSetCaptor.getValue();
             assertRequiredClaimsAreSet(claimsSet);
             assertThat(claimsSet.getClaim("channel"), equalTo(expectedChannelClaim));
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldPassAuthenticatedClaimToAuthFromOrchSession(boolean isAuthenticated)
+                throws Exception {
+            orchSession.setAuthenticated(isAuthenticated);
+            var authRequest = generateAuthRequest(AUTH_ONLY_VTR);
+            authService.generateAuthRedirectRequest(
+                    SESSION_ID,
+                    CLIENT_SESSION_ID,
+                    authRequest,
+                    clientRegistry,
+                    false,
+                    AUTH_ONLY_VTR,
+                    Optional.empty(),
+                    orchSession);
+
+            var claimsSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService)
+                    .getSignedAndEncryptedJWT(claimsSetCaptor.capture());
+            var claimsSet = claimsSetCaptor.getValue();
+            assertRequiredClaimsAreSet(claimsSet);
+            assertThat(claimsSet.getClaim("authenticated"), equalTo(isAuthenticated));
         }
 
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {
