@@ -1515,8 +1515,12 @@ class AuthorisationHandlerTest {
                                     "[PCL200.Cl.Cm]")
                             .serialize();
             var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), serialisedIdTokenHint);
+                    jwtClaimsSetBuilder(
+                                    ID_TOKEN_AUDIENCE,
+                                    Prompt.Type.LOGIN.toString(),
+                                    serialisedIdTokenHint)
+                            .claim("vtr", null)
+                            .build();
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1538,6 +1542,9 @@ class AuthorisationHandlerTest {
             assertThat(
                     argument.getValue().getClaim("requested_credential_strength"),
                     equalTo("Cl.Cm"));
+            assertThat(
+                    argument.getValue().getClaim("requested_level_of_confidence"),
+                    equalTo("PCL200"));
         }
 
         @Test
@@ -2953,7 +2960,8 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private static JWTClaimsSet buildjwtClaimsSet(String audience, String prompt, String idToken) {
+    private static JWTClaimsSet.Builder jwtClaimsSetBuilder(
+            String audience, String prompt, String idToken) {
         return new JWTClaimsSet.Builder()
                 .audience(audience)
                 .claim("prompt", prompt)
@@ -2967,26 +2975,16 @@ class AuthorisationHandlerTest {
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
                 .claim("max_age", "1000")
-                .claim("vtr", "[Cl.Cm]")
-                .build();
+                .claim("vtr", "[Cl.Cm]");
+    }
+
+    private static JWTClaimsSet buildjwtClaimsSet(String audience, String prompt, String idToken) {
+        return jwtClaimsSetBuilder(audience, prompt, idToken).build();
     }
 
     private static JWTClaimsSet buildJwtClaimsSet(
             String audience, String prompt, String idToken, String maxAge) {
-        return new JWTClaimsSet.Builder()
-                .audience(audience)
-                .claim("prompt", prompt)
-                .claim("id_token_hint", idToken)
-                .claim("redirect_uri", REDIRECT_URI)
-                .claim("response_type", ResponseType.CODE.toString())
-                .claim("scope", SCOPE)
-                .claim("state", STATE.getValue())
-                .claim("nonce", null)
-                .claim("client_id", CLIENT_ID.getValue())
-                .claim("claims", CLAIMS)
-                .issuer(CLIENT_ID.getValue())
-                .claim("max_age", maxAge)
-                .build();
+        return jwtClaimsSetBuilder(audience, prompt, idToken).claim("max_age", maxAge).build();
     }
 
     private void verifyAuthorisationRequestParsedAuditEvent() {
