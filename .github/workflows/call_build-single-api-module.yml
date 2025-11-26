@@ -72,7 +72,7 @@ jobs:
           distribution: ${{ inputs.java_distribution }}
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@017a9effdb900e5b5b2fddfb590a105619dca3c3 # v4
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
@@ -219,7 +219,7 @@ jobs:
 
       - name: Upload artifacts
         id: upload-artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         env:
           MODULE_NAME: ${{ inputs.module_name }}
         with:
