@@ -16,6 +16,7 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -87,10 +88,31 @@ class ClientRegistryMigrationHandlerTest {
         assertThat(response, equalTo("Finished"));
     }
 
+    @Test
+    void itShouldSortClientsBeforeHashingToEnsureHashComparisonIsOnlyDeterminedByContents() {
+        var clientsInOrder =
+                List.of(
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-1"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-2"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-3"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-4"));
+
+        var unOrderedClients =
+                List.of(
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-3"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-4"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-1"),
+                        generateUnmappedClientRegistryDynamoItem("test-client-id-2"));
+
+        assertEquals(
+                clientRegistryMigrationHandler.hashListOfClients(clientsInOrder),
+                clientRegistryMigrationHandler.hashListOfClients(unOrderedClients));
+    }
+
     private Map<String, AttributeValue> generateUnmappedClientRegistryDynamoItem(String clientId) {
         return Map.ofEntries(
                 Map.entry(
-                        "clientID",
+                        "ClientID",
                         AttributeValue.fromS(clientId != null ? clientId : "test-client")),
                 Map.entry("ClientName", AttributeValue.fromS("test-client")),
                 Map.entry("PublicKey", AttributeValue.fromS("example-key")),

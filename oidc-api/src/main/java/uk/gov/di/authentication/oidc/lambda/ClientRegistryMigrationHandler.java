@@ -12,6 +12,8 @@ import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -75,20 +77,36 @@ public class ClientRegistryMigrationHandler implements RequestHandler<Object, St
     }
 
     private void logHashOfEntries(List<Map<String, AttributeValue>> clients, String logPrefix) {
+        var clientsHash = hashListOfClients(clients);
+        LOG.info("{}: {}", logPrefix, clientsHash);
+    }
+
+    public String hashListOfClients(List<Map<String, AttributeValue>> clients) {
         var totalDigest = new SHA256.Digest();
+
         clients.stream()
+                // Sort the clients to ensure we hash in the same order
+                // each time. We want the digest of the contents - we don't care
+                // ordering!
+                .sorted(Comparator.comparing(c -> c.get("ClientID").s()))
                 .map(this::hashRawClient)
                 .forEach(hash -> totalDigest.update(hash.getBytes(StandardCharsets.UTF_8)));
-        var totalHashString = new String(Hex.encode(totalDigest.digest()), StandardCharsets.UTF_8);
-        LOG.info("{}: {}", logPrefix, totalHashString);
+        return new String(Hex.encode(totalDigest.digest()), StandardCharsets.UTF_8);
     }
 
     private String hashRawClient(Map<String, AttributeValue> client) {
         var digest = new SHA256.Digest();
-        client.forEach(
-                (key, value) ->
-                        digest.update(
-                                (key + "=" + value.toString()).getBytes(StandardCharsets.UTF_8)));
+
+        var mapEntries = new ArrayList<>(client.entrySet());
+        // Ensure we sort the keys of the individual client to ensure we hash in the same order
+        mapEntries.sort(Map.Entry.comparingByKey());
+        mapEntries.forEach(
+                entry -> {
+                    digest.update(
+                            (entry.getKey() + "=" + entry.getValue().toString())
+                                    .getBytes(StandardCharsets.UTF_8));
+                });
+
         return new String(Hex.encode(digest.digest()), StandardCharsets.UTF_8);
     }
 }
