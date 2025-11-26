@@ -688,10 +688,8 @@ class AuthorisationHandlerTest {
                             Map.of("clientId", CLIENT_ID.getValue()));
         }
 
-        @ParameterizedTest
-        @ValueSource(booleans = {true, false})
-        void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
-                boolean isAuthOrchSplitEnabled) {
+        @Test
+        void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp() {
             withExistingSession();
             var authRequestParams = generateAuthRequest(Optional.empty()).toParameters();
             when(orchClientSession.getAuthRequestParams()).thenReturn(authRequestParams);
@@ -1380,8 +1378,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void
-                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1399,27 +1396,6 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertNull(argument.getValue().getClaim("reauthenticate"));
             assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
-        }
-
-        @Test
-        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "prompt",
-                                    Prompt.Type.LOGIN.toString(),
-                                    "id_token_hint",
-                                    SERIALIZED_SIGNED_ID_TOKEN));
-            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            verifyAuthorisationRequestParsedAuditEvent();
-
-            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
-            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
 
         @Test
@@ -1539,8 +1515,12 @@ class AuthorisationHandlerTest {
                                     "[PCL200.Cl.Cm]")
                             .serialize();
             var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), serialisedIdTokenHint);
+                    jwtClaimsSetBuilder(
+                                    ID_TOKEN_AUDIENCE,
+                                    Prompt.Type.LOGIN.toString(),
+                                    serialisedIdTokenHint)
+                            .claim("vtr", null)
+                            .build();
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1562,6 +1542,9 @@ class AuthorisationHandlerTest {
             assertThat(
                     argument.getValue().getClaim("requested_credential_strength"),
                     equalTo("Cl.Cm"));
+            assertThat(
+                    argument.getValue().getClaim("requested_level_of_confidence"),
+                    equalTo("PCL200"));
         }
 
         @Test
@@ -2977,7 +2960,8 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private static JWTClaimsSet buildjwtClaimsSet(String audience, String prompt, String idToken) {
+    private static JWTClaimsSet.Builder jwtClaimsSetBuilder(
+            String audience, String prompt, String idToken) {
         return new JWTClaimsSet.Builder()
                 .audience(audience)
                 .claim("prompt", prompt)
@@ -2991,26 +2975,16 @@ class AuthorisationHandlerTest {
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
                 .claim("max_age", "1000")
-                .claim("vtr", "[Cl.Cm]")
-                .build();
+                .claim("vtr", "[Cl.Cm]");
+    }
+
+    private static JWTClaimsSet buildjwtClaimsSet(String audience, String prompt, String idToken) {
+        return jwtClaimsSetBuilder(audience, prompt, idToken).build();
     }
 
     private static JWTClaimsSet buildJwtClaimsSet(
             String audience, String prompt, String idToken, String maxAge) {
-        return new JWTClaimsSet.Builder()
-                .audience(audience)
-                .claim("prompt", prompt)
-                .claim("id_token_hint", idToken)
-                .claim("redirect_uri", REDIRECT_URI)
-                .claim("response_type", ResponseType.CODE.toString())
-                .claim("scope", SCOPE)
-                .claim("state", STATE.getValue())
-                .claim("nonce", null)
-                .claim("client_id", CLIENT_ID.getValue())
-                .claim("claims", CLAIMS)
-                .issuer(CLIENT_ID.getValue())
-                .claim("max_age", maxAge)
-                .build();
+        return jwtClaimsSetBuilder(audience, prompt, idToken).claim("max_age", maxAge).build();
     }
 
     private void verifyAuthorisationRequestParsedAuditEvent() {
