@@ -173,6 +173,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @Nested
     class LockoutTests {
+        @Test
         void shouldLockoutAfterMaxIncorrectEmailAttempts() {
             setupUser();
             var expectedPairwiseId = setupPairwiseId();
