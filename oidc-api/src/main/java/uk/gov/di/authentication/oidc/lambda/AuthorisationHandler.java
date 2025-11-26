@@ -11,17 +11,13 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -47,10 +43,8 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
-import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -85,8 +79,6 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -98,7 +90,6 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
-import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
@@ -969,78 +960,6 @@ public class AuthorisationHandler
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
-    }
-
-    private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
-            ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
-        LOG.info("Constructing additional authentication claims");
-        var identityRequired =
-                identityRequired(
-                        authenticationRequest.toParameters(),
-                        clientRegistry.isIdentityVerificationSupported(),
-                        configurationService.isIdentityEnabled());
-
-        var amScopePresent =
-                requestedScopesContain(CustomScopeValue.ACCOUNT_MANAGEMENT, authenticationRequest);
-        var govukAccountScopePresent =
-                requestedScopesContain(CustomScopeValue.GOVUK_ACCOUNT, authenticationRequest);
-        var phoneScopePresent = requestedScopesContain(OIDCScopeValue.PHONE, authenticationRequest);
-        var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
-
-        var claimsSet = new HashSet<AuthUserInfoClaims>();
-        claimsSet.add(AuthUserInfoClaims.EMAIL);
-        claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
-        claimsSet.add(AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE);
-        claimsSet.add(AuthUserInfoClaims.UPLIFT_REQUIRED);
-        claimsSet.add(AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH);
-        if (identityRequired) {
-            LOG.info(
-                    "Identity is required. Adding the salt, email_verified and phone_number claims");
-            claimsSet.add(AuthUserInfoClaims.SALT);
-            // Email required for ID journeys for use in Face-to-Face flows
-            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
-            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
-        }
-        if (amScopePresent) {
-            LOG.info("am scope is present. Adding the public_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
-        } else if (PUBLIC.toString().equalsIgnoreCase(clientRegistry.getSubjectType())) {
-            LOG.info("client has PUBLIC subjectType. Adding the public_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
-        }
-
-        if (govukAccountScopePresent) {
-            LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
-            claimsSet.add(AuthUserInfoClaims.LEGACY_SUBJECT_ID);
-        }
-        if (phoneScopePresent) {
-            LOG.info(
-                    "phone scope is present. Adding the phone_number and phone_number_verified claim");
-            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
-            claimsSet.add(AuthUserInfoClaims.PHONE_VERIFIED);
-        }
-        if (emailScopePresent) {
-            LOG.info("email scope is present. Adding the email_verified claim");
-            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
-        }
-
-        var claimSetEntries =
-                claimsSet.stream()
-                        .sorted(Comparator.naturalOrder())
-                        .map(claim -> new ClaimsSetRequest.Entry(claim.getValue()))
-                        .toList();
-
-        if (claimSetEntries.isEmpty()) {
-            LOG.info("No additional claims to add to request");
-            return Optional.empty();
-        }
-        var claimsSetRequest = new ClaimsSetRequest(claimSetEntries);
-        return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
-    }
-
-    private boolean requestedScopesContain(
-            Scope.Value scope, AuthenticationRequest authenticationRequest) {
-        return authenticationRequest.getScope().toStringList().contains(scope.getValue());
     }
 
     private List<String> handleCookies(
