@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -15,6 +16,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
@@ -35,6 +40,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -70,6 +76,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -547,6 +554,62 @@ class AuthenticationAuthorizationServiceTest {
                     orchSession);
 
             verify(authFrontend).authorizeURI(Optional.empty(), Optional.of("test"));
+        }
+
+        @Test
+        void shouldSendAuthTheClaimsRequiredWhenIdentityRequested() throws Exception {
+            try (MockedStatic<IdGenerator> mockIdGenerator = mockStatic(IdGenerator.class);
+                    MockedConstruction<State> ignored =
+                            Mockito.mockConstruction(
+                                    State.class,
+                                    (mock, context) -> when(mock.getValue()).thenReturn("state"))) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
+                var authRequest = generateAuthRequest(IDENTITY_VTR);
+                authService.generateAuthRedirectRequest(
+                        SESSION_ID,
+                        CLIENT_SESSION_ID,
+                        authRequest,
+                        clientRegistry,
+                        false,
+                        IDENTITY_VTR,
+                        Optional.of(PREVIOUS_SESSION_ID),
+                        orchSession);
+
+                var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+                verify(orchestrationAuthorizationService)
+                        .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+                JsonApprovals.verifyAsJson(
+                        jwtClaimSetCaptor.getValue().toJSONObject(), GsonBuilder::serializeNulls);
+            }
+        }
+
+        @Test
+        void shouldSendAuthTheRequiredClaimsWhenAuthOnly() throws Exception {
+            var authRequest = generateAuthRequest(AUTH_ONLY_VTR);
+            try (MockedStatic<IdGenerator> mockIdGenerator = mockStatic(IdGenerator.class);
+                    MockedConstruction<State> ignored =
+                            Mockito.mockConstruction(
+                                    State.class,
+                                    (mock, context) -> when(mock.getValue()).thenReturn("state"))) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
+                authService.generateAuthRedirectRequest(
+                        SESSION_ID,
+                        CLIENT_SESSION_ID,
+                        authRequest,
+                        clientRegistry,
+                        false,
+                        AUTH_ONLY_VTR,
+                        Optional.of(PREVIOUS_SESSION_ID),
+                        orchSession);
+
+                var jwtClaimSetCaptor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+                verify(orchestrationAuthorizationService)
+                        .getSignedAndEncryptedJWT(jwtClaimSetCaptor.capture());
+
+                JsonApprovals.verifyAsJson(
+                        jwtClaimSetCaptor.getValue().toJSONObject(), GsonBuilder::serializeNulls);
+            }
         }
 
         private void assertRequiredUserInfoClaimsAreSet(Map<String, String> actualUserInfoClaims) {

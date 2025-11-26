@@ -18,12 +18,13 @@
   "subject_type": "pairwise",
   "rp_redirect_uri": "https://localhost:8080",
   "is_smoke_test": false,
-  "previous_session_id": "a-session-id",
+  "previous_session_id": "previous-session-id",
   "requested_credential_strength": "Cl.Cm",
-  "govuk_signin_journey_id": "client-session-id",
+  "govuk_signin_journey_id": "a-client-session-id",
   "aud": "https://example.com",
   "service_type": "MANDATORY",
   "nbf": 1630534200,
-  "rp_state": "state",
-  "is_identity_verification_required": true
+  "rp_state": "rp-state",
+  "is_identity_verification_required": true,
+  "redirect_uri": "https://example/orchestration-redirect"
 }

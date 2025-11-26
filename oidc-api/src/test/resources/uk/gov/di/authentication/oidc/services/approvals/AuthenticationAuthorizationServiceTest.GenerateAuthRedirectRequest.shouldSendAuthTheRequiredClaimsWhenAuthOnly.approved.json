@@ -7,6 +7,7 @@
   "scope": "email openid profile",
   "claim": "{\"userinfo\":{\"email_verified\":null,\"local_account_id\":null,\"uplift_required\":null,\"verified_mfa_method_type\":null,\"email\":null,\"achieved_credential_strength\":null}}",
   "state": "state",
+  "requested_level_of_confidence": "P0",
   "exp": 1630534380,
   "iat": 1630534200,
   "client_name": "test-rp-client-name",
@@ -17,12 +18,13 @@
   "subject_type": "pairwise",
   "rp_redirect_uri": "https://localhost:8080",
   "is_smoke_test": false,
-  "previous_session_id": "a-session-id",
-  "requested_credential_strength": "Cl.Cm",
-  "govuk_signin_journey_id": "client-session-id",
+  "previous_session_id": "previous-session-id",
+  "requested_credential_strength": "Cl",
+  "govuk_signin_journey_id": "a-client-session-id",
   "aud": "https://example.com",
   "service_type": "MANDATORY",
   "nbf": 1630534200,
-  "rp_state": "state",
-  "is_identity_verification_required": false
+  "rp_state": "rp-state",
+  "is_identity_verification_required": false,
+  "redirect_uri": "https://example/orchestration-redirect"
 }
