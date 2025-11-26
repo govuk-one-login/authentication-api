@@ -99,14 +99,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             CheckReauthUserRequest request,
             UserContext userContext) {
 
-        var emailUserIsSignedInWith = userContext.getAuthSession().getEmailAddress();
         var internalPairwiseId = userContext.getAuthSession().getInternalCommonSubjectId();
 
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
                         internalPairwiseId,
-                        emailUserIsSignedInWith,
+                        userContext.getAuthSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -134,7 +133,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .orElseGet(
                             () ->
                                     generateErrorResponse(
-                                            emailUserIsSignedInWith,
+                                            userContext.getUserProfile(),
                                             request.rpPairwiseId(),
                                             auditContext,
                                             pairwiseIdMetadataPair,
@@ -189,7 +188,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String emailUserIsSignedInWith,
+            Optional<UserProfile> userProfileOfSignedInUser,
             String rpPairwiseId,
             AuditContext auditContext,
             AuditService.MetadataPair pairwiseIdMetadataPair,
@@ -198,13 +197,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         String uniqueUserIdentifier = rpPairwiseId;
         Optional<String> additionalIdentifier = Optional.empty();
-        if (emailUserIsSignedInWith != null) {
-            var userProfile = authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
-
-            if (userProfile != null) {
-                uniqueUserIdentifier = userProfile.getSubjectID();
-                additionalIdentifier = Optional.of(rpPairwiseId);
-            }
+        if (userProfileOfSignedInUser.isPresent()) {
+            uniqueUserIdentifier = userProfileOfSignedInUser.get().getSubjectID();
+            additionalIdentifier = Optional.of(rpPairwiseId);
         }
 
         authenticationAttemptsService.createOrIncrementCount(
