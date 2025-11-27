@@ -38,11 +38,10 @@ node_modules
 
 # ignore the rain merged template generated from the components yamls in ci/cloudformation/auth/*
 auth-template.yaml
+stubs-template.yaml
+am-template.yaml
 
 # Amazon Q files
 .amazonq/
 
 specs-and-prompts/
-
-# ignore the rain merged template generated from the components yamls in ci/cloudformation/stubs/*
-stubs-template.yaml

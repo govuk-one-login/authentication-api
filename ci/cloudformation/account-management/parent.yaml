@@ -76,15 +76,17 @@ Parameters:
     Default: 1
 
 Conditions:
-  AddOrchApiVpcEndpointId:
+  AddHomeApiVpcEndpointId:
     Fn::Not:
       - Fn::Equals:
-          - !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              orchApiVpcEndpointId,
-            ]
-          - ""
+          - Fn::Length:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                HomeApiVpcEndpointId,
+                DefaultValue: [],
+              ]
+          - 0
 
   EnableProvisionedConcurrency:
     Fn::And:
@@ -258,8 +260,6 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/a7f93e1c-d441-4237-8b01-b0c1b4ff39bb
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM0ZehmrdDd89uYEFMTakbS7JgwCGXK7CAYMcVvy1pP5yV4O2mnDjYmvjZpvio2ctgOPxDuBb38QP1HD9WAOR2w==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -319,8 +319,6 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f7f540ee-5bac-4785-a3eb-a5653bd7c137
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -380,8 +378,6 @@ Mappings:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f944cc04-ec31-4ff5-843f-c72e87f5f334
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6f8567bc-37aa-4a12-a3e7-87312701ebcb
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/Yz722IDLN1mPqkPTihkwAkp/rUmBhnWynwAkE/YZlskX+N7VmwIjupla7O6hczlIOqkmPdQ1ayDqI8yY2QOiw==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwe8ey1GnTbH6E69EJFUkt4WQc1KltJwzOYNWUmK/+GxooRp+j9i9KWQ0WlV4gVI0iQkHY3ZKq+RWk94tSDHbyQ==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -480,10 +476,6 @@ Mappings:
       bulkRemoveAccountMaxConcurrency: 10
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
-      orchApiVpcEndpointId: ""
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE1P2vcnCdqx+MDwMTrJy47tV5ryTfkRaZYTpLsfCpC79ZgKSYEBcguuOUP4DvJpyHomBEnxeUs7s5KRgyMQjY4g==
-      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       UseAlarmActions: "No"
       emailAcctCreationOtpCodeTtlDuration: 3600
       lockoutCountTtl: 60
@@ -521,6 +513,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
+      HomeApiVpcEndpointId: ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
@@ -550,9 +543,6 @@ Mappings:
       bulkRemoveAccountMaxConcurrency: 20
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
-      orchApiVpcEndpointId: vpce-0867442e4d95fb43e
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
       UseAlarmActions: "Yes"
       emailAcctCreationOtpCodeTtlDuration: 60
@@ -594,6 +584,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
+      HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
@@ -624,9 +615,6 @@ Mappings:
       bulkRemoveAccountMaxConcurrency: 50
       manuallyDeleteAccountMemorySize: 1536
       manuallyDeleteAccountReservedConcurrency: 1
-      orchApiVpcEndpointId: vpce-0a81481bcd8257f5e
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEw3VqLzY6ZFWmqruOpvMpPH8PWuQQ1zSWSgFy2sngA1GKybC0zuZluGHfZMnr/BGo+teQzbDCekLijPvlozXY1g==
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
       UseAlarmActions: "Yes"
       emailAcctCreationOtpCodeTtlDuration: 3600
@@ -668,6 +656,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendint"
       frontendBaseUrl: https://apitest.signin.integration.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
+      HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -700,9 +689,6 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutCountTtl: 900
       lockoutDuration: 7200
-      orchApiVpcEndpointId: vpce-0704b783d794cea52
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0KGEYIJxophMmqbI/eaJnAJYewaxN+vg+fXthdHMTKrQWPTFu8tUwCbo7f8CS90UsIeSHSDdaSPvXvIoa+j8eA==
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzzwKLypUL89WVaeTbfBZu0Fws8T7ppx89XLVfgXIoCs2P//N5qdghvzgNIgVehQ7CkzyorO/lnRlWPfjCG4Oxw==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
       reauthEnterEmailCountTtl: 3600
@@ -742,6 +728,7 @@ Mappings:
       frontendApiFMSTagValue: "authfrontendprod"
       frontendBaseUrl: https://apitest.signin.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
+      HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -774,9 +761,6 @@ Mappings:
       manuallyDeleteAccountReservedConcurrency: 1
       lockoutCountTtl: 900
       lockoutDuration: 7200
-      orchApiVpcEndpointId: vpce-0dd5d6bf9c2a1eade
-      orchStubToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIh7xuVSWAZ8aW3ak20Ile5B9DfbP/87qEnLLTBZ/8lYCoKVdjMkS/IroHkPcS0laDQa/w0TAPDIqGtsHLI1Rw==
-      orchToAuthSigningPublicKey: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5+3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
       otpCodeTtlDuration: 900
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
       reauthEnterEmailCountTtl: 3600
