@@ -1,0 +1,293 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  DeliveryReceiptsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${Env}-di-authentication-delivery-receipts-api
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TracingEnabled: true
+      EndpointConfiguration:
+        Type: REGIONAL
+      DefinitionBody:
+        openapi: "3.0.1"
+        paths:
+          /notify-callback:
+            post:
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${NotifyCallbackFunction.Arn}:active/invocations"
+      MethodSettings:
+        - CachingEnabled: false
+          ResourcePath: "/*"
+          HttpMethod: "*"
+          MetricsEnabled: true
+          DataTraceEnabled: false
+          LoggingLevel: INFO
+      AccessLogSetting:
+        DestinationArn: !GetAtt DeliveryReceiptsApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
+      Tags:
+        FMSRegionalPolicy: "false"
+        CustomPolicy:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+            frontendApiFMSTagValue,
+          ]
+
+  DeliveryReceiptsApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-delivery-receipts-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-DeliveryReceiptsApiAccessLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/delivery-receipts-api.yaml
+
+  DeliveryReceiptsApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref DeliveryReceiptsApiAccessLogGroup
+
+  DeliveryReceiptsApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${DeliveryReceiptsApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-DeliveryReceiptsApiExecutionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/auth/api/delivery-receipts-api.yaml
+
+  DeliveryReceiptsApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref DeliveryReceiptsApiExecutionLogGroup
+
+  DeliveryReceiptsApiDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub
+        - "${Env}-di-authentication-delivery-receipts-api"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      DashboardBody:
+        Fn::Sub:
+          - |
+            {
+              "start": "-PT336H",
+              "widgets": [
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 6,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Latency",
+                        "ApiName",
+                        "${Env}-di-authentication-delivery-receipts-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Average",
+                    "title": "Latency",
+                    "yAxis": {
+                      "left": {
+                        "label": "Millis",
+                        "showUnits": false,
+                        "min": 0
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    },
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 0,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(m1, 0)",
+                          "label": "",
+                          "id": "e1",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "Count",
+                        "ApiName",
+                        "${Env}-di-authentication-delivery-receipts-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Requests (sum/hr)",
+                    "yAxis": {
+                      "left": {
+                        "label": "Requests",
+                        "showUnits": false
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "height": 6,
+                  "width": 12,
+                  "y": 0,
+                  "x": 12,
+                  "type": "metric",
+                  "properties": {
+                    "metrics": [
+                      [
+                        {
+                          "expression": "FILL(IF(m2 == 0, 1, 1-(m1/m2)), 1)*100",
+                          "label": "",
+                          "id": "e2",
+                          "region": "${AWS::Region}",
+                          "period": 900
+                        }
+                      ],
+                      [
+                        "AWS/ApiGateway",
+                        "5XXError",
+                        "ApiName",
+                        "${Env}-di-authentication-delivery-receipts-api",
+                        {
+                          "id": "m1",
+                          "visible": false
+                        }
+                      ],
+                      [
+                        ".",
+                        "Count",
+                        ".",
+                        ".",
+                        {
+                          "id": "m2",
+                          "visible": false
+                        }
+                      ]
+                    ],
+                    "view": "timeSeries",
+                    "stacked": false,
+                    "region": "${AWS::Region}",
+                    "period": 900,
+                    "stat": "Sum",
+                    "title": "Successful requests",
+                    "yAxis": {
+                      "left": {
+                        "label": "",
+                        "showUnits": false,
+                        "min": 0,
+                        "max": 100
+                      },
+                      "right": {
+                        "showUnits": false
+                      }
+                    },
+                    "setPeriodToTimeRange": true,
+                    "legend": {
+                      "position": "bottom"
+                    },
+                    "liveData": false
+                  }
+                }
+              ]
+            }
+          - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+Outputs:
+  DeliveryReceiptsApiId:
+    Description: "API Gateway ID for Auth Internal API"
+    Value: !Ref DeliveryReceiptsApi
+    Export:
+      Name: !Sub "${AWS::StackName}-DeliveryReceiptsApiId"
