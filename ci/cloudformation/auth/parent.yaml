@@ -274,10 +274,10 @@ Mappings:
       useStronglyConsistentReads: true
       OrchAccountID: 816047645251
       OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
-      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/645669ba-b288-4b63-bfe1-9d8bde9956ec
-      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/4cd7c551-128f-4579-99c2-a7f1bff64fb7
-      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/590f841e-3eec-45f1-a9bc-4b32b2edece4
-      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/97c19476-82ba-433f-8500-981857e7367e
+      OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/54458128-e8d6-4f3f-bb3f-2737f2717bbf
+      OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/2652846f-2767-4d53-a33c-5d1bd5d3f350
+      OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/6c12b394-e3b7-4ca6-a137-2d3a9da8ad9f
+      OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/12a2f192-542c-48f5-9c88-20c62e8944c4
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
