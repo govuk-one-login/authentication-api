@@ -47,7 +47,7 @@ fi
 
 function sso_login() {
   export AWS_ACCOUNT=di-authentication-development
-  export AWS_PROFILE=di-authentication-development-AWSAdministratorAccess
+  export AWS_PROFILE=di-authentication-development-AdministratorAccessPermission
   export AWS_REGION="eu-west-2"
 
   if ! aws sts get-caller-identity &> /dev/null; then
