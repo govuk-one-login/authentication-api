@@ -22,17 +22,21 @@ public class ClientRegistryMigrationHandler implements RequestHandler<Object, St
     private static final Logger LOG = LogManager.getLogger(ClientRegistryMigrationHandler.class);
     private final ClientRegistryMigrationService authClientRegistry;
     private final ClientRegistryMigrationService orchClientRegistry;
+    private final ConfigurationService configurationService;
 
     public ClientRegistryMigrationHandler(ConfigurationService configurationService) {
         this.authClientRegistry = new ClientRegistryMigrationService(configurationService, false);
         this.orchClientRegistry = new ClientRegistryMigrationService(configurationService, true);
+        this.configurationService = configurationService;
     }
 
     public ClientRegistryMigrationHandler(
+            ConfigurationService configurationService,
             ClientRegistryMigrationService authClientRegistryMigrationService,
             ClientRegistryMigrationService orchClientRegistryMigrationService) {
         this.authClientRegistry = authClientRegistryMigrationService;
         this.orchClientRegistry = orchClientRegistryMigrationService;
+        this.configurationService = configurationService;
     }
 
     public ClientRegistryMigrationHandler() {
@@ -43,6 +47,14 @@ public class ClientRegistryMigrationHandler implements RequestHandler<Object, St
     public String handleRequest(Object ignored, Context context) {
         attachTraceId();
         attachLogFieldToLogs(LogLineHelper.LogFieldName.AWS_REQUEST_ID, context.getAwsRequestId());
+
+        if (configurationService.isOrchClientRegistryEnabled()) {
+            var err =
+                    "Cannot invoke Migrate client registry handler as Orch Client Registry is enabled";
+            LOG.error(err);
+            return err;
+        }
+
         LOG.info("Migrate client registry handler invoked");
         return migrateClientRegistry();
     }

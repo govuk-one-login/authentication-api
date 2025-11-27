@@ -7,17 +7,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.oidc.services.ClientRegistryMigrationService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -26,6 +29,7 @@ class ClientRegistryMigrationHandlerTest {
             mock(ClientRegistryMigrationService.class);
     private final ClientRegistryMigrationService orchClientRegistryMigrationService =
             mock(ClientRegistryMigrationService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context mockContext = mock(Context.class);
     private ClientRegistryMigrationHandler clientRegistryMigrationHandler;
 
@@ -37,7 +41,22 @@ class ClientRegistryMigrationHandlerTest {
     void setup() {
         clientRegistryMigrationHandler =
                 new ClientRegistryMigrationHandler(
-                        authClientRegistryMigrationService, orchClientRegistryMigrationService);
+                        configurationService,
+                        authClientRegistryMigrationService,
+                        orchClientRegistryMigrationService);
+    }
+
+    @Test
+    void itDoesNotExecuteDataTransferWhenOrchClientRegistryIsEnabled() {
+        when(configurationService.isOrchClientRegistryEnabled()).thenReturn(true);
+
+        var response = clientRegistryMigrationHandler.handleRequest(null, mockContext);
+        assertThat(
+                response,
+                equalTo(
+                        "Cannot invoke Migrate client registry handler as Orch Client Registry is enabled"));
+        verifyNoInteractions(authClientRegistryMigrationService);
+        verifyNoInteractions(orchClientRegistryMigrationService);
     }
 
     @Test
@@ -54,7 +73,7 @@ class ClientRegistryMigrationHandlerTest {
                                 generateUnmappedClientRegistryDynamoItem("test-client-1"),
                                 generateUnmappedClientRegistryDynamoItem("test-client-2")));
 
-        clientRegistryMigrationHandler.handleRequest(null, mockContext);
+        var response = clientRegistryMigrationHandler.handleRequest(null, mockContext);
 
         verify(authClientRegistryMigrationService).getAllClients();
         verify(orchClientRegistryMigrationService, times(2)).putClientToDynamo(anyMap());
@@ -65,6 +84,7 @@ class ClientRegistryMigrationHandlerTest {
         assertThat(
                 logging.events(), hasItem(withMessageContaining("Found 2 clients in Orch table")));
         assertThat(logging.events(), hasItem(withMessageContaining("Orch client registry hash")));
+        assertThat(response, equalTo("Finished"));
     }
 
     private Map<String, AttributeValue> generateUnmappedClientRegistryDynamoItem(String clientId) {
