@@ -11,6 +11,28 @@ Resources:
           - PRIVATE
         VpcEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - Fn::If:
+              - AddHomeApiVpcEndpointId
+              - Fn::Select:
+                  - 0
+                  - !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      HomeApiVpcEndpointId,
+                      DefaultValue: [],
+                    ]
+              - !Ref AWS::NoValue
+          - Fn::If:
+              - AddHomeApiVpcEndpointId
+              - Fn::Select:
+                  - 1
+                  - !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      HomeApiVpcEndpointId,
+                      DefaultValue: [],
+                    ]
+              - !Ref AWS::NoValue
       Policy:
         Version: "2012-10-17"
         Statement:
@@ -28,6 +50,28 @@ Resources:
               StringNotEquals:
                 aws:SourceVpce:
                   - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                  - Fn::If:
+                      - AddHomeApiVpcEndpointId
+                      - Fn::Select:
+                          - 0
+                          - !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              HomeApiVpcEndpointId,
+                              DefaultValue: [],
+                            ]
+                      - !Ref AWS::NoValue
+                  - Fn::If:
+                      - AddHomeApiVpcEndpointId
+                      - Fn::Select:
+                          - 1
+                          - !FindInMap [
+                              EnvironmentConfiguration,
+                              !Ref Environment,
+                              HomeApiVpcEndpointId,
+                              DefaultValue: [],
+                            ]
+                      - !Ref AWS::NoValue
       Body:
         openapi: "3.0.1"
         info:
