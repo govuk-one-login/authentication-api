@@ -14,6 +14,7 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStor
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -276,6 +277,45 @@ class AuthenticationAttemptsServiceIntegrationTest {
             var expectedCounts = Map.ofEntries(Map.entry(CountType.ENTER_MFA_CODE, 6));
 
             assertEquals(expectedCounts, authenticationAttempts);
+        }
+    }
+
+    @Test
+    void shouldGetCountsByJourneyForIdentifiers() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var thirdIdentifier = "THIRD_IDENTIFIER";
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            incrementCountsForIdentifier(
+                    INTERNAL_SUBJECT_ID,
+                    requestedJourneyType,
+                    Map.of(CountType.ENTER_EMAIL, 2, CountType.ENTER_PASSWORD, 4));
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 1));
+            incrementCountsForIdentifier(
+                    thirdIdentifier, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 3));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 2, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID), JOURNEY_TYPE));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 3, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID), JOURNEY_TYPE));
+
+            assertEquals(
+                    Map.of(CountType.ENTER_EMAIL, 6, CountType.ENTER_PASSWORD, 4),
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            List.of(INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, thirdIdentifier),
+                            JOURNEY_TYPE));
         }
     }
 

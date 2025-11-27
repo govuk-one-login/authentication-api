@@ -32,8 +32,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
@@ -115,25 +118,24 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         Optional<UserProfile> maybeUserProfileOfUserSuppliedEmail =
                 authenticationService.getUserProfileByEmailMaybe(request.email());
 
+        Optional<UserProfile> maybeUserProfileOfSignedInUser = userContext.getUserProfile();
+
         try {
             return maybeUserProfileOfUserSuppliedEmail
                     .flatMap(
-                            userProfile -> {
-                                throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
-                                        userProfile, auditContext, request.rpPairwiseId());
-
-                                return verifyReAuthentication(
-                                        userProfile,
-                                        userContext,
-                                        request.rpPairwiseId(),
-                                        auditContext,
-                                        pairwiseIdMetadataPair);
-                            })
+                            userProfileOfUserSuppliedEmail ->
+                                    verifyReAuthentication(
+                                            userProfileOfUserSuppliedEmail,
+                                            maybeUserProfileOfSignedInUser.orElse(null),
+                                            userContext,
+                                            request.rpPairwiseId(),
+                                            auditContext,
+                                            pairwiseIdMetadataPair))
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(
                             () ->
                                     generateErrorResponse(
-                                            userContext.getUserProfile(),
+                                            maybeUserProfileOfSignedInUser,
                                             request.rpPairwiseId(),
                                             auditContext,
                                             pairwiseIdMetadataPair,
@@ -146,17 +148,46 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private Optional<String> verifyReAuthentication(
-            UserProfile userProfile,
+            UserProfile userProfileAssociatedWithTheUserSubmittedEmail,
+            UserProfile userProfileOfSignedInUser,
             UserContext userContext,
             String rpPairwiseId,
             AuditContext auditContext,
             AuditService.MetadataPair pairwiseIdMetadataPair) {
-        var calculatedPairwiseId =
-                ClientSubjectHelper.getSubject(
-                                userProfile, userContext.getAuthSession(), authenticationService)
-                        .getValue();
+        /*
+           A few things go on in this file method right now. There may be opportunity to refactor further to simplify.
+           First, in order to verify the reauthentication we need to generate a pairwiseId if we have a user profile
+           with the same email address that the user submitted. Then we compare that to the pairwiseId the RP
+           submitted. If they are the same then it's a match.
 
-        if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
+           Once we know if there is a match or not we can check for lockouts against up to 3 identifiers:
+           - We always look for lockouts against the rpPairwiseId.
+           - If the user is signed in we also look for lockouts against that user.
+           - If there is a match then we also look for lockouts against the matched user.
+
+           The user profiles we check may not necessarily be the same. In theory the user could be signed in to auth
+           with a different user profile than the one the RP is wanting to reauthenticate. We should be checking for
+           lockouts against both users in that case.
+        */
+        var calculatedPairwiseIdFromUserSuppliedEmail =
+                ClientSubjectHelper.getSubject(
+                                userProfileAssociatedWithTheUserSubmittedEmail,
+                                userContext.getAuthSession(),
+                                authenticationService)
+                        .getValue();
+        boolean isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId =
+                calculatedPairwiseIdFromUserSuppliedEmail != null
+                        && calculatedPairwiseIdFromUserSuppliedEmail.equals(rpPairwiseId);
+
+        throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+                auditContext,
+                isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
+                        ? userProfileAssociatedWithTheUserSubmittedEmail.getSubjectID()
+                        : null,
+                userProfileOfSignedInUser != null ? userProfileOfSignedInUser.getSubjectID() : null,
+                rpPairwiseId);
+
+        if (isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
             // note here that this retrieval is duplicated a lot here. Currently duplicating so that
             // we don't hit merge conflicts with
             // other PRs that are forced to populate these values in audit events in different ways,
@@ -164,7 +195,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             // once these are done, we should make this consistent and just get these counts once.
             var incorrectEmailCount =
                     authenticationAttemptsService.getCount(
-                            userProfile.getSubjectID(),
+                            userProfileAssociatedWithTheUserSubmittedEmail.getSubjectID(),
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_EMAIL);
 
@@ -287,11 +318,22 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private void throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
-            UserProfile userProfile, AuditContext auditContext, String pairwiseId)
+            AuditContext auditContext,
+            String subjectIdAssociatedWithMatchedSubmittedEmail,
+            String subjectIdAssociatedWithSignedInUser,
+            String pairwiseId)
             throws AccountLockedException {
+        List<String> identifiers =
+                Stream.of(
+                                subjectIdAssociatedWithMatchedSubmittedEmail,
+                                subjectIdAssociatedWithSignedInUser,
+                                pairwiseId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
         var countTypesToCounts =
-                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        userProfile.getSubjectID(), pairwiseId, JourneyType.REAUTHENTICATION);
+                authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                        identifiers, JourneyType.REAUTHENTICATION);
 
         var exceededCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
