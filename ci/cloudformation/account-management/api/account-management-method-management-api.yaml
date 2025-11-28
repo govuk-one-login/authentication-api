@@ -1,5 +1,27 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
+  ApiGatewayAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - ${Env}-api_gateway_auth_invocation
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: default
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Ref AuthorizerFunctionAliasactive
+
   AccountManagementMethodManagementApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -142,6 +164,11 @@ Resources:
               type: apiKey
               name: Authorization
               in: header
+              x-amazon-apigateway-authorizer:
+                type: token
+                authorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionAliasactive.AliasArn}/invocations"
+                authorizerCredentials: !GetAtt ApiGatewayAuthorizerRole.Arn
+                authorizerResultTtlInSeconds: 0
 
   AccountManagementMethodManagementApiDeployment:
     Type: AWS::ApiGateway::Deployment
