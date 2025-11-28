@@ -1,0 +1,28 @@
+openapi: "3.0.1"
+
+info:
+  title: "account-data-api"
+  version: 0.0.1
+  description: Account Data API
+
+paths:
+  /account/factors/passkeys:
+    get:
+      summary: Read all passkeys belonging to a user
+    post:
+      summary: Create a passkey belonging to a user
+
+  /account/factors/passkeys/{passkeyId}:
+    parameters:
+      - name: passkeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read a passkey belonging to a user
+    put:
+      summary: Update a passkey belonging to a user
+    delete:
+      summary: Delete a passkey belonging to a user
