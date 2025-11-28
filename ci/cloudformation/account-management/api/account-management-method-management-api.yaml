@@ -27,7 +27,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: lambda:InvokeFunction
-                Resource: !GetAtt AuthorizerFunction.Arn
+                Resource: !Ref AuthorizerFunction.Alias
 
   AccountManagementMethodManagementApi:
     Type: AWS::ApiGateway::RestApi
@@ -35,9 +35,26 @@ Resources:
       Name: !Sub
         - ${Env}-di-account-management-api-method-management
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlwaysDeploy: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt AccountManagementApiAccessLogGroup.Arn
+        Format:
+          Fn::ToJsonString:
+            requestId: $context.requestId
+            ip: $context.identity.sourceIp
+            userAgent: $context.identity.userAgent
+            requestTime: $context.requestTime
+            httpMethod: $context.httpMethod
+            resourcePath: $context.resourcePath
+            status: $context.status
+            protocol: $context.protocol
+            responseLength: $context.responseLength
+            integrationStatus: $context.integration.integrationStatus
+            integrationLatency: $context.integration.latency
+            integrationRequestId: $context.integration.requestId
       EndpointConfiguration:
-        Types:
-          - PRIVATE
+        Type: PRIVATE
         VpcEndpointIds:
           - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
           - Fn::If:
@@ -112,145 +129,78 @@ Resources:
               AMApiFMSTagValue,
             ]
       Body:
-        openapi: "3.0.1"
-        info:
-          title: "auth-account-management-method-management-api"
-          version: 1.0.2
-          description: Auth Account Management API
-        servers:
-          - url: "https://localhost:8080/"
-        paths:
-          /authenticate:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticateFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /update-password:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdatePasswordFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /update-email:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateEmailFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /update-phone-number:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdatePhoneNumberFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /delete-account:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteAccountFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /send-otp-notification:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendOtpNotificationFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /mfa-methods:
-            post:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodCreateFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /v1/{publicSubjectId}:
-            get:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodRetrieveFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-          /mfa-methods/{mfaIdentifier}:
-            put:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodUpdateFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-            delete:
-              security:
-                - authorise-access-token: []
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodDeleteFunction.Arn}:active/invocations"
-                passthroughBehavior: "when_no_match"
-                timeoutInMillis: 29000
-        components:
-          securitySchemes:
-            authorise-access-token:
-              type: apiKey
-              name: Authorization
-              in: header
-              x-amazon-apigateway-authorizer:
-                type: token
-                authorizerUri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunctionAliasactive.AliasArn}/invocations"
-                authorizerCredentials: !GetAtt ApiGatewayAuthorizerRole.Arn
-                authorizerResultTtlInSeconds: 0
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./ci/openAPI/AccountManagementMMApi.yaml"
+      OpenApiVersion: 3.0.1
 
-  AccountManagementMethodManagementApiDeployment:
-    Type: AWS::ApiGateway::Deployment
+  AccountManagementApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      RestApiId: !Ref AccountManagementMethodManagementApi
-      Description: "Account Management API Deployment"
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - "${Env}-AccountManagement-api-access-logs"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountManagementApiAccessLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/api/account-management-method-management-api
 
-  AccountManagementMethodManagementApiStage:
-    Type: AWS::ApiGateway::Stage
+  AccountManagementApiAccessLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
     Properties:
-      DeploymentId: !Ref AccountManagementMethodManagementApiDeployment
-      RestApiId: !Ref AccountManagementMethodManagementApi
-      StageName: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountManagementApiAccessLogGroup
+
+  AccountManagementApiExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      LogGroupName: !Sub
+        - API-Gateway-Execution-Logs_${AccountManagementApi}/${StageName}
+        - StageName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-AccountManagementApiExecutionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/api/account-management-method-management-api
+
+  AccountManagementApiExecutionLogSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AccountManagementApiExecutionLogGroup
 
 Outputs:
-  AccountManagementMethodManagementApiId:
-    Value: !Ref AccountManagementMethodManagementApi
+  AccountManagementApiId:
+    Value: !Ref AccountManagementApi
     Export:
-      Name: !Sub "${AWS::StackName}-AccountManagementMethodManagementApiId"
+      Name: !Sub "${AWS::StackName}-AccountManagementApiId"
 
-  AccountManagementMethodManagementApiRootResourceId:
-    Value: !GetAtt AccountManagementMethodManagementApi.RootResourceId
+  AccountManagementApiRootResourceId:
+    Value: !GetAtt AccountManagementApi.RootResourceId
     Export:
-      Name: !Sub "${AWS::StackName}-AccountManagementMethodManagementApiRootResourceId"
+      Name: !Sub "${AWS::StackName}-AccountManagementApiRootResourceId"
