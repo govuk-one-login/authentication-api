@@ -9,8 +9,16 @@ paths:
   /account/factors/passkeys:
     get:
       summary: Read all passkeys belonging to a user
+      responses:
+        200:
+          description: List of passkeys
     post:
       summary: Create a passkey belonging to a user
+      responses:
+        201:
+          description: Successfully created passkey
+        400:
+          description: Bad request
 
   /account/factors/passkeys/{passkeyId}:
     parameters:
@@ -22,7 +30,24 @@ paths:
           format: uuid
     get:
       summary: Read a passkey belonging to a user
+      responses:
+        200:
+          description: A passkey
+        404:
+          description: Passkey not found
     put:
       summary: Update a passkey belonging to a user
+      responses:
+        204:
+          description: Successfully updated passkey
+        400:
+          description: Bad request
+        404:
+          description: Passkey not found
     delete:
       summary: Delete a passkey belonging to a user
+      responses:
+        204:
+          description: Successfully deleted passkey
+        404:
+          description: Passkey not found
