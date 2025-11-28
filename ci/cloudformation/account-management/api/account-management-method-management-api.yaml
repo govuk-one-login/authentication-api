@@ -20,7 +20,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: lambda:InvokeFunction
-                Resource: !Ref AuthorizerFunctionAliasactive
+                Resource: !GetAtt AuthorizerFunction.Arn
 
   AccountManagementMethodManagementApi:
     Type: AWS::ApiGateway::RestApi
