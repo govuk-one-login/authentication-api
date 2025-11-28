@@ -163,6 +163,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = UserMfaDetail.noMfa();
+            var hasActivePasskey = false;
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -212,7 +213,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.mfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            lockoutInformation);
+                            lockoutInformation,
+                            hasActivePasskey);
 
             authSessionService.updateSession(authSession);
 

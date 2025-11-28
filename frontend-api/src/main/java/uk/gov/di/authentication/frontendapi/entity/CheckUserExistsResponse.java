@@ -12,5 +12,5 @@ public record CheckUserExistsResponse(
         @SerializedName("doesUserExist") @Expose boolean doesUserExist,
         @SerializedName("mfaMethodType") @Expose MFAMethodType mfaMethodType,
         @SerializedName("phoneNumberLastThree") @Expose String phoneNumberLastThree,
-        @SerializedName("lockoutInformation") @Expose
-                List<LockoutInformation> lockoutInformation) {}
+        @SerializedName("lockoutInformation") @Expose List<LockoutInformation> lockoutInformation,
+        @SerializedName("hasActivePasskey") @Expose boolean hasActivePasskey) {}

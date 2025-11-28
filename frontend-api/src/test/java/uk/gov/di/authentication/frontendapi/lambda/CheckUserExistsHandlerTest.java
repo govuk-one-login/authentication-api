@@ -180,7 +180,8 @@ class CheckUserExistsHandlerTest {
                     "doesUserExist":true,
                     "mfaMethodType":"SMS",
                     "phoneNumberLastThree":"%s",
-                    "lockoutInformation":[]}
+                    "lockoutInformation":[],
+                    "hasActivePasskey":false}
                     """,
                             EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
@@ -235,7 +236,8 @@ class CheckUserExistsHandlerTest {
                     "doesUserExist":true,
                     "mfaMethodType":"%s",
                     "phoneNumberLastThree": %s,
-                    "lockoutInformation":[]}
+                    "lockoutInformation":[],
+                    "hasActivePasskey":false}
                     """,
                             EMAIL_ADDRESS,
                             expectedMfaMethodType,
@@ -331,7 +333,8 @@ class CheckUserExistsHandlerTest {
                                             "codeBlock",
                                             MFAMethodType.AUTH_APP,
                                             lockoutExpiry.getEpochSecond(),
-                                            JourneyType.PASSWORD_RESET_MFA)));
+                                            JourneyType.PASSWORD_RESET_MFA)),
+                            false);
             assertThat(result, hasJsonBody(expectedResponse));
         }
 
