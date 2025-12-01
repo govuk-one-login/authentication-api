@@ -128,7 +128,8 @@ public class AuthenticationCallbackHandler
         var stateStorageService = new StateStorageService(configurationService);
         var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService = new AuthenticationAuthorizationService(stateStorageService);
+        this.authorisationService =
+                new AuthenticationAuthorizationService(configurationService, stateStorageService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.orchAccessTokenService = new OrchAccessTokenService(configurationService);
