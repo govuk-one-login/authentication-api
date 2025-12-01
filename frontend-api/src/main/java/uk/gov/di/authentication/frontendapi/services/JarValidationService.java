@@ -42,7 +42,8 @@ public class JarValidationService {
 
     public JarValidationService(ConfigurationService configService) {
         this.configService = configService;
-        if ("local".equals(configService.getEnvironment())) {
+        if ("local".equals(configService.getEnvironment())
+                && configService.getAuthEncryptionKeyLocal() != null) {
             this.jweDecrypter =
                     new RSADecrypter(parseRSAKey(configService.getAuthEncryptionKeyLocal()));
         } else {
