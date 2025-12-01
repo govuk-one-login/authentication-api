@@ -16,9 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.exceptions.JarValidationException;
 import uk.gov.di.authentication.shared.configuration.OauthClientConfig;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -38,7 +36,6 @@ public class JarValidationService {
 
     private final ConfigurationService configService;
     private final JWEDecrypter jweDecrypter;
-    private final Json objectMapper = SerializationService.getInstance();
 
     public JarValidationService(ConfigurationService configService) {
         this.configService = configService;
@@ -49,6 +46,11 @@ public class JarValidationService {
         } else {
             this.jweDecrypter = new KmsRsaDecrypter(configService);
         }
+    }
+
+    public JarValidationService(ConfigurationService configService, JWEDecrypter jweDecrypter) {
+        this.configService = configService;
+        this.jweDecrypter = jweDecrypter;
     }
 
     public JWTClaimsSet parseAndValidateJar(String jar, String clientId)
