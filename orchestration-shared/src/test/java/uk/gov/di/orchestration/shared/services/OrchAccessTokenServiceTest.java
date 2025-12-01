@@ -261,6 +261,40 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
         }
     }
 
+    @Nested
+    class GetOrchAccessTokensWithoutTtl {
+        @Test
+        void shouldGetAccessTokensWithoutTtlSuccessfully() {
+            List<OrchAccessTokenItem> orchAccessTokenTableItems =
+                    List.of(
+                            new OrchAccessTokenItem()
+                                    .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
+                                    .withAuthCode(AUTH_CODE),
+                            new OrchAccessTokenItem()
+                                    .withClientAndRpPairwiseId(
+                                            "anotherClientId.anotherRpPairwiseId")
+                                    .withAuthCode("another-auth-code"),
+                            new OrchAccessTokenItem()
+                                    .withClientAndRpPairwiseId(
+                                            "clientAndRpPairwiseId-for-token-with-ttl-set")
+                                    .withAuthCode("yet-another-auth-code")
+                                    .withTimeToLive(Instant.now().getEpochSecond()));
+
+            var spyService = spy(orchAccessTokenService);
+            doReturn(orchAccessTokenTableItems.stream()).when(spyService).scanTable();
+
+            var orchAccessTokensWithoutTtl = spyService.getAccessTokensWithoutTtl();
+
+            assertEquals(2, orchAccessTokensWithoutTtl.size());
+            assertTrue(
+                    orchAccessTokensWithoutTtl.stream()
+                            .noneMatch(
+                                    token ->
+                                            "clientAndRpPairwiseId-for-token-with-ttl-set"
+                                                    .equals(token.getClientAndRpPairwiseId())));
+        }
+    }
+
     private void assertOrchAccessTokenItemMatchesExpected(OrchAccessTokenItem orchAccessTokenItem) {
         assertEquals(CLIENT_AND_RP_PAIRWISE_ID, orchAccessTokenItem.getClientAndRpPairwiseId());
         assertEquals(TOKEN, orchAccessTokenItem.getToken());
