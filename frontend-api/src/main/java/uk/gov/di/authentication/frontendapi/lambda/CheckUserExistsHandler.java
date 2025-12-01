@@ -130,7 +130,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             userContext.getAuthSession().setEmailAddress(emailAddress);
 
             UserPermissionContext userPermissionContext =
-                    new UserPermissionContext(null, null, emailAddress, null);
+                    UserPermissionContext.builder().withEmailAddress(emailAddress).build();
 
             var decisionResult =
                     permissionDecisionManager.canReceivePassword(
