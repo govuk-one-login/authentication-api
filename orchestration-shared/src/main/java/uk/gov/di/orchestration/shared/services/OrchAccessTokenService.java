@@ -120,6 +120,24 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
         }
     }
 
+    public List<OrchAccessTokenItem> getAccessTokensWithoutTtl() {
+        try {
+            return scanTable().filter(item -> item.getTimeToLive() == 0).toList();
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException("Failed to scan for tokens without TTL", e);
+            return List.of();
+        }
+    }
+
+    public void updateAccessTokenTtlToNow(OrchAccessTokenItem item) {
+        try {
+            item.setTimeToLive(nowClock.now().toInstant().getEpochSecond());
+            update(item);
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException("Failed to update token TTL", e);
+        }
+    }
+
     private void logAndThrowOrchAccessTokenException(String message, Exception e) {
         LOG.error("{}. Error message: {}", message, e.getMessage());
         throw new OrchAccessTokenException(message);

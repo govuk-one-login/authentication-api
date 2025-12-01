@@ -135,4 +135,8 @@ public class BaseDynamoService<T> {
         return client.describeTable(
                 DescribeTableRequest.builder().tableName(dynamoTable.tableName()).build());
     }
+
+    public Stream<T> scanTable() {
+        return dynamoTable.scan().items().stream();
+    }
 }
