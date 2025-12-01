@@ -3,9 +3,6 @@ Resources:
   ApiGatewayAuthorizerRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub
-        - ${Env}-api_gateway_auth_invocation
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
