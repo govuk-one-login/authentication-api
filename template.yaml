@@ -102,7 +102,11 @@ Conditions:
       true,
     ]
   UseOrchClientRegistry:
-    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
   UseSyncWaitForSpot: !Equals [!Ref Environment, dev]
 
 Mappings:
