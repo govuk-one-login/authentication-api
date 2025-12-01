@@ -205,11 +205,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
         UserPermissionContext userPermissionContext =
-                new UserPermissionContext(
-                        userProfile.getSubjectID(),
-                        calculatedPairwiseId,
-                        userProfile.getEmail(),
-                        null);
+                UserPermissionContext.builder()
+                        .withInternalSubjectId(userProfile.getSubjectID())
+                        .withRpPairwiseId(calculatedPairwiseId)
+                        .withEmailAddress(userProfile.getEmail())
+                        .build();
 
         var decisionResult =
                 permissionDecisionManager.canReceivePassword(journeyType, userPermissionContext);
