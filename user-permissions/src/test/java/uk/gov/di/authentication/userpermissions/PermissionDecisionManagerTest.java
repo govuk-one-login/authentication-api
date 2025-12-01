@@ -379,7 +379,11 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnErrorForReauthenticationJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    new UserPermissionContext(null, "pairwise", EMAIL, new AuthSessionItem());
+                    UserPermissionContext.builder()
+                            .withRpPairwiseId("pairwise")
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(new AuthSessionItem())
+                            .build();
 
             var result =
                     permissionDecisionManager.canReceivePassword(

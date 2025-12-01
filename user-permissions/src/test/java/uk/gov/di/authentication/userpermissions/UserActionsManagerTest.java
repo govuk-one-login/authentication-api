@@ -40,7 +40,10 @@ class UserActionsManagerTest {
     private final AuthSessionItem authSession =
             new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
     private final UserPermissionContext userPermissionContext =
-            new UserPermissionContext(null, null, EMAIL, authSession);
+            UserPermissionContext.builder()
+                    .withEmailAddress(EMAIL)
+                    .withAuthSessionItem(authSession)
+                    .build();
 
     @BeforeEach
     void setUp() {
@@ -106,7 +109,10 @@ class UserActionsManagerTest {
                 sessionWithMaxCount = sessionWithMaxCount.incrementPasswordResetCount();
             }
             var contextWithMaxCount =
-                    new UserPermissionContext(null, null, EMAIL, sessionWithMaxCount);
+                    UserPermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(sessionWithMaxCount)
+                            .build();
 
             var result =
                     userActionsManager.sentEmailOtpNotification(
@@ -129,7 +135,10 @@ class UserActionsManagerTest {
                 sessionWithExactMaxCount = sessionWithExactMaxCount.incrementPasswordResetCount();
             }
             var contextWithExactMaxCount =
-                    new UserPermissionContext(null, null, EMAIL, sessionWithExactMaxCount);
+                    UserPermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(sessionWithExactMaxCount)
+                            .build();
 
             var result =
                     userActionsManager.sentEmailOtpNotification(
