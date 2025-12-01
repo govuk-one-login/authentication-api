@@ -101,7 +101,8 @@ Conditions:
       !FindInMap [EnvironmentConfiguration, !Ref Environment, authStubEnabled],
       true,
     ]
-  UseOrchClientRegistry: !Equals [!Ref Environment, dev]
+  UseOrchClientRegistry:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   UseSyncWaitForSpot: !Equals [!Ref Environment, dev]
 
 Mappings:
