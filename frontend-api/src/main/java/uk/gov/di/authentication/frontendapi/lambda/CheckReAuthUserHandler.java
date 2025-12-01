@@ -150,130 +150,115 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         Optional<UserProfile> maybeUserProfileOfSignedInUser = userContext.getUserProfile();
 
         try {
-            return maybeUserProfileOfUserSuppliedEmail
-                    .flatMap(
-                            userProfileOfUserSuppliedEmail -> {
-                                /*
-                                   A few things go on here right now. There may be opportunity to refactor further
-                                   to simplify. First, in order to verify the reauthentication we need to generate a
-                                   pairwiseId if we have a user profile with the same email address that the user
-                                   submitted. Then we compare that to the pairwiseId the RP submitted. If they are
-                                   the same then it's a match.
+            if (maybeUserProfileOfUserSuppliedEmail.isEmpty()) {
+                return generateErrorResponse(
+                        maybeUserProfileOfSignedInUser,
+                        request.rpPairwiseId(),
+                        auditContext,
+                        pairwiseIdMetadataPair,
+                        request.email(),
+                        maybeUserProfileOfUserSuppliedEmail);
+            }
 
-                                   Once we know if there is a match or not we can check for lockouts against
-                                   up to 3 identifiers:
-                                   - We always look for lockouts against the rpPairwiseId.
-                                   - If the user is signed in we also look for lockouts against that user.
-                                   - If there is a match then we also look for lockouts against the matched user.
+            var userProfileOfUserSuppliedEmail = maybeUserProfileOfUserSuppliedEmail.get();
 
-                                   The user profiles we check may not necessarily be the same. In theory the user
-                                   could be signed in to auth with a different user profile than the one the RP is
-                                   wanting to reauthenticate. We should be checking for lockouts against both
-                                   users in that case.
-                                */
-                                var calculatedPairwiseIdFromUserSuppliedEmail =
-                                        ClientSubjectHelper.getSubject(
-                                                        userProfileOfUserSuppliedEmail,
-                                                        userContext.getAuthSession(),
-                                                        authenticationService)
-                                                .getValue();
-                                boolean
-                                        isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId =
-                                                calculatedPairwiseIdFromUserSuppliedEmail != null
-                                                        && calculatedPairwiseIdFromUserSuppliedEmail
-                                                                .equals(request.rpPairwiseId());
+            /*
+               A few things go on here right now. There may be opportunity to refactor further to simplify. First, in
+               order to verify the reauthentication we need to generate a pairwiseId if we have a user profile with
+               the same email address that the user submitted. Then we compare that to the pairwiseId the RP submitted.
+               If they are the same then it's a match.
 
-                                var countTypesToCounts =
-                                        authenticationAttemptsService
-                                                .getCountsByJourneyForIdentifiers(
-                                                        Arrays.asList(
-                                                                isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
-                                                                        ? userProfileOfUserSuppliedEmail
-                                                                                .getSubjectID()
-                                                                        : null,
-                                                                maybeUserProfileOfSignedInUser
-                                                                        .map(
-                                                                                UserProfile
-                                                                                        ::getSubjectID)
-                                                                        .orElse(null),
-                                                                request.rpPairwiseId()),
-                                                        JourneyType.REAUTHENTICATION);
+               Once we know if there is a match or not we can check for lockouts against up to 3 identifiers:
+               - We always look for lockouts against the rpPairwiseId.
+               - If the user is signed in we also look for lockouts against that user.
+               - If there is a match then we also look for lockouts against the matched user.
 
-                                var exceededCountTypes =
-                                        ReauthAuthenticationAttemptsHelper
-                                                .countTypesWhereUserIsBlockedForReauth(
-                                                        countTypesToCounts, configurationService);
+               The user profiles we check may not necessarily be the same. In theory the user could be signed in to
+               auth with a different user profile than the one the RP is wanting to reauthenticate. We should be
+               checking for lockouts against both users in that case.
+            */
+            var calculatedPairwiseIdFromUserSuppliedEmail =
+                    ClientSubjectHelper.getSubject(
+                                    userProfileOfUserSuppliedEmail,
+                                    userContext.getAuthSession(),
+                                    authenticationService)
+                            .getValue();
+            boolean isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId =
+                    calculatedPairwiseIdFromUserSuppliedEmail != null
+                            && calculatedPairwiseIdFromUserSuppliedEmail.equals(
+                                    request.rpPairwiseId());
 
-                                if (!exceededCountTypes.isEmpty()) {
-                                    LOG.info(
-                                            "Account is locked due to exceeded counts on count types {}",
-                                            exceededCountTypes);
-                                    ReauthFailureReasons failureReason =
-                                            getReauthFailureReasonFromCountTypes(
-                                                    exceededCountTypes);
-                                    auditService.submitAuditEvent(
-                                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                            auditContext,
-                                            ReauthMetadataBuilder.builder(request.rpPairwiseId())
-                                                    .withAllIncorrectAttemptCounts(
-                                                            countTypesToCounts)
-                                                    .withFailureReason(failureReason)
-                                                    .build());
-                                    cloudwatchMetricsService.incrementCounter(
-                                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                                            Map.of(
-                                                    ENVIRONMENT.getValue(),
-                                                    configurationService.getEnvironment(),
-                                                    FAILURE_REASON.getValue(),
-                                                    failureReason == null
-                                                            ? "unknown"
-                                                            : failureReason.getValue()));
+            var countTypesToCounts =
+                    authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
+                                            ? userProfileOfUserSuppliedEmail.getSubjectID()
+                                            : null,
+                                    maybeUserProfileOfSignedInUser
+                                            .map(UserProfile::getSubjectID)
+                                            .orElse(null),
+                                    request.rpPairwiseId()),
+                            JourneyType.REAUTHENTICATION);
 
-                                    throw new AccountLockedException(
-                                            "Account is locked due to too many failed attempts.",
-                                            ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
-                                }
+            var exceededCountTypes =
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            countTypesToCounts, configurationService);
 
-                                if (isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
-                                    // note here that this retrieval is duplicated a lot here.
-                                    // Currently duplicating so that
-                                    // we don't hit merge conflicts with
-                                    // other PRs that are forced to populate these values in audit
-                                    // events in different ways,
-                                    // but
-                                    // once these are done, we should make this consistent and just
-                                    // get these counts once.
-                                    var incorrectEmailCount =
-                                            authenticationAttemptsService.getCount(
-                                                    userProfileOfUserSuppliedEmail.getSubjectID(),
-                                                    JourneyType.REAUTHENTICATION,
-                                                    CountType.ENTER_EMAIL);
+            if (!exceededCountTypes.isEmpty()) {
+                LOG.info(
+                        "Account is locked due to exceeded counts on count types {}",
+                        exceededCountTypes);
+                ReauthFailureReasons failureReason =
+                        getReauthFailureReasonFromCountTypes(exceededCountTypes);
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
+                        ReauthMetadataBuilder.builder(request.rpPairwiseId())
+                                .withAllIncorrectAttemptCounts(countTypesToCounts)
+                                .withFailureReason(failureReason)
+                                .build());
+                cloudwatchMetricsService.incrementCounter(
+                        CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                FAILURE_REASON.getValue(),
+                                failureReason == null ? "unknown" : failureReason.getValue()));
 
-                                    auditService.submitAuditEvent(
-                                            AUTH_REAUTH_ACCOUNT_IDENTIFIED,
-                                            auditContext,
-                                            pairwiseIdMetadataPair,
-                                            pair(
-                                                    "incorrect_email_attempt_count",
-                                                    incorrectEmailCount));
-                                    return Optional.of(request.rpPairwiseId());
-                                } else {
-                                    LOG.warn("Could not calculate rp pairwise ID");
-                                }
+                throw new AccountLockedException(
+                        "Account is locked due to too many failed attempts.",
+                        ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+            }
 
-                                LOG.warn("User re-authentication verification failed");
-                                return Optional.empty();
-                            })
-                    .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(
-                            () ->
-                                    generateErrorResponse(
-                                            maybeUserProfileOfSignedInUser,
-                                            request.rpPairwiseId(),
-                                            auditContext,
-                                            pairwiseIdMetadataPair,
-                                            request.email(),
-                                            maybeUserProfileOfUserSuppliedEmail));
+            if (!isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
+                LOG.warn(
+                        "Could not calculate rp pairwise ID. User re-authentication verification failed");
+                return generateErrorResponse(
+                        maybeUserProfileOfSignedInUser,
+                        request.rpPairwiseId(),
+                        auditContext,
+                        pairwiseIdMetadataPair,
+                        request.email(),
+                        maybeUserProfileOfUserSuppliedEmail);
+            }
+
+            // note here that this retrieval is duplicated a lot here.
+            // Currently, duplicating so that we don't hit merge conflicts with other PRs that are
+            // forced to populate these values in audit events in different ways, but once these
+            // are done, we should make this consistent and just get these counts once.
+            var incorrectEmailCount =
+                    authenticationAttemptsService.getCount(
+                            userProfileOfUserSuppliedEmail.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_EMAIL);
+
+            auditService.submitAuditEvent(
+                    AUTH_REAUTH_ACCOUNT_IDENTIFIED,
+                    auditContext,
+                    pairwiseIdMetadataPair,
+                    pair("incorrect_email_attempt_count", incorrectEmailCount));
+
+            return generateSuccessResponse();
         } catch (AccountLockedException e) {
             LOG.warn("Account is unable to reauth due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
