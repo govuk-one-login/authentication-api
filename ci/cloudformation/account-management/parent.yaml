@@ -262,8 +262,7 @@ Mappings:
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
       emailAcctCreationOtpCodeTtlDuration: 600
-      frontendApiFMSTagValue: "authenticationfrontend"
-      frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
+      AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -321,8 +320,7 @@ Mappings:
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
-      frontendApiFMSTagValue: "authenticationfrontend"
-      frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
+      AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -380,8 +378,7 @@ Mappings:
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6f8567bc-37aa-4a12-a3e7-87312701ebcb
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
       emailAcctCreationOtpCodeTtlDuration: 600
-      frontendApiFMSTagValue: "authenticationfrontend"
-      frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
+      AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
       lockoutDuration: 600
       otpCodeTtlDuration: 600
@@ -441,8 +438,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/cc4448e9-1b9d-4309-ad65-deb619dc444c
-      frontendApiFMSTagValue: "authfrontenddev"
-      frontendBaseUrl: https://apitest.signin.dev.account.gov.uk
+      AMApiFMSTagValue: accountmanagement
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
@@ -508,8 +504,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/353a8367-d45a-47b5-b16b-b94cd163ab22
-      frontendApiFMSTagValue: "authfrontendbuild"
-      frontendBaseUrl: https://apitest.signin.build.account.gov.uk
+      AMApiFMSTagValue: accountmanagementbuild
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -579,8 +574,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
-      frontendApiFMSTagValue: "authfrontendstaging"
-      frontendBaseUrl: https://apitest.signin.staging.account.gov.uk
+      AMApiFMSTagValue: accountmanagementstaging
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
@@ -653,8 +647,7 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
-      frontendApiFMSTagValue: "authfrontendint"
-      frontendBaseUrl: https://apitest.signin.integration.account.gov.uk
+      AMApiFMSTagValue: accountmanagementint
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
       IPVApiEnabled: true
@@ -725,8 +718,7 @@ Mappings:
       EnforceLambdaDeploymentOrder: "Yes"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
-      frontendApiFMSTagValue: "authfrontendprod"
-      frontendBaseUrl: https://apitest.signin.account.gov.uk
+      AMApiFMSTagValue: accountmanagementprod
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
       IPVApiEnabled: true

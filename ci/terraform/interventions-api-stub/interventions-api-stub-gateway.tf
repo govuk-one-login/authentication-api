@@ -129,6 +129,12 @@ resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
     module.account_interventions_stub_role,
     aws_api_gateway_deployment.interventions_api_stub_deployment
   ]
+
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = "apistub"
+  }
+
 }
 
 resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {

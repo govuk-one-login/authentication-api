@@ -120,6 +120,12 @@ resource "aws_api_gateway_stage" "ticf_cri_stub_stage" {
     module.ticf_cri_stub_role,
     aws_api_gateway_deployment.ticf_cri_stub_deployment
   ]
+
+  tags = {
+    "FMSRegionalPolicy" = "false"
+    "CustomPolicy"      = "apistub"
+  }
+
 }
 
 resource "aws_api_gateway_deployment" "ticf_cri_stub_deployment" {
