@@ -6,7 +6,10 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -14,14 +17,27 @@ import java.util.Optional;
 public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenItem> {
     private static final Logger LOG = LogManager.getLogger(OrchRefreshTokenService.class);
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
+    private final long timeToLive;
+    private final NowHelper.NowClock nowClock;
 
     public OrchRefreshTokenService(ConfigurationService configurationService) {
+        this(configurationService, Clock.systemUTC());
+    }
+
+    public OrchRefreshTokenService(ConfigurationService configurationService, Clock clock) {
         super(OrchRefreshTokenItem.class, "Refresh-Token", configurationService, true);
+        this.timeToLive = configurationService.getRefreshTokenExpiry();
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public OrchRefreshTokenService(
-            DynamoDbClient dynamoDbClient, DynamoDbTable<OrchRefreshTokenItem> dynamoDbTable) {
+            DynamoDbClient dynamoDbClient,
+            DynamoDbTable<OrchRefreshTokenItem> dynamoDbTable,
+            ConfigurationService configurationService,
+            Clock clock) {
         super(dynamoDbTable, dynamoDbClient);
+        this.timeToLive = configurationService.getRefreshTokenExpiry();
+        this.nowClock = new NowHelper.NowClock(clock);
     }
 
     public Optional<OrchRefreshTokenItem> getRefreshToken(String jwtId) {
@@ -64,12 +80,15 @@ public class OrchRefreshTokenService extends BaseDynamoService<OrchRefreshTokenI
     public void saveRefreshToken(
             String jwtId, String internalPairwiseSubjectId, String token, String authCode) {
         try {
+            var itemTtl =
+                    nowClock.nowPlus(timeToLive, ChronoUnit.SECONDS).toInstant().getEpochSecond();
             put(
                     new OrchRefreshTokenItem()
                             .withJwtId(jwtId)
                             .withInternalPairwiseSubjectId(internalPairwiseSubjectId)
                             .withToken(token)
-                            .withAuthCode(authCode));
+                            .withAuthCode(authCode)
+                            .withTimeToLive(itemTtl));
         } catch (Exception e) {
             logAndThrowOrchRefreshTokenException(
                     "Failed to save Orch refresh token item to Dynamo", e);

@@ -324,6 +324,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("LANGUAGE_COOKIE_MAX_AGE", "31536000"));
     }
 
+    public long getRefreshTokenExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("REFRESH_TOKEN_EXPIRY", "3600"));
+    }
+
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }

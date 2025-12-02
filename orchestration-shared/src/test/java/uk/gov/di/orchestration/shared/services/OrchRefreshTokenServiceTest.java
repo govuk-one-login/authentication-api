@@ -11,6 +11,9 @@ import uk.gov.di.orchestration.shared.entity.OrchRefreshTokenItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchRefreshTokenException;
 import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,6 +32,7 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
     private static final String TOKEN = "test-token";
     private static final String AUTH_CODE = "test-auth-code";
     private static final String AUTH_CODE_INDEX = "AuthCodeIndex";
+    private static final Instant CREATION_INSTANT = Instant.parse("2025-02-01T03:04:05.678Z");
 
     private final DynamoDbTable<OrchRefreshTokenItem> table = mock(DynamoDbTable.class);
     private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
@@ -36,7 +40,13 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
 
     @BeforeEach
     void setup() {
-        orchRefreshTokenService = new OrchRefreshTokenService(dynamoDbClient, table);
+        when(configurationService.getRefreshTokenExpiry()).thenReturn(3600L);
+        orchRefreshTokenService =
+                new OrchRefreshTokenService(
+                        dynamoDbClient,
+                        table,
+                        configurationService,
+                        Clock.fixed(CREATION_INSTANT, ZoneId.systemDefault()));
     }
 
     @Test
@@ -55,6 +65,9 @@ class OrchRefreshTokenServiceTest extends BaseDynamoServiceTest<OrchRefreshToken
         assertEquals(TOKEN, refreshTokenFromCapturedRequest.getToken());
         assertEquals(AUTH_CODE, refreshTokenFromCapturedRequest.getAuthCode());
         assertFalse(refreshTokenFromCapturedRequest.getIsUsed());
+        assertEquals(
+                CREATION_INSTANT.getEpochSecond() + 3600L,
+                refreshTokenFromCapturedRequest.getTimeToLive());
     }
 
     @Test
