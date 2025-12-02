@@ -30,6 +30,7 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.Instant;
@@ -43,7 +44,6 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -155,6 +155,9 @@ class CheckReAuthUserHandlerTest {
 
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
+
+        when(userActionsManager.incorrectEmailAddressReceived(any(), any()))
+                .thenReturn(Result.success(null));
 
         expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(USER_PROFILE, authSession, authenticationService)
@@ -396,7 +399,7 @@ class CheckReAuthUserHandlerTest {
     }
 
     @Test
-    void shouldIncrementLockoutCountWhenUserDoesNotMatch() {
+    void shouldRecordIncorrectEmailReceived() {
         setupExistingEnterEmailAttemptsCountForIdentifier(0, TEST_SUBJECT_ID);
 
         handler.handleRequestWithUserContext(
@@ -405,12 +408,25 @@ class CheckReAuthUserHandlerTest {
                 new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
                 userContext);
 
-        verify(authenticationAttemptsService)
-                .createOrIncrementCount(
-                        eq(TEST_SUBJECT_ID),
-                        anyLong(),
-                        eq(JourneyType.REAUTHENTICATION),
-                        eq(CountType.ENTER_EMAIL));
+        verify(userActionsManager)
+                .incorrectEmailAddressReceived(
+                        eq(JourneyType.REAUTHENTICATION), any(UserPermissionContext.class));
+    }
+
+    @Test
+    void shouldReturn500WhenIncorrectEmailTrackingFails() {
+        when(userActionsManager.incorrectEmailAddressReceived(any(), any()))
+                .thenReturn(Result.failure(TrackingError.STORAGE_SERVICE_ERROR));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
+                        userContext);
+
+        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
     }
 
     @TestFactory
