@@ -15,7 +15,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -276,13 +275,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String userSuppliedEmail,
             Optional<UserProfile> userProfileOfSuppliedEmail) {
 
-        String uniqueUserIdentifier = rpPairwiseId;
-        Optional<String> additionalIdentifier = Optional.empty();
-        if (userProfileOfSignedInUser.isPresent()) {
-            uniqueUserIdentifier = userProfileOfSignedInUser.get().getSubjectID();
-            additionalIdentifier = Optional.of(rpPairwiseId);
-        }
-
         var userPermissionContext =
                 UserPermissionContext.builder()
                         .withRpPairwiseId(rpPairwiseId)
@@ -301,23 +293,20 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
         }
 
-        var updatedCount =
-                authenticationAttemptsService.getCount(
-                                uniqueUserIdentifier,
-                                JourneyType.REAUTHENTICATION,
-                                CountType.ENTER_EMAIL)
-                        + additionalIdentifier
-                                .map(
-                                        identifier ->
-                                                authenticationAttemptsService.getCount(
-                                                        identifier,
-                                                        JourneyType.REAUTHENTICATION,
-                                                        CountType.ENTER_EMAIL))
-                                .orElse(0);
+        var canReceiveEmailAddressResult =
+                permissionDecisionManager.canReceiveEmailAddress(
+                        JourneyType.REAUTHENTICATION, userPermissionContext);
+        if (canReceiveEmailAddressResult.isFailure()) {
+            DecisionError failure = canReceiveEmailAddressResult.getFailure();
+            LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
+            return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
+        }
+
+        Decision canReceiveEmailAddressDecision = canReceiveEmailAddressResult.getSuccess();
 
         var pairBuilder =
                 ReauthMetadataBuilder.builder(rpPairwiseId)
-                        .withIncorrectEmailCount(updatedCount)
+                        .withIncorrectEmailCount(canReceiveEmailAddressDecision.attemptCount())
                         .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
 
         userProfileOfSuppliedEmail.ifPresent(
@@ -328,23 +317,17 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         auditService.submitAuditEvent(
                 AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, pairBuilder.build());
 
-        if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
-            var incorrectCounts =
-                    additionalIdentifier.isPresent()
-                            ? authenticationAttemptsService
-                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                                            uniqueUserIdentifier,
-                                            additionalIdentifier.get(),
-                                            JourneyType.REAUTHENTICATION)
-                            : authenticationAttemptsService.getCountsByJourney(
-                                    uniqueUserIdentifier, JourneyType.REAUTHENTICATION);
+        if (canReceiveEmailAddressDecision instanceof Decision.ReauthLockedOut reauthLockedOut) {
+            ReauthFailureReasons failureReason =
+                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                            reauthLockedOut.forbiddenReason());
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(rpPairwiseId)
-                            .withAllIncorrectAttemptCounts(incorrectCounts)
-                            .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
+                            .withAllIncorrectAttemptCounts(reauthLockedOut.detailedCounts())
+                            .withFailureReason(failureReason)
                             .build());
             cloudwatchMetricsService.incrementCounter(
                     CloudwatchMetrics.REAUTH_FAILED.getValue(),
@@ -352,7 +335,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             ENVIRONMENT.getValue(),
                             configurationService.getEnvironment(),
                             FAILURE_REASON.getValue(),
-                            ReauthFailureReasons.INCORRECT_EMAIL.getValue()));
+                            failureReason.getValue()));
 
             auditService.submitAuditEvent(
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
@@ -365,14 +348,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             LOG.warn("Account is unable to reauth due to too many failed attempts");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+        } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         return generateApiGatewayProxyErrorResponse(404, USER_NOT_FOUND);
-    }
-
-    private boolean hasEnteredIncorrectEmailTooManyTimes(int count) {
-        var maxRetries = configurationService.getMaxEmailReAuthRetries();
-
-        return count >= maxRetries;
     }
 }

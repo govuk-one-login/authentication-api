@@ -429,6 +429,36 @@ class CheckReAuthUserHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
     }
 
+    @Test
+    void shouldReturn400WhenIncorrectEmailTriggersLockout() {
+        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                        JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(MAX_RETRIES - 1)))
+                .thenReturn(
+                        Result.success(
+                                new Decision.ReauthLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
+                                        MAX_RETRIES,
+                                        null,
+                                        false,
+                                        Map.of(CountType.ENTER_EMAIL, MAX_RETRIES),
+                                        List.of(CountType.ENTER_EMAIL))));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
+                        userContext);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+    }
+
     @TestFactory
     Stream<DynamicTest> emailSubmittedLockoutCheckScenarios() {
         var differentUserProfile =
