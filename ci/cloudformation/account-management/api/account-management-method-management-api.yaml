@@ -1,8 +1,12 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
+  # Reference existing IAM role created by Terraform
   ApiGatewayAuthorizerRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub
+        - ${Env}-api_gateway_auth_invocation
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -10,6 +14,12 @@ Resources:
             Principal:
               Service: apigateway.amazonaws.com
             Action: sts:AssumeRole
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
       Policies:
         - PolicyName: default
           PolicyDocument:
