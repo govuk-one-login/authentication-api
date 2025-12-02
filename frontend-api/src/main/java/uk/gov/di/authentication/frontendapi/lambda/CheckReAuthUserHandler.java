@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.TrackingErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -20,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -36,9 +36,9 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.TrackingError;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -283,15 +283,23 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             additionalIdentifier = Optional.of(rpPairwiseId);
         }
 
-        authenticationAttemptsService.createOrIncrementCount(
-                uniqueUserIdentifier,
-                NowHelper.nowPlus(
-                                configurationService.getReauthEnterEmailCountTTL(),
-                                ChronoUnit.SECONDS)
-                        .toInstant()
-                        .getEpochSecond(),
-                JourneyType.REAUTHENTICATION,
-                CountType.ENTER_EMAIL);
+        var userPermissionContext =
+                UserPermissionContext.builder()
+                        .withRpPairwiseId(rpPairwiseId)
+                        .withInternalSubjectId(
+                                userProfileOfSignedInUser
+                                        .map(UserProfile::getSubjectID)
+                                        .orElse(null))
+                        .build();
+
+        var trackingResult =
+                userActionsManager.incorrectEmailAddressReceived(
+                        JourneyType.REAUTHENTICATION, userPermissionContext);
+        if (trackingResult.isFailure()) {
+            TrackingError failure = trackingResult.getFailure();
+            LOG.error("Failed to track incorrect email address: {}", failure);
+            return TrackingErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
+        }
 
         var updatedCount =
                 authenticationAttemptsService.getCount(
