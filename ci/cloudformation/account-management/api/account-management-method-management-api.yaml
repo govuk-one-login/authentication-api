@@ -96,15 +96,13 @@ Resources:
             Location: "./ci/openAPI/AccountManagementMMApi.yaml"
       OpenApiVersion: 3.0.1
       Tags:
-        - Key: FMSRegionalPolicy
-          Value: "false"
-        - Key: CustomPolicy
-          Value:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              AMApiFMSTagValue,
-            ]
+        FMSRegionalPolicy: "false"
+        CustomPolicy:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+            AMApiFMSTagValue,
+          ]
 
   AccountManagementApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
