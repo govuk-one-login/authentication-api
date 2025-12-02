@@ -1,36 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Resources:
-  # Reference existing IAM role created by Terraform
-  ApiGatewayAuthorizerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub
-        - ${Env}-api_gateway_auth_invocation
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: apigateway.amazonaws.com
-            Action: sts:AssumeRole
-      PermissionsBoundary:
-        !If [
-          UsePermissionsBoundary,
-          !Ref PermissionsBoundary,
-          !Ref AWS::NoValue,
-        ]
-      Policies:
-        - PolicyName: default
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: lambda:InvokeFunction
-                Resource: !Ref AuthorizerFunction.Alias
-
-  AccountManagementMethodManagementApi:
-    Type: AWS::ApiGateway::RestApi
+  AccountManagementApi:
+    Type: AWS::Serverless::Api
     Properties:
       Name: !Sub
         - ${Env}-di-account-management-api-method-management
@@ -79,45 +50,51 @@ Resources:
                       DefaultValue: [],
                     ]
               - !Ref AWS::NoValue
-      Policy:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: "AllowAll"
-            Effect: Allow
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource: "execute-api:/*"
-          - Sid: "EnforceVpcEndpointAccess"
-            Effect: Deny
-            Action: "execute-api:Invoke"
-            Principal: "*"
-            Resource: "execute-api:/*"
-            Condition:
-              StringNotEquals:
-                aws:SourceVpce:
-                  - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
-                  - Fn::If:
-                      - AddHomeApiVpcEndpointId
-                      - Fn::Select:
-                          - 0
-                          - !FindInMap [
-                              EnvironmentConfiguration,
-                              !Ref Environment,
-                              HomeApiVpcEndpointId,
-                              DefaultValue: [],
-                            ]
-                      - !Ref AWS::NoValue
-                  - Fn::If:
-                      - AddHomeApiVpcEndpointId
-                      - Fn::Select:
-                          - 1
-                          - !FindInMap [
-                              EnvironmentConfiguration,
-                              !Ref Environment,
-                              HomeApiVpcEndpointId,
-                              DefaultValue: [],
-                            ]
-                      - !Ref AWS::NoValue
+      Auth:
+        ResourcePolicy:
+          CustomStatements:
+            - Sid: "AllowAll"
+              Effect: Allow
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+            - Sid: "EnforceVpcEndpointAccess"
+              Effect: Deny
+              Action: "execute-api:Invoke"
+              Principal: "*"
+              Resource: "execute-api:/*"
+              Condition:
+                StringNotEquals:
+                  aws:SourceVpce:
+                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - Fn::If:
+                        - AddHomeApiVpcEndpointId
+                        - Fn::Select:
+                            - 0
+                            - !FindInMap [
+                                EnvironmentConfiguration,
+                                !Ref Environment,
+                                HomeApiVpcEndpointId,
+                                DefaultValue: [],
+                              ]
+                        - !Ref AWS::NoValue
+                    - Fn::If:
+                        - AddHomeApiVpcEndpointId
+                        - Fn::Select:
+                            - 1
+                            - !FindInMap [
+                                EnvironmentConfiguration,
+                                !Ref Environment,
+                                HomeApiVpcEndpointId,
+                                DefaultValue: [],
+                              ]
+                        - !Ref AWS::NoValue
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: "./ci/openAPI/AccountManagementMMApi.yaml"
+      OpenApiVersion: 3.0.1
       Tags:
         - Key: FMSRegionalPolicy
           Value: "false"
@@ -128,12 +105,6 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               AMApiFMSTagValue,
             ]
-      Body:
-        Fn::Transform:
-          Name: AWS::Include
-          Parameters:
-            Location: "./ci/openAPI/AccountManagementMMApi.yaml"
-      OpenApiVersion: 3.0.1
 
   AccountManagementApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
