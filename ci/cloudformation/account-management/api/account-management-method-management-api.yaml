@@ -101,6 +101,16 @@ Resources:
                               DefaultValue: [],
                             ]
                       - !Ref AWS::NoValue
+      Tags:
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              AMApiFMSTagValue,
+            ]
       Body:
         openapi: "3.0.1"
         info:

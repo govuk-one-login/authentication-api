@@ -71,6 +71,11 @@ Resources:
                 requestParameters:
                   integration.request.path.internalPairwiseId: method.request.path.internalPairwiseId
                 timeoutInMillis: 29000
+      Tags:
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value: apistub
 
   AccountInterventionsStubApiAccessLogGroup:
     Type: AWS::Logs::LogGroup

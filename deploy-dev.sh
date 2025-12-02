@@ -109,7 +109,7 @@ echo "Environment: ${ENVIRONMENT}"
 if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
   export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
 else
-  export AWS_PROFILE="gds-di-development-admin"
+  export AWS_PROFILE="gds-di-development-ApprovedAdmin"
 fi
 
 if [[ ${NUMBER_PICKED} -eq 0 ]]; then
