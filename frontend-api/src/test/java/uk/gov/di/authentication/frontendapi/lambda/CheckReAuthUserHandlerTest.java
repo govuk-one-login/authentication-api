@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -27,7 +28,11 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -147,6 +152,9 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(0)));
+
         expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(USER_PROFILE, authSession, authenticationService)
                         .getValue();
@@ -221,6 +229,15 @@ class CheckReAuthUserHandlerTest {
                         List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
                         JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason
+                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        MAX_RETRIES,
+                                        null,
+                                        false)));
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -239,6 +256,14 @@ class CheckReAuthUserHandlerTest {
                         List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
                         JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                new Decision.TemporarilyLockedOut(
+                                        ForbiddenReason.EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT,
+                                        MAX_RETRIES,
+                                        null,
+                                        false)));
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -249,6 +274,25 @@ class CheckReAuthUserHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+    }
+
+    @Test
+    void shouldReturn500WhenPermissionDecisionManagerReturnsError() {
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(
+                        Result.failure(
+                                uk.gov.di.authentication.userpermissions.entity.DecisionError
+                                        .STORAGE_SERVICE_ERROR));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
+                        userContext);
+
+        assertEquals(500, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.STORAGE_LAYER_ERROR));
     }
 
     @Test
@@ -339,6 +383,11 @@ class CheckReAuthUserHandlerTest {
         when(authenticationAttemptsService.getCountsByJourney(
                         identifier, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
+        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                        List.of(identifier), JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
+        when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(count)));
     }
 
     @Test
@@ -412,6 +461,7 @@ class CheckReAuthUserHandlerTest {
 
             void setupMocks(
                     AuthenticationAttemptsService authenticationAttemptsService,
+                    PermissionDecisionManager permissionDecisionManager,
                     String expectedRpPairwiseSub) {
                 int testSubjectIdCount = 0;
                 int expectedRpPairwiseCount = 0;
@@ -438,28 +488,49 @@ class CheckReAuthUserHandlerTest {
                             .thenReturn(setup.getValue());
                 }
 
+                record MockSetup(List<String> subjectIds, String rpPairwiseId, int count) {}
+
                 var mockCountsByJourneySetups =
                         List.of(
-                                Map.entry(List.of(expectedRpPairwiseSub), expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                                new MockSetup(
+                                        List.of(), expectedRpPairwiseSub, expectedRpPairwiseCount),
+                                new MockSetup(
+                                        List.of(TEST_SUBJECT_ID),
+                                        expectedRpPairwiseSub,
                                         testSubjectIdCount + expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(DIFFERENT_SUBJECT_ID, expectedRpPairwiseSub),
+                                new MockSetup(
+                                        List.of(DIFFERENT_SUBJECT_ID),
+                                        expectedRpPairwiseSub,
                                         differentSubjectIdCount + expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(
-                                                TEST_SUBJECT_ID,
-                                                DIFFERENT_SUBJECT_ID,
-                                                expectedRpPairwiseSub),
+                                new MockSetup(
+                                        List.of(TEST_SUBJECT_ID, DIFFERENT_SUBJECT_ID),
+                                        expectedRpPairwiseSub,
                                         testSubjectIdCount
                                                 + differentSubjectIdCount
                                                 + expectedRpPairwiseCount));
 
                 for (var setup : mockCountsByJourneySetups) {
+                    var identifiers = new ArrayList<>(setup.subjectIds);
+                    identifiers.add(setup.rpPairwiseId);
                     when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                                    setup.getKey(), JourneyType.REAUTHENTICATION))
-                            .thenReturn(Map.of(CountType.ENTER_EMAIL, setup.getValue()));
+                                    identifiers, JourneyType.REAUTHENTICATION))
+                            .thenReturn(Map.of(CountType.ENTER_EMAIL, setup.count));
+                    when(permissionDecisionManager.canReceiveEmailAddress(
+                                    JourneyType.REAUTHENTICATION,
+                                    UserPermissionContext.builder()
+                                            .withInternalSubjectIds(setup.subjectIds)
+                                            .withRpPairwiseId(setup.rpPairwiseId)
+                                            .build()))
+                            .thenReturn(
+                                    Result.success(
+                                            setup.count >= MAX_RETRIES
+                                                    ? new Decision.TemporarilyLockedOut(
+                                                            ForbiddenReason
+                                                                    .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
+                                                            setup.count,
+                                                            Instant.now(),
+                                                            false)
+                                                    : new Decision.Permitted(setup.count)));
                 }
             }
         }
@@ -607,7 +678,9 @@ class CheckReAuthUserHandlerTest {
                                             .thenReturn(Optional.of(differentUserProfile));
 
                                     scenario.setupMocks(
-                                            authenticationAttemptsService, expectedRpPairwiseSub);
+                                            authenticationAttemptsService,
+                                            permissionDecisionManager,
+                                            expectedRpPairwiseSub);
 
                                     var result =
                                             handler.handleRequestWithUserContext(

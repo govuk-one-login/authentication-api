@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.DecisionErrorHttpMapper;
+import uk.gov.di.authentication.frontendapi.anticorruptionlayer.ForbiddenReasonAntiCorruption;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -20,7 +22,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -33,8 +34,12 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.Decision;
+import uk.gov.di.authentication.userpermissions.entity.DecisionError;
+import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,7 +50,6 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
-import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
@@ -187,37 +191,49 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 calculatedPairwiseIdFromUserSuppliedEmail != null
                         && calculatedPairwiseIdFromUserSuppliedEmail.equals(request.rpPairwiseId());
 
-        List<String> identifiers =
-                Stream.of(
-                                isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
-                                        ? userProfileOfUserSuppliedEmail.getSubjectID()
-                                        : null,
-                                maybeUserProfileOfSignedInUser
-                                        .map(UserProfile::getSubjectID)
-                                        .orElse(null),
-                                request.rpPairwiseId())
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .toList();
-        var countTypesToCounts =
-                authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        identifiers, JourneyType.REAUTHENTICATION);
+        var userPermissionContext =
+                UserPermissionContext.builder()
+                        .withInternalSubjectIds(
+                                Stream.of(
+                                                isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId
+                                                        ? userProfileOfUserSuppliedEmail
+                                                                .getSubjectID()
+                                                        : null,
+                                                maybeUserProfileOfSignedInUser
+                                                        .map(UserProfile::getSubjectID)
+                                                        .orElse(null))
+                                        .filter(Objects::nonNull)
+                                        .distinct()
+                                        .toList())
+                        .withRpPairwiseId(request.rpPairwiseId())
+                        .build();
 
-        var exceededCountTypes =
-                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                        countTypesToCounts, configurationService);
+        var canReceiveEmailAddressResult =
+                permissionDecisionManager.canReceiveEmailAddress(
+                        JourneyType.REAUTHENTICATION, userPermissionContext);
+        if (canReceiveEmailAddressResult.isFailure()) {
+            DecisionError failure = canReceiveEmailAddressResult.getFailure();
+            LOG.error("Failure to get canReceiveEmailAddress decision due to {}", failure);
+            return DecisionErrorHttpMapper.toApiGatewayProxyErrorResponse(failure);
+        }
 
-        if (!exceededCountTypes.isEmpty()) {
-            LOG.info(
-                    "Account is locked due to exceeded counts on count types {}",
-                    exceededCountTypes);
+        Decision canReceiveEmailAddressDecision = canReceiveEmailAddressResult.getSuccess();
+
+        if (canReceiveEmailAddressDecision
+                instanceof Decision.TemporarilyLockedOut temporarilyLockedOut) {
             ReauthFailureReasons failureReason =
-                    getReauthFailureReasonFromCountTypes(exceededCountTypes);
+                    ForbiddenReasonAntiCorruption.toReauthFailureReason(
+                            temporarilyLockedOut.forbiddenReason());
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(request.rpPairwiseId())
-                            .withAllIncorrectAttemptCounts(countTypesToCounts)
+                            .withAllIncorrectAttemptCounts(
+                                    getReauthAttemptCounts(
+                                            JourneyType.REAUTHENTICATION,
+                                            userPermissionContext.internalSubjectIds(),
+                                            request.rpPairwiseId()))
                             .withFailureReason(failureReason)
                             .build());
             cloudwatchMetricsService.incrementCounter(
@@ -228,9 +244,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             FAILURE_REASON.getValue(),
                             failureReason == null ? "unknown" : failureReason.getValue()));
 
-            LOG.warn("Account is unable to reauth due to too many failed attempts.");
+            LOG.warn("Account is unable to reauth due to too many failed attempts");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
+        } else if (!(canReceiveEmailAddressDecision instanceof Decision.Permitted)) {
+            return generateApiGatewayProxyErrorResponse(
+                    500, ErrorResponse.UNHANDLED_NEGATIVE_DECISION);
         }
 
         if (!isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId) {
@@ -245,21 +264,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     maybeUserProfileOfUserSuppliedEmail);
         }
 
-        // note here that this retrieval is duplicated a lot here.
-        // Currently, duplicating so that we don't hit merge conflicts with other PRs that are
-        // forced to populate these values in audit events in different ways, but once these
-        // are done, we should make this consistent and just get these counts once.
-        var incorrectEmailCount =
-                authenticationAttemptsService.getCount(
-                        userProfileOfUserSuppliedEmail.getSubjectID(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_EMAIL);
-
         auditService.submitAuditEvent(
                 AUTH_REAUTH_ACCOUNT_IDENTIFIED,
                 auditContext,
                 pairwiseIdMetadataPair,
-                pair("incorrect_email_attempt_count", incorrectEmailCount));
+                pair(
+                        "incorrect_email_attempt_count",
+                        canReceiveEmailAddressDecision.attemptCount()));
 
         return generateSuccessResponse();
     }
@@ -367,5 +378,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         var maxRetries = configurationService.getMaxEmailReAuthRetries();
 
         return count >= maxRetries;
+    }
+
+    // TODO AUT-4755 remove authenticationAttemptsService data access from handler
+    private Map<CountType, Integer> getReauthAttemptCounts(
+            JourneyType journeyType, List<String> internalSubjectIds, String rpPairwiseId) {
+        List<String> identifiers = new ArrayList<>(internalSubjectIds);
+        identifiers.add(rpPairwiseId);
+        return authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                identifiers, journeyType);
     }
 }
