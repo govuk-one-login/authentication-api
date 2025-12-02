@@ -17,11 +17,35 @@ resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
   }
 }
 
+resource "aws_s3_bucket_policy" "source_bucket_ssl_requests_only" {
+  bucket = aws_s3_bucket.source_bucket.id
+
+  policy = jsonencode({
+    Statement = [
+      {
+        Sid       = "AllowSSLRequestsOnly"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.source_bucket.arn,
+          "${aws_s3_bucket.source_bucket.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_s3_object" "test_services_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "utils-release.zip"
 
-  server_side_encryption = "AES256"
+  server_side_encryption = "aws:kms"
   source                 = var.test_services-api-lambda_zip_file
   source_hash            = filemd5(var.test_services-api-lambda_zip_file)
 }
