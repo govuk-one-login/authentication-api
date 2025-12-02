@@ -65,10 +65,8 @@ Resources:
                 uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TicfCriStubLambdaFunction.Arn}:active/invocations"
                 timeoutInMillis: 29000
       Tags:
-        - Key: FMSRegionalPolicy
-          Value: "false"
-        - Key: CustomPolicy
-          Value: apistub
+        FMSRegionalPolicy: "false"
+        CustomPolicy: apistub
 
   TicfCriStubApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
