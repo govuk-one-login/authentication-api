@@ -81,6 +81,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService.GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY;
 import static uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
@@ -123,6 +124,7 @@ class AuthenticationAuthorizationServiceTest {
                         Optional.of(
                                 new StateItem(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID)
                                         .withState(STORED_STATE.getValue())));
+        when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(false);
         when(configurationService.getOrchestrationClientId())
                 .thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
         when(configurationService.getOrchestrationRedirectURI()).thenReturn(ORCH_REDIRECT_URI);
@@ -712,7 +714,7 @@ class AuthenticationAuthorizationServiceTest {
             queryParams.put("state", STORED_STATE.getValue());
             queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-            assertDoesNotThrow(() -> authService.validateRequest(queryParams, SESSION_ID));
+            assertDoesNotThrow(() -> authService.validateRequest(queryParams, SESSION_ID, false));
             verify(stateStorageService).getState(AUTHENTICATION_STATE_STORAGE_PREFIX + SESSION_ID);
         }
 
@@ -723,7 +725,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
             assertThat(exception.getLogoutRequired(), is((equalTo(false))));
             verify(stateStorageService, never()).getState(anyString());
@@ -737,7 +739,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
             assertThat(exception.getLogoutRequired(), is((equalTo(false))));
             verify(stateStorageService, never()).getState(anyString());
@@ -753,7 +755,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(exception.getError(), is((equalTo(expectedErrorObject))));
             assertThat(exception.getLogoutRequired(), is((equalTo(true))));
             verify(stateStorageService, never()).getState(anyString());
@@ -773,7 +775,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
             assertThat(exception.getLogoutRequired(), is((equalTo(false))));
             verify(stateStorageService, never()).getState(anyString());
@@ -788,7 +790,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(
                     exception.getError(),
                     samePropertyValuesAs(
@@ -810,7 +812,7 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(
                     exception.getError(),
                     samePropertyValuesAs(
@@ -829,9 +831,29 @@ class AuthenticationAuthorizationServiceTest {
             var exception =
                     assertThrows(
                             AuthenticationCallbackValidationException.class,
-                            () -> authService.validateRequest(queryParams, SESSION_ID));
+                            () -> authService.validateRequest(queryParams, SESSION_ID, false));
             assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
             assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         }
+    }
+
+    @Test
+    void shouldThrowWhenSingleFactorAccountDeletionErrorReceivedAndOnReauthJourney() {
+        when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(true);
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("error", SFAD_ERROR.toString());
+
+        assertThrows(
+                AuthenticationCallbackValidationException.class,
+                () -> authService.validateRequest(queryParams, SESSION_ID, true));
+    }
+
+    @Test
+    void shouldNotThrowWhenSingleFactorAccountDeletionErrorReceivedAndNotOnReauthJourney() {
+        when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(true);
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("error", SFAD_ERROR.toString());
+
+        assertDoesNotThrow(() -> authService.validateRequest(queryParams, SESSION_ID, false));
     }
 }

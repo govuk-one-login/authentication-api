@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.PersonClaims;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +40,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -47,6 +49,7 @@ import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
 import uk.gov.di.orchestration.shared.exceptions.SessionNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -71,6 +74,7 @@ import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +85,8 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
+import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -255,15 +261,54 @@ public class AuthenticationCallbackHandler
             String clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
+            boolean reauthRequested =
+                    getCustomParameterOpt(authenticationRequest, "id_token_hint").isPresent()
+                            && authenticationRequest.getPrompt() != null
+                            && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN);
             var validationFailureResponse =
                     generateAuthenticationErrorResponseIfRequestInvalid(
-                            authenticationRequest, input, user, sessionId, orchSession);
+                            authenticationRequest,
+                            input,
+                            user,
+                            sessionId,
+                            orchSession,
+                            reauthRequested);
             if (validationFailureResponse.isPresent()) {
                 return validationFailureResponse.get();
             }
 
             auditService.submitAuditEvent(
                     OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED, clientId, user);
+            var errorCode = input.getQueryStringParameters().get("error");
+            if (configurationService.isSingleFactorAccountDeletionEnabled()
+                    && SFAD_ERROR.toString().equals(errorCode)) {
+                LOG.info(
+                        "Single factor account deletion error received. Deleting old sessions and generating new ones");
+                var newSessionId = IdGenerator.generate();
+                var newClientSessionId = IdGenerator.generate();
+                LOG.info(
+                        "Generating new session with ID {} and client session with ID {}",
+                        newSessionId,
+                        newClientSessionId);
+                attachSessionIdToLogs(newSessionId);
+                attachLogFieldToLogs(CLIENT_SESSION_ID, newClientSessionId);
+                attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, newClientSessionId);
+                generateNewSession(orchSession, newSessionId, newClientSessionId);
+                generateNewClientSession(orchClientSession, newClientSessionId);
+                var newSessionCookie =
+                        CookieHelper.buildCookieString(
+                                CookieHelper.SESSION_COOKIE_NAME,
+                                newSessionId + "." + newClientSessionId,
+                                configurationService.getSessionCookieMaxAge(),
+                                configurationService.getSessionCookieAttributes(),
+                                configurationService.getDomainName());
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, authFrontend.errorURI().toString()),
+                        Map.of(ResponseHeaders.SET_COOKIE, List.of(newSessionCookie)));
+                // TODO: ATO-2109 Redirect to auth frontend on success
+            }
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
@@ -634,9 +679,11 @@ public class AuthenticationCallbackHandler
                     APIGatewayProxyRequestEvent input,
                     TxmaAuditUser user,
                     String sessionId,
-                    OrchSessionItem orchSession) {
+                    OrchSessionItem orchSession,
+                    boolean reauthRequested) {
         try {
-            authorisationService.validateRequest(input.getQueryStringParameters(), sessionId);
+            authorisationService.validateRequest(
+                    input.getQueryStringParameters(), sessionId, reauthRequested);
         } catch (AuthenticationCallbackValidationException e) {
             return Optional.of(
                     generateAuthenticationErrorResponse(
@@ -681,6 +728,31 @@ public class AuthenticationCallbackHandler
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, errorResponseUri.toString()), null);
         }
+    }
+
+    private OrchSessionItem generateNewSession(
+            OrchSessionItem oldSession, String newSessionId, String newClientSessionId) {
+        var newSession =
+                new OrchSessionItem(newSessionId)
+                        .withBrowserSessionId(oldSession.getBrowserSessionId())
+                        .addClientSession(newClientSessionId);
+        orchSessionService.addSession(newSession);
+        orchSessionService.deleteSession(oldSession.getSessionId());
+        return newSession;
+    }
+
+    public OrchClientSessionItem generateNewClientSession(
+            OrchClientSessionItem oldClientSession, String newClientSessionId) {
+        var newClientSession =
+                new OrchClientSessionItem(
+                        newClientSessionId,
+                        oldClientSession.getAuthRequestParams(),
+                        LocalDateTime.now(),
+                        oldClientSession.getVtrList(),
+                        oldClientSession.getClientName());
+        orchClientSessionService.storeClientSession(newClientSession);
+        orchClientSessionService.deleteStoredClientSession(oldClientSession.getClientSessionId());
+        return newClientSession;
     }
 
     private Long getPasswordResetTimeClaim(UserInfo userInfo) {

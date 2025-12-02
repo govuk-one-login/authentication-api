@@ -48,6 +48,7 @@ import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
+import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -96,7 +97,8 @@ public class AuthenticationAuthorizationService {
         this.nowClock = nowClock;
     }
 
-    public void validateRequest(Map<String, String> queryParams, String sessionId)
+    public void validateRequest(
+            Map<String, String> queryParams, String sessionId, boolean reauthRequested)
             throws AuthenticationCallbackValidationException {
         LOG.info("Validating authentication callback request");
         if (queryParams == null || queryParams.isEmpty()) {
@@ -111,6 +113,16 @@ public class AuthenticationAuthorizationService {
                             .findFirst();
             if (reauthError.isPresent()) {
                 throw new AuthenticationCallbackValidationException(reauthError.get(), true);
+            } else if (configurationService.isSingleFactorAccountDeletionEnabled()
+                    && SFAD_ERROR.toString().equals(queryParams.get("error"))) {
+                if (!reauthRequested) {
+                    LOG.info("Performing single factor account deletion on an auth journey");
+                    return;
+                } else {
+                    LOG.warn("Cannot perform single factor account deletion on a reauth journey");
+                    throw new AuthenticationCallbackValidationException();
+                }
+
             } else {
                 throw new AuthenticationCallbackValidationException();
             }
