@@ -1,0 +1,1208 @@
+openapi: "3.0.1"
+info:
+  title: "auth-account-management-method-management-api"
+  version: 1.0.2
+  description: Auth Account Management API
+servers:
+  - url: "https://localhost:8080/"
+paths:
+  /authenticate:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      responses:
+        "204":
+          description: Successful Operation. The password is correct for this user.
+        "400":
+          description: One of the required fields is missing.
+        "401":
+          description: This user does not have an account or the password is wrong.
+        "403":
+          description: This user cannot authenticate because of a suspension.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserAccountBlocked"
+                  - $ref: "#/components/schemas/UserAccountSuspended"
+              examples:
+                post-when-user-has-blocked-intervention:
+                  value:
+                    code: 1084
+                    message: "User's account is blocked"
+                post-when-user-has-suspended-intervention:
+                  value:
+                    code: 1083
+                    message: "User's account is suspended"
+
+  /update-password:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdatePasswordFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-email:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateEmailFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      description: "Updates a user's email address. Before calling this endpoint, you must first call the /send-otp-notification endpoint with notificationType 'VERIFY_EMAIL' to send an OTP to the new email address. The user must verify the new email address with the OTP before the update can be completed. Email notifications will be sent to both the old and new email addresses confirming the change."
+      summary: Updates a user's email address
+      operationId: "update-email"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmailRequest"
+            examples:
+              update-email-request:
+                summary: Update user email address
+                value:
+                  existingEmailAddress: "old.user@example.gov.uk"
+                  replacementEmailAddress: "new.user@example.gov.uk"
+                  otp: "123456"
+        required: true
+      responses:
+        "204":
+          description: Email address successfully updated. Confirmation emails sent to both old and new addresses.
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/InvalidOTPCode"
+                  - $ref: "#/components/schemas/InvalidEmailFormat"
+                  - $ref: "#/components/schemas/EmailAddressesMatch"
+                  - $ref: "#/components/schemas/AccountWithEmailExists"
+                  - $ref: "#/components/schemas/AccountDoesNotExist"
+              examples:
+                update-email-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                update-email-when-invalid-otp-code:
+                  value:
+                    code: 1020
+                    message: "Invalid OTP code"
+                update-email-when-invalid-email-format:
+                  value:
+                    code: 1004
+                    message: "Email address is in an incorrect format"
+                update-email-when-email-addresses-match:
+                  value:
+                    code: 1019
+                    message: "Email addresses are the same"
+                update-email-when-account-with-email-exists:
+                  value:
+                    code: 1009
+                    message: "An account with this email address already exists"
+                update-email-when-account-does-not-exist:
+                  value:
+                    code: 1010
+                    message: "An account with this email address does not exist"
+        "403":
+          description: Forbidden - Email address is denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailAddressDenied"
+              examples:
+                update-email-when-email-address-denied:
+                  value:
+                    code: 1089
+                    message: "Email address is denied"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "https://localhost:8080/update-email" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+              -d '{
+                "existingEmailAddress": "old.user@example.gov.uk",
+                "replacementEmailAddress": "new.user@example.gov.uk",
+                "otp": "123456"
+              }'
+  /delete-account:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteAccountFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /send-otp-notification:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SendOtpNotificationFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-phone-number:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdatePhoneNumberFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /v1/mfa-methods/{publicSubjectId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodRetrieveFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      description: "Retrieve mfaMethods that for the given public subject id"
+      tags:
+        - 2FAManagement
+      summary: Retrieves the list of MFA Methods for a user
+      operationId: "mfa-methods-retrieve"
+      responses:
+        "200":
+          description: Successful Operation.  The retrieve query was accepted and the response contains all matching MFAMethods.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                get-when-user-with-single-mfa-type-app:
+                  summary: a user with a single MFA
+                  value:
+                    - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+                get-when-user-with-multiple-mfa-types-default-sms:
+                  summary: a user with a default mfa method of SMS, and a backup auth app method
+                  value:
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        phoneNumber: "070"
+                      methodVerified: true
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/ErrorRetrievingMfaMethods"
+                  - $ref: "#/components/schemas/InvalidPrincipalInRequest"
+                  - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
+              examples:
+                get-when-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                get-when-new-method-management-api-not-available:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                get-when-account-management-api-unexpected-error:
+                  value:
+                    code: 1071
+                    message: "Account Management API encountered Unexpected Error"
+                get-when-invalid-principal-in-request:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                get-when-invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+              examples:
+                get-when-404-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorRetrievingMfaMethods"
+                  - $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
+              examples:
+                get-when-500-error-retrieving-mfa-methods:
+                  value:
+                    code: 1064
+                    message: "Error retrieving mfa methods"
+                get-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "http://localhost/mfa-methods -H "Content-Type: application/json" -H "Prefer:{example=an-example -d '{"email": "user@gov.uk"}'
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodCreateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Creates an mfa method. A new MFA Method cannot be created as DEFAULT, it must be BACKUP and promoted at a later stage
+      operationId: "mfa-method-create"
+      parameters:
+        - name: publicSubjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaMethodCreateRequest"
+            examples:
+              add-an-authapp-mfa:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "BACKUP",
+                        "method":
+                          {
+                            "mfaMethodType": "AUTH_APP",
+                            "credential": "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444",
+                          },
+                      },
+                  }
+              add-an-sms-mfa:
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "BACKUP",
+                        "method":
+                          {
+                            "mfaMethodType": "SMS",
+                            "phoneNumber": "070",
+                            "otp": "123456",
+                          },
+                      },
+                  }
+        required: true
+      responses:
+        "200":
+          description: MFA Method Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaMethod"
+              examples:
+                create-new-mfa-method:
+                  value:
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        phoneNumber: "070"
+                      methodVerified: true
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "postAAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/DefaultMethodAlreadyExistsNewOneCannotBeCreated"
+                  - $ref: "#/components/schemas/InvalidOTPCode"
+                  - $ref: "#/components/schemas/MfaMethodCountLimitReached"
+                  - $ref: "#/components/schemas/SmsMfaMethodWithSameNumberAlreadyExists"
+                  - $ref: "#/components/schemas/AuthAppAlreadyExists"
+              examples:
+                post-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                post-when-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                post-when-new-method-management-api-not-available:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                post-when-default-method-already-exists-new-one-cannot-be-created:
+                  value:
+                    code: 1080
+                    message: "Default method already exists, new one cannot be created."
+                post-when-invalid-otp-code:
+                  value:
+                    code: 1020
+                    message: "Invalid OTP code"
+                post-when-mfa-method-count-limit-reached:
+                  value:
+                    code: 1068
+                    message: "MFA method could limit reached"
+                post-when-sms-mfa-method-with-same-number-already-exists:
+                  value:
+                    code: 1069
+                    message: "SMS MFA with same number already exists"
+                post-when-auth-app-mfa-already-exists:
+                  value:
+                    code: 1070
+                    message: "AUTH APP MFA already exists"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                post-when-invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+              examples:
+                post-when-404-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+        "500":
+          description: MFA Method could not be created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod"
+              examples:
+                post-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
+  /v1/mfa-methods/{publicSubjectId}/{mfaIdentifier}:
+    parameters:
+      - name: mfaIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: publicSubjectId
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodUpdateFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Updates an mfa method. If the MFA method is updated to 'DEFAULT', the current 'DEFAULT' gets relegated to backup. Returns all a user's MFA methods following the update.
+      operationId: "mfa-methods-update"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaMethodUpdateRequest"
+            examples:
+              change-default-mfa:
+                summary: a user with a default mfa method of auth app before update who is changing their default to SMS
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "DEFAULT",
+                        "method":
+                          {
+                            "mfaMethodType": "SMS",
+                            "phoneNumber": "070",
+                            "otp": "123456",
+                          },
+                      },
+                  }
+              change-auth-app:
+                summary: a user with a default mfa method of auth app before update who is changing to a new auth app
+                value:
+                  {
+                    "mfaMethod":
+                      {
+                        "priorityIdentifier": "DEFAULT",
+                        "method":
+                          {
+                            "mfaMethodType": "AUTH_APP",
+                            "credential": "AABBCC",
+                          },
+                      },
+                  }
+              switch-backup-with-default:
+                summary: a user with two mfa methods who is switching the backup (whose mfa id is specified in the path parameters) to be the new default
+                value: {}
+        required: true
+      responses:
+        "200":
+          description: MFA Method Updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                put-when-user-with-single-mfa-type-app:
+                  summary: a user with a single MFA after update
+                  value:
+                    - mfaIdentifier: "bb5ccc7d-2591-4ccd-ae04-2b2c95b4e256"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+                put-when-user-with-multiple-mfa-types-default-sms:
+                  summary: a user with a default mfa method of SMS, and a backup auth app method after update
+                  value:
+                    - mfaIdentifier: "78b8b624-d59d-49e8-b321-1a5e0876a244"
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        phoneNumber: "070"
+                      methodVerified: true
+                    - mfaIdentifier: "4372e333-266c-4245-8c4d-385aafdd3fb3"
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+                      methodVerified: true
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/InvalidOTPCode"
+                  - $ref: "#/components/schemas/CannotChangeTypeOfMfaMethod"
+                  - $ref: "#/components/schemas/CannotUpdateABackupSmsMfaMethodPhoneNumber"
+                  - $ref: "#/components/schemas/CannotUpdateABackupSmsMfaMethodsAuthAppCredential"
+                  - $ref: "#/components/schemas/CannotChangePriorityOfDefaultMfaMethod"
+                  - $ref: "#/components/schemas/CannotUpdatePrimarySMSNumberToNumberAlreadyInUseByBackup"
+              examples:
+                put-when-new-method-management-api-not-available-in-this-environment:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                put-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                put-when-invalid-otp-code:
+                  value:
+                    code: 1020
+                    message: "Invalid OTP code"
+                put-when-cannot-change-type-of-mfa-method:
+                  value:
+                    code: 1072
+                    message: "Cannot change type of MFA method"
+                put-when-cannot-update-a-backup-sms-mfa-method-phone-number:
+                  value:
+                    code: 1075
+                    message: "Cannot update a backup sms mfa method's phone number"
+                put-when-cannot-update-a-backup-sms-mfa-methods-auth-app-credential:
+                  value:
+                    code: 1076
+                    message: "Cannot update a backup sms mfa method's auth app credential"
+                put-when-cannot-change-priority-of-default-mfa-method:
+                  value:
+                    code: 1073
+                    message: "Cannot change priority of default mfa method"
+                put-when-cannot-update-primary-sms-number-to-number-already-in-use-by-backup:
+                  value:
+                    code: 1074
+                    message: "Cannot update primary sms number to number already in use by backup"
+        "401":
+          description: Unauthorized - user credentials incorrect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                put-when-invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "404":
+          description: MFA Method not Found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/MfaMethodNotFound"
+              examples:
+                put-when-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                put-when-mfa-method-not-found:
+                  value:
+                    code: 1065
+                    message: "MFA method not found"
+        "500":
+          description: MFA Method could not be updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AttemptedToUpdateABackupMfaMethodWithoutADefaultPresent"
+                  - $ref: "#/components/schemas/AccountManagementApiUnexpectedError"
+              examples:
+                put-when-attempted-to-update-a-backup-mfa-method-without-a-default-present:
+                  value:
+                    code: 1076
+                    message: "Attempted to update a backup mfa method without a default present"
+                put-when-unexpected-error-creating-mfa-identifier-for-auth-app-mfa-method:
+                  value:
+                    code: 1078
+                    message: "Unexpected error creating mfa identifier for auth app mfa method"
+    delete:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MfaMethodDeleteFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'DEFAULT'.
+      operationId: "mfa-method-delete"
+      parameters:
+        - name: mfaIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: publicSubjectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: MFA Method Deleted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                delete-mfa-method:
+                  summary: a user with a single MFA after update
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/NewMethodManagementAPINotAvailableInThisEnvironment"
+                  - $ref: "#/components/schemas/RequestIsMissingParameters"
+                  - $ref: "#/components/schemas/CannotDeleteMfaMethodForNonMigratedUser"
+              examples:
+                delete-when-new-method-management-api-not-available-in-this-environment:
+                  value:
+                    code: 1063
+                    message: "New method management api not available in environment"
+                delete-when-request-is-missing-parameters:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+                delete-when-cannot-delete-mfa-method-for-non-migrated-user:
+                  value:
+                    code: 1067
+                    message: "Cannot delete mfa method for non-migrated user"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvalidPrincipalInRequest"
+              examples:
+                delete-when-invalid-principal:
+                  value:
+                    code: 1079
+                    message: "Invalid principal in request"
+        "404":
+          description: MFA Method Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserNotFoundOrNoMatch"
+                  - $ref: "#/components/schemas/MfaMethodNotFound"
+              examples:
+                delete-when-user-not-found-or-no-match:
+                  value:
+                    code: 1056
+                    message: "User Not Found Or No Match"
+                delete-when-mfa-method-not-found:
+                  value:
+                    code: 1065
+                    message: "MFA method not found"
+        "409":
+          description: Cannot delete a Default MFA Method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CannotDeleteDefaultPriorityMfaMethod"
+              examples:
+                delete-when-cannot-delete-default-priority-mfa-method:
+                  value:
+                    code: 1066
+                    message: "Cannot delete default priority mfa method"
+components:
+  schemas:
+    PriorityEnum:
+      type: string
+      enum:
+        - DEFAULT
+        - BACKUP
+    MfaMethod:
+      required:
+        - priorityIdentifier
+        - method
+      type: object
+      properties:
+        mfaIdentifier:
+          type: string
+          format: uuid
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/SmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
+        methodVerified:
+          type: boolean
+    SmsMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+        phoneNumber:
+          type: string
+    CreateSmsMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+        phoneNumber:
+          type: string
+        otp:
+          type: string
+    AuthAppMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - AUTH_APP
+        credential:
+          type: string
+
+    MfaMethodCreate:
+      required:
+        - priorityIdentifier
+        - method
+      type: object
+      properties:
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/CreateSmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
+      example:
+        priorityIdentifier: DEFAULT
+        method:
+          mfaMethodType: AUTH_APP
+          credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+
+    MfaMethodUpdate:
+      required:
+        - priorityIdentifier
+      type: object
+      properties:
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/SmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
+      example:
+        priorityIdentifier: DEFAULT
+        method:
+          mfaMethodType: SMS
+          phoneNumber: "070"
+
+    MfaMethodCreateRequest:
+      required:
+        - mfaMethod
+      type: object
+      properties:
+        mfaMethod:
+          $ref: "#/components/schemas/MfaMethodCreate"
+      example:
+        mfaMethod:
+          priorityIdentifier: DEFAULT
+          method:
+            mfaMethodType: AUTH_APP
+            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+
+    MfaMethodUpdateRequest:
+      required:
+        - mfaMethod
+      type: object
+      properties:
+        mfaMethod:
+          $ref: "#/components/schemas/MfaMethodCreate"
+      example:
+        mfaMethod:
+          priorityIdentifier: DEFAULT
+          method:
+            mfaMethodType: AUTH_APP
+            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
+
+    SimpleError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: API specific error code
+        message:
+          type: string
+          description: Human readable error message
+    RequestIsMissingParameters:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1001]
+    InvalidOTPCode:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1020]
+    UserNotFoundOrNoMatch:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1056]
+    NewMethodManagementAPINotAvailableInThisEnvironment:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1063]
+          example:
+            code: 1063
+            message: "New method management api not available in environment"
+    ErrorRetrievingMfaMethods:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1064]
+          example:
+            code: 1064
+            message: "Error retrieving MFA methods"
+    MfaMethodNotFound:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1065]
+          example:
+            code: 1065
+            message: "MFA method not found"
+    CannotDeleteDefaultPriorityMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1066]
+          example:
+            code: 1066
+            message: "Cannot delete default priority MFA method"
+    CannotDeleteMfaMethodForNonMigratedUser:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1067]
+          example:
+            code: 1067
+            message: "Cannot delete MFA method for non migrated user"
+    MfaMethodCountLimitReached:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1068]
+          example:
+            code: 1068
+            message: "MFA method count limit reached"
+    SmsMfaMethodWithSameNumberAlreadyExists:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1069]
+          example:
+            code: 1069
+            message: "SMS MFA method with the same number already exists"
+    AuthAppAlreadyExists:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1070]
+          example:
+            code: 1070
+            message: "AUTH APP MFA already exists"
+    AccountManagementApiUnexpectedError:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1071]
+          example:
+            code: 1071
+            message: "Account Management API encountered Unexpected Error"
+    CannotChangeTypeOfMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1072]
+          example:
+            code: 1072
+            message: "Cannot change type of MFA method"
+    CannotChangePriorityOfDefaultMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1073]
+          example:
+            code: 1073
+            message: "Cannot change priority of default MFA method"
+    CannotUpdatePrimarySMSNumberToNumberAlreadyInUseByBackup:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1074]
+          example:
+            code: 1074
+            message: "Cannot update primary SMS number to number already in use by backup"
+    CannotUpdateABackupSmsMfaMethodPhoneNumber:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1075]
+          example:
+            code: 1075
+            message: "Cannot update a backup SMS MFA methods phone number"
+    CannotUpdateABackupSmsMfaMethodsAuthAppCredential:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1076]
+          example:
+            code: 1076
+            message: "Cannot update a backup sms mfa method's auth app credential"
+    AttemptedToUpdateABackupMfaMethodWithoutADefaultPresent:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1077]
+          example:
+            code: 1077
+            message: "Attempted to update a backup mfa method without a default present"
+    UnexpectedErrorCreatingMfaIdentifierForAuthAppMfaMethod:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1078]
+          example:
+            code: 1078
+            message: "Unexpected error creating mfa identifier for auth app mfa method"
+    InvalidPrincipalInRequest:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1079]
+          example:
+            code: 1079
+            message: "Invalid principal in request"
+    DefaultMethodAlreadyExistsNewOneCannotBeCreated:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1080]
+          example:
+            code: 1080
+            message: "Default method already exists, new one cannot be created."
+    UserAccountBlocked:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1084]
+    UpdateEmailRequest:
+      required:
+        - existingEmailAddress
+        - replacementEmailAddress
+        - otp
+      type: object
+      properties:
+        existingEmailAddress:
+          type: string
+          format: email
+          description: The user's current email address
+          example: "old.user@example.gov.uk"
+        replacementEmailAddress:
+          type: string
+          format: email
+          description: The user's new email address
+          example: "new.user@example.gov.uk"
+        otp:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: The 6-digit OTP code sent to the new email address
+          example: "123456"
+      example:
+        existingEmailAddress: "old.user@example.gov.uk"
+        replacementEmailAddress: "new.user@example.gov.uk"
+        otp: "123456"
+
+    InvalidEmailFormat:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1004]
+          example:
+            code: 1004
+            message: "Email address is in an incorrect format"
+    EmailAddressesMatch:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1019]
+          example:
+            code: 1019
+            message: "Email addresses are the same"
+    AccountWithEmailExists:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1009]
+          example:
+            code: 1009
+            message: "An account with this email address already exists"
+    AccountDoesNotExist:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1010]
+          example:
+            code: 1010
+            message: "An account with this email address does not exist"
+    EmailAddressDenied:
+      allOf:
+        - $ref: "#/components/schemas/SimpleError"
+        - type: object
+          properties:
+            code:
+              type: integer
+              enum: [1089]
+          example:
+            code: 1089
+            message: "Email address is denied"
+
+  securitySchemes:
+    authorise-access-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        type: "token"
+        authorizerUri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthorizerFunction.Arn}:active/invocations"
+        authorizerCredentials:
+          Fn::GetAtt: [ApiGatewayAuthorizerRole, Arn]
+        authorizerResultTtlInSeconds: 0

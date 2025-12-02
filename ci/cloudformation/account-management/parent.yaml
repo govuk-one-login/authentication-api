@@ -892,6 +892,33 @@ Resources:
           !Ref AWS::NoValue,
         ]
 
+  ApiGatewayAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - ${Env}-api_gateway_auth_invocation
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: default
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Ref AuthorizerFunction.Alias
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
   # ----------------
   # Common Resources
   # ----------------
