@@ -18,6 +18,10 @@ import uk.gov.di.authentication.userpermissions.entity.DecisionError;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 import uk.gov.di.authentication.userpermissions.entity.UserPermissionContext;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -320,10 +324,11 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnPermittedForReauthenticationJourney() {
             var userContext = createUserContext(3);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
-                            JourneyType.REAUTHENTICATION))
+            var identifiers = new ArrayList<String>();
+            identifiers.add(userContext.internalSubjectId());
+            identifiers.add(userContext.rpPairwiseId());
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            identifiers, JourneyType.REAUTHENTICATION))
                     .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
             when(configurationService.getMaxPasswordRetries()).thenReturn(5);
@@ -343,10 +348,11 @@ class PermissionDecisionManagerTest {
         void shouldReturnReauthLockedOutForReauthenticationWhenCountExceeded(
                 CountType countType, ForbiddenReason expectedReason) {
             var userContext = createUserContext(3);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
-                            JourneyType.REAUTHENTICATION))
+            var identifiers = new ArrayList<String>();
+            identifiers.add(userContext.internalSubjectId());
+            identifiers.add(userContext.rpPairwiseId());
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            identifiers, JourneyType.REAUTHENTICATION))
                     .thenReturn(Map.of(countType, 6));
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
             when(configurationService.getMaxPasswordRetries()).thenReturn(5);
@@ -497,9 +503,9 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldReturnPermittedForReauthWhenNotBlocked() {
             var userContext = createUserContext(0);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -519,9 +525,9 @@ class PermissionDecisionManagerTest {
         void shouldReturnReauthLockedOutWhenPasswordCountExceeded() {
             var userContext = createUserContext(0);
             var counts = Map.of(CountType.ENTER_PASSWORD, 6);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(counts);
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -546,9 +552,9 @@ class PermissionDecisionManagerTest {
         void shouldReturnReauthLockedOutWhenEmailCountExceeded() {
             var userContext = createUserContext(0);
             var counts = Map.of(CountType.ENTER_EMAIL, 6);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(counts);
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -573,9 +579,9 @@ class PermissionDecisionManagerTest {
         void shouldReturnReauthLockedOutWhenMfaCountExceeded() {
             var userContext = createUserContext(0);
             var counts = Map.of(CountType.ENTER_MFA_CODE, 6);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(counts);
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -599,9 +605,14 @@ class PermissionDecisionManagerTest {
         @Test
         void shouldUseGetCountsByJourneyWhenInternalSubjectIdIsNull() {
             var userContext =
-                    new UserPermissionContext(null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
-            when(authenticationAttemptsService.getCountsByJourney(
-                            userContext.rpPairwiseId(), JourneyType.REAUTHENTICATION))
+                    UserPermissionContext.builder()
+                            .withRpPairwiseId("rp-pairwise-id")
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(new AuthSessionItem())
+                            .build();
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Collections.singletonList(userContext.rpPairwiseId()),
+                            JourneyType.REAUTHENTICATION))
                     .thenReturn(Map.of(CountType.ENTER_PASSWORD, 2));
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
             when(configurationService.getMaxPasswordRetries()).thenReturn(5);
@@ -624,9 +635,10 @@ class PermissionDecisionManagerTest {
                             CountType.ENTER_PASSWORD, 6,
                             CountType.ENTER_EMAIL, 6,
                             CountType.ENTER_MFA_CODE, 3);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(counts);
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -649,9 +661,9 @@ class PermissionDecisionManagerTest {
         void shouldReturnReauthLockedOutWhenEmailCodeCountExceeded() {
             var userContext = createUserContext(0);
             var counts = Map.of(CountType.ENTER_EMAIL_CODE, 6);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            userContext.internalSubjectId(),
-                            userContext.rpPairwiseId(),
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            Arrays.asList(
+                                    userContext.internalSubjectId(), userContext.rpPairwiseId()),
                             JourneyType.REAUTHENTICATION))
                     .thenReturn(counts);
             when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -674,10 +686,10 @@ class PermissionDecisionManagerTest {
     }
 
     @Nested
-    class SimplePermissionMethods {
+    class CanReceiveEmailAddress {
 
         @Test
-        void canReceiveEmailAddressShouldAlwaysReturnPermitted() {
+        void shouldReturnPermittedForNonReauthenticationJourney() {
             var userContext = createUserContext(0);
 
             var result =
@@ -688,6 +700,81 @@ class PermissionDecisionManagerTest {
             var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
             assertEquals(0, decision.attemptCount());
         }
+
+        @Test
+        void shouldReturnPermittedForReauthenticationWhenNotLocked() {
+            var userContext = createUserContext(0);
+            var identifiers = new ArrayList<String>();
+            identifiers.add(userContext.internalSubjectId());
+            identifiers.add(userContext.rpPairwiseId());
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            identifiers, JourneyType.REAUTHENTICATION))
+                    .thenReturn(Map.of(CountType.ENTER_EMAIL, 2));
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canReceiveEmailAddress(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var decision = assertInstanceOf(Decision.Permitted.class, result.getSuccess());
+            assertEquals(2, decision.attemptCount());
+        }
+
+        @Test
+        void shouldReturnLockedOutForReauthenticationWhenLocked() {
+            var userContext = createUserContext(0);
+            var identifiers = new ArrayList<String>();
+            identifiers.add(userContext.internalSubjectId());
+            identifiers.add(userContext.rpPairwiseId());
+            when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
+                            identifiers, JourneyType.REAUTHENTICATION))
+                    .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
+            when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+
+            var result =
+                    permissionDecisionManager.canReceiveEmailAddress(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isSuccess());
+            var lockedOut = assertInstanceOf(Decision.ReauthLockedOut.class, result.getSuccess());
+            assertEquals(
+                    ForbiddenReason.EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT,
+                    lockedOut.forbiddenReason());
+            assertEquals(6, lockedOut.attemptCount());
+        }
+
+        @Test
+        void shouldReturnErrorForReauthenticationWithNullInternalSubjectIds() {
+            var userContext =
+                    new UserPermissionContext(
+                            (List<String>) null, "rp-pairwise-id", EMAIL, new AuthSessionItem());
+
+            var result =
+                    permissionDecisionManager.canReceiveEmailAddress(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+
+        @Test
+        void shouldReturnErrorForReauthenticationWithNullRpPairwiseId() {
+            var userContext =
+                    new UserPermissionContext(
+                            List.of("internal-subject-id"), null, EMAIL, new AuthSessionItem());
+
+            var result =
+                    permissionDecisionManager.canReceiveEmailAddress(
+                            JourneyType.REAUTHENTICATION, userContext);
+
+            assertTrue(result.isFailure());
+            assertEquals(DecisionError.INVALID_USER_CONTEXT, result.getFailure());
+        }
+    }
+
+    @Nested
+    class SimplePermissionMethods {
 
         @Test
         void canSendSmsOtpNotificationShouldAlwaysReturnPermitted() {
