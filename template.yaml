@@ -80,6 +80,12 @@ Conditions:
   IsDev: !Equals [dev, !Ref Environment]
   IsDevOrBuild:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+  IsStagingIntOrProd:
+    !Or [
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
   IsNotIntegration: !Not [!Equals [!Ref Environment, integration]]
   IsNotDevOrProd:
     !Not [
@@ -880,6 +886,66 @@ Resources:
           - Key: BackupFrequency
             Value: Bihourly
           - !Ref AWS::NoValue
+
+  ClientRegistryReadOnlyIamPolicy:
+    Condition: IsStagingIntOrProd
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Path: /control-tower/shared/
+      Description: "Policy for use in Control Tower to be attached to the role assumed by support users to view the Client Registry"
+      ManagedPolicyName: client-registry-read-only-user-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ClientRegistryReadOnly
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeImport
+              - dynamodb:ListTables
+              - dynamodb:DescribeContributorInsights
+              - dynamodb:ListTagsOfResource
+              - dynamodb:DescribeReservedCapacityOfferings
+              - dynamodb:PartiQLSelect
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:DescribeContinuousBackups
+              - dynamodb:DescribeExport
+              - dynamodb:ListImports
+              - dynamodb:DescribeKinesisStreamingDestination
+              - dynamodb:ListExports
+              - dynamodb:DescribeLimits
+              - dynamodb:BatchGetItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:ListBackups
+              - dynamodb:Scan
+              - dynamodb:Query
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTimeToLive
+              - dynamodb:ListStreams
+              - dynamodb:ListContributorInsights
+              - dynamodb:DescribeGlobalTableSettings
+              - dynamodb:ListGlobalTables
+              - dynamodb:GetShardIterator
+              - dynamodb:DescribeGlobalTable
+              - dynamodb:DescribeReservedCapacity
+              - dynamodb:DescribeBackup
+              - dynamodb:DescribeEndpoints
+              - dynamodb:GetRecords
+              - dynamodb:DescribeTableReplicaAutoScaling
+            Resource:
+              - !GetAtt ClientRegistryTable.Arn
+          - Sid: ClientRegistryKeyDecrypt
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !GetAtt ClientRegistryTableEncryptionKey.Arn
+          - Sid: AllowListAllTables
+            Effect: Allow
+            Action:
+              - dynamodb:ListTables
+            Resource:
+              - !Sub arn:aws:dynamodb:eu-west-2:${AWS::AccountId}:table/*
 
   #endregion
 
