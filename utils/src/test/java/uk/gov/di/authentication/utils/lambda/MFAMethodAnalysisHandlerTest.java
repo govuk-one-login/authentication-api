@@ -64,24 +64,7 @@ class MFAMethodAnalysisHandlerTest {
             items.add(item);
         }
         mockCredentialsScan(items, size);
-
-        List<Map<String, AttributeValue>> requestKeys = new ArrayList<>();
-        for (int i = 1; i < size + 1; i++) {
-            Map<String, AttributeValue> key = new HashMap<>();
-            key.put(
-                    UserProfile.ATTRIBUTE_EMAIL,
-                    AttributeValue.builder().s(getTestEmail(i)).build());
-            requestKeys.add(key);
-
-            if (i % 100 == 0) {
-                mockProfileBatchGetItem(requestKeys, items.subList(i - 100, i));
-                requestKeys = new ArrayList<>();
-            }
-        }
-
-        if (!requestKeys.isEmpty()) {
-            mockProfileBatchGetItem(requestKeys, items.subList(size - requestKeys.size(), size));
-        }
+        mockProfileBatchGetItem(new ArrayList<>(), items);
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         assertEquals(
@@ -276,37 +259,72 @@ class MFAMethodAnalysisHandlerTest {
                         invocation -> {
                             ScanRequest request = invocation.getArgument(0);
                             if ("PhoneNumberIndex".equals(request.indexName())) {
+                                int segment = request.segment() != null ? request.segment() : 0;
+                                int totalSegments = request.totalSegments() != null ? request.totalSegments() : 1;
+                                List<Map<String, AttributeValue>> segmentItems = distributeItemsToSegment(phoneItems, segment, totalSegments);
+                                int segmentCount = phoneCount / totalSegments + (segment < phoneCount % totalSegments ? 1 : 0);
+                                int segmentScanned = phoneScannedCount / totalSegments + (segment < phoneScannedCount % totalSegments ? 1 : 0);
                                 return ScanResponse.builder()
-                                        .items(phoneItems)
-                                        .count(phoneCount)
-                                        .scannedCount(phoneScannedCount)
+                                        .items(segmentItems)
+                                        .count(segmentCount)
+                                        .scannedCount(segmentScanned)
                                         .build();
                             }
 
+                            int segment = request.segment() != null ? request.segment() : 0;
+                            int totalSegments = request.totalSegments() != null ? request.totalSegments() : 1;
+                            List<Map<String, AttributeValue>> segmentItems = distributeItemsToSegment(credentialItems, segment, totalSegments);
+                            int segmentCount = credentialCount / totalSegments + (segment < credentialCount % totalSegments ? 1 : 0);
+                            int segmentScanned = credentialScannedCount / totalSegments + (segment < credentialScannedCount % totalSegments ? 1 : 0);
                             return ScanResponse.builder()
-                                    .items(credentialItems)
-                                    .count(credentialCount)
-                                    .scannedCount(credentialScannedCount)
+                                    .items(segmentItems)
+                                    .count(segmentCount)
+                                    .scannedCount(segmentScanned)
                                     .build();
                         });
     }
 
+    private List<Map<String, AttributeValue>> distributeItemsToSegment(
+            List<Map<String, AttributeValue>> allItems, int segment, int totalSegments) {
+        if (allItems.isEmpty()) {
+            return List.of();
+        }
+        int itemsPerSegment = allItems.size() / totalSegments;
+        int remainder = allItems.size() % totalSegments;
+        int startIdx = segment * itemsPerSegment + Math.min(segment, remainder);
+        int endIdx = startIdx + itemsPerSegment + (segment < remainder ? 1 : 0);
+        if (startIdx >= allItems.size()) {
+            return List.of();
+        }
+        return allItems.subList(startIdx, Math.min(endIdx, allItems.size()));
+    }
+
     private void mockProfileBatchGetItem(
             List<Map<String, AttributeValue>> keys, List<Map<String, AttributeValue>> items) {
-        Map<String, KeysAndAttributes> requestItems = new HashMap<>();
-        requestItems.put(
-                "test-user-profile",
-                KeysAndAttributes.builder()
-                        .keys(keys)
-                        .projectionExpression(
-                                "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
-                        .build());
-
-        Map<String, List<Map<String, AttributeValue>>> responses = new HashMap<>();
-        responses.put("test-user-profile", items);
-
-        when(client.batchGetItem(BatchGetItemRequest.builder().requestItems(requestItems).build()))
-                .thenReturn(BatchGetItemResponse.builder().responses(responses).build());
+        when(client.batchGetItem(any(BatchGetItemRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            BatchGetItemRequest request = invocation.getArgument(0);
+                            Map<String, KeysAndAttributes> requestItems = request.requestItems();
+                            KeysAndAttributes keysAndAttrs = requestItems.get("test-user-profile");
+                            if (keysAndAttrs == null || keysAndAttrs.keys().isEmpty()) {
+                                return BatchGetItemResponse.builder()
+                                        .responses(Map.of("test-user-profile", List.of()))
+                                        .build();
+                            }
+                            List<Map<String, AttributeValue>> requestedKeys = keysAndAttrs.keys();
+                            List<Map<String, AttributeValue>> matchedItems = new ArrayList<>();
+                            for (Map<String, AttributeValue> key : requestedKeys) {
+                                String email = key.get("Email").s();
+                                items.stream()
+                                        .filter(item -> email.equals(item.get("Email").s()))
+                                        .findFirst()
+                                        .ifPresent(matchedItems::add);
+                            }
+                            return BatchGetItemResponse.builder()
+                                    .responses(Map.of("test-user-profile", matchedItems))
+                                    .build();
+                        });
     }
 
     private Map<String, AttributeValue> createUserWithMfaMethods(
@@ -678,7 +696,7 @@ class MFAMethodAnalysisHandlerTest {
     }
 
     @Test
-    void shouldRetryUnprocessedKeysAndCountMissingCorrectly() {
+    void shouldNotRetryUnprocessedKeysWithMaxRetriesZero() {
         when(configurationService.getEnvironment()).thenReturn("test");
         mockPhoneNumberIndexScan(0, 0);
 
@@ -689,85 +707,35 @@ class MFAMethodAnalysisHandlerTest {
         }
         mockCredentialsScan(credentialItems, credentialItems.size());
 
-        List<Map<String, AttributeValue>> requestKeys = createKeysFromCredentials(credentialItems);
-        Map<String, KeysAndAttributes> requestItems =
-                Map.of(
-                        "test-user-profile",
-                        KeysAndAttributes.builder()
-                                .keys(requestKeys)
-                                .projectionExpression(
-                                        "Email,PhoneNumber,PhoneNumberVerified,mfaMethodsMigrated")
-                                .build());
+        List<Map<String, AttributeValue>> profileItems = new ArrayList<>();
+        profileItems.add(Map.of("Email", AttributeValue.builder().s(getTestEmail(1)).build()));
+        profileItems.add(Map.of("Email", AttributeValue.builder().s(getTestEmail(2)).build()));
 
-        // First call: return items 1-2, unprocessed keys 3-5
-        Map<String, List<Map<String, AttributeValue>>> firstResponse = new HashMap<>();
-        firstResponse.put(
-                "test-user-profile",
-                List.of(
-                        Map.of("Email", AttributeValue.builder().s(getTestEmail(1)).build()),
-                        Map.of("Email", AttributeValue.builder().s(getTestEmail(2)).build())));
-
-        Map<String, KeysAndAttributes> unprocessedKeys1 =
+        Map<String, KeysAndAttributes> unprocessedKeys =
                 Map.of(
                         "test-user-profile",
                         KeysAndAttributes.builder()
                                 .keys(
                                         List.of(
-                                                requestKeys.get(2),
-                                                requestKeys.get(3),
-                                                requestKeys.get(4)))
+                                                Map.of("Email", AttributeValue.builder().s(getTestEmail(3)).build()),
+                                                Map.of("Email", AttributeValue.builder().s(getTestEmail(4)).build()),
+                                                Map.of("Email", AttributeValue.builder().s(getTestEmail(5)).build())))
                                 .build());
-
-        // Second call (retry 1): return item 3, unprocessed keys 4-5
-        Map<String, List<Map<String, AttributeValue>>> secondResponse = new HashMap<>();
-        secondResponse.put(
-                "test-user-profile",
-                List.of(Map.of("Email", AttributeValue.builder().s(getTestEmail(3)).build())));
-
-        Map<String, KeysAndAttributes> unprocessedKeys2 =
-                Map.of(
-                        "test-user-profile",
-                        KeysAndAttributes.builder()
-                                .keys(List.of(requestKeys.get(3), requestKeys.get(4)))
-                                .build());
-
-        // Third call (retry 2): return item 4, unprocessed key 5 (still failing after max retries)
-        Map<String, List<Map<String, AttributeValue>>> thirdResponse = new HashMap<>();
-        thirdResponse.put(
-                "test-user-profile",
-                List.of(Map.of("Email", AttributeValue.builder().s(getTestEmail(4)).build())));
-
-        Map<String, KeysAndAttributes> unprocessedKeys3 =
-                Map.of(
-                        "test-user-profile",
-                        KeysAndAttributes.builder().keys(List.of(requestKeys.get(4))).build());
 
         when(client.batchGetItem(any(BatchGetItemRequest.class)))
                 .thenReturn(
                         BatchGetItemResponse.builder()
-                                .responses(firstResponse)
-                                .unprocessedKeys(unprocessedKeys1)
-                                .build(),
-                        BatchGetItemResponse.builder()
-                                .responses(secondResponse)
-                                .unprocessedKeys(unprocessedKeys2)
-                                .build(),
-                        BatchGetItemResponse.builder()
-                                .responses(thirdResponse)
-                                .unprocessedKeys(unprocessedKeys3)
+                                .responses(Map.of("test-user-profile", profileItems))
+                                .unprocessedKeys(unprocessedKeys)
                                 .build());
 
         var handler = new MFAMethodAnalysisHandler(configurationService, client);
         String result = handler.handleRequest("", mock(Context.class));
 
-        // Verify 3 calls were made (initial + 2 retries)
-        verify(client, times(3)).batchGetItem(any(BatchGetItemRequest.class));
-
-        // Should have retrieved 4 items (items 1-4) and counted 1 as missing (item 5 failed after 2
-        // retries)
-        assertTrue(result.contains("missingUserProfileCount=1"));
+        // Should have retrieved 2 items and counted 3 as missing (items 3-5 were unprocessed)
+        assertTrue(result.contains("missingUserProfileCount=3"));
         assertTrue(
                 result.contains(
-                        "User profile retrieval failures: userProfile items could not be retrieved for 1 accounts."));
+                        "User profile retrieval failures: userProfile items could not be retrieved for 3 accounts."));
     }
 }
