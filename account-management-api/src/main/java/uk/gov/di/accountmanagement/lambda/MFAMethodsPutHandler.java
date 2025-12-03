@@ -484,11 +484,11 @@ public class MFAMethodsPutHandler
             throw new IllegalArgumentException("notificationType cannot be null.");
         }
 
-        LOG.info(
-                "Method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
-                notificationType.name());
-
         NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType, userLanguage);
+        LOG.info(
+                "Method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue, reference: {}",
+                notificationType.name(),
+                notifyRequest.getUniqueNotificationReference());
         sqsClient.send(serialisationService.writeValueAsString((notifyRequest)));
 
         LOG.info(

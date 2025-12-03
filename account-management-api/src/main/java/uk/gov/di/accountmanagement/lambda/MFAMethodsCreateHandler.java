@@ -331,11 +331,12 @@ public class MFAMethodsCreateHandler
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
 
-        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
-
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
+        LOG.info(
+                "Backup method added successfully. Adding confirmation message to SQS queue, reference {}",
+                notifyRequest.getUniqueNotificationReference());
 
         try {
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));

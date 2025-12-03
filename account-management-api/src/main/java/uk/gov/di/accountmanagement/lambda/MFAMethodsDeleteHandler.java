@@ -175,6 +175,9 @@ public class MFAMethodsDeleteHandler
                         userProfile.getEmail(),
                         NotificationType.BACKUP_METHOD_REMOVED,
                         userLanguage);
+        LOG.info(
+                "Account deleted successfully. Adding confirmation message to SQS queue, reference {}",
+                notifyRequest.getUniqueNotificationReference());
         sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
         LOG.info("Notify request sent.");

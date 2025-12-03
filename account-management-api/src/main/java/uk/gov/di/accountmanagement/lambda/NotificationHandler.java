@@ -108,6 +108,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         try {
             NotifyRequest notifyRequest =
                     objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+            LOG.info(
+                    "Sending {} notification, reference: {}",
+                    notifyRequest.getNotificationType().toString(),
+                    notifyRequest.getUniqueNotificationReference());
             sendNotification(notifyRequest);
         } catch (JsonException e) {
             LOG.error(ERROR_WHEN_MAPPING_MESSAGE_FROM_QUEUE_TO_A_NOTIFY_REQUEST);
