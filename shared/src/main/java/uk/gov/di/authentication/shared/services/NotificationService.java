@@ -30,8 +30,16 @@ public class NotificationService {
             String email, Map<String, Object> personalisation, TemplateAware type, String reference)
             throws NotificationClientException {
         LOG.info("Sending EMAIL using Notify, reference: {}", reference);
-        notifyClient.sendEmail(
-                type.getTemplateId(configurationService), email, personalisation, reference);
+        var sendEmailResponse =
+                notifyClient.sendEmail(
+                        type.getTemplateId(configurationService),
+                        email,
+                        personalisation,
+                        reference);
+        LOG.info(
+                "Sent EMAIL using Notify, reference: {}, notification ID: {}",
+                reference,
+                sendEmailResponse.getNotificationId().toString());
     }
 
     public void sendText(
@@ -47,7 +55,15 @@ public class NotificationService {
             String reference)
             throws NotificationClientException {
         LOG.info("Sending SMS using Notify, reference: {}", reference);
-        notifyClient.sendSms(
-                type.getTemplateId(configurationService), phoneNumber, personalisation, reference);
+        var sendSmsResponse =
+                notifyClient.sendSms(
+                        type.getTemplateId(configurationService),
+                        phoneNumber,
+                        personalisation,
+                        reference);
+        LOG.info(
+                "Sent SMS using Notify, reference: {}, notification ID: {}",
+                reference,
+                sendSmsResponse.getNotificationId().toString());
     }
 }
