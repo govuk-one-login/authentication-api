@@ -21,11 +21,6 @@ public class NotificationService {
         this.configurationService = configurationService;
     }
 
-    public void sendEmail(String email, Map<String, Object> personalisation, TemplateAware type)
-            throws NotificationClientException {
-        sendEmail(email, personalisation, type, "");
-    }
-
     public void sendEmail(
             String email, Map<String, Object> personalisation, TemplateAware type, String reference)
             throws NotificationClientException {
@@ -40,12 +35,6 @@ public class NotificationService {
                 "Sent EMAIL using Notify, reference: {}, notification ID: {}",
                 reference,
                 sendEmailResponse.getNotificationId().toString());
-    }
-
-    public void sendText(
-            String phoneNumber, Map<String, Object> personalisation, TemplateAware type)
-            throws NotificationClientException {
-        sendText(phoneNumber, personalisation, type, "");
     }
 
     public void sendText(

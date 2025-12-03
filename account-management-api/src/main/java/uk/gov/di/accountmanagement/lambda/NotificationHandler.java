@@ -230,7 +230,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 (destination, per, type) -> {
                     try {
                         notificationService.sendEmail(
-                                destination, per, NotificationType.valueOf(type));
+                                destination,
+                                per,
+                                NotificationType.valueOf(type),
+                                notifyRequest.getUniqueNotificationReference());
                         LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
@@ -265,7 +268,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 (destination, per, type) -> {
                     try {
                         notificationService.sendText(
-                                destination, per, NotificationType.valueOf(type));
+                                destination,
+                                per,
+                                NotificationType.valueOf(type),
+                                notifyRequest.getUniqueNotificationReference());
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
