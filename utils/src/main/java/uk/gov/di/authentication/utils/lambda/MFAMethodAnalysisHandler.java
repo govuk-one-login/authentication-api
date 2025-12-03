@@ -90,7 +90,8 @@ public class MFAMethodAnalysisHandler
                             combinedResults.getCountOfUsersWithoutMfaMethodsMigrated(),
                             combinedResults.getMissingUserProfileCount(),
                             combinedResults.getMfaMethodPriorityIdentifierCombinations(),
-                            combinedResults.getMfaMethodDetailsCombinations());
+                            formatMfaMethodDetailsCombinations(
+                                    combinedResults.getMfaMethodDetailsCombinations()));
             LOG.info("MFA Method Analysis Response: {}", response);
             return response;
         } finally {
@@ -788,5 +789,33 @@ public class MFAMethodAnalysisHandler
                     + mfaMethodDetailsCombinations
                     + '}';
         }
+    }
+
+    private static Map<String, Long> formatMfaMethodDetailsCombinations(
+            Map<MfaMethodDetailsCombinationKey, Long> combinations) {
+        return combinations.entrySet().stream()
+                .collect(
+                        Collectors.toMap(
+                                entry -> {
+                                    String methodsStr =
+                                            entry.getKey().methods().isEmpty()
+                                                    ? "[]"
+                                                    : entry.getKey().methods().stream()
+                                                            .map(
+                                                                    m ->
+                                                                            String.format(
+                                                                                    "{priority=%s,type=%s}",
+                                                                                    m
+                                                                                            .priorityIdentifier(),
+                                                                                    m
+                                                                                            .mfaMethodType()))
+                                                            .collect(
+                                                                    Collectors.joining(
+                                                                            ",", "[", "]"));
+                                    return String.format(
+                                            "methods=%s,migrated=%s",
+                                            methodsStr, entry.getKey().areMfaMethodsMigrated());
+                                },
+                                Map.Entry::getValue));
     }
 }

@@ -16,4 +16,4 @@ public record MFAMethodAnalysisResponse(
         @Expose long countOfUsersWithoutMfaMethodsMigrated,
         @Expose long missingUserProfileCount,
         @Expose Map<?, Long> mfaMethodPriorityIdentifierCombinations,
-        @Expose Map<?, Long> mfaMethodDetailsCombinations) {}
+        @Expose Map<String, Long> mfaMethodDetailsCombinations) {}
