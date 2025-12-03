@@ -113,7 +113,8 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
     ]
-  UseSyncWaitForSpot: !Equals [!Ref Environment, dev]
+  UseSyncWaitForSpot:
+    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
 
 Mappings:
