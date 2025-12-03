@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -70,15 +71,23 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         return count;
     }
 
-    public Map<CountType, Integer> getCountsByJourney(
-            String internalSubjectId, JourneyType journeyType) {
+    public Map<CountType, Integer> getCountsByJourneyForIdentifiers(
+            List<String> identifiers, JourneyType journeyType) {
         Map<CountType, Integer> results = new EnumMap<>(CountType.class);
         Arrays.stream(CountType.values())
                 // TODO remove temporary ZDD measure to sum deprecated count types
                 .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
                 .forEach(
                         countType -> {
-                            var count = getCount(internalSubjectId, journeyType, countType);
+                            var count =
+                                    identifiers.stream()
+                                            .mapToInt(
+                                                    identifier ->
+                                                            getCount(
+                                                                    identifier,
+                                                                    journeyType,
+                                                                    countType))
+                                            .sum();
                             if (count > 0) {
                                 results.put(countType, count);
                             }
@@ -87,26 +96,18 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         return results;
     }
 
+    public Map<CountType, Integer> getCountsByJourney(
+            String internalSubjectId, JourneyType journeyType) {
+        return getCountsByJourneyForIdentifiers(List.of(internalSubjectId), journeyType);
+    }
+
     // This should only be used in specific journeys (e.g. reauth) where it's possible that a
     // non-logged in user
     // can go through a journey, and have counts initially stored against a pairwise id
     public Map<CountType, Integer> getCountsByJourneyForSubjectIdAndRpPairwiseId(
             String internalSubjectId, String rpPairwiseId, JourneyType journeyType) {
-        Map<CountType, Integer> results = new EnumMap<>(CountType.class);
-        Arrays.stream(CountType.values())
-                // TODO remove temporary ZDD measure to sum deprecated count types
-                .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
-                .forEach(
-                        countType -> {
-                            var count =
-                                    getCount(internalSubjectId, journeyType, countType)
-                                            + getCount(rpPairwiseId, journeyType, countType);
-                            if (count > 0) {
-                                results.put(countType, count);
-                            }
-                        });
-
-        return results;
+        return getCountsByJourneyForIdentifiers(
+                List.of(internalSubjectId, rpPairwiseId), journeyType);
     }
 
     public void deleteCount(

@@ -115,7 +115,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     class SuccessTests {
         @Test
         void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
-            setupUser("https://" + INTERNAL_SECTOR_HOST, INTERNAL_SECTOR_HOST);
+            setupUser(INTERNAL_SECTOR_HOST);
             var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
@@ -140,7 +140,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     class UserNotFoundTests {
         @Test
         void shouldReturn404WhenUserNotFound() {
-            setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+            setupUser("randomSectorIDuRI.COM");
             var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
@@ -156,7 +156,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         @Test
         void shouldReturn404WhenUserNotMatched() {
-            setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+            setupUser("randomSectorIDuRI.COM");
             var expectedPairwiseId = setupPairwiseId();
             var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
             var response =
@@ -173,6 +173,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @Nested
     class LockoutTests {
+        @Test
         void shouldLockoutAfterMaxIncorrectEmailAttempts() {
             setupUser();
             var expectedPairwiseId = setupPairwiseId();
@@ -265,7 +266,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         @Test
         void should400WhenUserAlreadyHasMaxPasswordAttempts() {
-            setupUser();
+            setupUser(INTERNAL_SECTOR_HOST);
             var expectedPairwiseId = setupPairwiseId();
 
             createPasswordAttempts(SUBJECT.getValue(), 6);
@@ -285,10 +286,10 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     }
 
     private void setupUser() {
-        setupUser("https://randomSectorIDuRI.COM", "randomSectorIDuRI.COM");
+        setupUser("randomSectorIDuRI.COM");
     }
 
-    private void setupUser(String clientUri, String sectorHost) {
+    private void setupUser(String sectorHost) {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         authSessionExtension.addRpSectorIdentifierHostToSession(SESSION_ID, sectorHost);
     }
