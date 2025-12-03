@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
@@ -74,13 +75,14 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
     public Map<CountType, Integer> getCountsByJourneyForIdentifiers(
             List<String> identifiers, JourneyType journeyType) {
         Map<CountType, Integer> results = new EnumMap<>(CountType.class);
+        var identifierList = identifiers.stream().filter(Objects::nonNull).distinct().toList();
         Arrays.stream(CountType.values())
                 // TODO remove temporary ZDD measure to sum deprecated count types
                 .filter(t -> t != CountType.ENTER_SMS_CODE && t != CountType.ENTER_AUTH_APP_CODE)
                 .forEach(
                         countType -> {
                             var count =
-                                    identifiers.stream()
+                                    identifierList.stream()
                                             .mapToInt(
                                                     identifier ->
                                                             getCount(
@@ -98,7 +100,7 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
 
     public Map<CountType, Integer> getCountsByJourney(
             String internalSubjectId, JourneyType journeyType) {
-        return getCountsByJourneyForIdentifiers(List.of(internalSubjectId), journeyType);
+        return getCountsByJourneyForIdentifiers(Arrays.asList(internalSubjectId), journeyType);
     }
 
     // This should only be used in specific journeys (e.g. reauth) where it's possible that a
@@ -107,7 +109,7 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
     public Map<CountType, Integer> getCountsByJourneyForSubjectIdAndRpPairwiseId(
             String internalSubjectId, String rpPairwiseId, JourneyType journeyType) {
         return getCountsByJourneyForIdentifiers(
-                List.of(internalSubjectId, rpPairwiseId), journeyType);
+                Arrays.asList(internalSubjectId, rpPairwiseId), journeyType);
     }
 
     public void deleteCount(

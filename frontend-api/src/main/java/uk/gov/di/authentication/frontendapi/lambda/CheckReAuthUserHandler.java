@@ -32,11 +32,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
@@ -323,17 +321,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String subjectIdAssociatedWithSignedInUser,
             String pairwiseId)
             throws AccountLockedException {
-        List<String> identifiers =
-                Stream.of(
-                                subjectIdAssociatedWithMatchedSubmittedEmail,
-                                subjectIdAssociatedWithSignedInUser,
-                                pairwiseId)
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .toList();
         var countTypesToCounts =
                 authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        identifiers, JourneyType.REAUTHENTICATION);
+                        Arrays.asList(
+                                subjectIdAssociatedWithMatchedSubmittedEmail,
+                                subjectIdAssociatedWithSignedInUser,
+                                pairwiseId),
+                        JourneyType.REAUTHENTICATION);
 
         var exceededCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
