@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisRequest;
+import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisResponse;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +32,8 @@ import java.util.stream.Collectors;
 import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
-public class MFAMethodAnalysisHandler implements RequestHandler<MFAMethodAnalysisRequest, String> {
+public class MFAMethodAnalysisHandler
+        implements RequestHandler<MFAMethodAnalysisRequest, MFAMethodAnalysisResponse> {
 
     public static final String ABSENT_ATTRIBUTE = "absent_attribute";
     private static final Logger LOG = LogManager.getLogger(MFAMethodAnalysisHandler.class);
@@ -54,7 +56,8 @@ public class MFAMethodAnalysisHandler implements RequestHandler<MFAMethodAnalysi
     }
 
     @Override
-    public String handleRequest(MFAMethodAnalysisRequest request, Context context) {
+    public MFAMethodAnalysisResponse handleRequest(
+            MFAMethodAnalysisRequest request, Context context) {
         if (request == null || request.parallelism() == null || request.totalSegments() == null) {
             throw new IllegalArgumentException(
                     "Request must contain 'parallelism' and 'totalSegments' fields. It is recommended that: parallelism > totalSegments (e.g., {\"parallelism\": 40,\"totalSegments\": 20}).");
@@ -71,16 +74,25 @@ public class MFAMethodAnalysisHandler implements RequestHandler<MFAMethodAnalysi
             Pool.gracefulPoolShutdown(forkJoinPool);
 
             MFAMethodAnalysis combinedResults = combineTaskResults(parallelTasks);
-            String analysis = combinedResults.toString();
-            LOG.info("Analysis result: {}", analysis);
+            LOG.info("Analysis completed");
 
-            String userProfileRetrievalAnalysis =
-                    String.format(
-                            "User profile retrieval failures: userProfile items could not be retrieved for %,d accounts.",
-                            combinedResults.getMissingUserProfileCount());
-            LOG.info(userProfileRetrievalAnalysis);
-
-            return String.format("%s %s", analysis, userProfileRetrievalAnalysis);
+            var response =
+                    new MFAMethodAnalysisResponse(
+                            combinedResults.getCountOfAuthAppUsersAssessed(),
+                            combinedResults.getCountOfPhoneNumberUsersAssessed(),
+                            combinedResults
+                                    .getCountOfUsersWithAuthAppEnabledButNoVerifiedSMSOrAuthAppMFAMethods(),
+                            combinedResults.getCountOfUsersWithVerifiedPhoneNumber(),
+                            combinedResults.getPhoneDestinationCounts(),
+                            combinedResults.getAttributeCombinationsForAuthAppUsersCount(),
+                            combinedResults.getCountOfAccountsWithoutAnyMfaMethods(),
+                            combinedResults.getCountOfUsersWithMfaMethodsMigrated(),
+                            combinedResults.getCountOfUsersWithoutMfaMethodsMigrated(),
+                            combinedResults.getMissingUserProfileCount(),
+                            combinedResults.getMfaMethodPriorityIdentifierCombinations(),
+                            combinedResults.getMfaMethodDetailsCombinations());
+            LOG.info("MFA Method Analysis Response: {}", response);
+            return response;
         } finally {
             Pool.forcePoolShutdown(forkJoinPool);
         }
