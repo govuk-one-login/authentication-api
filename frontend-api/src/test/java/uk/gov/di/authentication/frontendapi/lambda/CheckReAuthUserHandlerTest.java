@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -211,7 +212,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
         when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                        Arrays.asList(TEST_SUBJECT_ID, TEST_SUBJECT_ID, expectedRpPairwiseSub),
                         JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
@@ -229,7 +230,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
         when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                        Arrays.asList(TEST_SUBJECT_ID, TEST_SUBJECT_ID, expectedRpPairwiseSub),
                         JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES));
 
@@ -432,24 +433,27 @@ class CheckReAuthUserHandlerTest {
                 }
 
                 var mockCountsByJourneySetups =
-                        List.of(
-                                Map.entry(List.of(expectedRpPairwiseSub), expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
-                                        testSubjectIdCount + expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(DIFFERENT_SUBJECT_ID, expectedRpPairwiseSub),
-                                        differentSubjectIdCount + expectedRpPairwiseCount),
-                                Map.entry(
-                                        List.of(
-                                                TEST_SUBJECT_ID,
-                                                DIFFERENT_SUBJECT_ID,
-                                                expectedRpPairwiseSub),
-                                        testSubjectIdCount
-                                                + differentSubjectIdCount
-                                                + expectedRpPairwiseCount));
+                        Map.of(
+                                Arrays.asList(null, null, expectedRpPairwiseSub),
+                                expectedRpPairwiseCount,
+                                Arrays.asList(
+                                        TEST_SUBJECT_ID, TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                                testSubjectIdCount + expectedRpPairwiseCount,
+                                Arrays.asList(TEST_SUBJECT_ID, null, expectedRpPairwiseSub),
+                                testSubjectIdCount + expectedRpPairwiseCount,
+                                Arrays.asList(null, TEST_SUBJECT_ID, expectedRpPairwiseSub),
+                                testSubjectIdCount + expectedRpPairwiseCount,
+                                Arrays.asList(null, DIFFERENT_SUBJECT_ID, expectedRpPairwiseSub),
+                                differentSubjectIdCount + expectedRpPairwiseCount,
+                                Arrays.asList(
+                                        TEST_SUBJECT_ID,
+                                        DIFFERENT_SUBJECT_ID,
+                                        expectedRpPairwiseSub),
+                                testSubjectIdCount
+                                        + differentSubjectIdCount
+                                        + expectedRpPairwiseCount);
 
-                for (var setup : mockCountsByJourneySetups) {
+                for (var setup : mockCountsByJourneySetups.entrySet()) {
                     when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
                                     setup.getKey(), JourneyType.REAUTHENTICATION))
                             .thenReturn(Map.of(CountType.ENTER_EMAIL, setup.getValue()));
