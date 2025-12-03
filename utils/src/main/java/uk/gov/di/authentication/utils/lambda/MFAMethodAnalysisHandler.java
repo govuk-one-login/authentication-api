@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.utils.entity.MFAMethodAnalysisRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
-public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> {
+public class MFAMethodAnalysisHandler implements RequestHandler<MFAMethodAnalysisRequest, String> {
 
     public static final String ABSENT_ATTRIBUTE = "absent_attribute";
     private static final Logger LOG = LogManager.getLogger(MFAMethodAnalysisHandler.class);
@@ -53,12 +54,20 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     @Override
-    public String handleRequest(Object input, Context context) {
+    public String handleRequest(MFAMethodAnalysisRequest request, Context context) {
+        if (request == null || request.parallelism() == null || request.totalSegments() == null) {
+            throw new IllegalArgumentException(
+                    "Request must contain 'parallelism' and 'totalSegments' fields. It is recommended that: parallelism > totalSegments (e.g., {\"parallelism\": 40,\"totalSegments\": 20}).");
+        }
+
+        int parallelism = request.parallelism();
+        int totalSegments = request.totalSegments();
+
         List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks = new ArrayList<>();
-        ForkJoinPool forkJoinPool = new ForkJoinPool(10);
+        ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
         try {
-            fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks);
-            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks);
+            fetchPhoneNumberVerifiedStatistics(forkJoinPool, parallelTasks, totalSegments);
+            fetchUserCredentialsAndProfileStatistics(forkJoinPool, parallelTasks, totalSegments);
             Pool.gracefulPoolShutdown(forkJoinPool);
 
             MFAMethodAnalysis combinedResults = combineTaskResults(parallelTasks);
@@ -112,8 +121,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private void fetchPhoneNumberVerifiedStatistics(
-            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
-        int totalSegments = 5;
+            ForkJoinPool forkJoinPool,
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks,
+            int totalSegments) {
         for (int segment = 0; segment < totalSegments; segment++) {
             final int currentSegment = segment;
             parallelTasks.add(
@@ -170,8 +180,9 @@ public class MFAMethodAnalysisHandler implements RequestHandler<Object, String> 
     }
 
     private void fetchUserCredentialsAndProfileStatistics(
-            ForkJoinPool forkJoinPool, List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks) {
-        int totalSegments = 5;
+            ForkJoinPool forkJoinPool,
+            List<ForkJoinTask<MFAMethodAnalysis>> parallelTasks,
+            int totalSegments) {
         for (int segment = 0; segment < totalSegments; segment++) {
             final int currentSegment = segment;
             parallelTasks.add(
