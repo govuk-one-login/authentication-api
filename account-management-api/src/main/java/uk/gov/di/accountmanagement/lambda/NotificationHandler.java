@@ -227,13 +227,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 personalisation,
                 notificationType,
-                (destination, per, type) -> {
+                (destination, notificationReference, per, type) -> {
                     try {
                         notificationService.sendEmail(
                                 destination,
                                 per,
                                 NotificationType.valueOf(type),
-                                notifyRequest.getUniqueNotificationReference());
+                                notificationReference);
                         LOG.info(EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
@@ -241,7 +241,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 false,
                                 ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
-                        LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        LOG.error(
+                                ERROR_SENDING_WITH_NOTIFY,
+                                notificationType,
+                                notificationReference,
+                                e.getMessage());
                         cloudwatchMetricsService.emitMetricForNotificationError(
                                 notifyRequest.getNotificationType(),
                                 destination,
@@ -252,6 +256,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
                                 notificationType,
+                                notificationReference,
                                 e.getMessage());
                     }
                 });
@@ -265,13 +270,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 notifyRequest,
                 personalisation,
                 notificationType,
-                (destination, per, type) -> {
+                (destination, notificationReference, per, type) -> {
                     try {
                         notificationService.sendText(
                                 destination,
                                 per,
                                 NotificationType.valueOf(type),
-                                notifyRequest.getUniqueNotificationReference());
+                                notificationReference);
                         LOG.info(TEXT_HAS_BEEN_SENT_USING_NOTIFY, notificationType);
                         cloudwatchMetricsService.emitMetricForNotification(
                                 notifyRequest.getNotificationType(),
@@ -279,7 +284,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 false,
                                 ONE_LOGIN_HOME);
                     } catch (NotificationClientException e) {
-                        LOG.error(ERROR_SENDING_WITH_NOTIFY, e.getMessage());
+                        LOG.error(
+                                ERROR_SENDING_WITH_NOTIFY,
+                                notificationType,
+                                notificationReference,
+                                e.getMessage());
                         cloudwatchMetricsService.emitMetricForNotificationError(
                                 notifyRequest.getNotificationType(),
                                 destination,
@@ -290,6 +299,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         LOG.error(
                                 UNEXPECTED_ERROR_SENDING_NOTIFICATION,
                                 notificationType,
+                                notificationReference,
                                 e.getMessage());
                     }
                 });
@@ -297,7 +307,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     @FunctionalInterface
     private interface NotificationSender {
-        void send(String destination, Map<String, Object> personalisation, String notificationType);
+        void send(
+                String destination,
+                String notificationReference,
+                Map<String, Object> personalisation,
+                String notificationType);
     }
 
     private void sendNotification(
@@ -320,7 +334,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     notifyRequest.getCode(),
                     notifyRequest.getEmail());
         } else {
-            sender.send(notifyRequest.getDestination(), personalisation, notificationType);
+            sender.send(
+                    notifyRequest.getDestination(),
+                    notifyRequest.getUniqueNotificationReference(),
+                    personalisation,
+                    notificationType);
         }
     }
 
