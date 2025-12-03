@@ -109,7 +109,8 @@ echo "Environment: ${ENVIRONMENT}"
 if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
   export AWS_PROFILE="di-auth-development-AdministratorAccessPermission"
 else
-  export AWS_PROFILE="gds-di-development-ApprovedAdmin"
+  echo "NOTE: You will need to raise a TEAM request on the gds-di-development account for the ApprovedPowerUser role to use this environment."
+  export AWS_PROFILE="gds-di-development-ApprovedPowerUser"
 fi
 
 if [[ ${NUMBER_PICKED} -eq 0 ]]; then
