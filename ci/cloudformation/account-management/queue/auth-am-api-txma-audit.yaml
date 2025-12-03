@@ -19,7 +19,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-am-api-txma-audit.yaml
 
   AuthInternalApiTxMAAuditQueuePolicy:
     Type: AWS::SQS::QueuePolicy
@@ -62,7 +62,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-am-api-txma-audit.yaml
 
   AuthInternalApiTxMAAuditQueueEncryptionKey:
     Type: AWS::KMS::Key
@@ -101,7 +101,7 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
         - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-internal-api-txma-audit.yaml
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/auth-am-api-txma-audit.yaml
 
   AuthInternalApiTxMAAuditQueueEncryptionKeyAlias:
     Type: AWS::KMS::Alias
