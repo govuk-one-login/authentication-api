@@ -384,7 +384,7 @@ public class MFAMethodAnalysisHandler
                 retryCount++;
                 int unprocessedCount = requestItems.get(userProfileTableName).keys().size();
                 LOG.warn(
-                        "Retrying {} unprocessed keys in batch {} (attempt {}/{})",
+                        "{} unprocessed keys in batch {} (attempt: {}, max retries: {})",
                         unprocessedCount,
                         batchNumber,
                         retryCount,
