@@ -896,7 +896,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub
-        - ${Env}-api_gateway_auth_invocation
+        - ${AWS::StackName}-${Env}-api-gateway-auth-role
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
