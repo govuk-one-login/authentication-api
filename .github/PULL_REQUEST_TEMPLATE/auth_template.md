@@ -61,6 +61,14 @@ Delete this item if this PR does not need a UCD review.
 
 - [ ] A UCD review has been performed.
 
+<!-- Pairing
+We want to make sure ensemble commits are correctly attributed to the contributors, so everyone who is not the committer should have a separate `Co-authored-by` line in the trailer of the commit.
+
+See this page for more information: https://gds-way.digital.cabinet-office.gov.uk/standards/pair-programming.html#pair-programming-and-version-control
+-->
+
+- [ ] All commits contain one or more `Co-authored-by` lines where pairing or mobbing has taken place
+
 ## Related PRs
 
 <!-- Links to PRs in other repositories that are relevant to this PR.
