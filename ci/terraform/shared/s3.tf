@@ -7,10 +7,35 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "smoketest_sms_buc
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm = "aws:kms"
     }
   }
 }
+
+resource "aws_s3_bucket_policy" "smoketest_sms_bucket_ssl_requests_only" {
+  bucket = aws_s3_bucket.smoketest_sms_bucket.id
+
+  policy = jsonencode({
+    Statement = [
+      {
+        Sid       = "AllowSSLRequestsOnly"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.smoketest_sms_bucket.arn,
+          "${aws_s3_bucket.smoketest_sms_bucket.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 
 resource "aws_s3_bucket_ownership_controls" "smoketest_sms_bucket" {
   bucket = aws_s3_bucket.smoketest_sms_bucket.id

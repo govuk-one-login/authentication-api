@@ -10,6 +10,30 @@ resource "aws_s3_bucket_public_access_block" "common_passwords_private_bucket" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_policy" "common_passwords_bucket_ssl_requests_only" {
+  bucket = aws_s3_bucket.common_passwords.id
+
+  policy = jsonencode({
+    Statement = [
+      {
+        Sid       = "AllowSSLRequestsOnly"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.common_passwords.arn,
+          "${aws_s3_bucket.common_passwords.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_s3_bucket_acl" "common_passwords" {
   bucket = aws_s3_bucket.common_passwords.id
   acl    = "private"
@@ -27,7 +51,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "common_passwords"
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm = "aws:kms"
     }
   }
 }

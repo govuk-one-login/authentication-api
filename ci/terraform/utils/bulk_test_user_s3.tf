@@ -22,12 +22,36 @@ resource "aws_s3_bucket_versioning" "bulk_test_user" {
   }
 }
 
+resource "aws_s3_bucket_policy" "bulk_test_user_bucket_ssl_requests_only" {
+  bucket = aws_s3_bucket.bulk_test_user.id
+
+  policy = jsonencode({
+    Statement = [
+      {
+        Sid       = "AllowSSLRequestsOnly"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.bulk_test_user.arn,
+          "${aws_s3_bucket.bulk_test_user.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "bulk_test_user" {
   bucket = aws_s3_bucket.bulk_test_user.bucket
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm = "aws:kms"
     }
   }
 }
