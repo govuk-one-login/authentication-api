@@ -1,6 +1,7 @@
 resource "aws_sns_topic" "slack_events" {
   name                             = "${var.environment}-slack-events"
   lambda_failure_feedback_role_arn = aws_iam_role.sns_logging_iam_role.arn
+  kms_master_key_id                = "alias/aws/sns"
 }
 
 output "slack_event_sns_topic_arn" {
