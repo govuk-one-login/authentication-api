@@ -80,10 +80,11 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(
-                            "SPOTResponse Status is {}. Adding CoreIdentityJWT to Dynamo",
+                            "SPOTResponse Status is {}. Sending audit event and adding CoreIdentityJWT to Dynamo",
                             spotResponse.getStatus());
                     auditService.submitAuditEvent(
                             IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
+                    LOG.info("Finished sending audit event");
                     dynamoIdentityService.addCoreIdentityJWT(
                             logIds.getClientSessionId(),
                             spotResponse.getSub(),
@@ -91,6 +92,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                                     .map(Object::toString)
                                     .findFirst()
                                     .orElseThrow());
+                    LOG.info("Finished adding CoreIdentityJWT to Dynamo");
                     return null;
                 } else {
                     LOG.warn(

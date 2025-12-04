@@ -346,5 +346,6 @@ public class IPVCallbackHelper {
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
                 ipvCoreIdentityString);
+        LOG.info("Saved identity claims to DynamoDB");
     }
 }
