@@ -9,6 +9,17 @@ resource "aws_s3_bucket_versioning" "interventions_api_stub_source_bucket_versio
   }
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "interventions_api_stub_source_bucket_encryption" {
+  bucket = aws_s3_bucket.interventions_api_stub_source_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = "alias/aws/s3"
+    }
+  }
+}
+
 resource "aws_s3_bucket_policy" "interventions_bucket_ssl_requests_only" {
   bucket = aws_s3_bucket.interventions_api_stub_source_bucket.id
 

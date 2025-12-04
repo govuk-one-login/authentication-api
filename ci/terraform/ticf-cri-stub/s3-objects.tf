@@ -9,6 +9,17 @@ resource "aws_s3_bucket_versioning" "ticf_cri_stub_source_bucket_versioning" {
   }
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "ticf_cri_stub_source_bucket_encryption" {
+  bucket = aws_s3_bucket.ticf_cri_stub_source_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = "alias/aws/s3"
+    }
+  }
+}
+
 resource "aws_s3_bucket_policy" "ticf_cri_bucket_ssl_requests_only" {
   bucket = aws_s3_bucket.ticf_cri_stub_source_bucket.id
 
