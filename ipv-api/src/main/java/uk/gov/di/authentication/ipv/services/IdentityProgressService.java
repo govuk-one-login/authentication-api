@@ -17,7 +17,7 @@ import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getIdenti
 public class IdentityProgressService {
 
     private static final Logger LOG = LogManager.getLogger(IdentityProgressService.class);
-    private static final int DELAY_IN_MS = 500;
+    private static final int DELAY_IN_MS = 800;
     private static final int MAX_RETRIES = 10;
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
