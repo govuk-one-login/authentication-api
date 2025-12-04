@@ -84,7 +84,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
@@ -94,6 +99,8 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REGISTRATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.BACKUP_AUTH_APP_METHOD;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DEFAULT_AUTH_APP_METHOD;
@@ -383,7 +390,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("account-recovery", false),
                     pair("journey-type", REGISTRATION),
                     pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
+                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name()));
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.NEW,
@@ -482,7 +490,8 @@ class VerifyMfaCodeHandlerTest {
                     pair("account-recovery", true),
                     pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
                     pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
+                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name()));
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -925,12 +934,19 @@ class VerifyMfaCodeHandlerTest {
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         }
 
+        private static Stream<Arguments> invalidOtpSmsJourneyTypesWithMfaNotificationType() {
+            return Stream.of(
+                    Arguments.of(JourneyType.SIGN_IN, MFA_SMS.name()),
+                    Arguments.of(JourneyType.PASSWORD_RESET_MFA, MFA_SMS.name()),
+                    Arguments.of(REAUTHENTICATION, MFA_SMS.name()),
+                    Arguments.of(ACCOUNT_RECOVERY, VERIFY_PHONE_NUMBER.name()),
+                    Arguments.of(REGISTRATION, VERIFY_PHONE_NUMBER.name()));
+        }
+
         @ParameterizedTest
-        @EnumSource(
-                value = JourneyType.class,
-                names = {"SIGN_IN"},
-                mode = EnumSource.Mode.EXCLUDE)
-        void shouldReturn400WhenUserEnteredInvalidPhoneNumberOtpCode(JourneyType journeyType)
+        @MethodSource("invalidOtpSmsJourneyTypesWithMfaNotificationType")
+        void shouldReturn400WhenUserEnteredInvalidPhoneNumberOtpCode(
+                JourneyType journeyType, String expectedNotificationType)
                 throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
@@ -949,12 +965,14 @@ class VerifyMfaCodeHandlerTest {
                             CODE,
                             journeyType,
                             DEFAULT_SMS_METHOD.getDestination());
+
             if (!CodeRequestType.isValidCodeRequestType(
                     CodeRequestType.SupportedCodeType.getFromMfaMethodType(
                             codeRequest.getMfaMethodType()),
                     codeRequest.getJourneyType())) {
                 return;
             }
+
             var result = makeCallWithCode(codeRequest);
 
             assertThat(result, hasStatus(400));
@@ -983,7 +1001,10 @@ class VerifyMfaCodeHandlerTest {
                             pair("journey-type", journeyType),
                             pair("loginFailureCount", 3),
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+                            pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
+                            pair(
+                                    AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE,
+                                    expectedNotificationType));
 
             List<AuditService.MetadataPair> actual = Arrays.asList(metadataCaptor.getValue());
 
@@ -1243,5 +1264,64 @@ class VerifyMfaCodeHandlerTest {
                             withMessageContaining(
                                     "Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.")));
         }
+    }
+
+    private static Stream<Arguments> validSmsOtpJourneyTypesWithMfaNotificationType() {
+        return Stream.of(
+                Arguments.of(JourneyType.SIGN_IN, MFA_SMS.name()),
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, MFA_SMS.name()),
+                Arguments.of(REAUTHENTICATION, MFA_SMS.name()),
+                Arguments.of(ACCOUNT_RECOVERY, VERIFY_PHONE_NUMBER.name()),
+                Arguments.of(REGISTRATION, VERIFY_PHONE_NUMBER.name()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validSmsOtpJourneyTypesWithMfaNotificationType")
+    void shouldIncludeCorrectNotificationTypeForSmsMfaJourneyTypes(
+            JourneyType journeyType, String expectedNotificationType) throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(phoneNumberCodeProcessor));
+        when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
+
+        if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION).contains(journeyType)) {
+            authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
+        } else {
+            authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+        }
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, CODE, journeyType, DEFAULT_SMS_METHOD.getDestination());
+
+        if (!CodeRequestType.isValidCodeRequestType(
+                CodeRequestType.SupportedCodeType.getFromMfaMethodType(
+                        codeRequest.getMfaMethodType()),
+                codeRequest.getJourneyType())) {
+            return;
+        }
+
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(204));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        assertEquals(MEDIUM_LEVEL, authSession.getAchievedCredentialStrength());
+        verify(phoneNumberCodeProcessor)
+                .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+
+        boolean isAccountRecoveryJourney = journeyType.equals(ACCOUNT_RECOVERY);
+
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue()),
+                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, isAccountRecoveryJourney),
+                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, CODE),
+                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
+                pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, expectedNotificationType));
     }
 }
