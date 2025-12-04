@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
@@ -63,11 +64,14 @@ import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
@@ -652,6 +656,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                                 pair(
                                                         AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                                         identifier.name().toLowerCase())));
+
+                if (MFAMethodType.SMS.getValue().equals(methodType.getValue())) {
+                    var notificationType =
+                            getNotificationTypeFromJourney(codeRequest)
+                                    .map(Enum::name)
+                                    .orElse(AuditService.UNKNOWN);
+
+                    metadataPairs.add(
+                            pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, notificationType));
+                }
             }
         }
 
@@ -677,6 +691,23 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         } else if (activeMfaMethod.isPresent()) {
             return Optional.of(PriorityIdentifier.valueOf(activeMfaMethod.get().getPriority()));
         } else {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<NotificationType> getNotificationTypeFromJourney(CodeRequest codeRequest) {
+        var journeyType = codeRequest.getJourneyType();
+
+        if (List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION)
+                .contains(journeyType)) {
+            return Optional.of(MFA_SMS);
+        } else if (List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REGISTRATION)
+                .contains(journeyType)) {
+            return Optional.of(VERIFY_PHONE_NUMBER);
+        } else {
+            LOG.warn(
+                    "Unable to determine audit event extensions.notification-type value for journey type: {}. Defaulting to UNKNOWN.",
+                    journeyType);
             return Optional.empty();
         }
     }
