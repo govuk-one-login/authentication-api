@@ -20,7 +20,18 @@ Resources:
       Timeout: 30
       Environment:
         Variables:
-          TOKEN_SIGNING_KEY_ALIAS: !Sub "alias/${Environment}-id-token-signing-key-alias"
+          TOKEN_SIGNING_KEY_ALIAS: !If
+            - UseSubEnvironment
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref SubEnvironment,
+                TokenSigningkeyArn,
+              ]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                TokenSigningkeyArn,
+              ]
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -32,6 +43,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

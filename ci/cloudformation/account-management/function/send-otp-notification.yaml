@@ -94,6 +94,7 @@ Resources:
         - !Ref DynamoEmailCheckResultReadAccessPolicy
         - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref TestClientSecretAccessPolicy
+        - !Ref AuditEventsSnsPolicy
         - !If
           - ProvisionTestClientSecret
           - !Ref TestClientEmailAllowListSecretAccessPolicy

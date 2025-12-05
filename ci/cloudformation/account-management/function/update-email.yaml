@@ -63,6 +63,7 @@ Resources:
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref UserProfileTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

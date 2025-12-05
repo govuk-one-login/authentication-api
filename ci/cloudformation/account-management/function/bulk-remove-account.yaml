@@ -63,6 +63,7 @@ Resources:
         - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
         - !Ref S3AcceptanceTestsBucketPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:
