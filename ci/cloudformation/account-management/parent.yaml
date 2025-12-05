@@ -250,6 +250,21 @@ Conditions:
       ],
     ]
 
+  HasTestClientSecretKey:
+    !Or [
+      !And [
+        !Condition UseSubEnvironment,
+        !Or [
+          !Equals [!Ref SubEnvironment, "authdev1"],
+          !Equals [!Ref SubEnvironment, "authdev2"],
+          !Equals [!Ref SubEnvironment, "authdev3"],
+        ],
+      ],
+      !Equals [!Ref Environment, "dev"],
+      !Equals [!Ref Environment, "build"],
+      !Equals [!Ref Environment, "staging"],
+    ]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -450,6 +465,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/cc4448e9-1b9d-4309-ad65-deb619dc444c
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/55684f22-2ed2-4dab-bbde-c4381c66ff79
       AMApiFMSTagValue: accountmanagement
       cloudwatchLogRetentionInDays: 1
@@ -588,6 +604,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/cb787cef-819e-4824-b678-c6c172cc78cf
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       AMApiFMSTagValue: accountmanagementstaging
       cloudwatchLogRetentionInDays: 7
@@ -642,7 +659,6 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/cb787cef-819e-4824-b678-c6c172cc78cf
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -2944,7 +2960,7 @@ Resources:
                       !Ref Environment,
                     ]
           - !If
-            - IsLowerEnv
+            - HasTestClientSecretKey
             - Sid: AllowSecretDecrypt
               Effect: Allow
               Action:
@@ -2956,22 +2972,29 @@ Resources:
                       EnvironmentConfiguration,
                       !Ref SubEnvironment,
                       testClientSecretEncryptionKey,
+                      DefaultValue: "",
                     ]
                   - !FindInMap [
                       EnvironmentConfiguration,
                       !Ref Environment,
                       testClientSecretEncryptionKey,
+                      DefaultValue: "",
                     ]
                 - !Sub
-                  - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
+                  - "arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${Env}-test-client-secret-encryption-key"
                   - Env:
                       !If [
                         UseSubEnvironment,
                         !Ref SubEnvironment,
                         !Ref Environment,
                       ]
+                    DataStoreAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        dataStoreAccountId,
+                      ]
             - !Ref AWS::NoValue
-
   AccountModifiersTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:

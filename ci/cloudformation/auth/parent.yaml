@@ -145,6 +145,7 @@ Conditions:
         !Or [
           !Equals [!Ref SubEnvironment, "authdev1"],
           !Equals [!Ref SubEnvironment, "authdev2"],
+          !Equals [!Ref SubEnvironment, "authdev3"],
         ],
       ],
       !Equals [!Ref Environment, "dev"],
