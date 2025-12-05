@@ -17,7 +17,7 @@ import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getIdenti
 public class IdentityProgressService {
 
     private static final Logger LOG = LogManager.getLogger(IdentityProgressService.class);
-    private static final int DELAY_IN_MS = 500;
+    private final int delayInMs;
     private static final int MAX_RETRIES = 10;
     private final ConfigurationService configurationService;
     private final DynamoIdentityService dynamoIdentityService;
@@ -45,6 +45,12 @@ public class IdentityProgressService {
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.sleeper = sleeper;
+        if ("dev".equals(configurationService.getEnvironment())
+                || "build".equals(configurationService.getEnvironment())) {
+            delayInMs = 800;
+        } else {
+            delayInMs = 500;
+        }
     }
 
     public IdentityProgressStatus pollForStatus(String clientSessionId, AuditContext auditContext)
@@ -60,7 +66,7 @@ public class IdentityProgressService {
                     LOG.info("Max retries of {} reached. Returning ERROR", MAX_RETRIES);
                     status = IdentityProgressStatus.ERROR;
                 } else {
-                    sleeper.sleep(DELAY_IN_MS);
+                    sleeper.sleep(delayInMs);
                     attempts++;
                 }
             }
