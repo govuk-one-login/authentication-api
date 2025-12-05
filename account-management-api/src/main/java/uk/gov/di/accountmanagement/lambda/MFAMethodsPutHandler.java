@@ -599,6 +599,10 @@ public class MFAMethodsPutHandler
                         .getSuccess()
                         .withMetadataItem(
                                 pair(
+                                        AUDIT_EVENT_EXTENSIONS_MFA_TYPE,
+                                        MFAMethodType.AUTH_APP.getValue()))
+                        .withMetadataItem(
+                                pair(
                                         AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
                                         PriorityIdentifier.DEFAULT.name().toLowerCase()))
                         .withMetadataItem(

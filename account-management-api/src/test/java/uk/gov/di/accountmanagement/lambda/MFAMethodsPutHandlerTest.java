@@ -65,6 +65,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.CHANGED_DEFAULT_MFA;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
@@ -1315,6 +1316,52 @@ class MFAMethodsPutHandlerTest {
                 capturedObject, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
 
         verify(sqsClient, never()).send(any());
+    }
+
+    @Test
+    void shouldEmitAuthUpdateProfileAuthAppAuditEventWhenUpdatingAuthApp() {
+        var credential = "some-credential";
+        var updateRequest =
+                MfaMethodUpdateRequest.from(
+                        PriorityIdentifier.DEFAULT, new RequestAuthAppMfaDetail(credential));
+        var event = generateApiGatewayEvent(TEST_INTERNAL_SUBJECT);
+        var eventWithUpdateRequest = event.withBody(updateAuthAppRequest(credential));
+
+        when(authenticationService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+
+        var updatedMfaMethod =
+                MFAMethod.authAppMfaMethod(
+                        credential, true, true, PriorityIdentifier.DEFAULT, MFA_IDENTIFIER);
+        when(mfaMethodsService.getMfaMethod(EMAIL, MFA_IDENTIFIER))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.GetMfaResult(
+                                        DEFAULT_SMS_METHOD, List.of(DEFAULT_SMS_METHOD))));
+        when(mfaMethodsService.updateMfaMethod(eq(EMAIL), any(), any(), eq(updateRequest)))
+                .thenReturn(
+                        Result.success(
+                                new MFAMethodsService.MfaUpdateResponse(
+                                        List.of(updatedMfaMethod),
+                                        MFAMethodUpdateIdentifier.CHANGED_AUTHENTICATOR_APP)));
+
+        var result = handler.handleRequest(eventWithUpdateRequest, context);
+
+        assertEquals(200, result.getStatusCode());
+
+        ArgumentCaptor<AuditContext> captor = ArgumentCaptor.forClass(AuditContext.class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AUTH_UPDATE_PROFILE_AUTH_APP),
+                        captor.capture(),
+                        eq(AUDIT_EVENT_COMPONENT_ID_HOME));
+
+        AuditContext capturedContext = captor.getValue();
+        containsMetadataPair(capturedContext, AUDIT_EVENT_EXTENSIONS_MFA_TYPE, "AUTH_APP");
+        containsMetadataPair(capturedContext, AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default");
+        containsMetadataPair(
+                capturedContext, AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, "ACCOUNT_MANAGEMENT");
     }
 
     private static APIGatewayProxyRequestEvent generateApiGatewayEvent(String principal) {
