@@ -200,7 +200,7 @@ spotless {
 
 dockerCompose {
     buildBeforeUp = true
-    forceRecreate = false
+    forceRecreate = true
 
     if (System.getProperty("os.arch") == "aarch64") {
         useComposeFiles = [
