@@ -574,7 +574,10 @@ public class AuthenticationCallbackHandler
                 return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         authFrontend.errorURI(), e);
             }
-        } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
+        } catch (OrchAuthCodeException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                    authFrontend.errorURI(), e);
+        } catch (AuthenticationCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(), e);
         } catch (ParseException e) {

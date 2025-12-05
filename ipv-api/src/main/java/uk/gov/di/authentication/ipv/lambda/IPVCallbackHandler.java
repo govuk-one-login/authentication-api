@@ -501,7 +501,7 @@ public class IPVCallbackHandler
                     frontend.errorURI(),
                     new Error("Unable to serialize SPOTRequest when placing on queue"));
         } catch (OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                     frontend.errorURI(),
                     new Error(
                             String.format(
