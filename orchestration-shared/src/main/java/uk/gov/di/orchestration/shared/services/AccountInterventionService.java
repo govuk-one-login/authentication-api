@@ -95,6 +95,8 @@ public class AccountInterventionService {
                         retrieveAccountIntervention(internalPairwiseSubjectId, passwordResetTime);
                 if (accountInterventionsActionEnabled) {
                     if (auditContext == null) {
+                        LOG.error(
+                                "Account intervention Audit enabled, but no AuditContext provided");
                         throw new AccountInterventionException(
                                 "Account intervention Audit enabled, but no AuditContext provided");
                     }

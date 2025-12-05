@@ -332,7 +332,7 @@ public class IPVCallbackHandler
             if (!tokenResponse.indicatesSuccess()) {
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         frontend.errorURI(),
                         new Exception(
                                 String.format(
@@ -446,11 +446,11 @@ public class IPVCallbackHandler
             if (configurationService.isSyncWaitForSpotEnabled()) {
                 var status = identityProgressService.pollForStatus(clientSessionId, auditContext);
                 if (status == IdentityProgressStatus.NO_ENTRY) {
-                    return RedirectService.redirectToFrontendErrorPage(
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                             frontend.errorURI(), new Error("Identity processing failed"));
                 }
                 if (status == IdentityProgressStatus.ERROR) {
-                    return RedirectService.redirectToFrontendErrorPage(
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                             frontend.errorURI(),
                             new Error("Identity processing returned NO_ENTRY"));
                 }
@@ -482,7 +482,7 @@ public class IPVCallbackHandler
             }
             if (redirectURI == null) {
                 // Should be impossible, but compiler seems to think otherwise
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         frontend.errorURI(), new Error("Failed to create redirectURI"));
             }
             return generateApiGatewayProxyResponse(
@@ -490,25 +490,27 @@ public class IPVCallbackHandler
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
-        } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
-            return RedirectService.redirectToFrontendErrorPage(frontend.errorURI(), e);
+        } catch (UnsuccessfulCredentialResponseException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(frontend.errorURI(), e);
+        } catch (IpvCallbackException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
         } catch (JsonException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error("Unable to serialize SPOTRequest when placing on queue"));
         } catch (OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                     frontend.errorURI(),
                     new Error(
                             String.format(
                                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: %s",
                                     e.getMessage())));
         } catch (InterruptedException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Error(
                             String.format(
