@@ -5,6 +5,8 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
+import software.amazon.awssdk.services.kms.model.DecryptRequest;
+import software.amazon.awssdk.services.kms.model.DecryptResponse;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
@@ -53,6 +55,11 @@ public class KmsConnectionService {
     public SignResponse sign(SignRequest signRequest) {
         LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
         return kmsClient.sign(signRequest);
+    }
+
+    public DecryptResponse decrypt(DecryptRequest decryptRequest) {
+        LOG.info("Calling KMS with DecryptRequest and KeyId {}", decryptRequest.keyId());
+        return kmsClient.decrypt(decryptRequest);
     }
 
     private void warmUp(String keyId) {

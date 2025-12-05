@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
+import uk.gov.di.authentication.frontendapi.services.JarValidationService;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -103,6 +105,8 @@ class StartHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final JarValidationService jarValidationService = mock(JarValidationService.class);
+
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     TEST_CLIENT_ID,
@@ -129,7 +133,8 @@ class StartHandlerTest {
                         authSessionService,
                         configurationService,
                         authenticationAttemptsService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        jarValidationService);
     }
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
@@ -440,6 +445,28 @@ class StartHandlerTest {
                                 expectedFailureReason));
     }
 
+    @Test
+    void shouldInvokeJarValidationServiceWhenPassedJarRequest() throws Exception {
+        var jarRequest = "test-jar-request";
+        var clientId = "test-client-id";
+
+        var userStartInfo = getUserStartInfo(null, null);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+        when(configurationService.isJarValidationEnabled()).thenReturn(true);
+        when(jarValidationService.parseAndValidateJar(anyString(), anyString()))
+                .thenReturn(new JWTClaimsSet.Builder().build());
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS,
+                        makeRequestBody(null, null, null, true, jarRequest, clientId));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(jarValidationService).parseAndValidateJar(jarRequest, clientId);
+    }
+
     private String makeRequestBodyWithAuthenticatedField(boolean authenticated)
             throws Json.JsonException {
         return makeRequestBody(null, null, null, authenticated);
@@ -509,6 +536,23 @@ class StartHandlerTest {
             String rpPairwiseIdForReauth,
             boolean authenticated)
             throws Json.JsonException {
+        return makeRequestBody(
+                previousSessionId,
+                previousGovUkSignInJourneyId,
+                rpPairwiseIdForReauth,
+                authenticated,
+                null,
+                null);
+    }
+
+    private String makeRequestBody(
+            String previousSessionId,
+            String previousGovUkSignInJourneyId,
+            String rpPairwiseIdForReauth,
+            boolean authenticated,
+            String jarRequest,
+            String clientId)
+            throws Json.JsonException {
         return objectMapper.writeValueAsString(
                 new StartRequest(
                         previousSessionId,
@@ -530,6 +574,8 @@ class StartHandlerTest {
                         false,
                         TEST_SUBJECT_TYPE,
                         false,
-                        TEST_RP_SUBJECT_ID_HOST));
+                        TEST_RP_SUBJECT_ID_HOST,
+                        clientId,
+                        jarRequest));
     }
 }

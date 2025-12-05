@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
+import uk.gov.di.authentication.frontendapi.services.JarValidationService;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -72,6 +73,7 @@ public class StartHandler
     private final ConfigurationService configurationService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final JarValidationService jarValidationService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
@@ -80,13 +82,15 @@ public class StartHandler
             AuthSessionService authSessionService,
             ConfigurationService configurationService,
             AuthenticationAttemptsService authenticationAttemptsService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            JarValidationService jarValidationService) {
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
         this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.jarValidationService = jarValidationService;
     }
 
     public StartHandler(ConfigurationService configurationService) {
@@ -97,6 +101,7 @@ public class StartHandler
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.jarValidationService = new JarValidationService(configurationService);
     }
 
     public StartHandler() {
@@ -143,6 +148,19 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
+        if (configurationService.isJarValidationEnabled() && startRequest.request() != null) {
+            try {
+                LOG.info("Received JAR");
+                var jarPayload =
+                        jarValidationService.parseAndValidateJar(
+                                startRequest.request(), startRequest.clientId());
+                LOG.info("Validated JAR {}", jarPayload.getJWTID());
+                // TODO: AUT-4952 Do something with this payload
+            } catch (Exception e) {
+                LOG.warn("Error validating JAR", e);
+            }
+        }
+
         boolean isUserAuthenticatedWithValidProfile;
         try {
             var authSession =
@@ -156,8 +174,8 @@ public class StartHandler
                 authSession.setRequestedLevelOfConfidence(
                         retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
             }
-            authSession.setClientId(startRequest.clientId());
-            authSession.setClientName(startRequest.clientName());
+            authSession.setClientId(startRequest.rpClientId());
+            authSession.setClientName(startRequest.rpClientName());
             authSession.setIsSmokeTest(startRequest.isSmokeTest());
             authSession.setIsOneLoginService(startRequest.isOneLoginService());
             authSession.setSubjectType(startRequest.subjectType());
@@ -176,8 +194,8 @@ public class StartHandler
             var userContext = startService.buildUserContext(authSession);
 
             var scopes = List.of(startRequest.scope().split(" "));
-            var redirectURI = new URI(startRequest.redirectUri());
-            var state = new State(startRequest.state());
+            var redirectURI = new URI(startRequest.rpRedirectUri());
+            var state = new State(startRequest.rpState());
             attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
             var clientStartInfo =
                     startService.buildClientStartInfo(

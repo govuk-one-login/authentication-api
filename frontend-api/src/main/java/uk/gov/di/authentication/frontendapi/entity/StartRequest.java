@@ -13,11 +13,11 @@ public record StartRequest(
         @Expose @SerializedName("_ga") String ga,
         @Expose @SerializedName("requested_credential_strength") String requestedCredentialStrength,
         @Expose @SerializedName("requested_level_of_confidence") String requestedLevelOfConfidence,
-        @Expose @SerializedName("state") String state,
-        @Expose @SerializedName("client_id") String clientId,
-        @Expose @SerializedName("redirect_uri") String redirectUri,
+        @Expose @SerializedName("state") String rpState,
+        @Expose @SerializedName("client_id") String rpClientId,
+        @Expose @SerializedName("redirect_uri") String rpRedirectUri,
         @Expose @SerializedName("scope") String scope,
-        @Expose @SerializedName("client_name") String clientName,
+        @Expose @SerializedName("client_name") String rpClientName,
         @Expose @SerializedName("service_type") String serviceType,
         @Expose @SerializedName("cookie_consent_shared") boolean isCookieConsentShared,
         @Expose @SerializedName("is_smoke_test") boolean isSmokeTest,
@@ -25,4 +25,7 @@ public record StartRequest(
         @Expose @SerializedName("subject_type") String subjectType,
         @Expose @SerializedName("is_identity_verification_required")
                 boolean isIdentityVerificationRequired,
-        @Expose @SerializedName("rp_sector_identifier_host") String rpSectorIdentifierHost) {}
+        @Expose @SerializedName("rp_sector_identifier_host") String rpSectorIdentifierHost,
+        // TODO: AUT-4952 Once complete remove all properties except these
+        @Expose @SerializedName("clientId") String clientId,
+        @Expose @SerializedName("request") String request) {}
