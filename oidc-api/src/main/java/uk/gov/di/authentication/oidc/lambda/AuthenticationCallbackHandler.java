@@ -584,7 +584,7 @@ public class AuthenticationCallbackHandler
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                         authFrontend.errorURI(), e);
             }
         } catch (OrchAuthCodeException e) {

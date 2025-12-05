@@ -490,7 +490,9 @@ public class IPVCallbackHandler
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
-        } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
+        } catch (UnsuccessfulCredentialResponseException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(frontend.errorURI(), e);
+        } catch (IpvCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), e);
         } catch (ParseException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
