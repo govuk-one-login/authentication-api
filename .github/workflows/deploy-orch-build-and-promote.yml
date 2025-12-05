@@ -8,6 +8,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "ci/openAPI/**"
+      - "docs/**"
+      - "**/README.md"
+      - "integration-tests/**"
+      - "delivery-receipts-integration-tests/**"
+      - "local-running/**"
+      - "notifications/**"
+      - "quality-gate.manifest.json"
 
 jobs:
   deploy:
