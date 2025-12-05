@@ -48,7 +48,7 @@ jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "ju
 jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
 lettuceCore = "io.lettuce:lettuce-core:6.8.1.RELEASE"
-libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.15"
+libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.20"
 log4jJsonTemplate = "org.apache.logging.log4j:log4j-layout-template-json:2.17.1"
 mockitoCore = "org.mockito:mockito-core:5.20.0"
 nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.4.2"
