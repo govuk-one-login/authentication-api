@@ -10,4 +10,4 @@ ais_call_in_authenticate_enabled  = true
 openapi_spec_filename = "openapi_v2.yaml"
 
 # URIs
-internal_sector_uri = "https://identity.authdev1.sandpit.account.gov.uk"
+internal_sector_uri = "https://identity.authdev1.dev.account.gov.uk"

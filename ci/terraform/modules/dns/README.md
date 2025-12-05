@@ -31,7 +31,6 @@
 | <a name="input_dns_state_key"></a> [dns\_state\_key](#input\_dns\_state\_key) | n/a | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | n/a | `string` | n/a | yes |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | n/a | `string` | `"eu-west-2"` | no |
-| <a name="input_is_sandpit"></a> [is\_sandpit](#input\_is\_sandpit) | n/a | `bool` | `false` | no |
 
 ## Outputs
 

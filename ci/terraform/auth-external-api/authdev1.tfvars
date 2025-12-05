@@ -2,7 +2,7 @@ shared_state_bucket = "di-auth-development-tfstate"
 vpc_environment     = "dev"
 
 # URIs
-internal_sector_uri = "https://identity.authdev1.sandpit.account.gov.uk"
+internal_sector_uri = "https://identity.authdev1.dev.account.gov.uk"
 
 # Signing Keys
 orch_to_auth_public_signing_key      = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw=="

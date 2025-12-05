@@ -377,7 +377,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         }
 
         dynamic "rule_action_override" {
-          for_each = var.environment != "production" || var.environment != "sandpit" ? ["1"] : []
+          for_each = var.environment != "production" ? ["1"] : []
           content {
             name = "EC2MetaDataSSRF_BODY"
             action_to_use {
@@ -416,7 +416,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
   }
 
   dynamic "rule" {
-    for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
+    for_each = var.environment == "production" ? ["1"] : []
     content {
       action {
         block {}
