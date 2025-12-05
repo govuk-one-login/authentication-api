@@ -414,7 +414,7 @@ public class AuthCodeHandler
 
     private APIGatewayProxyResponseEvent processParseException(ParseException e) {
         if (e.getRedirectionURI() == null) {
-            LOG.warn(
+            LOG.error(
                     "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
                     e);
             throw new RuntimeException("Redirect URI or Client ID is missing from auth request", e);

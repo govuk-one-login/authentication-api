@@ -233,7 +233,7 @@ public class AuthenticationAuthorizationService {
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
             } catch (java.text.ParseException e) {
-                LOG.warn("Unable to parse id_token_hint SignedJWT into claims");
+                LOG.error("Unable to parse id_token_hint SignedJWT into claims");
                 throw new RuntimeException("Invalid id_token_hint");
             }
         }
