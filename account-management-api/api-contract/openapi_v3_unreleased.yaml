@@ -302,19 +302,21 @@ paths:
       description: "Sends an OTP code to the user's known contact method for verification purposes. Unlike /send-otp-notification, this endpoint only sends to contact methods already associated with the user's account."
       summary: Sends an OTP challenge
       operationId: "send-otp-challenge"
+      parameters:
+        - name: publicSubjectId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's public subject identifier
       requestBody:
         content:
           application/json:
             schema:
               type: object
               required:
-                - email
                 - mfaMethodType
               properties:
-                email:
-                  type: string
-                  format: email
-                  description: The user's email address
                 mfaMethodType:
                   type: string
                   enum:
@@ -324,7 +326,6 @@ paths:
               send-otp-challenge-email-request:
                 summary: Send OTP challenge via email
                 value:
-                  email: "user@example.gov.uk"
                   mfaMethodType: "EMAIL"
         required: true
       responses:
@@ -383,11 +384,10 @@ paths:
         - lang: shell
           label: cURL request example
           source: |
-            curl -X POST "https://localhost:8080/send-otp-challenge" \
+            curl -X POST "https://localhost:8080/send-otp-challenge?publicSubjectId=<PUBLIC_SUBJECT_ID>" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
               -d '{
-                "email": "user@example.gov.uk",
                 "mfaMethodType": "EMAIL"
               }'
   /verify-otp-challenge:
@@ -403,16 +403,33 @@ paths:
       description: "Verifies an OTP code sent to the user's contact method. This endpoint validates the OTP without performing any account updates."
       summary: Verifies an OTP challenge
       operationId: "verify-otp-challenge"
+      parameters:
+        - name: publicSubjectId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's public subject identifier
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VerifyOtpRequest"
+              type: object
+              required:
+                - otp
+                - mfaMethodType
+              properties:
+                otp:
+                  type: string
+                  pattern: "^[0-9]{6}$"
+                  description: The 6-digit OTP code to verify
+                  example: "123456"
+                mfaMethodType:
+                  $ref: "#/components/schemas/MfaMethodType"
             examples:
               verify-otp-challenge-request:
                 summary: Verify OTP challenge
                 value:
-                  email: "new.user@example.gov.uk"
                   otp: "123456"
                   mfaMethodType: "EMAIL"
         required: true
@@ -450,11 +467,10 @@ paths:
         - lang: shell
           label: cURL request example
           source: |
-            curl -X POST "https://localhost:8080/verify-otp-challenge" \
+            curl -X POST "https://localhost:8080/verify-otp-challenge?publicSubjectId=<PUBLIC_SUBJECT_ID>" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
               -d '{
-                "email": "new.user@example.gov.uk",
                 "otp": "123456",
                 "mfaMethodType": "EMAIL"
               }'
@@ -1523,16 +1539,10 @@ components:
       description: The MFA method type for OTP verification
     VerifyOtpRequest:
       required:
-        - email
         - otp
         - mfaMethodType
       type: object
       properties:
-        email:
-          type: string
-          format: email
-          description: The email address where the OTP was sent
-          example: "new.user@example.gov.uk"
         otp:
           type: string
           pattern: "^[0-9]{6}$"
@@ -1541,7 +1551,6 @@ components:
         mfaMethodType:
           $ref: "#/components/schemas/MfaMethodType"
       example:
-        email: "new.user@example.gov.uk"
         otp: "123456"
         mfaMethodType: "EMAIL"
     OtpVerificationRateLimitExceeded:
