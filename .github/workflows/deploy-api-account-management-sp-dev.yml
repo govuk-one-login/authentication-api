@@ -5,8 +5,13 @@ on:
     inputs:
       environment:
         description: "Environment to run against"
-        type: environment
+        type: choice
         required: true
+        options:
+          - authdev1
+          - authdev2
+          - authdev3
+          - dev
 
 env:
   AWS_REGION: eu-west-2

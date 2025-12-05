@@ -62,6 +62,7 @@ Resources:
         - !Ref UserProfileTableKmsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

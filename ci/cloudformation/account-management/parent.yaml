@@ -241,6 +241,21 @@ Conditions:
       !Equals [!Ref Environment, "production"],
     ]
 
+  HasTestClientSecretKey:
+    !Or [
+      !And [
+        !Condition UseSubEnvironment,
+        !Or [
+          !Equals [!Ref SubEnvironment, "authdev1"],
+          !Equals [!Ref SubEnvironment, "authdev2"],
+          !Equals [!Ref SubEnvironment, "authdev3"],
+        ],
+      ],
+      !Equals [!Ref Environment, "dev"],
+      !Equals [!Ref Environment, "build"],
+      !Equals [!Ref Environment, "staging"],
+    ]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -261,6 +276,7 @@ Mappings:
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/a7f93e1c-d441-4237-8b01-b0c1b4ff39bb
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3be3cbe9-d030-4a96-9738-420ee063a1d7
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/2dcfcf9b-6c30-49a9-b3c6-421af0e3040a
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
@@ -319,6 +335,7 @@ Mappings:
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f7f540ee-5bac-4785-a3eb-a5653bd7c137
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/bc782157-0e0f-4b5d-93c7-ddadd4d538a0
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/01b45239-4243-4c5f-8188-d09ef2da842d
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
@@ -377,6 +394,7 @@ Mappings:
       parameterStoreKmsKey: arn:aws:kms:eu-west-2:653994557586:key/f944cc04-ec31-4ff5-843f-c72e87f5f334
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6f8567bc-37aa-4a12-a3e7-87312701ebcb
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
       emailAcctCreationOtpCodeTtlDuration: 600
       AMApiFMSTagValue: accountmanagement
       lockoutCountTtl: 600
@@ -438,6 +456,8 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/cc4448e9-1b9d-4309-ad65-deb619dc444c
+      pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:653994557586:key/55684f22-2ed2-4dab-bbde-c4381c66ff79
       AMApiFMSTagValue: accountmanagement
       cloudwatchLogRetentionInDays: 1
       customDocAppClaimEnabled: true
@@ -504,6 +524,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/353a8367-d45a-47b5-b16b-b94cd163ab22
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/4812e1de-a6f5-459b-9328-1865e3a72176
       AMApiFMSTagValue: accountmanagementbuild
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -574,6 +595,8 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/f2cbc2f5-78d9-4e13-9f23-7b46907b91e6
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/cb787cef-819e-4824-b678-c6c172cc78cf
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       AMApiFMSTagValue: accountmanagementstaging
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -627,7 +650,6 @@ Mappings:
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/b94d81a1-a41f-4e61-859c-87dcacb32e51
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/d0bdb864-8478-4411-a44a-a4232fc97cf3
       OrchClientRegistryTableEncryptionkey: arn:aws:kms:eu-west-2:590183975515:key/4373aa74-95b2-454c-bd86-9716f105a1c4
-      testClientSecretEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/cb787cef-819e-4824-b678-c6c172cc78cf
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -649,6 +671,7 @@ Mappings:
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       AMApiFMSTagValue: accountmanagementint
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
@@ -707,6 +730,7 @@ Mappings:
       authenticationAttemptTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/65fad11d-d525-4fc1-a806-0b304b9dda36
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
+      TokenSigningkeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       cloudwatchLogRetentionInDays: 30
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       customDocAppClaimEnabled: true
@@ -1052,7 +1076,7 @@ Resources:
     Properties:
       Description: "IAM policy for Lambda Basic Execution"
       Path: !Sub
-        - /${Env}/oidc-default/
+        - /${Env}/auth-am-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1092,7 +1116,7 @@ Resources:
     Properties:
       Description: "IAM policy for managing KMS connection for a lambda"
       Path: !Sub
-        - /${Env}/oidc-default/
+        - /${Env}/auth-am-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1137,17 +1161,13 @@ Resources:
                     !Ref Environment,
                     eventsTopicEncryptionKey,
                   ]
-              # Additional events topic encryption key that some functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
-              # Another missing KMS key that all functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
 
   AuditSigningKeyLambdaKmsSigningPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
       Path: !Sub
-        - /${Env}/oidc-default/
+        - /${Env}/auth-am-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1210,10 +1230,6 @@ Resources:
                     !Ref Environment,
                     eventsTopicEncryptionKey,
                   ]
-              # Additional events topic encryption key that some functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
-              # Another missing KMS key that all functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41
 
   DynamoAccountModifiersReadWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -1222,7 +1238,7 @@ Resources:
         - "IAM policy for managing write permissions to the ${Env}-account-modifiers table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-default/
+        - /${Env}/auth-am-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1279,7 +1295,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-account-modifiers table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1329,7 +1345,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-authentication-attempt table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1399,7 +1415,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-authentication-attempt table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1583,7 +1599,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-client-registry table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1641,7 +1657,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-email-check-result table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1710,7 +1726,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-id-reverification-state table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1760,7 +1776,7 @@ Resources:
         - "IAM policy for managing write permissions to the ${Env}-id-reverification-state table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -1922,7 +1938,7 @@ Resources:
     Properties:
       Description: "IAM policy for managing read and write permissions to the Dynamo User tables"
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -2313,7 +2329,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-auth-session table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -2377,7 +2393,7 @@ Resources:
         - "IAM policy for managing read permissions to the ${Env}-common-passwords table"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Path: !Sub
-        - /${Env}/oidc-default/
+        - /${Env}/auth-am-default/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -2604,7 +2620,7 @@ Resources:
     Properties:
       Description: "Combined IAM policy for orchestration session, client session, and identity credentials cross-account access"
       Path: !Sub
-        - /${Env}/oidc-shared/
+        - /${Env}/auth-am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
@@ -2934,32 +2950,42 @@ Resources:
                       !Ref SubEnvironment,
                       !Ref Environment,
                     ]
-          - Sid: AllowSecretDecrypt
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    testClientSecretEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    testClientSecretEncryptionKey,
-                  ]
-              - !Sub
-                - "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-test-client-secret-encryption-key"
-                - Env:
-                    !If [
-                      UseSubEnvironment,
+          - !If
+            - HasTestClientSecretKey
+            - Sid: AllowSecretDecrypt
+              Effect: Allow
+              Action:
+                - kms:Decrypt
+              Resource:
+                - !If
+                  - UseSubEnvironment
+                  - !FindInMap [
+                      EnvironmentConfiguration,
                       !Ref SubEnvironment,
-                      !Ref Environment,
+                      testClientSecretEncryptionKey,
+                      DefaultValue: "",
                     ]
-
+                  - !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      testClientSecretEncryptionKey,
+                      DefaultValue: "",
+                    ]
+                - !Sub
+                  - "arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${Env}-test-client-secret-encryption-key"
+                  - Env:
+                      !If [
+                        UseSubEnvironment,
+                        !Ref SubEnvironment,
+                        !Ref Environment,
+                      ]
+                    DataStoreAccountId:
+                      !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        dataStoreAccountId,
+                      ]
+            - !Ref AWS::NoValue
   AccountModifiersTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -3009,53 +3035,3 @@ Resources:
                     !Ref Environment,
                     commonPasswordsTableEncryptionKey,
                   ]
-
-  # Minimal audit signing policy without SNS for simple functions
-  MinimalAuditSigningKeyPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "Minimal IAM policy for KMS audit signing without SNS permissions"
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAccessToKmsAuditSigningKey
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-              - kms:Verify
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    auditPayloadSigningKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    auditPayloadSigningKey,
-                  ]
-          - Sid: AllowLambdasToEncryptWithCustomKey
-            Effect: Allow
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    eventsTopicEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    eventsTopicEncryptionKey,
-                  ]
-              # Additional events topic encryption key that some functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/2274712a-d58f-468d-8771-1031f9d66e2b
-              # Another missing KMS key that all functions need
-              - arn:aws:kms:eu-west-2:653994557586:key/e72745ed-5808-4869-9d30-3d4c5f78ee41

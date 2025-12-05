@@ -61,6 +61,7 @@ Resources:
         - !Ref ClientRegistryTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:

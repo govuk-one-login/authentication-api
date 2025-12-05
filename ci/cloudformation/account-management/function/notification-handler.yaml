@@ -29,6 +29,7 @@ Resources:
         LogGroup: !Ref NotificationHandlerFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuditEventsSnsPolicy
         - Version: 2012-10-17
           Statement:
             - Sid: AllowSQSAccess

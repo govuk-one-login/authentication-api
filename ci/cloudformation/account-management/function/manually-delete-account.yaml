@@ -70,6 +70,7 @@ Resources:
         - !Ref UserProfileTableKmsPolicy
         - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref LegacyAccountDeletionTopicPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: None
       VpcConfig:
