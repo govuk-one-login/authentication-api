@@ -338,7 +338,7 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         authFrontend.errorURI(),
                         new Error(
                                 String.format(
@@ -584,14 +584,16 @@ public class AuthenticationCallbackHandler
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                        authFrontend.errorURI(), e);
             }
         } catch (AuthenticationCallbackException
                 | OrchAuthCodeException
                 | AuthenticationAuthorisationRequestException e) {
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
         } catch (NoSessionException | SessionNotFoundException e) {

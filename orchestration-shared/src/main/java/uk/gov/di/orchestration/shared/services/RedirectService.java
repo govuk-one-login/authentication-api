@@ -13,12 +13,25 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 public class RedirectService {
     private static final Logger LOG = LogManager.getLogger(RedirectService.class);
 
-    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPageWithWarnLog(
+            URI errorPageUri, Throwable error) {
+        var errorPageUriStr = errorPageUri.toString();
+        LOG.atWarn()
+                .withThrowable(error)
+                .log("Redirecting to frontend error page: {}", errorPageUriStr);
+        return redirectToFrontendErrorPage(errorPageUriStr);
+    }
+
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPageWithErrorLog(
             URI errorPageUri, Throwable error) {
         var errorPageUriStr = errorPageUri.toString();
         LOG.atError()
                 .withThrowable(error)
                 .log("Redirecting to frontend error page: {}", errorPageUriStr);
+        return redirectToFrontendErrorPage(errorPageUriStr);
+    }
+
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(String errorPageUriStr) {
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
     }
@@ -32,7 +45,6 @@ public class RedirectService {
                         "Redirecting to frontend error page for no session: {}. Error: {}",
                         errorPageUriStr,
                         error.getMessage());
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
+        return redirectToFrontendErrorPage(errorPageUriStr);
     }
 }
