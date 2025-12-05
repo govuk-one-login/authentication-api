@@ -245,7 +245,7 @@ public class AuthCodeHandler
                             orchSession.getAuthTime(),
                             internalCommonSubjectIdOptional);
         } catch (OrchAuthCodeException e) {
-            LOG.error(
+            LOG.warn(
                     "Failed to generate and save authorisation code to orch auth code DynamoDB store. Error: {}",
                     e.getMessage());
             return generateApiGatewayProxyResponse(500, "Internal server error");

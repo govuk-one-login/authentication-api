@@ -329,7 +329,10 @@ public class DocAppCallbackHandler
                                             e.getMessage())));
                 }
             }
-        } catch (DocAppCallbackException | OrchAuthCodeException e) {
+        } catch (OrchAuthCodeException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                    authFrontend.errorURI(), e);
+        } catch (DocAppCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(), e);
         } catch (NoSessionException e) {
