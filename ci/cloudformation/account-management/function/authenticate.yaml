@@ -18,7 +18,6 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "session"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -39,8 +38,37 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk/"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
-          ACCOUNT_INTERVENTION_SERVICE_URI: !Ref AccountInterventionServiceUri
-          ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED: !Ref AisCallInAuthenticateEnabled
+          ACCOUNT_INTERVENTION_SERVICE_URI: !If
+            - IsLowerEnv
+            - !Join
+              - ""
+              - - "https://"
+                - !ImportValue
+                  Fn::Sub:
+                    - "${Env}-auth-stubs-api-AccountInterventionsStubApiID"
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+                - "-"
+                - !ImportValue "vpc-ExecuteApiGatewayEndpointId"
+                - ".execute-api."
+                - !Ref "AWS::Region"
+                - ".amazonaws.com/"
+                - !If
+                  - UseSubEnvironment
+                  - !Ref SubEnvironment
+                  - !Ref Environment
+            - !Sub
+              - "{{resolve:secretsmanager:/deploy/${env}/account_intervention_service_uri}}"
+              - env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          ACCOUNT_INTERVENTION_SERVICE_CALL_IN_AUTHENTICATE_ENABLED: !Sub
+            - "{{resolve:ssm:/deploy/${env}/account_intervention_service_call_enabled}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref AuthenticateFunctionLogGroup
       Policies:

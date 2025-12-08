@@ -28,7 +28,7 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "session"
+          REDIS_KEY: "account-management"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -57,6 +57,7 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoUserDeleteAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoEmailCheckResultReadAccessPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref RedisParametersAccessPolicy

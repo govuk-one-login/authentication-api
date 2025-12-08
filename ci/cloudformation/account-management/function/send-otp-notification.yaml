@@ -26,7 +26,7 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "session"
+          REDIS_KEY: "account-management"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:

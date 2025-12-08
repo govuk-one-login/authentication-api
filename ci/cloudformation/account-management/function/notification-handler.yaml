@@ -1,4 +1,34 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
+Mappings:
+  NonProdNotifyTemplateMap:
+    Templates:
+      AMVERIFYEMAILTEMPLATEID: "2564a2fe-df04-43df-b086-08831b1034d7"
+      AMVERIFYPHONENUMBERTEMPLATEID: "86fbfd12-e428-4579-b0ee-42ba2b840eac"
+      EMAILUPDATEDTEMPLATEID: "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+      DELETEACCOUNTTEMPLATEID: "0706adcc-b593-4d2d-afa6-c3da7149e426"
+      PHONENUMBERUPDATEDTEMPLATEID: "8274a2a3-5121-4630-a27e-e8578f8cba59"
+      PASSWORDUPDATEDTEMPLATEID: "323ebef4-cfa7-414f-bfba-1db324acdd66"
+      BACKUPMETHODADDEDTEMPLATEID: "2abd5f54-15b6-4957-b4d3-f310f2437b9f"
+      BACKUPMETHODREMOVEDTEMPLATEID: "5a101e35-8b8d-456d-bcfe-8c7470bf63e4"
+      CHANGEDAUTHENTICATORAPPTEMPLATEID: "b0bb3667-985b-428c-9eb3-6b778b50fb6b"
+      CHANGEDDEFAULTMFATEMPLATEID: "ab62d5fa-79a8-4dba-beb0-283118d2450f"
+      SWITCHEDMFAMETHODSTEMPLATEID: "be78564b-b9a6-4b3d-b438-7b30e45caf54"
+
+  ProdNotifyTemplateMap:
+    Templates:
+      AMVERIFYEMAILTEMPLATEID: "98fdb807-d0d8-41c8-a1d7-7d0abff06b3c"
+      AMVERIFYPHONENUMBERTEMPLATEID: "b1b3935d-ffdc-4853-a3cd-a9fce09dbff5"
+      EMAILUPDATEDTEMPLATEID: "22aac1ce-38c7-45f5-97b2-26ac1a54a235"
+      DELETEACCOUNTTEMPLATEID: "1540bdda-fdff-4297-b627-92102e061bfa"
+      PHONENUMBERUPDATEDTEMPLATEID: "8907d080-e69c-42c6-8cf5-54ca1558a2e4"
+      PASSWORDUPDATEDTEMPLATEID: "ebf3730c-0769-462b-ab39-7d9a7439bac1"
+      BACKUPMETHODADDEDTEMPLATEID: "569ae40c-2631-4de3-9d85-7f8ffd9182e9"
+      BACKUPMETHODREMOVEDTEMPLATEID: "8c8d2392-cecc-452d-88a5-2bd8418fb257"
+      CHANGEDAUTHENTICATORAPPTEMPLATEID: "de419864-17bf-488c-93e5-da791352e2db"
+      CHANGEDDEFAULTMFATEMPLATEID: "2d17c6db-8d2d-42af-95f1-5d096cd74212"
+      SWITCHEDMFAMETHODSTEMPLATEID: "0b856ef8-07d6-4dca-ab6a-8a45044182cc"
+
 Resources:
   NotificationHandlerFunction:
     Type: AWS::Serverless::Function
@@ -18,6 +48,14 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+          NOTIFY_API_KEY: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_TEST_DESTINATIONS: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_test_destinations}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION: !If
             - IsNotProduction
             - !Sub
@@ -25,6 +63,95 @@ Resources:
               - Env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - ""
+          AM_VERIFY_EMAIL_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - AMVERIFYEMAILTEMPLATEID
+          AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - AMVERIFYPHONENUMBERTEMPLATEID
+          EMAIL_UPDATED_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - EMAILUPDATEDTEMPLATEID
+          DELETE_ACCOUNT_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - DELETEACCOUNTTEMPLATEID
+          PHONE_NUMBER_UPDATED_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - PHONENUMBERUPDATEDTEMPLATEID
+          PASSWORD_UPDATED_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - PASSWORDUPDATEDTEMPLATEID
+          BACKUP_METHOD_ADDED_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - BACKUPMETHODADDEDTEMPLATEID
+          BACKUP_METHOD_REMOVED_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - BACKUPMETHODREMOVEDTEMPLATEID
+          CHANGED_AUTHENTICATOR_APP_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - CHANGEDAUTHENTICATORAPPTEMPLATEID
+          CHANGED_DEFAULT_MFA_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - CHANGEDDEFAULTMFATEMPLATEID
+          SWITCHED_MFA_METHODS_TEMPLATE_ID: !FindInMap
+            - !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ]
+            - Templates
+            - SWITCHEDMFAMETHODSTEMPLATEID
+          CONTACT_US_LINK_ROUTE: contact-gov-uk-one-login
       LoggingConfig:
         LogGroup: !Ref NotificationHandlerFunctionLogGroup
       Policies:
