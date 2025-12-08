@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "ci/cloudformation/auth/**"
+      - "ci/cloudformation/stubs/**"
+      - "template.yaml"
 
 env:
   AWS_REGION: eu-west-2
