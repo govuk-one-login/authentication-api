@@ -7,7 +7,7 @@ xray = "2.20.0"
 [libraries]
 apacheCommonsCodec = "commons-codec:commons-codec:1.20.0"
 apacheCommonsCollections = "org.apache.commons:commons-collections4:4.5.0"
-apacheCommonsIo = "commons-io:commons-io:2.20.0"
+apacheCommonsIo = "commons-io:commons-io:2.21.0"
 apacheCommonsLang = "org.apache.commons:commons-lang3:3.20.0"
 apacheCommonsNet = "commons-net:commons-net:3.12.0"
 apacheCommonsPool = "org.apache.commons:commons-pool2:2.12.1"
