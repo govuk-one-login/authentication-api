@@ -1,9 +1,13 @@
-name: "SP - Build and deploy API modules"
+name: "SP - Build and deploy Auth ext and Internal API"
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "ci/cloudformation/account-management/**"
+      - "ci/cloudformation/stubs/**"
+      - "template.yaml"
 
 env:
   AWS_REGION: eu-west-2

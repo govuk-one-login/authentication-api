@@ -18,7 +18,6 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.MFAMethodsRetrieveHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "session"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:

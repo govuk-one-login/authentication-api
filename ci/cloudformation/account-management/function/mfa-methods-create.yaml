@@ -29,7 +29,7 @@ Resources:
       Handler: uk.gov.di.accountmanagement.lambda.MFAMethodsCreateHandler::handleRequest
       Environment:
         Variables:
-          REDIS_KEY: "session"
+          REDIS_KEY: "account-management"
           ENVIRONMENT: !Sub
             - "${env}"
             - env:
@@ -58,6 +58,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref RedisParametersAccessPolicy
         - !Ref UserProfileTableKmsPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
