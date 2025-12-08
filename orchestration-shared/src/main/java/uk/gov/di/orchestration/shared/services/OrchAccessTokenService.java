@@ -10,9 +10,11 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenItem> {
     private static final Logger LOG = LogManager.getLogger(OrchAccessTokenService.class);
@@ -135,6 +137,29 @@ public class OrchAccessTokenService extends BaseDynamoService<OrchAccessTokenIte
             update(item);
         } catch (Exception e) {
             logAndThrowOrchAccessTokenException("Failed to update token TTL", e);
+        }
+    }
+
+    public void processAccessTokensWithoutTtlInBatches(
+            int batchSize, Consumer<List<OrchAccessTokenItem>> batchProcessor) {
+        try {
+            var batch = new ArrayList<OrchAccessTokenItem>();
+            scanTable()
+                    .filter(item -> item.getTimeToLive() == 0)
+                    .forEach(
+                            item -> {
+                                batch.add(item);
+                                if (batch.size() == batchSize) {
+                                    batchProcessor.accept(new ArrayList<>(batch));
+                                    batch.clear();
+                                }
+                            });
+            if (!batch.isEmpty()) {
+                batchProcessor.accept(batch);
+            }
+        } catch (Exception e) {
+            logAndThrowOrchAccessTokenException(
+                    "Failed to process tokens without TTL in batches", e);
         }
     }
 
