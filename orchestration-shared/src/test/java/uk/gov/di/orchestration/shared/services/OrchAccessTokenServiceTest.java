@@ -16,11 +16,14 @@ import uk.gov.di.orchestration.sharedtest.basetest.BaseDynamoServiceTest;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -262,36 +265,59 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
     }
 
     @Nested
-    class GetOrchAccessTokensWithoutTtl {
+    class UpdatingTtl {
         @Test
-        void shouldGetAccessTokensWithoutTtlSuccessfully() {
-            List<OrchAccessTokenItem> orchAccessTokenTableItems =
-                    List.of(
-                            new OrchAccessTokenItem()
-                                    .withClientAndRpPairwiseId(CLIENT_AND_RP_PAIRWISE_ID)
-                                    .withAuthCode(AUTH_CODE),
-                            new OrchAccessTokenItem()
-                                    .withClientAndRpPairwiseId(
-                                            "anotherClientId.anotherRpPairwiseId")
-                                    .withAuthCode("another-auth-code"),
-                            new OrchAccessTokenItem()
-                                    .withClientAndRpPairwiseId(
-                                            "clientAndRpPairwiseId-for-token-with-ttl-set")
-                                    .withAuthCode("yet-another-auth-code")
-                                    .withTimeToLive(Instant.now().getEpochSecond()));
-
+        void shouldGetAccessTokensWithoutTtlInBatchesSuccessfully() {
             var spyService = spy(orchAccessTokenService);
-            doReturn(orchAccessTokenTableItems.stream()).when(spyService).scanTable();
 
-            var orchAccessTokensWithoutTtl = spyService.getAccessTokensWithoutTtl();
+            var allTokens = createOrchAccessTokensWithOrWithoutTtl(3, 21);
 
-            assertEquals(2, orchAccessTokensWithoutTtl.size());
-            assertTrue(
-                    orchAccessTokensWithoutTtl.stream()
-                            .noneMatch(
-                                    token ->
-                                            "clientAndRpPairwiseId-for-token-with-ttl-set"
-                                                    .equals(token.getClientAndRpPairwiseId())));
+            doReturn(allTokens.stream()).when(spyService).scanTable();
+
+            var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
+            spyService.processAccessTokensWithoutTtlInBatches(10, capturedBatches::add);
+
+            assertEquals(3, capturedBatches.size());
+            assertEquals(10, capturedBatches.get(0).size());
+            assertEquals(10, capturedBatches.get(1).size());
+            assertEquals(1, capturedBatches.get(2).size());
+            var allProcessed = capturedBatches.stream().flatMap(List::stream).toList();
+            allProcessed.forEach(token -> assertEquals(0, token.getTimeToLive()));
+        }
+
+        @Test
+        void shouldBatchWriteSuccessfully() {
+            var spyService = spy(orchAccessTokenService);
+
+            var tokensToUpdate = createOrchAccessTokensWithOrWithoutTtl(0, 5);
+
+            var expectedTtl = CREATION_INSTANT.getEpochSecond();
+
+            doNothing().when(spyService).batchPut(any());
+            spyService.updateAccessTokensTtlToNow(tokensToUpdate);
+
+            tokensToUpdate.forEach(item -> assertEquals(expectedTtl, item.getTimeToLive()));
+            verify(spyService).batchPut(tokensToUpdate);
+        }
+
+        List<OrchAccessTokenItem> createOrchAccessTokensWithOrWithoutTtl(
+                int withTtl, int withoutTtl) {
+            return Stream.concat(
+                            IntStream.range(0, withTtl)
+                                    .mapToObj(i -> createToken("test-" + i, 1234567890)),
+                            IntStream.range(withTtl, withTtl + withoutTtl)
+                                    .mapToObj(i -> createToken("test-" + i, 0)))
+                    .toList();
+        }
+
+        private OrchAccessTokenItem createToken(String id, long ttl) {
+            return new OrchAccessTokenItem()
+                    .withClientAndRpPairwiseId(id)
+                    .withAuthCode(id)
+                    .withToken(id)
+                    .withInternalPairwiseSubjectId(id)
+                    .withClientSessionId(id)
+                    .withTimeToLive(ttl);
         }
     }
 

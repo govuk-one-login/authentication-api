@@ -7,11 +7,17 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class UpdateTokensWithTtlHandler implements RequestHandler<Object, String> {
 
     private static final Logger LOG = LogManager.getLogger(UpdateTokensWithTtlHandler.class);
+    private static final int DEFAULT_READ_BATCH_SIZE = 1000;
+    private static final int DEFAULT_WRITE_BATCH_SIZE = 25;
+    private static final int DEFAULT_LOG_INTERVAL = 500;
+
     private final OrchAccessTokenService orchAccessTokenService;
 
     public UpdateTokensWithTtlHandler() {
@@ -25,18 +31,44 @@ public class UpdateTokensWithTtlHandler implements RequestHandler<Object, String
 
     @Override
     public String handleRequest(Object input, Context context) {
-        LOG.info("Starting update of access tokens without TTL");
+        var config = parseInput(input);
+        var readBatchSize = config.getOrDefault("readBatchSize", DEFAULT_READ_BATCH_SIZE);
+        var writeBatchSize = config.getOrDefault("writeBatchSize", DEFAULT_WRITE_BATCH_SIZE);
+        var logInterval = config.getOrDefault("logInterval", DEFAULT_LOG_INTERVAL);
+
+        LOG.info(
+                "Starting update of access tokens without TTL (readBatch={}, writeBatch={}, logInterval={})",
+                readBatchSize,
+                writeBatchSize,
+                logInterval);
 
         var updated = new AtomicInteger(0);
         orchAccessTokenService.processAccessTokensWithoutTtlInBatches(
-                100,
+                readBatchSize,
                 batch -> {
-                    batch.forEach(orchAccessTokenService::updateAccessTokenTtlToNow);
-                    int currentCount = updated.addAndGet(batch.size());
-                    LOG.info("Updated {} tokens", currentCount);
+                    // Process the batch in sub-batches for writing
+                    for (int i = 0; i < batch.size(); i += writeBatchSize) {
+                        var writeBatch =
+                                new ArrayList<>(
+                                        batch.subList(
+                                                i, Math.min(i + writeBatchSize, batch.size())));
+                        orchAccessTokenService.updateAccessTokensTtlToNow(writeBatch);
+                        int currentCount = updated.addAndGet(writeBatch.size());
+                        if (currentCount % logInterval == 0) {
+                            LOG.info("Updated {} tokens", currentCount);
+                        }
+                    }
                 });
 
         LOG.info("Updated {} access tokens with current TTL", updated.get());
         return "Finished";
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Integer> parseInput(Object input) {
+        if (input instanceof Map) {
+            return (Map<String, Integer>) input;
+        }
+        return Map.of();
     }
 }
