@@ -57,19 +57,6 @@ Parameters:
     Description: The ARN of the subscription endpoint to send logs to splunk
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
-  AccountInterventionServiceUri:
-    Type: String
-    Description: The URI of the Account Intervention Service
-    Default: ""
-
-  AisCallInAuthenticateEnabled:
-    Type: String
-    Description: Feature flag to call AIS in the /authenticate handler when a user reverifies their password
-    Default: "false"
-    AllowedValues:
-      - "true"
-      - "false"
-
   DlqAlarmThreshold:
     Type: Number
     Description: Threshold for dead letter queue alarm
