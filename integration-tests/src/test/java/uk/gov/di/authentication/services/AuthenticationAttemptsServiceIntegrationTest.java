@@ -13,6 +13,7 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStor
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -316,6 +317,32 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     authenticationAttemptsService.getCountsByJourneyForIdentifiers(
                             List.of(INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, thirdIdentifier),
                             JOURNEY_TYPE));
+        }
+    }
+
+    @Test
+    void shouldFilterNullsAndDuplicatesWhenGettingCountsByJourneyForIdentifiers() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var spyService = Mockito.spy(authenticationAttemptsService);
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, Map.of(CountType.ENTER_EMAIL, 1));
+
+            spyService.getCountsByJourneyForIdentifiers(
+                    Arrays.asList(null, null, RP_PAIRWISE_ID, RP_PAIRWISE_ID, RP_PAIRWISE_ID, null),
+                    JOURNEY_TYPE);
+
+            Mockito.verify(spyService, Mockito.times(4))
+                    .getCount(Mockito.eq(RP_PAIRWISE_ID), Mockito.any(), Mockito.any());
+            Mockito.verify(spyService, Mockito.never())
+                    .getCount(Mockito.isNull(), Mockito.any(), Mockito.any());
         }
     }
 
