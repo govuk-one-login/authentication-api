@@ -41,15 +41,15 @@ Parameters:
   MinAuthJourneyThreshold:
     Type: Number
     Description: Minimum number of auth journeys started before the journey completion rate alarm can be triggered
-    Default: 10
+    Default: 300
   MinIdentityJourneyThreshold:
     Type: Number
     Description: Minimum number of identity journeys started before the journey completion rate alarm can be triggered
-    Default: 8
+    Default: 100
   MinDocAppJourneyThreshold:
     Type: Number
     Description: Minimum number of docapp journeys started before the journey completion rate alarm can be triggered
-    Default: 4
+    Default: 100
 
 Conditions:
   UsePermissionsBoundary:
@@ -77,7 +77,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  IsDev: !Equals [dev, !Ref Environment]
   IsDevOrBuild:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
   IsStagingIntOrProd:
@@ -8369,12 +8368,12 @@ Resources:
 
   #region journey completion rate alarms
   AuthJourneyCompletionRateAlarm:
-    Condition: IsDev
+    Condition: IsProduction
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "Auth journey completion rate has dropped below 80% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
@@ -8423,12 +8422,12 @@ Resources:
             Stat: Sum
 
   IdentityJourneyCompletionRateAlarm:
-    Condition: IsDev
+    Condition: IsProduction
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "Identity journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
@@ -8477,12 +8476,12 @@ Resources:
             Stat: Sum
 
   DocAppJourneyCompletionRateAlarm:
-    Condition: IsDev
+    Condition: IsProduction
     Type: AWS::CloudWatch::Alarm
     Properties:
       ActionsEnabled: true
       AlarmActions:
-        - !Ref SlackEvents
+        - !Ref OrchProdSlackEvents
       AlarmDescription: !Sub "Doc app journey completion rate has dropped below 30% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
