@@ -252,6 +252,14 @@ Conditions:
       ],
     ]
 
+  CreateTestBucket:
+    !Not [
+      !Or [
+        !Equals [!Ref Environment, production],
+        !Equals [!Ref Environment, integration],
+      ],
+    ]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -2900,6 +2908,27 @@ Resources:
                     userProfileTableEncryptionKey,
                   ]
 
+  # S3 bucket for acceptance tests OTP (only created in non-restricted environments)
+  AmApiAcceptanceTestsOtpBucket:
+    Type: AWS::S3::Bucket
+    Condition: CreateTestBucket
+    Properties:
+      BucketName: !Sub
+        - "${Env}-am-api-acceptance-test-otp"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
   S3AcceptanceTestsBucketPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -2913,8 +2942,8 @@ Resources:
               - s3:GetObject
               - s3:PutObject
             Resource:
-              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-tests-otp"
-              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-tests-otp/*"
+              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-test-otp"
+              - !Sub "arn:aws:s3:::${Environment}-am-api-acceptance-test-otp/*"
 
   # Additional test client secret access policy for Terraform compatibility
   TestClientSecretAccessPolicy:

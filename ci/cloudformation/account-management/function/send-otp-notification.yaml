@@ -32,7 +32,16 @@ Resources:
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
-          PENDING_EMAIL_CHECK_QUEUE_URL: ""
+          PENDING_EMAIL_CHECK_QUEUE_URL: !Sub
+            - https://sqs.eu-west-2.amazonaws.com/${DataStoreAccountId}/${Env}-pending-email-check-queue
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+              Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           LOCKOUT_DURATION:
             !FindInMap [
@@ -70,8 +79,14 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk/"
               - !Sub "https://identity.${Environment}.account.gov.uk/"
             - "https://identity.account.gov.uk"
-          TEST_CLIENT_VERIFY_EMAIL_OTP: ""
-          TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ""
+          TEST_CLIENT_VERIFY_EMAIL_OTP: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/test_client_verify_email_otp}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/test_client_verify_phone_number_otp}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           TEST_CLIENTS_ENABLED:
             !FindInMap [
               EnvironmentConfiguration,
