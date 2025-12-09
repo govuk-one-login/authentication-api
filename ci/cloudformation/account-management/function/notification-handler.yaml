@@ -59,7 +59,7 @@ Resources:
           ACCOUNT_MANAGEMENT_NOTIFY_ALTERNATIVE_DESTINATION: !If
             - IsNotProduction
             - !Sub
-              - ${Env}-am-api-acceptance-tests-otp
+              - ${Env}-am-api-acceptance-test-otp
               - Env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
             - ""
@@ -156,6 +156,7 @@ Resources:
         LogGroup: !Ref NotificationHandlerFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref S3AcceptanceTestsBucketPolicy
         - !Ref AuditEventsSnsPolicy
         - Version: 2012-10-17
           Statement:
