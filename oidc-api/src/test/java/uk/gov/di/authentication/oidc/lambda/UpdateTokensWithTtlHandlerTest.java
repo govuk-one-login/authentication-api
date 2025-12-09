@@ -37,27 +37,30 @@ class UpdateTokensWithTtlHandlerTest {
 
     @ParameterizedTest
     @NullSource
-    void shouldUseDefaultReadBatchSizeWithNullInput(Object input) {
+    void shouldUseDefaultReadBatchSizeAndSegmentsWithNullInput(Object input) {
         var result = handler.handleRequest(input, context);
 
         assertEquals("Finished", result);
-        verify(orchAccessTokenService).processAccessTokensWithoutTtlInBatches(eq(1000), any());
+        verify(orchAccessTokenService)
+                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), any());
     }
 
     @Test
-    void shouldUseDefaultReadBatchSizeWithEmptyInput() {
+    void shouldUseDefaultReadBatchSizeAndSegmentsWithEmptyInput() {
         var result = handler.handleRequest(Map.of(), context);
 
         assertEquals("Finished", result);
-        verify(orchAccessTokenService).processAccessTokensWithoutTtlInBatches(eq(1000), any());
+        verify(orchAccessTokenService)
+                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), any());
     }
 
     @Test
-    void shouldUseCustomReadBatchSize() {
-        var input = Map.of("readBatchSize", 500);
+    void shouldUseCustomReadBatchAndSegmentSize() {
+        var input = Map.of("readBatchSize", 500, "totalSegments", 4);
         handler.handleRequest(input, context);
 
-        verify(orchAccessTokenService).processAccessTokensWithoutTtlInBatches(eq(500), any());
+        verify(orchAccessTokenService)
+                .processAccessTokensWithoutTtlInBatches(eq(500), eq(4), any());
     }
 
     @Test
@@ -70,7 +73,7 @@ class UpdateTokensWithTtlHandlerTest {
 
         handler.handleRequest(input, context);
         verify(orchAccessTokenService)
-                .processAccessTokensWithoutTtlInBatches(eq(1000), consumerCaptor.capture());
+                .processAccessTokensWithoutTtlInBatches(eq(1000), eq(1), consumerCaptor.capture());
 
         var testBatch =
                 List.of(

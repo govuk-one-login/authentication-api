@@ -6,8 +6,10 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
@@ -142,6 +144,13 @@ public class BaseDynamoService<T> {
 
     public Stream<T> scanTable() {
         return dynamoTable.scan().items().stream();
+    }
+
+    public Stream<T> scanTableSegment(int segment, int totalSegments) {
+        var scanRequest =
+                ScanEnhancedRequest.builder().segment(segment).totalSegments(totalSegments).build();
+
+        return dynamoTable.scan(scanRequest).stream().map(Page::items).flatMap(List::stream);
     }
 
     public void batchPut(List<T> items) {

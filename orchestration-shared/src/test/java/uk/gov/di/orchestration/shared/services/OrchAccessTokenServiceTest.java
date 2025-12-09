@@ -270,19 +270,21 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
         void shouldGetAccessTokensWithoutTtlInBatchesSuccessfully() {
             var spyService = spy(orchAccessTokenService);
 
-            var allTokens = createOrchAccessTokensWithOrWithoutTtl(3, 21);
+            var allTokensSegment1 = createOrchAccessTokensWithOrWithoutTtl(1, 19);
+            var allTokensSegment2 = createOrchAccessTokensWithOrWithoutTtl(2, 2);
 
-            doReturn(allTokens.stream()).when(spyService).scanTable();
+            doReturn(allTokensSegment1.stream()).when(spyService).scanTableSegment(0, 2);
+            doReturn(allTokensSegment2.stream()).when(spyService).scanTableSegment(1, 2);
 
             var capturedBatches = new ArrayList<List<OrchAccessTokenItem>>();
-            spyService.processAccessTokensWithoutTtlInBatches(10, capturedBatches::add);
+            spyService.processAccessTokensWithoutTtlInBatches(10, 2, capturedBatches::add);
 
-            assertEquals(3, capturedBatches.size());
-            assertEquals(10, capturedBatches.get(0).size());
-            assertEquals(10, capturedBatches.get(1).size());
-            assertEquals(1, capturedBatches.get(2).size());
-            var allProcessed = capturedBatches.stream().flatMap(List::stream).toList();
-            allProcessed.forEach(token -> assertEquals(0, token.getTimeToLive()));
+            assertEquals(
+                    3,
+                    capturedBatches.size()); // 2 batches from first segment, 1 from second segment
+            var allItems = capturedBatches.stream().flatMap(List::stream).toList();
+            assertEquals(21, allItems.size());
+            assertTrue(allItems.stream().allMatch(item -> item.getTimeToLive() == 0));
         }
 
         @Test
