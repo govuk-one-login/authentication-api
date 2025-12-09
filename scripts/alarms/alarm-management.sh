@@ -298,10 +298,10 @@ test_alarm() {
   elif [[ ${METRIC_NAME} == "SmsLimitExceeded" ]]; then
     # For limit exceeded alarms, send metric directly (simulates 429 http status code responses from Notify)
     test_value=$((THRESHOLD + 1)) # Send 3 for threshold of 2
-    echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to simulate 429 (rate limit exceeded) http status responses from Notify"
+    echo "Sending ${METRIC_NAME} metric with value ${test_value} (threshold: ${THRESHOLD}) to simulate HTTP status 429 (too many requests) responses from Notify"
     aws cloudwatch put-metric-data \
       --namespace "${NAMESPACE}" \
-      --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=Application,Value=Authentication},{Name=IsTest,Value=false},{Name=SmsDestinationType,Value=${SMS_TYPE}}]"
+      --metric-data "MetricName=${METRIC_NAME},Value=${test_value},Unit=Count,Dimensions=[{Name=Environment,Value=${ENVIRONMENT}},{Name=Application,Value=Authentication},{Name=IsTest,Value=false},{Name=SmsDestinationType,Value=${SMS_TYPE}},{Name=LogGroup,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceName,Value=${ENVIRONMENT}-email-notification-sqs-lambda},{Name=ServiceType,Value=AWS::Lambda::Function}]"
     echo "${METRIC_NAME} metric data sent successfully!"
     # Continue to alarm monitoring (don't return early)
   fi
