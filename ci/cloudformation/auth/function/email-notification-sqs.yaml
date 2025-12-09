@@ -316,6 +316,12 @@ Resources:
           Value: false
         - Name: SmsDestinationType
           Value: DOMESTIC
+        - Name: LogGroup
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceName
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceType
+          Value: "AWS::Lambda::Function"
       AlarmDescription: !Sub
         - "${Prefix}Domestic SMS daily limit exceeded (${Env}). 2+ 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
@@ -355,6 +361,12 @@ Resources:
           Value: false
         - Name: SmsDestinationType
           Value: INTERNATIONAL
+        - Name: LogGroup
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceName
+          Value: !Ref EmailNotificationQueueFunction
+        - Name: ServiceType
+          Value: "AWS::Lambda::Function"
       AlarmDescription: !Sub
         - "${Prefix}International SMS daily limit exceeded (${Env}). 2+ 429 responses from Notify. Runbook: https://govukverify.atlassian.net/wiki/x/qIBJTQE"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
