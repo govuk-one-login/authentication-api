@@ -201,7 +201,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
 
                 String destinationType =
                         maybeGetCountry(request.getDestination())
-                                .map(country -> "GB".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
+                                .map(country -> "44".equals(country) ? "DOMESTIC" : "INTERNATIONAL")
                                 .orElse("UNKNOWN");
 
                 cloudwatchMetricsService.emitSmsLimitExceededMetric(
