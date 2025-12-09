@@ -43,6 +43,8 @@ public class App {
         // - The token signing key is purely internal
         // - MFA Reset needs a mock IPV Core to support those journeys
         var kmsInitialiser = new KmsInitialiser();
+        kmsInitialiser.createKey(
+                "alias/local-encryption-key-primary", KeyUsageType.ENCRYPT_DECRYPT);
         kmsInitialiser.createKey("alias/local-token-signing-key", KeyUsageType.SIGN_VERIFY);
         kmsInitialiser.createKey(
                 "alias/local-mfa-reset-storage-token-signing-key", KeyUsageType.SIGN_VERIFY);
