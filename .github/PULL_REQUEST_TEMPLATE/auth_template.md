@@ -8,10 +8,10 @@
 For example:
 
 1. Code Review
-1. Deploy to sandpit with `./deploy-sandpit.sh -a`
+1. Deploy to a dev environment using the most appropriate [GitHub dev deployment workflow](https://github.com/govuk-one-login/authentication-api/actions), or using the deployment scripts in this repo for the old account (e.g., `./deploy-authdevs.sh -c -b --all`).
 1. Ensure that resources `x`, `y` and `z` were not changed
-1. Visit [some url](https://some.sandpit.url/to/visit)
-1. Log in
+1. Visit [some url](https://some.dev.url/to/visit)
+1. Sign in
 1. Ensure `x` message appears in a modal
 -->
 
