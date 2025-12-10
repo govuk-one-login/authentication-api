@@ -26,6 +26,7 @@ on:
       - "**/*.gradle"
       - "**/*.properties"
       - "gradle*"
+      - "gradle/**"
   push:
     branches:
       - main
@@ -36,6 +37,7 @@ on:
       - "**/*.gradle"
       - "**/*.properties"
       - "gradle*"
+      - "gradle/**"
 
 jobs:
   contract-testing:

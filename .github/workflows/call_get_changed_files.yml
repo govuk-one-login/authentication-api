@@ -31,6 +31,7 @@ jobs:
             **/*.gradle
             **/*.properties
             gradle*
+            gradle/**
 
       - name: Get changed files in orchestration-alerting folder
         id: changed-orch-alerting-files
