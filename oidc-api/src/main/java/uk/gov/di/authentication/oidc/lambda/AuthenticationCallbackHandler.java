@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationAuthorisationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
@@ -302,12 +303,24 @@ public class AuthenticationCallbackHandler
                                 configurationService.getSessionCookieMaxAge(),
                                 configurationService.getSessionCookieAttributes(),
                                 configurationService.getDomainName());
+                var client = clientService.getClient(clientId).orElse(null);
+                var clientAuthRequest =
+                        AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
+                var authRequest =
+                        authorisationService.generateAuthRedirectRequest(
+                                newSessionId,
+                                newClientSessionId,
+                                clientAuthRequest,
+                                client,
+                                false,
+                                orchClientSession.getVtrList().get(0),
+                                Optional.of(sessionId),
+                                orchSession);
                 return generateApiGatewayProxyResponse(
                         302,
                         "",
-                        Map.of(ResponseHeaders.LOCATION, authFrontend.errorURI().toString()),
+                        Map.of(ResponseHeaders.LOCATION, authRequest.toURI().toString()),
                         Map.of(ResponseHeaders.SET_COOKIE, List.of(newSessionCookie)));
-                // TODO: ATO-2109 Redirect to auth frontend on success
             }
 
             var tokenRequest =
@@ -573,7 +586,9 @@ public class AuthenticationCallbackHandler
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
                 return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
             }
-        } catch (AuthenticationCallbackException | OrchAuthCodeException e) {
+        } catch (AuthenticationCallbackException
+                | OrchAuthCodeException
+                | AuthenticationAuthorisationRequestException e) {
             return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
         } catch (ParseException e) {
             return RedirectService.redirectToFrontendErrorPage(

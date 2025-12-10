@@ -3,8 +3,26 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -59,6 +77,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.OrchAuthCodeException;
@@ -151,7 +170,9 @@ class AuthenticationCallbackHandlerTest {
     private static final LogoutService logoutService = mock(LogoutService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
-    private static final String TEST_FRONTEND_ERROR_URI = "test.orchestration.frontend.url/error";
+    private static final String TEST_FRONTEND_BASE_URI = "http://example.com";
+    private static final String TEST_FRONTEND_LOGIN_URI = "http://example.com/login";
+    private static final String TEST_FRONTEND_ERROR_URI = "http://example.com/error";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
@@ -172,6 +193,7 @@ class AuthenticationCallbackHandlerTest {
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final State RP_STATE = new State();
     private static final Nonce RP_NONCE = new Nonce();
+    private static final String ORCH_CLIENT_ID = "orch-client-id";
     private static final CredentialTrustLevel lowestCredentialTrustLevel =
             CredentialTrustLevel.LOW_LEVEL;
     private static final OrchClientSessionItem orchClientSession =
@@ -199,11 +221,15 @@ class AuthenticationCallbackHandlerTest {
     static void init() {
         when(configurationService.getEnvironment()).thenReturn("test-env");
         when(authFrontend.errorURI()).thenReturn(URI.create(TEST_FRONTEND_ERROR_URI));
+        when(authFrontend.baseURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URI));
+        when(authFrontend.authorizeURI(any(), any()))
+                .thenReturn(URI.create(TEST_FRONTEND_LOGIN_URI));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
         when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(false);
+        when(configurationService.getOrchestrationClientId()).thenReturn(ORCH_CLIENT_ID);
         when(accountInterventionService.getAccountIntervention(anyString(), any(), any()))
                 .thenReturn(
                         new AccountIntervention(
@@ -1242,9 +1268,9 @@ class AuthenticationCallbackHandlerTest {
             when(configurationService.isSingleFactorAccountDeletionEnabled()).thenReturn(true);
         }
 
-        // TODO: ATO-2109 Update test name
         @Test
-        void shouldGenerateNewSessionsWhenSfadErrorReceivedInNonReauthJourney() throws Exception {
+        void shouldGenerateNewSessionsAndRedirectToAuthWhenSfadErrorReceivedInNonReauthJourney()
+                throws Exception {
             try (MockedStatic<LogLineHelper> mockLogHelper = mockStatic(LogLineHelper.class);
                     MockedStatic<IdGenerator> mockIdGenerator = mockStatic(IdGenerator.class)) {
                 usingValidSession();
@@ -1254,16 +1280,39 @@ class AuthenticationCallbackHandlerTest {
                         .when(IdGenerator::generate)
                         .thenReturn(NEW_SESSION_ID)
                         .thenReturn(NEW_CLIENT_SESSION_ID);
-
+                var encryptedJwt = createEncryptedJWT();
+                var rpClientId = new ClientID();
+                when(authorizationService.generateAuthRedirectRequest(
+                                anyString(),
+                                anyString(),
+                                any(),
+                                any(),
+                                anyBoolean(),
+                                any(),
+                                any(),
+                                any()))
+                        .thenReturn(
+                                new AuthorizationRequest.Builder(
+                                                new ResponseType(ResponseType.Value.CODE),
+                                                rpClientId)
+                                        .endpointURI(URI.create(TEST_FRONTEND_LOGIN_URI))
+                                        .requestObject(encryptedJwt)
+                                        .build());
                 var event = createRequestForSfadJourney();
                 when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
                 when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                         .thenReturn(USER_INFO);
-                // TODO: ATO-2109 Assert on redirecting to auth on success
                 var response = handler.handleRequest(event, CONTEXT);
                 assertThat(response, hasStatus(302));
-                assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
+                assertThat(
+                        response.getHeaders().get("Location"),
+                        equalTo(
+                                TEST_FRONTEND_LOGIN_URI
+                                        + "?response_type=code&request="
+                                        + encryptedJwt.serialize()
+                                        + "&client_id="
+                                        + rpClientId.getValue()));
                 assertThat(
                         response.getMultiValueHeaders().get("Set-Cookie"),
                         hasItem(
@@ -1322,6 +1371,48 @@ class AuthenticationCallbackHandlerTest {
                     tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
 
             assertNoAuthorisationCodeGeneratedAndSaved();
+        }
+
+        private EncryptedJWT createEncryptedJWT() throws Exception {
+            var ecdsaSigner = new ECDSASigner(generateECSigningKey());
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .claim("client-name", CLIENT_NAME)
+                            .claim("cookie-consent-shared", true)
+                            .claim("is-one-login-service", true)
+                            .claim("service-type", ServiceType.MANDATORY)
+                            .claim("state", STATE)
+                            .claim("scopes", "openid")
+                            .claim("redirect-uri", TEST_FRONTEND_BASE_URI)
+                            .build();
+            var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+            var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+            signedJWT.sign(ecdsaSigner);
+            var rsaEncryptionKey =
+                    new RSAKeyGenerator(2048)
+                            .keyID("encryption-key-id")
+                            .generate()
+                            .toRSAPublicKey();
+            var jweObject =
+                    new JWEObject(
+                            new JWEHeader.Builder(
+                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                    .contentType("JWT")
+                                    .build(),
+                            new Payload(signedJWT));
+            jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
+            return EncryptedJWT.parse(jweObject.serialize());
+        }
+
+        private static ECKey generateECSigningKey() {
+            try {
+                return new ECKeyGenerator(Curve.P_256)
+                        .keyID("key-id")
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+            } catch (JOSEException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         private static APIGatewayProxyRequestEvent createRequestForSfadJourney() {
