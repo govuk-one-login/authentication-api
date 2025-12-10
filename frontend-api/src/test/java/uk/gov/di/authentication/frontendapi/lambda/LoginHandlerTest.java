@@ -43,7 +43,6 @@ import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -143,8 +142,6 @@ class LoginHandlerTest {
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -226,7 +223,6 @@ class LoginHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService,
                         authSessionService,
                         mfaMethodsService,
                         permissionDecisionManager,

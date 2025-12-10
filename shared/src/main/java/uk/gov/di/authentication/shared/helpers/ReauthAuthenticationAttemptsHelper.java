@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 
@@ -20,6 +21,7 @@ public class ReauthAuthenticationAttemptsHelper {
         var reauthRelevantCountsToMaxRetries =
                 Map.ofEntries(
                         Map.entry(ENTER_EMAIL, configurationService.getMaxEmailReAuthRetries()),
+                        Map.entry(ENTER_EMAIL_CODE, configurationService.getCodeMaxRetries()),
                         Map.entry(ENTER_PASSWORD, configurationService.getMaxPasswordRetries()),
                         Map.entry(ENTER_MFA_CODE, configurationService.getCodeMaxRetries()));
 
