@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 info:
   title: "auth-account-management-method-management-api"
-  version: 1.0.3
+  version: 1.0.4
   description: Auth Account Management API
 servers:
   - url: "https://localhost:8080/"
@@ -10,6 +10,7 @@ paths:
     post:
       security:
         - authorise-access-token: []
+        - {}
       x-amazon-apigateway-integration:
         type: "aws_proxy"
         httpMethod: "POST"
@@ -19,13 +20,6 @@ paths:
       description: "Authenticates a user with email and password credentials. Used by the Home service to verify user credentials before issuing access tokens."
       summary: Authenticates a user
       operationId: "authenticate"
-      parameters:
-        - name: clientId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
@@ -238,13 +232,6 @@ paths:
       description: "Deletes a user account. The email in the request must match the authenticated user's email."
       summary: Deletes a user account
       operationId: "delete-account"
-      parameters:
-        - name: clientId
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Client identifier for the requesting service
       requestBody:
         content:
           application/json:
@@ -303,7 +290,7 @@ paths:
         uri: "${endpoint_modules.send-otp-notification.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-  /send-otp-challenge:
+  /send-otp-challenge/{publicSubjectId}:
     post:
       security:
         - authorise-access-token: []
@@ -317,25 +304,20 @@ paths:
       summary: Sends an OTP challenge
       operationId: "send-otp-challenge"
       parameters:
-        - name: clientId
-          in: query
+        - name: publicSubjectId
+          in: path
           required: true
           schema:
             type: string
-          description: Client identifier for the requesting service
+          description: The user's public subject identifier
       requestBody:
         content:
           application/json:
             schema:
               type: object
               required:
-                - email
                 - mfaMethodType
               properties:
-                email:
-                  type: string
-                  format: email
-                  description: The user's email address
                 mfaMethodType:
                   type: string
                   enum:
@@ -345,7 +327,6 @@ paths:
               send-otp-challenge-email-request:
                 summary: Send OTP challenge via email
                 value:
-                  email: "user@example.gov.uk"
                   mfaMethodType: "EMAIL"
         required: true
       responses:
@@ -404,14 +385,13 @@ paths:
         - lang: shell
           label: cURL request example
           source: |
-            curl -X POST "https://localhost:8080/send-otp-challenge" \
+            curl -X POST "https://localhost:8080/send-otp-challenge/<PUBLIC_SUBJECT_ID>" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
               -d '{
-                "email": "user@example.gov.uk",
                 "mfaMethodType": "EMAIL"
               }'
-  /verify-otp-challenge:
+  /verify-otp-challenge/{publicSubjectId}:
     post:
       security:
         - authorise-access-token: []
@@ -425,22 +405,32 @@ paths:
       summary: Verifies an OTP challenge
       operationId: "verify-otp-challenge"
       parameters:
-        - name: clientId
-          in: query
+        - name: publicSubjectId
+          in: path
           required: true
           schema:
             type: string
-          description: Client identifier for the requesting service
+          description: The user's public subject identifier
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VerifyOtpRequest"
+              type: object
+              required:
+                - otp
+                - mfaMethodType
+              properties:
+                otp:
+                  type: string
+                  pattern: "^[0-9]{6}$"
+                  description: The 6-digit OTP code to verify
+                  example: "123456"
+                mfaMethodType:
+                  $ref: "#/components/schemas/MfaMethodType"
             examples:
               verify-otp-challenge-request:
                 summary: Verify OTP challenge
                 value:
-                  email: "new.user@example.gov.uk"
                   otp: "123456"
                   mfaMethodType: "EMAIL"
         required: true
@@ -478,11 +468,10 @@ paths:
         - lang: shell
           label: cURL request example
           source: |
-            curl -X POST "https://localhost:8080/verify-otp-challenge" \
+            curl -X POST "https://localhost:8080/verify-otp-challenge/<PUBLIC_SUBJECT_ID>" \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
               -d '{
-                "email": "new.user@example.gov.uk",
                 "otp": "123456",
                 "mfaMethodType": "EMAIL"
               }'
@@ -1551,16 +1540,10 @@ components:
       description: The MFA method type for OTP verification
     VerifyOtpRequest:
       required:
-        - email
         - otp
         - mfaMethodType
       type: object
       properties:
-        email:
-          type: string
-          format: email
-          description: The email address where the OTP was sent
-          example: "new.user@example.gov.uk"
         otp:
           type: string
           pattern: "^[0-9]{6}$"
@@ -1569,7 +1552,6 @@ components:
         mfaMethodType:
           $ref: "#/components/schemas/MfaMethodType"
       example:
-        email: "new.user@example.gov.uk"
         otp: "123456"
         mfaMethodType: "EMAIL"
     OtpVerificationRateLimitExceeded:
