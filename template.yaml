@@ -8436,7 +8436,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: !Sub "IF(m2 >= ${MinIdentityJourneyThreshold}, m1/m2*100)"
+          Expression: !Sub "IF(m3 >= ${MinIdentityJourneyThreshold}, (m1+m2)/m3*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8448,14 +8448,31 @@ Resources:
                 - Name: journeyType
                   Value: identity
                 - Name: LogGroup
-                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                  Value: !Sub "${Environment}-IpvCallbackFunction"
                 - Name: ServiceName
-                  Value: !Sub "${Environment}-IPVCallbackFunction"
+                  Value: !Sub "${Environment}-IpvCallbackFunction"
                 - Name: ServiceType
                   Value: "AWS::Lambda::Function"
             Period: 300
             Stat: Sum
         - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: orchJourneyCompleted
+              Dimensions:
+                - Name: journeyType
+                  Value: identity
+                - Name: LogGroup
+                  Value: !Sub "${Environment}-AuthCodeFunction"
+                - Name: ServiceName
+                  Value: !Sub "${Environment}-AuthCodeFunction"
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 300
+            Stat: Sum
+        - Id: m3
           ReturnData: false
           MetricStat:
             Metric:
