@@ -41,15 +41,15 @@ Parameters:
   MinAuthJourneyThreshold:
     Type: Number
     Description: Minimum number of auth journeys started before the journey completion rate alarm can be triggered
-    Default: 300
+    Default: 350
   MinIdentityJourneyThreshold:
     Type: Number
     Description: Minimum number of identity journeys started before the journey completion rate alarm can be triggered
-    Default: 100
+    Default: 150
   MinDocAppJourneyThreshold:
     Type: Number
     Description: Minimum number of docapp journeys started before the journey completion rate alarm can be triggered
-    Default: 100
+    Default: 50
 
 Conditions:
   UsePermissionsBoundary:
