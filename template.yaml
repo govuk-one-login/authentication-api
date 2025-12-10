@@ -38,18 +38,6 @@ Parameters:
     Type: Number
     Description: Minimum number of errors before error rate alarms can be triggered
     Default: 4
-  MinAuthJourneyThreshold:
-    Type: Number
-    Description: Minimum number of auth journeys started before the journey completion rate alarm can be triggered
-    Default: 350
-  MinIdentityJourneyThreshold:
-    Type: Number
-    Description: Minimum number of identity journeys started before the journey completion rate alarm can be triggered
-    Default: 150
-  MinDocAppJourneyThreshold:
-    Type: Number
-    Description: Minimum number of docapp journeys started before the journey completion rate alarm can be triggered
-    Default: 50
 
 Conditions:
   UsePermissionsBoundary:
@@ -8382,7 +8370,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: !Sub "IF(m2 >= ${MinAuthJourneyThreshold}, m1/m2*100)"
+          Expression: "IF(m2 >= 350, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8436,7 +8424,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: !Sub "IF(m3 >= ${MinIdentityJourneyThreshold}, (m1+m2)/m3*100)"
+          Expression: "IF(m3 >= 150, (m1+m2)/m3*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
@@ -8507,7 +8495,7 @@ Resources:
       Metrics:
         - Id: e1
           ReturnData: true
-          Expression: !Sub "IF(m2 >= ${MinDocAppJourneyThreshold}, m1/m2*100)"
+          Expression: "IF(m2 >= 50, m1/m2*100)"
           Label: Journey Completion Rate
         - Id: m1
           ReturnData: false
