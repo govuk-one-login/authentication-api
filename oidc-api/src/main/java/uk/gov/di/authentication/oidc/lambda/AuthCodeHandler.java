@@ -357,6 +357,8 @@ public class AuthCodeHandler
                 Map.of(
                         "clientName", client.getClientName(),
                         "clientId", clientID.getValue()));
+        cloudwatchMetricsService.incrementCounter(
+                "orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
