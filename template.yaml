@@ -94,14 +94,6 @@ Conditions:
       !FindInMap [EnvironmentConfiguration, !Ref Environment, authStubEnabled],
       true,
     ]
-  UseOrchClientRegistry:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [!Ref Environment, integration],
-      !Equals [!Ref Environment, production],
-    ]
   UseSingleFactorAccountDeletion: !Equals [dev, !Ref Environment]
 
 Mappings:
@@ -305,7 +297,6 @@ Globals:
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
         OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING: "true"
         JAVA_TOOL_OPTIONS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
-        USE_ORCH_CLIENT_REGISTRY_TABLE: !If [UseOrchClientRegistry, true, false]
     MemorySize: 1536
     Timeout: 30
     Runtime: java17
