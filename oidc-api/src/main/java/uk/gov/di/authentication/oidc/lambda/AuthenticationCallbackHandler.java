@@ -587,10 +587,10 @@ public class AuthenticationCallbackHandler
                 return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                         authFrontend.errorURI(), e);
             }
-        } catch (OrchAuthCodeException e) {
+        } catch (OrchAuthCodeException | AuthenticationAuthorisationRequestException e) {
             return RedirectService.redirectToFrontendErrorPageWithWarnLog(
                     authFrontend.errorURI(), e);
-        } catch (AuthenticationCallbackException | AuthenticationAuthorisationRequestException e) {
+        } catch (AuthenticationCallbackException e) {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(), e);
         } catch (ParseException e) {
