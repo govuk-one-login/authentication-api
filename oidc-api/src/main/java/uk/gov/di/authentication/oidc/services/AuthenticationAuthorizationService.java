@@ -233,7 +233,7 @@ public class AuthenticationAuthorizationService {
                 reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
                 reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
             } catch (java.text.ParseException e) {
-                LOG.warn("Unable to parse id_token_hint SignedJWT into claims");
+                LOG.error("Unable to parse id_token_hint SignedJWT into claims");
                 throw new RuntimeException("Invalid id_token_hint");
             }
         }
@@ -381,7 +381,7 @@ public class AuthenticationAuthorizationService {
                                                 .getCustomParameter("id_token_hint")
                                                 .get(0)));
         if (!isTokenSignatureValid) {
-            LOG.warn("Unable to validate ID token signature");
+            LOG.error("Unable to validate ID token signature");
             throw new AuthenticationAuthorisationRequestException(
                     "Unable to validate id_token_hint");
         }
@@ -394,12 +394,12 @@ public class AuthenticationAuthorizationService {
                             authenticationRequest.getCustomParameter("id_token_hint").get(0));
             aud = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
         } catch (java.text.ParseException e) {
-            LOG.warn("Unable to parse id_token_hint into SignedJWT");
+            LOG.error("Unable to parse id_token_hint into SignedJWT");
             throw new AuthenticationAuthorisationRequestException("Invalid id_token_hint");
         }
 
         if (aud == null || !aud.equals(authenticationRequest.getClientID().getValue())) {
-            LOG.warn("Audience on id_token_hint does not match client ID");
+            LOG.error("Audience on id_token_hint does not match client ID");
             throw new AuthenticationAuthorisationRequestException(
                     "Invalid id_token_hint for client");
         }

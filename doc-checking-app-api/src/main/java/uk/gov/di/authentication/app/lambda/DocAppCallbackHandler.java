@@ -234,7 +234,7 @@ public class DocAppCallbackHandler
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
+                return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         authFrontend.errorURI(),
                         new Error(
                                 String.format(
@@ -321,7 +321,7 @@ public class DocAppCallbackHandler
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
                             user);
-                    return RedirectService.redirectToFrontendErrorPage(
+                    return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                             authFrontend.errorURI(),
                             new Error(
                                     String.format(
@@ -329,13 +329,17 @@ public class DocAppCallbackHandler
                                             e.getMessage())));
                 }
             }
-        } catch (DocAppCallbackException | OrchAuthCodeException e) {
-            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI(), e);
+        } catch (OrchAuthCodeException e) {
+            return RedirectService.redirectToFrontendErrorPageWithWarnLog(
+                    authFrontend.errorURI(), e);
+        } catch (DocAppCallbackException e) {
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    authFrontend.errorURI(), e);
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     authFrontend.errorURI(), e);
         } catch (ParseException e) {
-            return RedirectService.redirectToFrontendErrorPage(
+            return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     authFrontend.errorURI(),
                     new Error("Cannot retrieve auth request params from client session id"));
         }

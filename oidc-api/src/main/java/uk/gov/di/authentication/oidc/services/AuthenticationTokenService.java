@@ -131,6 +131,10 @@ public class AuthenticationTokenService {
                 }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
+                LOG.error(
+                        format(
+                                "Error %s when attempting to call Authentication userinfo endpoint: %s",
+                                response.getStatusCode(), response.getContent()));
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call Authentication userinfo endpoint: %s",
@@ -140,6 +144,7 @@ public class AuthenticationTokenService {
             LOG.info("Received successful userinfo response");
             return parseUserInfoFromResponse(response);
         } catch (IOException e) {
+            LOG.error("Error when attempting to call Authentication userinfo endpoint");
             throw new UnsuccessfulCredentialResponseException(
                     "Error when attempting to call Authentication userinfo endpoint", e);
         }
@@ -150,11 +155,12 @@ public class AuthenticationTokenService {
         try {
             String content = response.getContent();
             if (content == null) {
+                LOG.error("No content in HTTP response");
                 throw new UnsuccessfulCredentialResponseException("No content in HTTP response");
             }
             return UserInfo.parse(content);
         } catch (ParseException e) {
-            LOG.warn("Unable to parse userinfo response as UserInfo object");
+            LOG.error("Unable to parse userinfo response as UserInfo object");
             throw new UnsuccessfulCredentialResponseException(
                     "Error parsing authentication userinfo response as JSON", e);
         }

@@ -180,6 +180,7 @@ public class LogoutService {
             redirectURI = authFrontend.accountSuspendedURI();
             LOG.info("Generating Account Intervention suspended logout response");
         } else {
+            LOG.error("Account status must be blocked or suspended");
             throw new RuntimeException("Account status must be blocked or suspended");
         }
 
