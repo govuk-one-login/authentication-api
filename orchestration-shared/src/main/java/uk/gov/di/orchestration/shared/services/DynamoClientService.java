@@ -174,8 +174,4 @@ public class DynamoClientService implements ClientService {
     public ClientID generateClientID() {
         return new ClientID(IdGenerator.generate());
     }
-
-    private void warmUp() {
-        dynamoClientRegistryTable.describeTable();
-    }
 }
