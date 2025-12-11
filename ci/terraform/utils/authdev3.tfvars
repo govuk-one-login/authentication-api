@@ -13,6 +13,8 @@ bulk_user_email_max_audience_load_user_count      = 10
 # Logging
 cloudwatch_log_retention = 30
 
+vpc_environment = "dev"
+
 # Sizing
 performance_tuning = {
   bulk-user-email-send = {

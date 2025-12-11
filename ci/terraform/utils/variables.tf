@@ -171,3 +171,9 @@ variable "email_check_results_sqs_queue_encryption_key_arn" {
   description = "ARN of the CMK used for server side encryption on the SQS email results check queue"
   type        = string
 }
+
+variable "vpc_environment" {
+  description = "The name of the environment this environment is sharing the VPC , this var is only for Authdevs env and must be overide using Authdevs.tfvars, default value should be null always."
+  type        = string
+  default     = null
+}
