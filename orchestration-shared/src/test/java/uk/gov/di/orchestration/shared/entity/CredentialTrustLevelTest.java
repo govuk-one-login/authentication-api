@@ -17,13 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 
+// QualityGateUnitTest
 class CredentialTrustLevelTest {
 
+    // QualityGateRegressionTest
     @Test
     void valuesShouldBeComparable() {
         assertThat(LOW_LEVEL, lessThan(MEDIUM_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("validCredentialTrustLevelValues")
     void valuesShouldBeParsable(String vtrSet, CredentialTrustLevel expectedValue) {
@@ -31,6 +34,7 @@ class CredentialTrustLevelTest {
                 CredentialTrustLevel.retrieveCredentialTrustLevel(vtrSet), equalTo(expectedValue));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("invalidCredentialTrustLevelValues")
     void shouldThrowWhenInvalidValueIsPassed(String vtrSet) {
@@ -40,6 +44,7 @@ class CredentialTrustLevelTest {
                 "Expected to throw exception");
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("maxCredentialTrustLevelValues")
     void maxShouldReturnTheMaximumValue(
@@ -63,21 +68,25 @@ class CredentialTrustLevelTest {
                 Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void mediumIsHigherThanLow() {
         assertTrue(MEDIUM_LEVEL.isHigherThan(LOW_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void lowIsLowerThanMedium() {
         assertTrue(LOW_LEVEL.isLowerThan(MEDIUM_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void mediumIsNotLowerThanLow() {
         assertFalse(MEDIUM_LEVEL.isLowerThan(LOW_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void lowIsNotHigherThanMedium() {
         assertFalse(LOW_LEVEL.isHigherThan(MEDIUM_LEVEL));

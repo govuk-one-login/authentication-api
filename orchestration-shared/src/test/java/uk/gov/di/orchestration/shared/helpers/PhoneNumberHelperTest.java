@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+// QualityGateUnitTest
 class PhoneNumberHelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void testShouldFormatPhoneNumbersUsingE164() {
         final String phoneNumber = "07316763843";
@@ -16,6 +18,7 @@ class PhoneNumberHelperTest {
         assertEquals("+447316763843", result);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testShouldThrowExceptionIfInvalidPhoneNumber() {
         final String phoneNumber = "Invalid phone number";

@@ -23,8 +23,10 @@ import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEV
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
+// QualityGateUnitTest
 class VectorOfTrustTest {
 
+    // QualityGateRegressionTest
     @Test
     void shouldParseValidStringWithSingleVector() {
         var jsonArray = jsonArrayOf("Cl.Cm");
@@ -35,6 +37,7 @@ class VectorOfTrustTest {
         assertThat(vectorsOfTrust.size(), equalTo(1));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("validListCombinations")
     void shouldParseValidStringWithMultipleVectors(String jsonArray, List<VectorOfTrust> expected) {
@@ -90,6 +93,7 @@ class VectorOfTrustTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, null))));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
         List<VectorOfTrust> vectorsOfTrust =
@@ -100,6 +104,7 @@ class VectorOfTrustTest {
         assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldParseValidStringWithSingleIdentityVector() {
         var jsonArray = jsonArrayOf("P2.Cl.Cm");
@@ -111,6 +116,7 @@ class VectorOfTrustTest {
                 equalTo(LevelOfConfidence.MEDIUM_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnOnlyLevelsOfConfidenceWhenRequested() {
         var vtrList =
@@ -122,6 +128,7 @@ class VectorOfTrustTest {
         assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1", "P3")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnEmptyListWhenOnlyLevelsOfConfidenceRequestedButNonePresent() {
         var vtrList = List.of(new VectorOfTrust(LOW_LEVEL), new VectorOfTrust(MEDIUM_LEVEL));
@@ -129,6 +136,7 @@ class VectorOfTrustTest {
         assertThat(levelsOfConfidence, equalTo(emptyList()));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("vtrListsWithLowestCredentialTrustVtrs")
     void shouldReturnCredentialTrustLevelOfLowestVot(
@@ -164,6 +172,7 @@ class VectorOfTrustTest {
                         MEDIUM_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("vtrListsToOrder")
     void shouldOrderVtrListsBasedOnLocThenCtl(
@@ -212,6 +221,7 @@ class VectorOfTrustTest {
                                                 MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL)))));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("invalidVtrValues")
     void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {
@@ -247,6 +257,7 @@ class VectorOfTrustTest {
                         jsonArrayOf("P1.Cl")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("validCombinations")
     void isValidShouldReturnTrueForValidCombinations(
@@ -266,6 +277,7 @@ class VectorOfTrustTest {
                 Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.HIGH_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("invalidCombinations")
     void isValidShouldReturnFalseForInvalidCombinations(
@@ -285,6 +297,7 @@ class VectorOfTrustTest {
                 Arguments.of(null, LevelOfConfidence.HIGH_LEVEL));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotIncludeIdentityValuesInTokenWhenTheyArePresent() {
         String vectorString = "P2.Cl.Cm";
@@ -296,6 +309,7 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo("Cl.Cm"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectCredentialTrustLevelInToken() {
         String vectorString = "Cl.Cm";
@@ -306,6 +320,7 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("validIdentityVtrs")
     void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent(String jsonArrayVector) {
@@ -327,6 +342,7 @@ class VectorOfTrustTest {
                 Arguments.of(jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm", "P3.Cl.Cm")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenIdentityLevelOfConfidenceIsNotPresent() {
         String vectorString = "Cl.Cm";
@@ -337,6 +353,7 @@ class VectorOfTrustTest {
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenIdentityLevelOfConfidenceIsP0() {
         String vectorString = "P0.Cl.Cm";
@@ -347,6 +364,7 @@ class VectorOfTrustTest {
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowExceptionForEmptyVtrList() {
         List<VectorOfTrust> vtrList = emptyList();
@@ -359,6 +377,7 @@ class VectorOfTrustTest {
         assertEquals("Invalid VTR attribute", exception.getMessage());
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("equalityTests")
     void shouldReturnCorrectEquality(String one, String two, boolean areEqual) {

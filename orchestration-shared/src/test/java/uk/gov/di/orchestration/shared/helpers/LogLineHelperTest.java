@@ -24,6 +24,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSession
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 
+// QualityGateUnitTest
 class LogLineHelperTest {
 
     private final String identifier = IdGenerator.generate();
@@ -33,6 +34,7 @@ class LogLineHelperTest {
         ThreadContext.clearAll();
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAttachSessionIdToThreadContextUsingAttachLogField() {
         attachLogFieldToLogs(SESSION_ID, identifier);
@@ -41,6 +43,7 @@ class LogLineHelperTest {
         assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAttachSessionIdToThreadContextUsingString() {
         attachSessionIdToLogs(identifier);
@@ -49,6 +52,7 @@ class LogLineHelperTest {
         assertEquals(identifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldUpdateAttachedSessionIdToThreadContext() {
         var newIdentifier = IdGenerator.generate();
@@ -61,6 +65,7 @@ class LogLineHelperTest {
         assertEquals(newIdentifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAttachOrchSessionIdToThreadContextUsingString() {
         attachOrchSessionIdToLogs(identifier);
@@ -69,6 +74,7 @@ class LogLineHelperTest {
         assertEquals(identifier, ThreadContext.get(ORCH_SESSION_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogInvalidParameterIfFormatIsWrong() {
         var badIdentifier = "not-@-b@se64-identifier";
@@ -79,6 +85,7 @@ class LogLineHelperTest {
         assertEquals("invalid-identifier", ThreadContext.get(SESSION_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotLogSpanAndTraceIdIfUnavailable() {
         attachTraceId();
@@ -86,6 +93,7 @@ class LogLineHelperTest {
         assertFalse(ThreadContext.containsKey(TRACE_ID.getLogFieldName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogSpanAndTraceIdIfAvailable() {
         var spanContext =

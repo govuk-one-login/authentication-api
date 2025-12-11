@@ -13,12 +13,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
+// QualityGateUnitTest
 class PersistentIdHelperTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
     private static final String NEW_ID = "lML1nhHXgGC9o-7efoVoFBJGve0";
     private static final String PERSISTENT_SESSION_ID_COOKIE_VALUE =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnPersistentIdWhenExistsInHeader() {
         Map<String, String> inputHeaders =
@@ -30,6 +32,7 @@ class PersistentIdHelperTest {
         assertThat(persistentId, equalTo(PERSISTENT_SESSION_ID_COOKIE_VALUE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnUnknownIfPersistentIdHeaderIsNotPresent() {
         Map<String, String> inputHeaders = Collections.emptyMap();
@@ -38,6 +41,7 @@ class PersistentIdHelperTest {
         assertThat(persistentId, equalTo(PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnUnknownIfPersistentIdIsNull() {
         Map<String, String> inputHeaders = new HashMap<>();
@@ -47,6 +51,7 @@ class PersistentIdHelperTest {
         assertThat(persistentId, equalTo(PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnPersistentIdFromCookieHeaderWhenExists() {
         String cookieString =
@@ -59,6 +64,7 @@ class PersistentIdHelperTest {
         assertThat(persistentId, equalTo(PERSISTENT_SESSION_ID_COOKIE_VALUE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnUnknownWhenPersistentCookieIsNotPresent() {
         String cookieString =
@@ -69,6 +75,7 @@ class PersistentIdHelperTest {
         assertThat(persistentId, equalTo(PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void
             shouldReturnExistingPersistentIdButAppendTimestampInGetExistingOrCreateWhenOldFormatExists() {
@@ -82,6 +89,7 @@ class PersistentIdHelperTest {
         assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
     }
 
+    // QualityGateRegressionTest
     @Test
     void
             shouldReturnExistingPersistentIdAndNotAppendNewTimestampInGetExistingOrCreateWhenNewFormatExists() {
@@ -99,6 +107,8 @@ class PersistentIdHelperTest {
     // This relates to a short period where it was possible to have a format like
     // --1700558480962--1700558480963--1700558480964; see commit
     // 75a10df4376397d5a454b87b5cee689e13a71e20; will not be needed from 26/05/2025
+    // TODO: check still needed?
+    // QualityGateRegressionTest
     @Test
     void shouldReturnNewPersistentIdWithATimestampWhenCorruptedFormatExists() {
         String corruptedPersistentId = "--1700558480962--1700558480963";
@@ -114,6 +124,7 @@ class PersistentIdHelperTest {
         assertFalse(persistentId.contains(corruptedPersistentId));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAppendTimestampToPersistentIdWhenMissing() {
         String oldPersistentId = IdGenerator.generate();
@@ -129,6 +140,7 @@ class PersistentIdHelperTest {
         assertTrue(persistentId.startsWith(oldPersistentId));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGenerateNewPersistentIdFromGetExistingOrCreateWhenMissing() {
         try (var mockIdGenerator = mockStatic(IdGenerator.class)) {

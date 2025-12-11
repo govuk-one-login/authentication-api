@@ -12,8 +12,10 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
+// QualityGateUnitTest
 class ClientRegistryTest {
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnP2andP0WhenidentityVerificationSupportedAndRegistryEmpty() {
         var clientRegistry = new ClientRegistry();
@@ -26,6 +28,7 @@ class ClientRegistryTest {
                                 LevelOfConfidence.NONE.getValue())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnP0WhenidentityVerificationNotSupportedAndRegistryEmpty() {
         var clientRegistry = new ClientRegistry();
@@ -35,6 +38,7 @@ class ClientRegistryTest {
                 equalTo(List.of(LevelOfConfidence.NONE.getValue())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnES256IdTokenSigningAlgorithmCorrectly() {
         var clientRegistry = new ClientRegistry();
@@ -43,6 +47,7 @@ class ClientRegistryTest {
                 clientRegistry.getIdTokenSigningAlgorithm(), equalTo(JWSAlgorithm.ES256.getName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnRS256IdTokenSigningAlgorithmCorrectly() {
         var clientRegistry = new ClientRegistry();
@@ -51,6 +56,7 @@ class ClientRegistryTest {
                 clientRegistry.getIdTokenSigningAlgorithm(), equalTo(JWSAlgorithm.RS256.getName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnRS256IdTokenSigningAlgorithmWhenRSA256IsUsed() {
         var clientRegistry = new ClientRegistry();
@@ -59,6 +65,7 @@ class ClientRegistryTest {
                 clientRegistry.getIdTokenSigningAlgorithm(), equalTo(JWSAlgorithm.RS256.getName()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnNullIdTokenSigningAlgorithmCorrectly() {
         var clientRegistry = new ClientRegistry();
@@ -70,6 +77,7 @@ class ClientRegistryTest {
      * Old client registry entries will have a public key but no public key source in the DB.
      * getPublicKeySource should therefore return STATIC by default.
      */
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectlyPublicKeyAndSourceForOldFormatClient() {
         var clientRegistry = new ClientRegistry();
@@ -82,6 +90,7 @@ class ClientRegistryTest {
         assertThat(clientRegistry.getJwksUrl(), equalTo(null));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectlyPublicKeyAndSourceForNewFormatClient() {
         var clientRegistry = new ClientRegistry();
@@ -95,6 +104,7 @@ class ClientRegistryTest {
         assertThat(clientRegistry.getJwksUrl(), equalTo(null));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectlyJwksUrlAndSourceForNewFormatClient() {
         var clientRegistry = new ClientRegistry();
@@ -112,6 +122,7 @@ class ClientRegistryTest {
      * When an existing client is updated with a JWKS URL, we should hide the existing public key in
      * the DB.
      */
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectlyJwksUrlAndSourceForOldFormatThatGetUpdateWithAJwksUrlClient() {
         var clientRegistry = new ClientRegistry();
@@ -137,6 +148,7 @@ class ClientRegistryTest {
                 Arguments.of(false, false));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("permutationsToCheck")
     void shouldOnlyReturnPermitMissingNonceTrueWhenIdentityVerificationSupportedIsAlsoFalse(
