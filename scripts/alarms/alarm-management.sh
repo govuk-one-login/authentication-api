@@ -49,7 +49,7 @@ select_environment() {
 
 setup_aws() {
   if [[ ${ENVIRONMENT} =~ ^authdev ]]; then
-    export AWS_PROFILE="di-auth-development-admin"
+    export AWS_PROFILE="di-authentication-development-AdministratorAccessPermission"
   elif [[ ${ENVIRONMENT} == "production" ]]; then
     export AWS_PROFILE="gds-di-production-admin"
   else
