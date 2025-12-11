@@ -2,20 +2,50 @@ package uk.gov.di.authentication.userpermissions.entity;
 
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
+import java.util.List;
+
 public record UserPermissionContext(
-        String internalSubjectId,
+        List<String> internalSubjectIds,
         String rpPairwiseId,
         String emailAddress,
         AuthSessionItem authSessionItem) {
 
+    public UserPermissionContext(
+            String internalSubjectId,
+            String rpPairwiseId,
+            String emailAddress,
+            AuthSessionItem authSessionItem) {
+        this(
+                internalSubjectId != null ? List.of(internalSubjectId) : null,
+                rpPairwiseId,
+                emailAddress,
+                authSessionItem);
+    }
+
+    public String internalSubjectId() {
+        if (internalSubjectIds == null || internalSubjectIds.isEmpty()) {
+            return null;
+        }
+        if (internalSubjectIds.size() > 1) {
+            throw new IllegalStateException(
+                    "Cannot get single internalSubjectId when multiple IDs exist");
+        }
+        return internalSubjectIds.get(0);
+    }
+
     public static class Builder {
-        private String internalSubjectId;
+        private List<String> internalSubjectIds;
         private String rpPairwiseId;
         private String emailAddress;
         private AuthSessionItem authSessionItem;
 
         public Builder withInternalSubjectId(String internalSubjectId) {
-            this.internalSubjectId = internalSubjectId;
+            return withInternalSubjectIds(
+                    internalSubjectId != null ? List.of(internalSubjectId) : null);
+        }
+
+        public Builder withInternalSubjectIds(List<String> internalSubjectIds) {
+            this.internalSubjectIds = internalSubjectIds;
             return this;
         }
 
@@ -36,7 +66,7 @@ public record UserPermissionContext(
 
         public UserPermissionContext build() {
             return new UserPermissionContext(
-                    internalSubjectId, rpPairwiseId, emailAddress, authSessionItem);
+                    internalSubjectIds, rpPairwiseId, emailAddress, authSessionItem);
         }
     }
 
