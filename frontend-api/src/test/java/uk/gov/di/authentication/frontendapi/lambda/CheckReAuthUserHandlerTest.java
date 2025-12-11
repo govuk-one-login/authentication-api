@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -69,8 +68,6 @@ class CheckReAuthUserHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
@@ -168,7 +165,6 @@ class CheckReAuthUserHandlerTest {
                         configurationService,
                         authenticationService,
                         auditService,
-                        authenticationAttemptsService,
                         cloudwatchMetricsService,
                         authSessionService,
                         userActionsManager,
@@ -178,8 +174,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
         var existingCountOfIncorrectEmails = 1;
-        setupExistingEnterEmailAttemptsCountForIdentifier(
-                existingCountOfIncorrectEmails, TEST_SUBJECT_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(existingCountOfIncorrectEmails);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -206,7 +201,7 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
-        setupExistingEnterEmailAttemptsCountForIdentifier(1, TEST_RP_PAIRWISE_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(1);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -229,10 +224,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        Arrays.asList(TEST_SUBJECT_ID, TEST_SUBJECT_ID, expectedRpPairwiseSub),
-                        JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(
                         Result.success(
@@ -258,10 +249,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        Arrays.asList(TEST_SUBJECT_ID, TEST_SUBJECT_ID, expectedRpPairwiseSub),
-                        JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_MFA_CODE, MAX_RETRIES));
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(
                         Result.success(
@@ -305,7 +292,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
-        setupExistingEnterEmailAttemptsCountForIdentifier(3, TEST_RP_PAIRWISE_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(3);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -329,7 +316,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
-        setupExistingEnterEmailAttemptsCountForIdentifier(3, TEST_RP_PAIRWISE_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(3);
         when(authenticationService.getUserProfileByEmailMaybe(
                         DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE))
                 .thenReturn(Optional.of(new UserProfile().withSubjectID(DIFFERENT_SUBJECT_ID)));
@@ -361,7 +348,7 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
-        setupExistingEnterEmailAttemptsCountForIdentifier(1, TEST_RP_PAIRWISE_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(1);
 
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN)).thenReturn(null);
 
@@ -384,23 +371,14 @@ class CheckReAuthUserHandlerTest {
                         pair("user_supplied_email", EMAIL_USED_TO_SIGN_IN, true));
     }
 
-    private void setupExistingEnterEmailAttemptsCountForIdentifier(int count, String identifier) {
-        when(authenticationAttemptsService.getCount(
-                        identifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
-                .thenReturn(count);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        identifier, JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
-        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        List.of(identifier), JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
+    private void setupExistingEnterEmailAttemptsCountForIdentifier(int count) {
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(count)));
     }
 
     @Test
     void shouldRecordIncorrectEmailReceived() {
-        setupExistingEnterEmailAttemptsCountForIdentifier(0, TEST_SUBJECT_ID);
+        setupExistingEnterEmailAttemptsCountForIdentifier(0);
 
         handler.handleRequestWithUserContext(
                 API_REQUEST_EVENT_WITH_VALID_HEADERS,
@@ -431,10 +409,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenIncorrectEmailTriggersLockout() {
-        when(authenticationAttemptsService.getCountsByJourneyForIdentifiers(
-                        List.of(TEST_SUBJECT_ID, expectedRpPairwiseSub),
-                        JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
         when(permissionDecisionManager.canReceiveEmailAddress(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(MAX_RETRIES - 1)))
                 .thenReturn(
@@ -511,7 +485,6 @@ class CheckReAuthUserHandlerTest {
             }
 
             void setupMocks(
-                    AuthenticationAttemptsService authenticationAttemptsService,
                     PermissionDecisionManager permissionDecisionManager,
                     String expectedRpPairwiseSub) {
                 int testSubjectIdCount = 0;
@@ -523,20 +496,6 @@ class CheckReAuthUserHandlerTest {
                             MAX_RETRIES;
                     case RP_SUBMITTED_PAIRWISE_ID -> expectedRpPairwiseCount = MAX_RETRIES;
                     case DIFFERENT_USER_PROFILE -> differentSubjectIdCount = MAX_RETRIES;
-                }
-
-                var mockCountSetups =
-                        List.of(
-                                Map.entry(TEST_SUBJECT_ID, testSubjectIdCount),
-                                Map.entry(expectedRpPairwiseSub, expectedRpPairwiseCount),
-                                Map.entry(DIFFERENT_SUBJECT_ID, differentSubjectIdCount));
-
-                for (var setup : mockCountSetups) {
-                    when(authenticationAttemptsService.getCount(
-                                    setup.getKey(),
-                                    JourneyType.REAUTHENTICATION,
-                                    CountType.ENTER_EMAIL))
-                            .thenReturn(setup.getValue());
                 }
 
                 record MockSetup(List<String> subjectIds, String rpPairwiseId, int count) {}
@@ -738,9 +697,7 @@ class CheckReAuthUserHandlerTest {
                                             .thenReturn(Optional.of(differentUserProfile));
 
                                     scenario.setupMocks(
-                                            authenticationAttemptsService,
-                                            permissionDecisionManager,
-                                            expectedRpPairwiseSub);
+                                            permissionDecisionManager, expectedRpPairwiseSub);
 
                                     var result =
                                             handler.handleRequestWithUserContext(

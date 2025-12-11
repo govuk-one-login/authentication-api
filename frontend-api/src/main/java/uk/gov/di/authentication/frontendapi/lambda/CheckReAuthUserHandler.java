@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -60,7 +59,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
 
     private final AuditService auditService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final UserActionsManager userActionsManager;
     private final PermissionDecisionManager permissionDecisionManager;
@@ -69,7 +67,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ConfigurationService configurationService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthSessionService authSessionService,
             UserActionsManager userActionsManager,
@@ -80,7 +77,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.userActionsManager = userActionsManager;
         this.permissionDecisionManager = permissionDecisionManager;
@@ -89,29 +85,22 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
             CodeStorageService codeStorageService,
-            AuthenticationAttemptsService authenticationAttemptsService,
             AuthSessionService authSessionService) {
         this(
                 configurationService,
                 new DynamoService(configurationService),
                 new AuditService(configurationService),
-                authenticationAttemptsService,
                 new CloudwatchMetricsService(),
                 authSessionService,
                 new UserActionsManager(
-                        configurationService,
-                        codeStorageService,
-                        authSessionService,
-                        authenticationAttemptsService),
-                new PermissionDecisionManager(
-                        configurationService, codeStorageService, authenticationAttemptsService));
+                        configurationService, codeStorageService, authSessionService),
+                new PermissionDecisionManager(configurationService, codeStorageService));
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new CodeStorageService(configurationService),
-                new AuthenticationAttemptsService(configurationService),
                 new AuthSessionService(configurationService));
     }
 
