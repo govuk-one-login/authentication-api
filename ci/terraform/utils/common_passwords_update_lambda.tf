@@ -3,6 +3,7 @@ module "common_passwords_update_lambda_role" {
 
   environment = var.environment
   role_name   = "common_passwords_update_lambda_role"
+  vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     aws_iam_policy.common_passwords_s3_read_access.arn,
@@ -23,6 +24,12 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
+
+  vpc_config {
+    security_group_ids = [local.allow_aws_service_access_security_group_id]
+    subnet_ids         = local.authentication_private_subnet_ids
+
+  }
 
   environment {
     variables = merge({
