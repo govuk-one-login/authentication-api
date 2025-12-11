@@ -100,6 +100,7 @@ Conditions:
       !Equals [build, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [!Ref Environment, integration],
+      !Equals [!Ref Environment, production],
     ]
   UseSyncWaitForSpot:
     !Or [
