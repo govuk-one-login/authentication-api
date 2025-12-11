@@ -50,17 +50,13 @@ public class ClientRegistryMigrationHandler implements RequestHandler<Object, St
         attachTraceId();
         attachLogFieldToLogs(LogLineHelper.LogFieldName.AWS_REQUEST_ID, context.getAwsRequestId());
 
-        if (configurationService.isOrchClientRegistryEnabled()) {
-            var err =
-                    "Cannot invoke Migrate client registry handler as Orch Client Registry is enabled";
-            LOG.error(err);
-            return err;
-        }
-
-        LOG.info("Migrate client registry handler invoked");
-        return migrateClientRegistry();
+        var err =
+                "Cannot invoke Migrate client registry handler as Orch Client Registry is enabled";
+        LOG.error(err);
+        return err;
     }
 
+    @SuppressWarnings("unused")
     private String migrateClientRegistry() {
         var authClients = authClientRegistry.getAllClients();
         LOG.info("Found {} clients in Auth table", authClients.size());
