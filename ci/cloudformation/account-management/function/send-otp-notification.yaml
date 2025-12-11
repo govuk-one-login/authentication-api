@@ -4,7 +4,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - ${Env}-account-management-send-otp-notification-lambda
+        - ${Env}-send-otp-notification-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       MemorySize:
@@ -163,13 +163,13 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub
-        - ${Env}-account-management-send-otp-notification-errors
+        - ${Env}-send-otp-notification-errors
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref SendOtpNotificationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub
-            - ${Env}-account-management-send-otp-notification-error-count
+            - ${Env}-send-otp-notification-error-count
             - Env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           MetricNamespace: LambdaErrorsNamespace
@@ -183,7 +183,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-account-management-send-otp-notification-lambda function. ${RunbookLink}"
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-send-otp-notification-lambda function. ${RunbookLink}"
         - AlarmThreshold: 5
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
@@ -193,12 +193,12 @@ Resources:
               RunbookLink,
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-send-otp-notification-alarm
+        - ${Env}-send-otp-notification-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
       MetricName: !Sub
-        - ${Env}-account-management-send-otp-notification-error-count
+        - ${Env}-send-otp-notification-error-count
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       Namespace: LambdaErrorsNamespace
       Period: 3600
@@ -213,7 +213,7 @@ Resources:
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
-        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-account-management-send-otp-notification-lambda. ${RunbookLink}"
+        - "Lambda error rate of ${ErrorRateThreshold}% has been reached in the ${Env}-send-otp-notification-lambda. ${RunbookLink}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           ErrorRateThreshold: 10
           RunbookLink:
@@ -223,7 +223,7 @@ Resources:
               RunbookLink,
             ]
       AlarmName: !Sub
-        - ${Env}-account-management-send-otp-notification-error-rate-alarm
+        - ${Env}-send-otp-notification-error-rate-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       ComparisonOperator: GreaterThanOrEqualToThreshold
       DatapointsToAlarm: 1
@@ -242,7 +242,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-send-otp-notification-lambda
+                    - ${Env}-send-otp-notification-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
@@ -261,7 +261,7 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub
-                    - ${Env}-account-management-send-otp-notification-lambda
+                    - ${Env}-send-otp-notification-lambda
                     - Env:
                         !If [
                           UseSubEnvironment,
