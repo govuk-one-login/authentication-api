@@ -316,7 +316,7 @@ Globals:
     Timeout: 30
     Runtime: java17
     Architectures:
-      - x86_64
+      - arm64
     KmsKeyArn: !GetAtt MainKmsKey.Arn
     PermissionsBoundary: !If
       - UsePermissionsBoundary
