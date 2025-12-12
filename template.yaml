@@ -876,7 +876,7 @@ Resources:
         - Key: Name
           Value: ClientRegistryTable
         - !If
-          - IsIntegrationOrProduction
+          - IsStagingIntOrProd
           - Key: BackupFrequency
             Value: Bihourly
           - !Ref AWS::NoValue
