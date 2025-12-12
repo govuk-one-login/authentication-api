@@ -1,5 +1,5 @@
 [versions]
-awsSdk = "2.33.4"
+awsSdk = "2.40.7"
 junit = "5.13.4"
 pact = "4.6.18"
 xray = "2.20.0"
