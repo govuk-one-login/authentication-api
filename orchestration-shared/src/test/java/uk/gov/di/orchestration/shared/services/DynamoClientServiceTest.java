@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 
+// QualityGateUnitTest
 class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name-one";
@@ -44,6 +45,7 @@ class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
                 spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
     }
 
+    // QualityGateRegressionTest
     @Test
     void emptyFieldsInUpdateSSEClientShouldHaveNoEffect() {
         var oldClient = generatePopulatedClientRegistry();
@@ -61,6 +63,7 @@ class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
         Assertions.assertTrue(new ReflectionEquals(oldClient).matches(updatedClient));
     }
 
+    // QualityGateRegressionTest
     @Test
     void updateSSEClientShouldChangeValues() {
         var oldClient = generatePopulatedClientRegistry();
@@ -103,6 +106,7 @@ class DynamoClientServiceTest extends BaseDynamoServiceTest<ClientRegistry> {
         assertThat(updatedClient.getClaims(), equalTo(List.of("new-claim")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void manualUpdateClientShouldChangeValues() {
         var oldClient = generatePopulatedClientRegistry();
