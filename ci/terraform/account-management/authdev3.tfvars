@@ -16,4 +16,4 @@ test_clients_enabled              = true
 openapi_spec_filename = "openapi_v2.yaml"
 
 # URIs
-internal_sector_uri = "https://identity.sandpit.account.gov.uk"
+internal_sector_uri = "https://identity.dev.account.gov.uk"

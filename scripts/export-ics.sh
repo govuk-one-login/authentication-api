@@ -12,7 +12,7 @@ fi
 export AWS_REGION=eu-west-2
 
 if [[ $2 == authdev* ]]; then
-  sector="identity.$2.sandpit.account.gov.uk"
+  sector="identity.$2.dev.account.gov.uk"
 else
   sector="identity.$2.account.gov.uk"
 fi

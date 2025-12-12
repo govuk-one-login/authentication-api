@@ -4,7 +4,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 cd "${DIR}" || exit 1
 
-environments=("authdev1" "authdev2" "sandpit" "dev" "build")
+environments=("authdev1" "authdev2" "dev" "build")
 
 function usage() {
   cat <<- USAGE
@@ -50,11 +50,7 @@ fi
 ENVIRONMENT="${POSITIONAL[0]}"
 EMAIL="${POSITIONAL[1]}"
 
-if [[ ${ENVIRONMENT} == "sandpit" ]]; then
-  export AWS_PROFILE="gds-di-development-admin"
-  KMS_KEY_ARN="arn:aws:kms:eu-west-2:761723964695:alias/sandpit-id-token-signing-key-alias"
-  CLIENT_ID="1Dlz5rYheTqzZASRMmSBtgFIYgZlysnQ"
-elif [[ ${ENVIRONMENT} == "authdev1" ]]; then
+if [[ ${ENVIRONMENT} == "authdev1" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
   KMS_KEY_ARN="arn:aws:kms:eu-west-2:653994557586:alias/authdev1-id-token-signing-key-alias"
   CLIENT_ID="skwdHH2y6ERjJWTPSoAFbSt8lX04OgtI"
