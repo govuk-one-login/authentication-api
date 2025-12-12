@@ -7,6 +7,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -26,6 +29,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,6 +53,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
@@ -457,25 +462,37 @@ public class NotificationHandlerTest {
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES, EMAIL, false, AUTHENTICATION);
     }
 
-    @Test
-    void shouldEmitSmsLimitExceededMetricWhen429ResponseReceived()
+    private static Stream<Arguments> destinationTypeTestData() {
+        return Stream.of(
+                Arguments.of(UK_MOBILE_NUMBER, "DOMESTIC", true),
+                Arguments.of(INTERNATIONAL_MOBILE_NUMBER, "INTERNATIONAL", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("destinationTypeTestData")
+    void shouldEmitSmsLimitExceededMetricWhen429ResponseReceived(
+            String phoneNumber, String destinationType, Boolean isTestDestination)
             throws Json.JsonException, NotificationClientException {
         NotificationClientException exception = mock(NotificationClientException.class);
         when(exception.getHttpResult()).thenReturn(429);
 
         Mockito.doThrow(exception).when(notificationService).sendText(any(), any(), any(), any());
 
-        SQSEvent sqsEvent = notifyRequestEvent(UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "123456");
+        SQSEvent sqsEvent = notifyRequestEvent(phoneNumber, VERIFY_PHONE_NUMBER, "123456");
 
         var response = handler.handleRequest(sqsEvent, context);
 
         assertEquals(1, response.getBatchItemFailures().size());
 
         verify(cloudwatchMetricsService)
-                .emitSmsLimitExceededMetric(true, AUTHENTICATION, "INTERNATIONAL");
+                .emitSmsLimitExceededMetric(isTestDestination, AUTHENTICATION, destinationType);
         verify(cloudwatchMetricsService)
                 .emitMetricForNotificationError(
-                        VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER, true, AUTHENTICATION, exception);
+                        VERIFY_PHONE_NUMBER,
+                        phoneNumber,
+                        isTestDestination,
+                        AUTHENTICATION,
+                        exception);
     }
 
     private String buildContactUsUrl() {
