@@ -156,13 +156,14 @@ public class UpdatePasswordHandler
             dynamoService.updatePassword(
                     updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
 
-            LOG.info(
-                    "User Password has successfully been updated.  Adding confirmation message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
                             updatePasswordRequest.getEmail(),
                             NotificationType.PASSWORD_UPDATED,
                             userLanguage);
+            LOG.info(
+                    "User Password has successfully been updated.  Adding confirmation message to SQS queue, reference: {}",
+                    notifyRequest.getUniqueNotificationReference());
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Message successfully added to queue. Generating successful gateway response");
 
