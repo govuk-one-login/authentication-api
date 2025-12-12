@@ -8363,11 +8363,11 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Auth journey completion rate has dropped below 75% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Auth journey completion rate has dropped below 50% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-auth-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
-      Threshold: 75
+      Threshold: 50
       Metrics:
         - Id: e1
           ReturnData: true
@@ -8417,11 +8417,11 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Identity journey completion rate has dropped below 45% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Identity journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-identity-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
-      Threshold: 45
+      Threshold: 25
       Metrics:
         - Id: e1
           ReturnData: true
@@ -8488,11 +8488,11 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref OrchProdSlackEvents
-      AlarmDescription: !Sub "Doc app journey completion rate has dropped below 25% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
+      AlarmDescription: !Sub "Doc app journey completion rate has dropped below 15% in ${Environment}.ACCOUNT: di-orchestration-${Environment}."
       AlarmName: !Sub ${Environment}-docapp-journey-completion-rate-alarm
       ComparisonOperator: LessThanOrEqualToThreshold
       EvaluationPeriods: 1
-      Threshold: 25
+      Threshold: 15
       Metrics:
         - Id: e1
           ReturnData: true
