@@ -21,6 +21,13 @@ on:
       - "ci/openAPI/**"
       - "scripts/dev-samconfig.toml"
       - "sam-deploy-authdevs.sh"
+      - "docs/**"
+      - "**/README.md"
+      - "integration-tests/**"
+      - "delivery-receipts-integration-tests/**"
+      - "local-running/**"
+      - "notifications/**"
+      - "quality-gate.manifest.json"
 
 concurrency:
   group: "build-and-deploy-api-modules"

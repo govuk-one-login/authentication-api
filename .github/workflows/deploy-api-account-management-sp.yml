@@ -8,6 +8,14 @@ on:
       - "ci/cloudformation/auth/**"
       - "ci/cloudformation/stubs/**"
       - "template.yaml"
+      - "ci/openAPI/**"
+      - "docs/**"
+      - "**/README.md"
+      - "integration-tests/**"
+      - "delivery-receipts-integration-tests/**"
+      - "local-running/**"
+      - "notifications/**"
+      - "quality-gate.manifest.json"
 
 env:
   AWS_REGION: eu-west-2
