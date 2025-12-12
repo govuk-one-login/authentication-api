@@ -23,3 +23,7 @@ am_api_fms_tag_value = "accountmanagementint"
 #Vpc endpoint IDs
 # di-account-integration, di-account-components-integration
 home_vpc_endpoint_id = ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
+
+# CIDR blocks
+new_auth_privatesub_cidr_blocks   = ["10.6.10.0/23", "10.6.12.0/23", "10.6.14.0/23"]
+new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"]
